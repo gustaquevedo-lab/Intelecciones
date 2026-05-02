@@ -1605,18 +1605,17 @@ const SuperAdmin = () => {
                 <form onSubmit={editingList ? handleUpdateList : handleCreateList} style={{ maxWidth: '600px', width: '100%', padding: 0 }}>
                   <style>{`
                     .premium-avatar-container-main { position: relative; cursor: pointer; transition: transform 0.2s; }
-                    .premium-avatar-container-main:hover { transform: scale(1.02); }
-                    .premium-avatar-frame-v2 { width: 100px; height: 100px; border-radius: 24px; background: rgba(255,255,255,0.03); border: 2px solid var(--border-mid); overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+                    .premium-avatar-frame-v2 { width: 80px; height: 80px; border-radius: 18px; background: rgba(255,255,255,0.03); border: 2px solid var(--border-mid); overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
                     .premium-avatar-frame-v2 img { width: 100%; height: 100%; object-fit: cover; }
                     .avatar-edit-badge { position: absolute; bottom: -4px; right: -4px; width: 32px; height: 32px; background: var(--plra-500); border: 3px solid #0a0e17; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 2; }
                     .verified-status-tag { display: flex; align-items: center; gap: 4px; background: rgba(34,197,94,0.15); color: #4ade80; padding: 2px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: 900; letter-spacing: 0.05em; }
                   `}</style>
                   {/* Header: Candidate Identity with precise alignment */}
                   <div style={{ 
-                    padding: '2.5rem 2.5rem 1.5rem', 
+                    padding: '1rem 1.25rem', 
                     background: 'linear-gradient(to bottom, rgba(37,99,235,0.08), transparent)',
                     borderBottom: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', gap: '1.75rem' 
+                    display: 'flex', alignItems: 'center', gap: '1rem' 
                   }}>
                     <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
                     <div className="premium-avatar-container-main" onClick={() => fileInputRef.current?.click()}>
@@ -1649,7 +1648,7 @@ const SuperAdmin = () => {
                         )}
                       </div>
                       <h2 style={{ 
-                        margin: 0, fontSize: '1.8rem', fontWeight: 800, color: 'white',
+                        margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'white',
                         fontFamily: 'var(--font-display)', letterSpacing: '-0.02em',
                         lineHeight: 1.1
                       }}>
@@ -1665,8 +1664,8 @@ const SuperAdmin = () => {
                   </div>
 
                   {/* Body: Optimized Grid for Space and Flow */}
-                  <div style={{ padding: '2rem' }}>
-                    <div className="form-grid">
+                  <div style={{ padding: '1rem 1.25rem' }}>
+                    <div className="form-grid" style={{ gap: '0.5rem' }}>
                       
                       {/* Row 1: Identity & Alias */}
                       <div className="form-group">
