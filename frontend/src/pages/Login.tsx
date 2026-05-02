@@ -26,7 +26,8 @@ const Login = () => {
       else if (loggedUser.role === 'JEFE_CAMPANA') navigate('/comando');
       else navigate('/coordinador');
     } catch (error: any) {
-      setError('Credenciales inválidas');
+      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      setError(`Error de acceso. Verificando conexión con: ${apiURL}`);
       console.error(error);
     } finally {
       setIsLoading(false);
