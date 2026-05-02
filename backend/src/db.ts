@@ -6,12 +6,14 @@ import fs from 'fs';
 const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
 const dbPath = path.join(dbDir, 'intellecciones.db');
 
-// Migration: If we are in production and the volume DB doesn't exist, 
-// copy the "seeded" DB from the app root (if it exists)
-if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
+// Migration: If we are in production and the volume DB doesn't exist OR is an empty placeholder (< 50KB)
+if (process.env.NODE_ENV === 'production') {
   const seedDbPath = path.join(process.cwd(), 'intellecciones.db');
-  if (fs.existsSync(seedDbPath)) {
-    console.log("MIGRATION: Copying seeded database to volume...");
+  const exists = fs.existsSync(dbPath);
+  const size = exists ? fs.statSync(dbPath).size : 0;
+  
+  if (size < 50000 && fs.existsSync(seedDbPath)) {
+    console.log("MIGRATION: Volume DB is empty or small. Overwriting with seeded database...");
     fs.copyFileSync(seedDbPath, dbPath);
   }
 }
