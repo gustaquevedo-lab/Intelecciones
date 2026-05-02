@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import ReactCrop, { centerCrop, makeAspectCrop, Crop, PixelCrop } from 'react-image-crop';
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import type { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { motion } from 'framer-motion';
 import { X, Crop as CropIcon, MousePointer2 } from 'lucide-react';
