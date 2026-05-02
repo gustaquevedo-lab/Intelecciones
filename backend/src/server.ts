@@ -127,6 +127,10 @@ const getRole = (req: express.Request) => {
   return req.headers['x-user-role'] as string || 'COORDINADOR';
 };
 
+const getTenant = (req: any) => {
+  return parseInt(req.headers['x-list-id'] as string) || null;
+};
+
 // Helper to wrap SQL queries with list_id filter if not superuser
 const applyTenantFilter = (query: string, req: express.Request, params: any[] = []) => {
   const role = getRole(req);
@@ -229,7 +233,7 @@ app.post('/api/captures', (req, res) => {
           db.prepare(`
             INSERT INTO capture_conflicts (capture_id, elector_ci, list_id, status)
             VALUES (?, ?, ?, 'PENDING')
-          `).run(result.lastInsertRowid, capture.elector_ci, list_id);
+          `).run(Number(result.lastInsertRowid), capture.elector_ci, list_id);
 
           return { success: true, warning: 'Elector en disputa con otro coordinador de tu lista. Se ha notificado al Jefe de Campaña.', is_disputed: true };
         } else {

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import db from './db'; // This will also ensure tables exist, but we will drop and recreate electors.
+import db from './db';
 
 const XML_PATH = path.join(__dirname, '../temp_excel_extract/xl/worksheets/sheet1.xml');
 
@@ -152,12 +152,12 @@ while ((match = rowRegex.exec(xmlData)) !== null) {
     
     // Extract value from <v> or <t>
     let value = '';
-    const valMatch = content.match(/<v>(.*?)<\/v>/);
-    if (valMatch) {
+    const valMatch = content?.match(/<v>(.*?)<\/v>/);
+    if (valMatch?.[1]) {
       value = valMatch[1];
     } else {
-      const textMatch = content.match(/<t>(.*?)<\/t>/);
-      if (textMatch) {
+      const textMatch = content?.match(/<t>(.*?)<\/t>/);
+      if (textMatch?.[1]) {
         value = textMatch[1];
       }
     }
