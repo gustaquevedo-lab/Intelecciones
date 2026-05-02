@@ -1,6 +1,5 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-
 import fs from 'fs';
 
 // Use path relative to /app/data for Railway persistence
@@ -126,10 +125,12 @@ db.exec(`
 
   INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
-
-  /* Create default Super Admin */
-  INSERT OR IGNORE INTO users (username, password, role, nombre) 
-  VALUES ('admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
 `);
+
+/* Ensure default Super Admin exists */
+db.prepare(`
+  INSERT OR REPLACE INTO users (id, username, password, role, nombre) 
+  VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General')
+`).run();
 
 export default db;
