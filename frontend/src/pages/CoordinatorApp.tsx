@@ -136,8 +136,9 @@ const CoordinatorApp = () => {
   const handleSendRequest = async () => {
     if (!requestMsg || !user) return;
     setIsLoading(true);
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     try {
-      await axios.post(`${API_URL}/coordinator/request`, {
+      await axios.post(`${API_URL}/api/coordinator/request`, {
         coordinator_id: user.id,
         type: requestType,
         description: requestMsg,

@@ -214,6 +214,7 @@ const SuperAdmin = () => {
   const [showModal, setShowModal] = useState<string | null>(null);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editingList, setEditingList] = useState<List | null>(null);
   const [newCampaignName, setNewCampaignName] = useState('');
   const [newCampaignModules, setNewCampaignModules] = useState<string[]>(['COMMAND_CENTER', 'REGISTRY']);
   const [newUserName, setNewUserName] = useState('');

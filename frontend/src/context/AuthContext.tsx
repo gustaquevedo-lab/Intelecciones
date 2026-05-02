@@ -5,6 +5,7 @@ interface User {
     username: string;
     role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'COORDINADOR';
     nombre: string;
+    party?: string;
     assigned_list_id?: number;
     photo_url?: string;
     enabled_modules?: string[];
@@ -64,7 +65,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user]);
 
     const login = async (credentials: any) => {
-        const res = await fetch('http://localhost:5000/api/login', {
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${apiBase}/api/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(credentials)

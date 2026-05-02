@@ -7,7 +7,8 @@ import L from 'leaflet';
 import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
   TrendingUp, TrendingDown, ChevronUp, ChevronDown,
-  Download, MapPin, Activity, Bell, X, Search
+  Download, MapPin, Activity, Bell, X, Search,
+  AlertCircle, ChevronRight, Truck
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { ManagementTable } from '../components/ManagementTable';
@@ -333,6 +334,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve }: { stats: an
 
 const CommandCenter = () => {
   const { user: authUser, loading } = useAuth();
+  const activeListId = localStorage.getItem('active_list_id') === 'null' ? null : localStorage.getItem('active_list_id');
   const navigate = useNavigate();
   const [locales, setLocales] = useState<any[]>([]);
   const [captures, setCaptures] = useState<any[]>([]);

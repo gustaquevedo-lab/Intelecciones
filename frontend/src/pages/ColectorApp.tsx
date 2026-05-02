@@ -27,7 +27,8 @@ const ColectorApp: React.FC = () => {
     const searchElectors = async () => {
         setLoading(true);
         try {
-            const res = await apiFetch(`http://localhost:5000/api/electors`);
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await apiFetch(`${apiBase}/api/electors`);
             const data = await res.json();
             const filtered = data.filter((e: any) => 
                 e.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -60,7 +61,8 @@ const ColectorApp: React.FC = () => {
         if (!location || !selectedElector) return;
 
         try {
-            const response = await apiFetch('http://localhost:5000/api/visits', {
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const response = await apiFetch(`${apiBase}/api/visits`, {
                 method: 'POST',
                 body: JSON.stringify({
                     elector_ci: selectedElector.ci,
