@@ -82,7 +82,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                 <option value="null" style={{ background: '#041428' }}>🌎 VISTA GLOBAL</option>
                 {lists.map((l: any) => (
                   <option key={l.id} value={l.id} style={{ background: '#041428' }}>
-                    🔷 {l.list_number} — {l.campaign_name}
+                    {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
                   </option>
                 ))}
               </select>
