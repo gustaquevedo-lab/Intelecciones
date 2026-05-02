@@ -1,8 +1,12 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
-// Use path relative to current file for SQLite
-const db = new Database(path.join(process.cwd(), 'intellecciones.db'));
+// Use path relative to /app/data for Railway persistence
+const dbPath = process.env.NODE_ENV === 'production' 
+  ? '/app/data/intellecciones.db' 
+  : path.join(process.cwd(), 'intellecciones.db');
+
+const db = new Database(dbPath);
 
 // Initialize Tables
 db.exec(`

@@ -17,8 +17,11 @@ app.use(cors());
 app.use(express.json());
 
 // 📸 Multer Setup for Photos
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+const uploadDir = process.env.NODE_ENV === 'production'
+  ? '/app/data/uploads'
+  : path.join(__dirname, '../uploads');
+  
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),

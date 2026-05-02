@@ -7,8 +7,12 @@ class WhatsAppService {
   private status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' = 'DISCONNECTED';
 
   constructor() {
+    const sessionPath = process.env.NODE_ENV === 'production'
+      ? '/app/data/whatsapp_session'
+      : './sessions';
+
     this.client = new Client({
-      authStrategy: new LocalAuth({ dataPath: './sessions' }),
+      authStrategy: new LocalAuth({ dataPath: sessionPath }),
       puppeteer: {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
         headless: true
