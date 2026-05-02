@@ -12,6 +12,10 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [onboardingUser, setOnboardingUser] = useState<any>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -22,13 +26,48 @@ const Login = () => {
     try {
       const loggedUser = await login({ username, password });
       
-      if (loggedUser.role === 'SUPERUSUARIO') navigate('/admin');
-      else if (loggedUser.role === 'JEFE_CAMPANA') navigate('/comando');
-      else navigate('/coordinador');
+      if (loggedUser.needs_password_change) {
+        setOnboardingUser(loggedUser);
+        setShowOnboarding(true);
+      } else {
+        if (loggedUser.role === 'SUPERUSUARIO') navigate('/admin');
+        else if (loggedUser.role === 'JEFE_CAMPANA') navigate('/comando');
+        else if (loggedUser.role === 'CANDIDATO') navigate('/comando'); // Candidates also see Command Center
+        else navigate('/coordinador');
+      }
     } catch (error: any) {
       const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       setError(`Error de acceso. Verificando conexión con: ${apiURL}`);
       console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCompleteOnboarding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      await axios.post(`${apiURL}/api/users/update-password`, {
+        user_id: onboardingUser.id,
+        new_password: newPassword
+      });
+      
+      // Re-login or just navigate
+      if (onboardingUser.role === 'CANDIDATO') navigate('/comando');
+      else navigate('/coordinador');
+    } catch (err) {
+      setError('Error al actualizar contraseña.');
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +153,58 @@ const Login = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Modal de Onboarding / Cambio de Contraseña */}
+      {showOnboarding && (
+        <div className="modal-overlay">
+          <motion.div 
+            className="modal-content"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{ maxWidth: '400px', width: '90%', padding: '2rem' }}
+          >
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>Bienvenido, {onboardingUser.nombre}</h2>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              Por seguridad, debes configurar una nueva contraseña para tu primera entrada.
+            </p>
+            
+            <form onSubmit={handleCompleteOnboarding} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Nueva Contraseña</label>
+                <input 
+                  type="password" 
+                  className="modern-input-premium-styled"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  required
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirmar Contraseña</label>
+                <input 
+                  type="password" 
+                  className="modern-input-premium-styled"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              
+              {error && <p style={{ color: 'var(--red)', fontSize: '0.75rem', fontWeight: 600 }}>{error}</p>}
+              
+              <button 
+                type="submit" 
+                className="btn-confirm-styled"
+                style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Actualizando...' : 'Comenzar Ahora'}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

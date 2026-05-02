@@ -175,7 +175,9 @@ const applyTenantFilter = (query: string, req: express.Request, params: any[] = 
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare(`
+  
+  // 1. First check if user exists
+  let user = db.prepare(`
     SELECT u.*, c.enabled_modules, l.campaign_id
     FROM users u
     LEFT JOIN lists l ON u.assigned_list_id = l.id
@@ -183,9 +185,40 @@ app.post('/api/login', (req, res) => {
     WHERE u.username = ?
   `).get(username) as any;
   
-  console.log(`[AUTH] Intento de login: ${username}. Encontrado: ${user ? 'SI' : 'NO'}`);
-  if (user) console.log(`[AUTH] Rol: ${user.role}, Coincide clave: ${user.password === password}`);
+  // 2. If not found, check if it's a Candidate from the lists table
+  if (!user) {
+    const candidateList = db.prepare('SELECT * FROM lists WHERE candidate_ci = ?').get(username) as any;
+    if (candidateList && password === username) {
+      // Auto-create user for candidate
+      const newId = Date.now();
+      db.prepare(`
+        INSERT INTO users (id, username, password, role, nombre, assigned_list_id, photo_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        newId, 
+        username, 
+        password, // Initial password is their CI
+        'CANDIDATO', 
+        candidateList.candidate_nombre || 'Candidato',
+        candidateList.id,
+        candidateList.photo_url
+      );
+      
+      // Fetch the newly created user
+      user = db.prepare(`
+        SELECT u.*, c.enabled_modules, l.campaign_id
+        FROM users u
+        LEFT JOIN lists l ON u.assigned_list_id = l.id
+        LEFT JOIN campaigns c ON l.campaign_id = c.id
+        WHERE u.id = ?
+      `).get(newId) as any;
+      
+      if (user) user.needs_password_change = true;
+    }
+  }
 
+  console.log(`[AUTH] Intento de login: ${username}. Encontrado: ${user ? 'SI' : 'NO'}`);
+  
   if (user && user.password === password) { 
     res.json({
       id: user.id,
@@ -194,6 +227,7 @@ app.post('/api/login', (req, res) => {
       assigned_list_id: user.assigned_list_id,
       nombre: user.nombre,
       photo_url: user.photo_url,
+      needs_password_change: !!user.needs_password_change,
       enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY']
     });
   } else {
@@ -1253,6 +1287,17 @@ app.get('/api/admin/disputes/global', (req, res) => {
       HAVING list_count > 1
     `).all();
     res.json(disputes);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/users/update-password', (req, res) => {
+  const { user_id, new_password } = req.body;
+  try {
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(new_password, user_id);
+    logAction(user_id, 'UPDATE_PASSWORD', 'USER', user_id, 'User updated their password');
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
