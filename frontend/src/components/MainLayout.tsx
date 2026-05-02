@@ -57,17 +57,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           borderBottom: '1px solid rgba(255,255,255,0.03)',
           position: 'relative' // Essential for absolute centering
         }}>
-          {/* Logo - Scaled Up (Auto-scales on mobile) */}
+          {/* Logo - Scaled Up */}
           <div className="header-logo-container" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', transformOrigin: 'left' }}>
             <Logo />
           </div>
 
-          {/* Module Switcher (Left side) */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ModuleSwitcher />
-          </div>
-
-          {/* List Selector - ABSOLUTELY CENTERED */}
+          {/* List Selector - ABSOLUTELY CENTERED in Row 1 */}
           {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
             <div 
               className="hidden-mobile"
@@ -112,7 +107,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
             </div>
           )}
 
-          {/* User Profile - Enhanced Size */}
+          {/* User Profile (Right side) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
             <div className="hidden-mobile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
               <span style={{
@@ -166,26 +161,37 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
         </div>
 
-        {/* ROW 2: Module Title - Absolute Centered Focus */}
+        {/* ROW 2: Switcher | Module Title (Centered) */}
         <div style={{
-          height: '36px',
+          height: '42px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           position: 'relative',
           padding: '0 1rem',
-          background: 'rgba(0, 0, 0, 0.1)'
+          background: 'rgba(0, 0, 0, 0.15)',
+          borderTop: '1px solid rgba(255,255,255,0.02)'
         }}>
+          {/* Module Switcher - Moved to Row 2 left */}
+          <div style={{ flexShrink: 0 }}>
+            <ModuleSwitcher />
+          </div>
+
+          {/* Module Title - ABSOLUTE CENTERED in Row 2 */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
               display: 'flex',
               alignItems: 'center', gap: '0.5rem',
               padding: '0.2rem 1rem',
               background: 'rgba(59,130,246,0.12)',
               border: '1px solid rgba(59,130,246,0.2)',
               borderRadius: '9999px',
+              whiteSpace: 'nowrap'
             }}
           >
             <Shield size={12} style={{ color: 'var(--plra-300)' }} />
@@ -197,6 +203,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
               {title}
             </span>
           </motion.div>
+          
+          {/* Spacer to balance Row 2 */}
+          <div style={{ width: '40px' }} className="hidden-mobile" />
         </div>
       </header>
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}>
