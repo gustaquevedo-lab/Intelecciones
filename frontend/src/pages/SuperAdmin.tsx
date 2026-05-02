@@ -290,6 +290,8 @@ const SuperAdmin = () => {
     reader.readAsDataURL(file);
     reader.onload = () => {
       setCropperData({ image: reader.result as string, type });
+      // Reset input value to allow re-selecting same file
+      e.target.value = '';
     };
   };
 
