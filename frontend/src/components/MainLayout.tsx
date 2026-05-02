@@ -54,53 +54,63 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           height: '56px',
           padding: '0 1.25rem',
           gap: '1rem',
-          borderBottom: '1px solid rgba(255,255,255,0.03)'
+          borderBottom: '1px solid rgba(255,255,255,0.03)',
+          position: 'relative' // Essential for absolute centering
         }}>
           {/* Logo - Scaled Up (Auto-scales on mobile) */}
           <div className="header-logo-container" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', transformOrigin: 'left' }}>
             <Logo />
           </div>
 
-          {/* Module Switcher & List Selector */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, overflow: 'hidden', justifyContent: 'center' }}>
+          {/* Module Switcher (Left side) */}
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ModuleSwitcher />
-            
-            {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
-              <div className="hidden-mobile" style={{ 
+          </div>
+
+          {/* List Selector - ABSOLUTELY CENTERED */}
+          {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
+            <div 
+              className="hidden-mobile"
+              style={{ 
+                position: 'absolute',
+                left: '50%',
+                transform: 'translateX(-50%)',
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '0.4rem', 
-                background: 'rgba(59,130,246,0.08)', 
-                padding: '0.25rem 0.6rem', 
+                background: 'rgba(59,130,246,0.1)', 
+                padding: '0.3rem 0.75rem', 
                 borderRadius: '10px', 
-                border: '1px solid rgba(59,130,246,0.15)',
-                whiteSpace: 'nowrap'
-              }}>
-                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--plra-400)', textTransform: 'uppercase' }}>VISTA:</span>
-                <select 
-                  value={activeListId === null ? 'null' : activeListId}
-                  onChange={(e) => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-display)'
-                  }}
-                >
-                  <option value="null" style={{ background: '#041428' }}>🌎 GLOBAL</option>
-                  {lists.map((l: any) => (
-                    <option key={l.id} value={l.id} style={{ background: '#041428' }}>
-                      {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
+                border: '1px solid rgba(59,130,246,0.2)',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                zIndex: 10
+              }}
+            >
+              <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--plra-400)', textTransform: 'uppercase' }}>VISTA:</span>
+              <select 
+                value={activeListId === null ? 'null' : activeListId}
+                onChange={(e) => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text)',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-display)'
+                }}
+              >
+                <option value="null" style={{ background: '#041428' }}>🌎 GLOBAL</option>
+                {lists.map((l: any) => (
+                  <option key={l.id} value={l.id} style={{ background: '#041428' }}>
+                    {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* User Profile - Enhanced Size */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
