@@ -95,6 +95,47 @@ body::before {
   z-index: 0;
 }
 
+/* ============================================================
+   PREMIUM UNIFIED SCROLLBARS
+   ============================================================ */
+
+/* Width */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* Track (The background of the scrollbar) */
+::-webkit-scrollbar-track {
+  background: rgba(4, 20, 40, 0.3);
+  border-radius: 10px;
+}
+
+/* Handle (The part that moves) */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.3));
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.4), rgba(59, 130, 246, 0.6));
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+/* Handle on active */
+::-webkit-scrollbar-thumb:active {
+  background: var(--plra-300);
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.3) rgba(4, 20, 40, 0.3);
+}
+
 #root {
   position: relative;
   z-index: 1;
