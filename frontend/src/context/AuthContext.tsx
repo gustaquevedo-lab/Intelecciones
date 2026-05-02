@@ -65,9 +65,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user]);
 
     const login = async (credentials: any) => {
-    const rawApiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const apiBase = rawApiBase.replace(/\/$/, '');
-    const res = await fetch(`${apiBase}/api/login`, {
+        let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        if (!apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
+        apiBase = apiBase.replace(/\/$/, '');
+        const res = await fetch(`${apiBase}/api/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(credentials)
