@@ -34,8 +34,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const fetchSettings = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/settings`);
+      let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      if (!apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
+      apiBase = apiBase.replace(/\/$/, '');
+      const res = await axios.get(`${apiBase}/api/settings`);
       setSettings(prev => ({ ...prev, ...res.data }));
+      if (res.data.app_name) {
+        document.title = res.data.app_name;
+      }
     } catch (err) {
       console.error("Error fetching settings:", err);
     } finally {
@@ -47,9 +53,18 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchSettings();
   }, []);
 
+  useEffect(() => {
+    if (settings.app_name) {
+      document.title = settings.app_name;
+    }
+  }, [settings.app_name]);
+
   const updateSettings = async (newSettings: Partial<Settings>) => {
     try {
-      await axios.post(`${API_BASE}/settings`, newSettings);
+      let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      if (!apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
+      apiBase = apiBase.replace(/\/$/, '');
+      await axios.post(`${apiBase}/api/settings`, newSettings);
       setSettings(prev => ({ ...prev, ...newSettings }));
     } catch (err) {
       console.error("Error updating settings:", err);

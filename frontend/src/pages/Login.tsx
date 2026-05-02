@@ -6,6 +6,7 @@ import { PLRABackground } from '../components/PLRABackground';
 import './Login.css';
 
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -18,6 +19,7 @@ const Login = () => {
   const [onboardingUser, setOnboardingUser] = useState<any>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { settings } = useSettings();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +89,7 @@ const Login = () => {
         className="title-container"
       >
         <h1 className="main-title">
-          Intelecciones
+          {settings.app_name}
         </h1>
         <p className="sub-title">
           Plataforma de Inteligencia Electoral y Análisis Geoespacial.
