@@ -516,7 +516,7 @@ app.delete('/api/campaigns/:id', (req, res) => {
 
 // Lists Management
 app.post('/api/lists', (req, res) => {
-  const { campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal } = req.body;
+  const { campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias } = req.body;
   
   if (!campaign_id || !type || !list_number || !candidate_ci) {
     return res.status(400).json({ error: 'Faltan campos obligatorios para registrar la lista.' });
@@ -525,9 +525,9 @@ app.post('/api/lists', (req, res) => {
   try {
     db.transaction(() => {
       const result = db.prepare(`
-        INSERT INTO lists (campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000);
+        INSERT INTO lists (campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, candidate_nombre, candidate_alias);
 
       if (photo_url) {
         db.prepare('UPDATE electors SET photo_url = ? WHERE ci = ?').run(photo_url, candidate_ci);
@@ -544,13 +544,13 @@ app.post('/api/lists', (req, res) => {
 
 app.put('/api/lists/:id', (req, res) => {
   const { id } = req.params;
-  const { goal, photo_url, type, list_number, option_number, campaign_id } = req.body;
+  const { goal, photo_url, type, list_number, option_number, campaign_id, candidate_alias, candidate_nombre } = req.body;
   try {
     db.prepare(`
       UPDATE lists 
-      SET goal = ?, photo_url = ?, type = ?, list_number = ?, option_number = ?, campaign_id = ?
+      SET goal = ?, photo_url = ?, type = ?, list_number = ?, option_number = ?, campaign_id = ?, candidate_alias = ?, candidate_nombre = ?
       WHERE id = ?
-    `).run(goal || 1000, photo_url, type, list_number, option_number, campaign_id, id);
+    `).run(goal || 1000, photo_url, type, list_number, option_number, campaign_id, candidate_alias, candidate_nombre, id);
     
     if (photo_url) {
       const list = db.prepare('SELECT candidate_ci FROM lists WHERE id = ?').get(id) as any;

@@ -47,6 +47,8 @@ db.exec(`
     list_number TEXT,
     option_number TEXT,
     candidate_ci TEXT,
+    candidate_nombre TEXT,
+    candidate_alias TEXT,
     goal INTEGER DEFAULT 1000,
     photo_url TEXT,
     FOREIGN KEY(campaign_id) REFERENCES campaigns(id)

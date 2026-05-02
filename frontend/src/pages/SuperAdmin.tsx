@@ -239,6 +239,7 @@ const SuperAdmin = () => {
   const [newListNumber, setNewListNumber] = useState('');
   const [newListOption, setNewListOption] = useState('');
   const [newListCandidateCI, setNewListCandidateCI] = useState('');
+  const [newListAlias, setNewListAlias] = useState('');
   const [candidatePreview, setCandidatePreview] = useState<any>(null);
   const [newListGoal, setNewListGoal] = useState(1000);
   const [listPhotoUrl, setListPhotoUrl] = useState('');
@@ -367,6 +368,7 @@ const SuperAdmin = () => {
         option_number: newListOption,
         candidate_ci: newListCandidateCI,
         candidate_nombre: candidatePreview?.nombre,
+        candidate_alias: newListAlias,
         goal: newListGoal,
         photo_url: listPhotoUrl
       });
@@ -381,11 +383,13 @@ const SuperAdmin = () => {
     try {
       await api.put(`/lists/${editingList.id}`, {
         goal: newListGoal,
-        photo_url: candidatePreview?.photo_url,
+        photo_url: candidatePreview?.photo_url || listPhotoUrl,
         type: newListType,
         list_number: newListNumber,
         option_number: newListOption,
-        campaign_id: newListCampaign
+        campaign_id: newListCampaign,
+        candidate_alias: newListAlias,
+        candidate_nombre: candidatePreview?.nombre
       });
       setShowModal(null);
       setEditingList(null);
@@ -860,6 +864,7 @@ const SuperAdmin = () => {
           setNewListType('INTENDENTE');
           setNewListOption('');
           setNewListGoal(1000);
+          setNewListAlias('');
           setIsCandidateVerified(false);
           setShowModal('list');
         }}>
@@ -870,7 +875,15 @@ const SuperAdmin = () => {
         isLoading={isLoading}
         columns={[
           { header: 'Nº', accessor: 'list_number', width: '80px' },
-          { header: 'Candidato', accessor: 'candidate_nombre' },
+          { 
+            header: 'Candidato / Apodo', 
+            accessor: (l: any) => (
+              <div>
+                <div style={{ fontWeight: 800, color: 'white' }}>{l.candidate_alias || l.candidate_nombre}</div>
+                {l.candidate_alias && <div style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{l.candidate_nombre}</div>}
+              </div>
+            )
+          },
           { header: 'Campaña', accessor: 'campaign_name' },
           { header: 'Tipo', accessor: 'type' },
           { header: 'Meta', accessor: 'goal' },
@@ -882,6 +895,7 @@ const SuperAdmin = () => {
                   setEditingList(l); 
                   setNewListGoal(l.goal || 1000); 
                   setNewListCandidateCI(l.candidate_ci || '');
+                  setNewListAlias(l.candidate_alias || '');
                   setCandidatePreview({ photo_url: l.photo_url, nombre: l.candidate_nombre });
                   setNewListType(l.type);
                   setNewListNumber(l.list_number);
@@ -1654,7 +1668,7 @@ const SuperAdmin = () => {
                   <div style={{ padding: '2rem' }}>
                     <div className="form-grid">
                       
-                      {/* Row 1: Identity & Level */}
+                      {/* Row 1: Identity & Alias */}
                       <div className="form-group">
                         <label>Documento de Identidad</label>
                         <div className="search-input-wrapper-premium">
@@ -1672,6 +1686,16 @@ const SuperAdmin = () => {
                       </div>
 
                       <div className="form-group">
+                        <label>Nombre de Campaña / Apodo</label>
+                        <input 
+                          className="modern-input-premium-styled" 
+                          placeholder="Ej: El León del Norte"
+                          value={newListAlias}
+                          onChange={(e) => setNewListAlias(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
                         <label>Jerarquía</label>
                         <select 
                           className="modern-input-premium-styled" 
