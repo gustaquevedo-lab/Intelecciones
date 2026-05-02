@@ -1595,12 +1595,13 @@ const SuperAdmin = () => {
                         <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                           <option value="JEFE_CAMPANA">Jefe de Campaña</option>
                           <option value="COORDINADOR">Coordinador de Campo</option>
+                          <option value="CANDIDATO">Candidato (Solo Lectura)</option>
                           <option value="SUPERUSUARIO">Súper Usuario</option>
                         </select>
                       </div>
 
                       {/* Row 3: Assignment (Conditional, Full Width) */}
-                      {newUserRole === 'COORDINADOR' && (
+                      {(newUserRole === 'COORDINADOR' || newUserRole === 'CANDIDATO') && (
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Lista Electoral Asignada</label>
                           <select className="modern-input-premium-styled" value={newUserList} onChange={e => setNewUserList(e.target.value)} required>

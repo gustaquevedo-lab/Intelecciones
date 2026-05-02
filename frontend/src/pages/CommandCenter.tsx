@@ -126,10 +126,16 @@ const RequestItem = ({ req, onResolve }: { req: any, onResolve: (status: string)
         <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{req.coordinator_name}</span>
       </div>
       {req.status === 'PENDING' ? (
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => onResolve('APPROVED')} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'var(--green)', color: 'white', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Aprobar</button>
-          <button onClick={() => onResolve('REJECTED')} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'rgba(239,68,68,0.2)', color: 'var(--red)', border: '1px solid var(--red)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Rechazar</button>
-        </div>
+        !isReadOnly ? (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={() => onResolve('APPROVED')} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'var(--green)', color: 'white', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Aprobar</button>
+            <button onClick={() => onResolve('REJECTED')} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'rgba(239,68,68,0.2)', color: 'var(--red)', border: '1px solid var(--red)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Rechazar</button>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '0.4rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', fontSize: '0.7rem', fontStyle: 'italic' }}>
+            Esperando decisión de mando
+          </div>
+        )
       ) : (
         <div style={{ textAlign: 'center', padding: '0.4rem', borderRadius: '8px', background: req.status === 'APPROVED' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: req.status === 'APPROVED' ? 'var(--green)' : 'var(--red)', fontSize: '0.7rem', fontWeight: 700 }}>
           {req.status === 'APPROVED' ? 'APROBADO' : 'RECHAZADO'}
@@ -618,7 +624,7 @@ const CommandCenter = () => {
                         <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white' }}>Solicitudes de Campo</h3>
                       </div>
                       {requests.map(req => (
-                        <RequestItem key={req.id} req={req} onResolve={(status) => handleResolveRequest(req.id, status)} />
+                        <RequestItem key={req.id} req={req} isReadOnly={authUser?.role === 'CANDIDATO'} onResolve={(status) => handleResolveRequest(req.id, status)} />
                       ))}
                     </div>
                     
@@ -633,9 +639,13 @@ const CommandCenter = () => {
                         <div key={conf.id} style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', marginBottom: '0.75rem' }}>
                           <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>{conf.nombre} {conf.apellido}</p>
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '1rem' }}>Elector captado por múltiples coordinadores de tu lista.</p>
-                          <button onClick={() => setShowResolveModal(conf)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                            Resolver Conflicto Interno
-                          </button>
+                          {authUser?.role !== 'CANDIDATO' ? (
+                            <button onClick={() => setShowResolveModal(conf)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
+                              Resolver Conflicto Interno
+                            </button>
+                          ) : (
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontStyle: 'italic' }}>En revisión por comando...</div>
+                          )}
                         </div>
                       ))}
                     </div>
