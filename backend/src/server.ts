@@ -490,11 +490,11 @@ app.get('/api/campaigns', (req, res) => {
 });
 
 app.post('/api/campaigns', (req, res) => {
-  const { name, enabled_modules } = req.body;
+  const { name, status, slogan, photo_url, enabled_modules } = req.body;
   try {
-    const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : 'COMMAND_CENTER,REGISTRY';
-    const result = db.prepare('INSERT INTO campaigns (name, enabled_modules) VALUES (?, ?)').run(name, modulesStr);
-    res.json({ id: Number(result.lastInsertRowid), name });
+    const result = db.prepare('INSERT INTO campaigns (name, status, slogan, photo_url, enabled_modules) VALUES (?, ?, ?, ?, ?)')
+      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, enabled_modules || 'COMMAND_CENTER,REGISTRY');
+    res.json({ id: result.lastInsertRowid });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -502,16 +502,11 @@ app.post('/api/campaigns', (req, res) => {
 
 app.put('/api/campaigns/:id', (req, res) => {
   const { id } = req.params;
-  const { name, status, enabled_modules } = req.body;
+  const { name, status, slogan, photo_url, enabled_modules } = req.body;
   try {
-    if (enabled_modules !== undefined) {
-      const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : enabled_modules;
-      db.prepare('UPDATE campaigns SET name = ?, status = ?, enabled_modules = ? WHERE id = ?')
-        .run(name, status || 'ACTIVE', modulesStr, id);
-    } else {
-      db.prepare('UPDATE campaigns SET name = ?, status = ? WHERE id = ?')
-        .run(name, status || 'ACTIVE', id);
-    }
+    const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : enabled_modules;
+    db.prepare('UPDATE campaigns SET name = ?, status = ?, slogan = ?, photo_url = ?, enabled_modules = ? WHERE id = ?')
+      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr || 'COMMAND_CENTER,REGISTRY', id);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

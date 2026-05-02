@@ -37,7 +37,9 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     enabled_modules TEXT DEFAULT 'COMMAND_CENTER,REGISTRY',
-    status TEXT DEFAULT 'active'
+    status TEXT DEFAULT 'active',
+    slogan TEXT,
+    photo_url TEXT
   );
 
   CREATE TABLE IF NOT EXISTS lists (
@@ -146,6 +148,13 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
 `);
+
+try {
+  db.prepare("ALTER TABLE campaigns ADD COLUMN slogan TEXT").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE campaigns ADD COLUMN photo_url TEXT").run();
+} catch (e) {}
 
 // Migration: Add new columns if they don't exist
 try {

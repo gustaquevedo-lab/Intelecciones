@@ -217,12 +217,17 @@ const SuperAdmin = () => {
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [editingList, setEditingList] = useState<List | null>(null);
   const [newCampaignName, setNewCampaignName] = useState('');
-  const [newCampaignModules, setNewCampaignModules] = useState<string[]>(['COMMAND_CENTER', 'REGISTRY']);
+  const [newCampaignSlogan, setNewCampaignSlogan] = useState('');
+  const [newCampaignPhotoUrl, setNewCampaignPhotoUrl] = useState('');
+  const [newCampaignModules, setNewCampaignModules] = useState<string[]>(['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP']);
   const [newUserName, setNewUserName] = useState('');
   const [newVehicleDesc, setNewVehicleDesc] = useState('');
   const [newVehicleDriver, setNewVehicleDriver] = useState('');
   const [newVehiclePhone, setNewVehiclePhone] = useState('');
   const [newVehicleList, setNewVehicleList] = useState('');
+  const [takenOptions, setTakenOptions] = useState<number[]>([]);
+  const [hasIntendente, setHasIntendente] = useState(false);
+  const [intendenteListNumber, setIntendenteListNumber] = useState('');
   const [newVehicleDriverCI, setNewVehicleDriverCI] = useState('');
   const [newVehicleCapacity, setNewVehicleCapacity] = useState(4);
   const [newVehicleStatus, setNewVehicleStatus] = useState('AVAILABLE');
@@ -318,6 +323,8 @@ const SuperAdmin = () => {
         setCandidatePreview((prev: any) => ({ ...prev, photo_url: res.data.photo_url }));
       } else if (type === 'app') {
         updateSettings({ app_logo_url: res.data.photo_url });
+      } else if (type === 'campaign') {
+        setNewCampaignPhotoUrl(res.data.photo_url);
       }
     } catch (err) { console.error(err); }
   };
@@ -327,11 +334,15 @@ const SuperAdmin = () => {
     try {
       await api.post('/campaigns', { 
         name: newCampaignName,
+        slogan: newCampaignSlogan,
+        photo_url: newCampaignPhotoUrl,
         enabled_modules: newCampaignModules 
       });
       setShowModal(null);
       setNewCampaignName('');
-      setNewCampaignModules(['COMMAND_CENTER', 'REGISTRY']);
+      setNewCampaignSlogan('');
+      setNewCampaignPhotoUrl('');
+      setNewCampaignModules(['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP']);
       fetchData();
     } catch (err) { console.error(err); }
   };
@@ -342,12 +353,16 @@ const SuperAdmin = () => {
     try {
       await api.put(`/campaigns/${editingCampaign.id}`, { 
         name: newCampaignName,
+        slogan: newCampaignSlogan,
+        photo_url: newCampaignPhotoUrl,
         enabled_modules: newCampaignModules
       });
       setShowModal(null);
       setEditingCampaign(null);
       setNewCampaignName('');
-      setNewCampaignModules(['COMMAND_CENTER', 'REGISTRY']);
+      setNewCampaignSlogan('');
+      setNewCampaignPhotoUrl('');
+      setNewCampaignModules(['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP']);
       fetchData();
     } catch (err) { console.error(err); }
   };
@@ -552,12 +567,26 @@ const SuperAdmin = () => {
     }
   };
 
-  const handleAssignVehicle = async (capture_id: number, vehicle_id: string) => {
-    try {
-      await api.post('/logistics/assign', { capture_id, vehicle_id });
-      fetchData();
-    } catch (err) { console.error(err); }
-  };
+  useEffect(() => {
+    if (newListCampaign) {
+      const campaignLists = lists.filter(l => l.campaign_id?.toString() === newListCampaign.toString());
+      const intendant = campaignLists.find(l => l.type === 'INTENDENTE');
+      setHasIntendente(!!intendant);
+      if (intendant) setIntendenteListNumber(intendant.list_number);
+      else setIntendenteListNumber('');
+      
+      const options = campaignLists
+        .filter(l => l.type === 'CONCEJAL')
+        .map(l => parseInt(l.option_number || '0'))
+        .filter(n => n > 0);
+      setTakenOptions(options);
+
+      // Auto-assign list number if it's a council member and intendant exists
+      if (newListType === 'CONCEJAL' && intendant && !editingList) {
+        setNewListNumber(intendant.list_number);
+      }
+    }
+  }, [newListCampaign, newListType, lists, editingList]);
 
   const handleCreateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -896,19 +925,51 @@ const SuperAdmin = () => {
       <ManagementTable 
         isLoading={isLoading}
         columns={[
-          { header: 'Nº', accessor: 'list_number', width: '80px' },
           { 
-            header: 'Candidato / Apodo', 
+            header: 'Lista / Opción', 
             accessor: (l: any) => (
-              <div>
-                <div style={{ fontWeight: 800, color: 'white' }}>{l.candidate_alias || l.candidate_nombre}</div>
-                {l.candidate_alias && <div style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{l.candidate_nombre}</div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontWeight: 800, color: 'var(--plra-300)', background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>L {l.list_number}</span>
+                {l.type === 'CONCEJAL' && (
+                  <span style={{ fontWeight: 700, color: 'var(--yellow)', background: 'rgba(234,179,8,0.1)', padding: '2px 6px', borderRadius: '4px' }}>Op {l.option_number}</span>
+                )}
+              </div>
+            ),
+            width: '140px'
+          },
+          { 
+            header: 'Candidato (Identidad)', 
+            accessor: (l: any) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-light)', border: '1px solid var(--border)', flexShrink: 0 }}>
+                  {l.photo_url ? <img src={l.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <User size={16} style={{ margin: '8px', color: 'var(--text-3)' }} />}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: 'white', fontSize: '0.85rem' }}>{l.candidate_alias || l.candidate_nombre}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>{l.candidate_nombre}</div>
+                </div>
               </div>
             )
           },
           { header: 'Campaña', accessor: 'campaign_name' },
-          { header: 'Tipo', accessor: 'type' },
-          { header: 'Meta', accessor: 'goal' },
+          { 
+            header: 'Tipo', 
+            accessor: (l: any) => (
+              <span style={{ 
+                padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800,
+                background: l.type === 'INTENDENTE' ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.05)',
+                color: l.type === 'INTENDENTE' ? 'var(--plra-300)' : 'var(--text-3)'
+              }}>
+                {l.type}
+              </span>
+            ) 
+          },
+          { 
+            header: 'Meta', 
+            accessor: (l: any) => (
+              <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: '0.85rem' }}>{l.goal} <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>votos</span></div>
+            )
+          },
           {
             header: 'Acciones',
             accessor: (l: any) => (
@@ -1422,6 +1483,23 @@ const SuperAdmin = () => {
                     <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Ej: Municipales 2026" required />
                   </div>
                   <div className="form-group">
+                    <label>Eslogan</label>
+                    <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} placeholder="Ej: Por un cambio real" />
+                  </div>
+                  <div className="form-group">
+                    <label>Imagen Splash</label>
+                    <div className="search-input-wrapper-premium">
+                      <input className="modern-input-premium-styled" value={newCampaignPhotoUrl} onChange={e => setNewCampaignPhotoUrl(e.target.value)} placeholder="URL o subir archivo..." />
+                      <button type="button" onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e: any) => handleFileUpload(e, 'campaign');
+                        input.click();
+                      }} className="search-btn-action">SUBIR</button>
+                    </div>
+                  </div>
+                  <div className="form-group">
                     <label style={{ display: 'block', marginBottom: '1rem', color: 'var(--plra-300)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Módulos Habilitados (SaaS)</label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                       {[
@@ -1462,6 +1540,17 @@ const SuperAdmin = () => {
                   <div className="form-group">
                     <label>Nombre de la Campaña</label>
                     <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Eslogan</label>
+                    <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label>Imagen (URL)</label>
+                    <div className="search-input-wrapper-premium">
+                      <input className="modern-input-premium-styled" value={newCampaignPhotoUrl} onChange={e => setNewCampaignPhotoUrl(e.target.value)} />
+                      <button type="button" onClick={() => fileInputRef.current?.click()} className="search-btn-action">SUBIR</button>
+                    </div>
                   </div>
                   <div className="form-group">
                     <label style={{ display: 'block', marginBottom: '1rem', color: 'var(--plra-300)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Módulos Habilitados (SaaS)</label>
@@ -1728,7 +1817,7 @@ const SuperAdmin = () => {
                           value={newListType} 
                           onChange={e => setNewListType(e.target.value)}
                         >
-                          <option value="INTENDENTE">Intendente</option>
+                          <option value="INTENDENTE" disabled={hasIntendente && !editingList}>Intendente {hasIntendente && !editingList ? '(Ya registrado)' : ''}</option>
                           <option value="CONCEJAL">Concejal</option>
                         </select>
                       </div>
@@ -1759,19 +1848,42 @@ const SuperAdmin = () => {
                         />
                       </div>
 
-                      <div className="form-group">
-                        <label>{newListType === 'CONCEJAL' ? 'Opción / Posición' : 'Restricción'}</label>
-                        <input 
-                          className="modern-input-premium-styled" 
-                          style={{ 
-                            opacity: newListType === 'CONCEJAL' ? 1 : 0.5,
-                            background: newListType === 'CONCEJAL' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.1)'
-                          }}
-                          value={newListOption} 
-                          onChange={e => setNewListOption(e.target.value)} 
-                          placeholder={newListType === 'CONCEJAL' ? 'Número de Opción' : 'N/A para Intendente'}
-                          disabled={newListType !== 'CONCEJAL'}
-                        />
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>{newListType === 'CONCEJAL' ? 'Número de Opción (Posición)' : 'Información Adicional'}</label>
+                        {newListType === 'CONCEJAL' ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(opt => {
+                              const isTaken = takenOptions.includes(opt) && (editingList?.option_number !== opt.toString());
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => setNewListOption(opt.toString())}
+                                  disabled={isTaken}
+                                  style={{
+                                    padding: '0.5rem 0.75rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border)',
+                                    background: newListOption === opt.toString() ? 'var(--plra-500)' : isTaken ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
+                                    color: newListOption === opt.toString() ? 'white' : isTaken ? 'var(--red)' : 'var(--text-2)',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    cursor: isTaken ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s',
+                                    opacity: isTaken ? 0.5 : 1,
+                                    minWidth: '40px'
+                                  }}
+                                >
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                            {hasIntendente && !editingList ? 'Ya existe un Intendente en esta campaña.' : 'Candidatura única para Intendencia.'}
+                          </div>
+                        )}
                       </div>
 
                       <div className="form-group" style={{ gridColumn: 'span 2' }}>
