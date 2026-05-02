@@ -44,18 +44,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: '64px',
-        padding: '0 1.25rem',
-        background: 'rgba(4, 20, 40, 0.88)',
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(59,130,246,0.12)',
-        boxShadow: '0 1px 0 rgba(59,130,246,0.06)',
-        gap: '1rem',
+        height: '52px',
+        padding: '0 1rem',
+        background: 'rgba(4, 20, 40, 0.92)',
+        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        borderBottom: '1px solid rgba(59,130,246,0.15)',
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)',
+        gap: '0.75rem',
         overflow: 'hidden'
       }}>
 
         {/* Col 1: Logo */}
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', transform: 'scale(0.85)', transformOrigin: 'left' }}>
           <Logo />
         </div>
 
@@ -82,7 +82,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                 <option value="null" style={{ background: '#041428' }}>🌎 VISTA GLOBAL</option>
                 {lists.map((l: any) => (
                   <option key={l.id} value={l.id} style={{ background: '#041428' }}>
-                    🚩 LISTA {l.list_number} - {l.campaign_name}
+                    🔷 {l.list_number} — {l.campaign_name}
                   </option>
                 ))}
               </select>
@@ -125,22 +125,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           {/* Name + role */}
           <div className="hidden sm:flex" style={{ flexDirection: 'column', alignItems: 'flex-end', minWidth: 0 }}>
             <span style={{
-              fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)',
+              fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)',
               fontFamily: 'var(--font-display)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               maxWidth: '120px',
+              lineHeight: 1
             }}>
               {userName}
             </span>
             <span style={{
-              fontSize: '0.58rem', fontWeight: 600, color: 'var(--text-3)',
-              textTransform: 'uppercase', letterSpacing: '0.1em',
-              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              fontSize: '0.5rem', fontWeight: 700, color: 'var(--plra-300)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+              display: 'flex', alignItems: 'center', gap: '0.25rem',
+              marginTop: '0.1rem'
             }}>
               <span style={{
-                width: '5px', height: '5px', borderRadius: '50%',
+                width: '4px', height: '4px', borderRadius: '50%',
                 background: 'var(--green)', display: 'inline-block',
-                animation: 'pulse-dot 2s infinite', flexShrink: 0,
+                flexShrink: 0,
               }} />
               {currentRoleLabel}
             </span>
