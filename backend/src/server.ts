@@ -550,7 +550,17 @@ app.put('/api/lists/:id', (req, res) => {
       UPDATE lists 
       SET goal = ?, photo_url = ?, type = ?, list_number = ?, option_number = ?, campaign_id = ?, candidate_alias = ?, candidate_nombre = ?
       WHERE id = ?
-    `).run(goal || 1000, photo_url, type, list_number, option_number, campaign_id, candidate_alias, candidate_nombre, id);
+    `).run(
+      goal || 1000, 
+      photo_url || null, 
+      type || 'INTENDENTE', 
+      list_number || '', 
+      option_number || null, 
+      campaign_id || null, 
+      candidate_alias || null, 
+      candidate_nombre || null, 
+      id
+    );
     
     if (photo_url) {
       const list = db.prepare('SELECT candidate_ci FROM lists WHERE id = ?').get(id) as any;

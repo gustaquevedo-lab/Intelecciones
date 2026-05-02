@@ -147,6 +147,14 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
 `);
 
+// Migration: Add new columns if they don't exist
+try {
+  db.prepare("ALTER TABLE lists ADD COLUMN candidate_nombre TEXT").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE lists ADD COLUMN candidate_alias TEXT").run();
+} catch (e) {}
+
 /* Ensure default Super Admin exists */
 db.prepare(`
   INSERT OR REPLACE INTO users (id, username, password, role, nombre) 
