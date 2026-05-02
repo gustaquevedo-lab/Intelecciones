@@ -41,6 +41,7 @@ import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { ManagementTable } from '../components/ManagementTable';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -242,6 +243,7 @@ const SuperAdmin = () => {
   const [newListGoal, setNewListGoal] = useState(1000);
   const [listPhotoUrl, setListPhotoUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropperData, setCropperData] = useState<{ image: string, type: 'user' | 'list' | 'app' } | null>(null);
 
   const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
     return new Promise((resolve) => {
@@ -283,10 +285,21 @@ const SuperAdmin = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      setCropperData({ image: reader.result as string, type });
+    };
+  };
+
+  const onCropComplete = async (croppedBlob: Blob) => {
+    if (!cropperData) return;
+    const type = cropperData.type;
+    setCropperData(null);
+
     try {
-      const resizedBlob = await resizeImage(file, 400, 400);
       const formData = new FormData();
-      formData.append('photo', resizedBlob, 'photo.jpg');
+      formData.append('photo', croppedBlob, 'photo.jpg');
 
       const res = await api.post('/upload-photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -1793,8 +1806,15 @@ const SuperAdmin = () => {
           </div>
         )}
       </AnimatePresence>
-
-
+      <AnimatePresence>
+        {cropperData && (
+          <ImageCropperModal 
+            image={cropperData.image} 
+            onCropComplete={onCropComplete} 
+            onCancel={() => setCropperData(null)} 
+          />
+        )}
+      </AnimatePresence>
     </MainLayout>
   );
 };
