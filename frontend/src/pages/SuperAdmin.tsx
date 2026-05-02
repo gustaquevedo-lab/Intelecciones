@@ -867,8 +867,8 @@ const SuperAdmin = () => {
       <ManagementTable 
         isLoading={isLoading}
         columns={[
-          { header: 'ID', accessor: 'id', width: '80px' },
-          { header: 'Nombre', accessor: 'name' },
+          { header: 'ID', accessor: 'id', width: '80px', sortKey: 'id' },
+          { header: 'Nombre', accessor: 'name', sortKey: 'name' },
           { 
             header: 'Estado', 
             accessor: (c: Campaign) => (
@@ -935,6 +935,7 @@ const SuperAdmin = () => {
                 )}
               </div>
             ),
+            sortKey: 'list_number',
             width: '140px'
           },
           { 
@@ -949,9 +950,10 @@ const SuperAdmin = () => {
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>{l.candidate_nombre}</div>
                 </div>
               </div>
-            )
+            ),
+            sortKey: 'candidate_alias'
           },
-          { header: 'Campaña', accessor: 'campaign_name' },
+          { header: 'Campaña', accessor: 'campaign_name', sortKey: 'campaign_name' },
           { 
             header: 'Tipo', 
             accessor: (l: any) => (
@@ -962,13 +964,15 @@ const SuperAdmin = () => {
               }}>
                 {l.type}
               </span>
-            ) 
+            ),
+            sortKey: 'type'
           },
           { 
             header: 'Meta', 
             accessor: (l: any) => (
               <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: '0.85rem' }}>{l.goal} <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>votos</span></div>
-            )
+            ),
+            sortKey: 'goal'
           },
           {
             header: 'Acciones',
@@ -1042,10 +1046,10 @@ const SuperAdmin = () => {
       <ManagementTable 
         isLoading={isLoading}
         columns={[
-          { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString() },
-          { header: 'Usuario', accessor: 'username' },
-          { header: 'Acción', accessor: 'action' },
-          { header: 'Detalles', accessor: 'details' }
+          { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp' },
+          { header: 'Usuario', accessor: 'username', sortKey: 'username' },
+          { header: 'Acción', accessor: 'action', sortKey: 'action' },
+          { header: 'Detalles', accessor: 'details', sortKey: 'details' }
         ]}
         data={auditLogs}
       />
@@ -1269,8 +1273,8 @@ const SuperAdmin = () => {
       <ManagementTable 
         isLoading={isLoading}
         columns={[
-          { header: 'Nombre', accessor: 'nombre' },
-          { header: 'Usuario', accessor: 'username' },
+          { header: 'Nombre', accessor: 'nombre', sortKey: 'nombre' },
+          { header: 'Usuario', accessor: 'username', sortKey: 'username' },
           { 
             header: 'Rol', 
             accessor: (u: any) => (
@@ -1281,9 +1285,25 @@ const SuperAdmin = () => {
               }}>
                 {u.role}
               </span>
-            )
+            ),
+            sortKey: 'role'
           },
-          { header: 'Lista Asignada', accessor: 'list_number' },
+          { 
+            header: 'Lista Asignada', 
+            accessor: (u: any) => {
+              if (!u.assigned_list_id) return <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Sin asignar</span>;
+              const list = lists.find(l => l.id === u.assigned_list_id);
+              if (!list) return <span style={{ color: 'var(--red)' }}>ID: {u.assigned_list_id}</span>;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontWeight: 800, color: 'var(--plra-300)' }}>L{list.list_number}</span>
+                  {list.type === 'CONCEJAL' && <span style={{ color: 'var(--yellow)', fontSize: '0.7rem' }}>Op{list.option_number}</span>}
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-2)' }}>— {list.candidate_alias || list.candidate_nombre}</span>
+                </div>
+              );
+            },
+            sortKey: 'list_number'
+          },
           {
             header: 'Acciones',
             accessor: (u: any) => (
@@ -1698,7 +1718,9 @@ const SuperAdmin = () => {
                           <select className="modern-input-premium-styled" value={newUserList} onChange={e => setNewUserList(e.target.value)} required>
                             <option value="">Seleccione la lista para este coordinador...</option>
                             {lists.map(l => (
-                              <option key={l.id} value={l.id}>Lista {l.list_number} — {l.candidate_nombre}</option>
+                              <option key={l.id} value={l.id}>
+                                {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
+                              </option>
                             ))}
                           </select>
                         </div>
