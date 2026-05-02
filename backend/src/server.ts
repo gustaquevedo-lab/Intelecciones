@@ -1225,6 +1225,6 @@ app.get('/api/admin/disputes/global', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

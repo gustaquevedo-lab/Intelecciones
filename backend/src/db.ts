@@ -1,11 +1,17 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 
-// Use path relative to /app/data for Railway persistence
-const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/app/data/intellecciones.db' 
-  : path.join(process.cwd(), 'intellecciones.db');
+import fs from 'fs';
 
+// Use path relative to /app/data for Railway persistence
+const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
+const dbPath = path.join(dbDir, 'intellecciones.db');
+
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+console.log("Initializing database at:", dbPath);
 const db = new Database(dbPath);
 
 // Initialize Tables
