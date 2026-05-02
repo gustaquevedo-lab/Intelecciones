@@ -6,6 +6,16 @@ import fs from 'fs';
 const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
 const dbPath = path.join(dbDir, 'intellecciones.db');
 
+// Migration: If we are in production and the volume DB doesn't exist, 
+// copy the "seeded" DB from the app root (if it exists)
+if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
+  const seedDbPath = path.join(process.cwd(), 'intellecciones.db');
+  if (fs.existsSync(seedDbPath)) {
+    console.log("MIGRATION: Copying seeded database to volume...");
+    fs.copyFileSync(seedDbPath, dbPath);
+  }
+}
+
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
