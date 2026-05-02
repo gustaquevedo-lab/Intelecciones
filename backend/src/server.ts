@@ -141,9 +141,7 @@ app.post('/api/ingest', (req, res) => {
 
 // --- Multi-tenancy Helpers ---
 const getListId = (req: express.Request) => {
-  // In a real app, this would come from a JWT or session
-  // For now, we'll expect it in the headers or body, but ideally inferred from the authenticated user
-  return parseInt(req.headers['x-list-id'] as string) || null;
+  return parseInt(req.headers['x-list-id'] as string) || parseInt(req.query.listId as string) || null;
 };
 
 const getRole = (req: express.Request) => {
@@ -635,12 +633,23 @@ app.put('/api/captures/:id', (req, res) => {
 });
 
 app.get('/api/captures', (req, res) => {
+  const list_id = getListId(req);
+  const local_id = req.query.localId as string;
+  const role = getRole(req);
+  const isSuper = role === 'SUPERUSUARIO';
+
   try {
+    const listFilter = isSuper || !list_id ? '' : `AND ec.list_id = ${list_id}`;
+    const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
+
     const captures = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.username as coordinator_name
+      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.username as coordinator_name, l.list_number, c.name as campaign_name
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      WHERE 1=1 ${listFilter} ${localFilter}
       ORDER BY ec.timestamp DESC
     `).all();
     res.json(captures);
@@ -1084,22 +1093,38 @@ app.get('/api/admin/electors/search', (req, res) => {
 
 app.get('/api/stats/command', (req, res) => {
   const list_id = getListId(req);
+  const local_id = req.query.localId as string;
   const role = getRole(req);
   const isSuper = role === 'SUPERUSUARIO';
 
   try {
-    const statsQuery = isSuper || !list_id
-      ? `SELECT traffic_light, COUNT(*) as count FROM elector_captures WHERE is_disputed = 0 GROUP BY traffic_light`
-      : `SELECT traffic_light, COUNT(*) as count FROM elector_captures WHERE is_disputed = 0 AND list_id = ${list_id} GROUP BY traffic_light`;
+    const listFilter = isSuper || !list_id ? '' : `AND ec.list_id = ${list_id}`;
+    const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
+
+    const statsQuery = `
+      SELECT traffic_light, COUNT(*) as count 
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter}
+      GROUP BY traffic_light
+    `;
     
     const stats = db.prepare(statsQuery).all() as any[];
 
-    const totalCapturesQuery = isSuper || !list_id
-      ? `SELECT COUNT(*) as count FROM elector_captures WHERE is_disputed = 0`
-      : `SELECT COUNT(*) as count FROM elector_captures WHERE is_disputed = 0 AND list_id = ${list_id}`;
+    const totalCapturesQuery = `
+      SELECT COUNT(*) as count 
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter}
+    `;
     
     const totalCaptures = db.prepare(totalCapturesQuery).get() as any;
-    const totalElectors = db.prepare('SELECT COUNT(*) as count FROM electors').get() as any;
+    
+    const totalElectorsQuery = `
+      SELECT COUNT(*) as count FROM electors e 
+      WHERE 1=1 ${local_id ? `AND e.cod_local = '${local_id}'` : ''}
+    `;
+    const totalElectors = db.prepare(totalElectorsQuery).get() as any;
 
     const locationStatsQuery = `
       SELECT 
@@ -1116,30 +1141,17 @@ app.get('/api/stats/command', (req, res) => {
     
     const locationStats = db.prepare(locationStatsQuery).all() as any[];
 
-    const topCoordinatorsQuery = `
-      SELECT u.id, u.nombre, COUNT(c.id) as capture_count
-      FROM users u
-      JOIN captures c ON u.id = c.coordinator_id
-      ${isSuper || !list_id ? '' : `WHERE u.assigned_list_id = ${list_id}`}
-      GROUP BY u.id
-      ORDER BY capture_count DESC
-      LIMIT 5
-    `;
-    
-    const topCoordinators = db.prepare(topCoordinatorsQuery).all();
-
     res.json({
       green: stats.find(s => s.traffic_light === 'GREEN')?.count || 0,
       yellow: stats.find(s => s.traffic_light === 'YELLOW')?.count || 0,
       red: stats.find(s => s.traffic_light === 'RED')?.count || 0,
       total_captures: totalCaptures.count,
       total_electors: totalElectors.count,
-      percentage: ((totalCaptures.count / totalElectors.count) * 100).toFixed(1),
+      percentage: totalElectors.count > 0 ? ((totalCaptures.count / totalElectors.count) * 100).toFixed(1) : 0,
       locations: locationStats.map(loc => ({
         ...loc,
         percentage: loc.total_electors > 0 ? ((loc.total_captures / loc.total_electors) * 100).toFixed(1) : 0
-      })),
-      top_coordinators: topCoordinators
+      }))
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

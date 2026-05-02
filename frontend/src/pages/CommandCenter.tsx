@@ -339,8 +339,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve }: { stats: an
 };
 
 const CommandCenter = () => {
-  const { user: authUser, loading } = useAuth();
-  const activeListId = localStorage.getItem('active_list_id') === 'null' ? null : localStorage.getItem('active_list_id');
+  const { user: authUser, loading, activeListId } = useAuth();
   const navigate = useNavigate();
   const [locales, setLocales] = useState<any[]>([]);
   const [captures, setCaptures] = useState<any[]>([]);
@@ -355,13 +354,18 @@ const CommandCenter = () => {
   const [activeTab, setActiveTab] = useState('map');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
+      const params = new URLSearchParams();
+      if (activeListId) params.append('listId', activeListId.toString());
+      if (selectedLocal) params.append('localId', selectedLocal);
+
       const [locRes, statRes, capRes, confRes, reqRes, actRes, vehRes] = await Promise.all([
         api.get('/voting-locations'),
-        api.get('/stats/command'),
-        api.get('/captures'),
+        api.get(`/stats/command?${params.toString()}`),
+        api.get(`/captures?${params.toString()}`),
         api.get('/admin/conflicts'),
         api.get('/admin/requests'),
         api.get('/admin/activity'),
@@ -436,6 +440,14 @@ const CommandCenter = () => {
     (window as any).handleStrategicSearch = handleSearch;
   }, []);
 
+  const handleLocalClick = (localId: string) => {
+    setSelectedLocal(localId);
+  };
+
+  const clearLocalFilter = () => {
+    setSelectedLocal(null);
+  };
+
   useEffect(() => {
     if (!loading && !authUser) navigate('/login');
   }, [authUser, loading, navigate]);
@@ -443,7 +455,11 @@ const CommandCenter = () => {
   if (loading) return null;
 
   return (
-    <MainLayout title="Comando Central" userName={authUser?.nombre || "Director"}>
+    <MainLayout 
+      title="Comando Central" 
+      userName={authUser?.nombre || "Director"} 
+      userPhoto={authUser?.photo_url}
+    >
       <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '2rem', alignItems: 'center', background: 'rgba(255,255,255,0.01)' }}>
         <div 
           onClick={() => setActiveTab('map')}
@@ -509,6 +525,30 @@ const CommandCenter = () => {
                 >
                   <Radio size={14} /> Logística: {showVehicles ? 'ON' : 'OFF'}
                 </button>
+
+                {selectedLocal && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    style={{ 
+                      padding: '0.6rem 1rem', borderRadius: '10px', 
+                      background: 'rgba(59,130,246,0.15)', 
+                      color: 'var(--plra-200)',
+                      border: '1px solid var(--plra-300)', fontSize: '0.7rem', fontWeight: 800,
+                      display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      backdropFilter: 'blur(8px)'
+                    }}
+                  >
+                    <MapPin size={14} /> FILTRO: {locales.find(l => l.cod_local === selectedLocal)?.nombre}
+                    <button 
+                      onClick={clearLocalFilter}
+                      style={{ background: 'var(--plra-500)', border: 'none', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800 }}
+                    >
+                      LIMPIAR
+                    </button>
+                  </motion.div>
+                )}
               </div>
 
               <MapContainer center={[-22.5422, -55.7336]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
@@ -517,13 +557,28 @@ const CommandCenter = () => {
                 {locales.map((l: any) => {
                   const locStat = commandStats?.locations?.find((s: any) => s.cod_local === l.cod_local);
                   const color = locStat?.percentage > 70 ? 'var(--green)' : locStat?.percentage > 30 ? 'var(--yellow)' : 'var(--red)';
+                  const isSelected = selectedLocal === l.cod_local;
+                  
                   return (
-                    <Marker key={l.cod_local} position={[l.lat, l.lng]} icon={createCustomIcon(color, l.icon)}>
+                    <Marker 
+                      key={l.cod_local} 
+                      position={[l.lat, l.lng]} 
+                      icon={createCustomIcon(isSelected ? 'white' : color, l.icon, isSelected)}
+                      eventHandlers={{
+                        click: () => handleLocalClick(l.cod_local)
+                      }}
+                    >
                       <Popup>
                         <div style={{ padding: '0.5rem' }}>
                           <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.25rem' }}>{l.nombre}</p>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Progreso: <strong>{locStat?.percentage || 0}%</strong></p>
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{locStat?.total_captures || 0} / {locStat?.total_electors || 0} captados</p>
+                          <button 
+                            onClick={() => handleLocalClick(l.cod_local)}
+                            style={{ width: '100%', marginTop: '0.5rem', padding: '0.3rem', borderRadius: '4px', background: 'var(--plra-500)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Filtrar este local
+                          </button>
                         </div>
                       </Popup>
                     </Marker>
