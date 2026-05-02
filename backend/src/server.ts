@@ -434,7 +434,7 @@ app.post('/api/campaigns', (req, res) => {
   try {
     const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : 'COMMAND_CENTER,REGISTRY';
     const result = db.prepare('INSERT INTO campaigns (name, enabled_modules) VALUES (?, ?)').run(name, modulesStr);
-    res.json({ id: result.lastInsertRowid, name });
+    res.json({ id: Number(result.lastInsertRowid), name });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -620,8 +620,8 @@ app.post('/api/users', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(username, password, role, assigned_list_id, nombre, photo_url);
     
-    logAction(1, 'CREATE', 'USER', result.lastInsertRowid, `Created user ${username} with role ${role}`);
-    res.json({ id: result.lastInsertRowid });
+    logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${username} with role ${role}`);
+    res.json({ id: Number(result.lastInsertRowid) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -907,7 +907,7 @@ app.post('/api/vehicles', (req, res) => {
       INSERT INTO vehicles (description, driver_name, driver_phone, assigned_user_id, driver_ci, capacity, status, type, plate)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(description, driver_name, driver_phone, assigned_user_id || null, driver_ci, capacity || 4, status || 'AVAILABLE', type, plate);
-    res.json({ id: result.lastInsertRowid });
+    res.json({ id: Number(result.lastInsertRowid) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1127,8 +1127,8 @@ app.post('/api/coordinator/request', (req, res) => {
       VALUES (?, ?, ?, ?)
     `).run(coordinator_id, type, description, priority || 'NORMAL');
     
-    logAction(coordinator_id, 'CREATE_REQUEST', 'FIELD_REQUEST', result.lastInsertRowid, `New ${type} request from field`);
-    res.json({ success: true, id: result.lastInsertRowid });
+    logAction(coordinator_id, 'CREATE_REQUEST', 'FIELD_REQUEST', Number(result.lastInsertRowid), `New ${type} request from field`);
+    res.json({ success: true, id: Number(result.lastInsertRowid) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

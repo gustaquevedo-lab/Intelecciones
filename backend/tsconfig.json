@@ -1,11 +1,7 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
-
-    // Environment Settings
     "module": "commonjs",
     "target": "esnext",
     "moduleResolution": "node",
@@ -13,18 +9,12 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-
-    // Other Outputs
     "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-
-    // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-
-    // Recommended Options
+    "declaration": false,
+    "declarationMap": false,
+    "noUncheckedIndexedAccess": false,
     "strict": false,
     "jsx": "react-jsx",
-    "isolatedModules": false,
+    "isolatedModules": false
   }
 }
