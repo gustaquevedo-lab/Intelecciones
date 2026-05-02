@@ -380,8 +380,20 @@ const SuperAdmin = () => {
   const handleUpdateList = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingList) return;
+    console.log("Updating list with data:", {
+      id: editingList.id,
+      goal: newListGoal,
+      photo_url: candidatePreview?.photo_url || listPhotoUrl,
+      type: newListType,
+      list_number: newListNumber,
+      option_number: newListOption,
+      campaign_id: newListCampaign,
+      candidate_alias: newListAlias,
+      candidate_nombre: candidatePreview?.nombre
+    });
+
     try {
-      await api.put(`/lists/${editingList.id}`, {
+      const res = await api.put(`/lists/${editingList.id}`, {
         goal: newListGoal,
         photo_url: candidatePreview?.photo_url || listPhotoUrl,
         type: newListType,
@@ -391,10 +403,18 @@ const SuperAdmin = () => {
         candidate_alias: newListAlias,
         candidate_nombre: candidatePreview?.nombre
       });
-      setShowModal(null);
-      setEditingList(null);
-      fetchData();
-    } catch (err) { console.error(err); }
+      
+      if (res.data.success) {
+        setShowModal(null);
+        setEditingList(null);
+        fetchData();
+      } else {
+        alert("Error al actualizar: " + (res.data.error || "Desconocido"));
+      }
+    } catch (err: any) { 
+      console.error("Update failed:", err);
+      alert("Error de conexión al actualizar la lista.");
+    }
   };
 
   const handleDeleteList = async (id: number) => {
@@ -896,7 +916,11 @@ const SuperAdmin = () => {
                   setNewListGoal(l.goal || 1000); 
                   setNewListCandidateCI(l.candidate_ci || '');
                   setNewListAlias(l.candidate_alias || '');
-                  setCandidatePreview({ photo_url: l.photo_url, nombre: l.candidate_nombre });
+                  setCandidatePreview({ 
+                    photo_url: l.photo_url, 
+                    nombre: l.candidate_nombre,
+                    apellido: l.candidate_apellido
+                  });
                   setNewListType(l.type);
                   setNewListNumber(l.list_number);
                   setNewListOption(l.option_number || '');
