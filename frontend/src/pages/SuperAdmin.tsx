@@ -1576,52 +1576,64 @@ const SuperAdmin = () => {
 
               {showModal === 'list' && (
                 <form onSubmit={editingList ? handleUpdateList : handleCreateList} style={{ maxWidth: '600px', width: '100%', padding: 0 }}>
+                  <style>{`
+                    .premium-avatar-container-main { position: relative; cursor: pointer; transition: transform 0.2s; }
+                    .premium-avatar-container-main:hover { transform: scale(1.02); }
+                    .premium-avatar-frame-v2 { width: 100px; height: 100px; border-radius: 24px; background: rgba(255,255,255,0.03); border: 2px solid var(--border-mid); overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+                    .premium-avatar-frame-v2 img { width: 100%; height: 100%; object-fit: cover; }
+                    .avatar-edit-badge { position: absolute; bottom: -4px; right: -4px; width: 32px; height: 32px; background: var(--plra-500); border: 3px solid #0a0e17; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 2; }
+                    .verified-status-tag { display: flex; align-items: center; gap: 4px; background: rgba(34,197,94,0.15); color: #4ade80; padding: 2px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: 900; letter-spacing: 0.05em; }
+                  `}</style>
                   {/* Header: Candidate Identity with precise alignment */}
                   <div style={{ 
-                    padding: '2rem', 
+                    padding: '2.5rem 2.5rem 1.5rem', 
+                    background: 'linear-gradient(to bottom, rgba(37,99,235,0.08), transparent)',
                     borderBottom: '1px solid var(--border)',
-                    background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)',
-                    display: 'flex', alignItems: 'center', gap: '1.5rem'
+                    display: 'flex', alignItems: 'center', gap: '1.75rem' 
                   }}>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      style={{ display: 'none' }} 
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'list')}
-                    />
-                    <div 
-                      className="premium-avatar-frame-compact" 
-                      style={{ flexShrink: 0, cursor: 'pointer', position: 'relative' }}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {candidatePreview?.photo_url ? (
-                        <img src={candidatePreview.photo_url} alt="Candidato" />
-                      ) : (
-                        <User size={32} style={{ color: 'var(--text-3)' }} />
-                      )}
-                      <div className="avatar-edit-overlay">
-                        <Camera size={14} />
+                    <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
+                    <div className="premium-avatar-container-main" onClick={() => fileInputRef.current?.click()}>
+                      <div className="premium-avatar-frame-v2">
+                        {candidatePreview?.photo_url ? (
+                          <img src={candidatePreview.photo_url} alt="Candidato" />
+                        ) : (
+                          <User size={40} style={{ color: 'var(--text-3)' }} />
+                        )}
+                        <div className="avatar-edit-badge">
+                          <Camera size={14} />
+                        </div>
                       </div>
                     </div>
+
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ 
-                        fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', 
-                        letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.25rem' 
-                      }}>
-                        Perfil del Candidato
-                      </div>
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Sin Verificar'}
-                      </h3>
-                      {candidatePreview?.nombre && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-                          <span className="verified-badge-compact" style={{ width: '20px', height: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                        <span style={{ 
+                          fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-300)', 
+                          letterSpacing: '0.15em', textTransform: 'uppercase',
+                          background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '4px'
+                        }}>
+                          Perfil del Candidato
+                        </span>
+                        {candidatePreview?.nombre && (
+                          <div className="verified-status-tag">
                             <ShieldCheck size={12} />
-                          </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>C.I. Nº {newListCandidateCI}</span>
+                            <span>VERIFICADO</span>
+                          </div>
+                        )}
+                      </div>
+                      <h2 style={{ 
+                        margin: 0, fontSize: '1.8rem', fontWeight: 800, color: 'white',
+                        fontFamily: 'var(--font-display)', letterSpacing: '-0.02em',
+                        lineHeight: 1.1
+                      }}>
+                        {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Esperando Verificación'}
+                      </h2>
+                      <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ opacity: 0.5 }}>C.I. Nº</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>{newListCandidateCI || '---'}</span>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
 
