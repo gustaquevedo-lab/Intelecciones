@@ -161,51 +161,52 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
         </div>
 
-        {/* ROW 2: Switcher | Module Title (Centered) */}
+        {/* ROW 2: Navigation Unit (Switcher + Title) - Absolutely Centered */}
         <div style={{
-          height: '42px',
+          height: '46px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           position: 'relative',
           padding: '0 1rem',
           background: 'rgba(0, 0, 0, 0.15)',
           borderTop: '1px solid rgba(255,255,255,0.02)'
         }}>
-          {/* Module Switcher - Moved to Row 2 left */}
-          <div style={{ flexShrink: 0 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.25rem',
+          }}>
+            {/* Module Switcher */}
             <ModuleSwitcher />
-          </div>
 
-          {/* Module Title - ABSOLUTE CENTERED in Row 2 */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            style={{
-              position: 'absolute',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              alignItems: 'center', gap: '0.5rem',
-              padding: '0.2rem 1rem',
-              background: 'rgba(59,130,246,0.12)',
-              border: '1px solid rgba(59,130,246,0.2)',
-              borderRadius: '9999px',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <Shield size={12} style={{ color: 'var(--plra-300)' }} />
-            <span style={{
-              fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.12em',
-              textTransform: 'uppercase', color: 'white',
-              fontFamily: 'var(--font-display)',
-            }}>
-              {title}
-            </span>
-          </motion.div>
-          
-          {/* Spacer to balance Row 2 */}
-          <div style={{ width: '40px' }} className="hidden-mobile" />
+            {/* Separator Line */}
+            <div style={{ width: '1px', height: '20px', background: 'rgba(59,130,246,0.2)' }} className="hidden-mobile" />
+
+            {/* Module Title */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              style={{
+                display: 'flex',
+                alignItems: 'center', gap: '0.5rem',
+                padding: '0.25rem 1rem',
+                background: 'rgba(59,130,246,0.12)',
+                border: '1px solid rgba(59,130,246,0.2)',
+                borderRadius: '9999px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Shield size={12} style={{ color: 'var(--plra-300)' }} />
+              <span style={{
+                fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'white',
+                fontFamily: 'var(--font-display)',
+              }}>
+                {title}
+              </span>
+            </motion.div>
+          </div>
         </div>
       </header>
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}>
