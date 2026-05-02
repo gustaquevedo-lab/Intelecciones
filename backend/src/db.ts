@@ -121,7 +121,7 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
 
-  -- Create default Super Admin
+  /* Create default Super Admin */
   INSERT OR IGNORE INTO users (username, password, role, nombre) 
   VALUES ('admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
 `);
