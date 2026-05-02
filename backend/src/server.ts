@@ -91,6 +91,22 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Intellecciones Backend' });
 });
 
+app.get('/api/debug/db-info', (req, res) => {
+  const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
+  const dbPath = path.join(dbDir, 'intellecciones.db');
+  const seedPath = path.join(process.cwd(), 'intellecciones.db');
+  
+  res.json({
+    env: process.env.NODE_ENV,
+    cwd: process.cwd(),
+    dbPath,
+    dbExists: fs.existsSync(dbPath),
+    dbSize: fs.existsSync(dbPath) ? fs.statSync(dbPath).size : 0,
+    seedExists: fs.existsSync(seedPath),
+    seedSize: fs.existsSync(seedPath) ? fs.statSync(seedPath).size : 0
+  });
+});
+
 app.post('/api/ingest', (req, res) => {
   try {
     const data = req.body.electors ? req.body.electors : req.body;
