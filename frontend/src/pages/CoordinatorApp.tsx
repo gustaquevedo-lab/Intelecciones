@@ -110,7 +110,6 @@ const NumberBadge = ({ label, value }: { label: string; value: React.ReactNode }
 
 const CoordinatorApp = () => {
   const { user, loading } = useAuth();
-  const isReadOnly = user?.role === 'CANDIDATO';
   const navigate = useNavigate();
   const [ci, setCi] = useState('');
   const [elector, setElector] = useState<any>(null);
@@ -157,7 +156,7 @@ const CoordinatorApp = () => {
 
   if (loading) return null;
 
-  const isReadOnly = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+  const isReadOnly = user?.role === 'CANDIDATO' || user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
 
   useEffect(() => {
     const lookup = async () => {
