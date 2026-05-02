@@ -1,9 +1,12 @@
 # Dockerfile for Intelecciones (Monorepo)
-FROM node:18-slim
+FROM node:20-slim
 
-# Install dependencies for Puppeteer/WhatsApp-web.js
+# Install dependencies for Puppeteer/WhatsApp-web.js and build tools for native modules
 RUN apt-get update && apt-get install -y \
     chromium \
+    python3 \
+    make \
+    g++ \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
