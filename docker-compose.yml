@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    container_name: intelecciones-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
+      - ./backend/.wwebjs_auth:/app/.wwebjs_auth
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - MASTER_KEY=tu_llave_maestra_aqui
+      - APP_URL=https://tuservidor.com
+    restart: always
+
+  # Frontend is hosted on Vercel, but we keep this here if you want to run it locally with Docker

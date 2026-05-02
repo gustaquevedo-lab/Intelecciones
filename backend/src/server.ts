@@ -45,8 +45,8 @@ const logAction = (user_id: number | null, action: string, entity: string, entit
 
 app.post('/api/upload-photo', upload.single('photo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const host = req.get('host');
-  const photoUrl = `http://${host}/uploads/${req.file.filename}`;
+  const baseUrl = process.env.APP_URL || `http://${req.get('host')}`;
+  const photoUrl = `${baseUrl}/uploads/${req.file.filename}`;
   res.json({ photo_url: photoUrl });
 });
 
