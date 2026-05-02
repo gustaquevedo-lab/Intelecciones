@@ -167,6 +167,9 @@ app.post('/api/login', (req, res) => {
     WHERE u.username = ?
   `).get(username) as any;
   
+  console.log(`[AUTH] Intento de login: ${username}. Encontrado: ${user ? 'SI' : 'NO'}`);
+  if (user) console.log(`[AUTH] Rol: ${user.role}, Coincide clave: ${user.password === password}`);
+
   if (user && user.password === password) { 
     res.json({
       id: user.id,
