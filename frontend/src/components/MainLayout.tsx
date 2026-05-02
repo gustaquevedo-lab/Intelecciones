@@ -56,17 +56,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           gap: '1rem',
           borderBottom: '1px solid rgba(255,255,255,0.03)'
         }}>
-          {/* Logo - Scaled Up */}
-          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', transform: 'scale(1.1)', transformOrigin: 'left' }}>
+          {/* Logo - Scaled Up (Auto-scales on mobile) */}
+          <div className="header-logo-container" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', transformOrigin: 'left' }}>
             <Logo />
           </div>
 
           {/* Module Switcher & List Selector */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, overflow: 'hidden', justifyContent: 'center' }}>
             <ModuleSwitcher />
             
             {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
-              <div style={{ 
+              <div className="hidden-mobile" style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '0.4rem', 
@@ -103,17 +103,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
 
           {/* User Profile - Enhanced Size */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+            <div className="hidden-mobile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
               <span style={{
-                fontSize: '0.85rem', fontWeight: 800, color: 'white',
+                fontSize: '0.8rem', fontWeight: 800, color: 'white',
                 fontFamily: 'var(--font-display)',
                 letterSpacing: '-0.01em'
               }}>
                 {userName}
               </span>
               <span style={{
-                fontSize: '0.55rem', fontWeight: 700, color: 'var(--plra-300)',
+                fontSize: '0.5rem', fontWeight: 700, color: 'var(--plra-300)',
                 textTransform: 'uppercase', letterSpacing: '0.08em',
                 display: 'flex', alignItems: 'center', gap: '0.3rem',
                 marginTop: '0.15rem'
@@ -124,8 +124,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
             </div>
 
             <div style={{
-              width: '40px', height: '40px',
-              borderRadius: '12px',
+              width: '36px', height: '36px',
+              borderRadius: '10px',
               overflow: 'hidden',
               border: '2px solid rgba(59,130,246,0.3)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
@@ -158,28 +158,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
 
         {/* ROW 2: Module Title - Absolute Centered Focus */}
         <div style={{
-          height: '40px',
+          height: '36px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          padding: '0 1rem'
+          padding: '0 1rem',
+          background: 'rgba(0, 0, 0, 0.1)'
         }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             style={{
               display: 'flex',
-              alignItems: 'center', gap: '0.6rem',
-              padding: '0.25rem 1.25rem',
+              alignItems: 'center', gap: '0.5rem',
+              padding: '0.2rem 1rem',
               background: 'rgba(59,130,246,0.12)',
-              border: '1px solid rgba(59,130,246,0.25)',
+              border: '1px solid rgba(59,130,246,0.2)',
               borderRadius: '9999px',
             }}
           >
-            <Shield size={14} style={{ color: 'var(--plra-300)' }} />
+            <Shield size={12} style={{ color: 'var(--plra-300)' }} />
             <span style={{
-              fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.15em',
+              fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.12em',
               textTransform: 'uppercase', color: 'white',
               fontFamily: 'var(--font-display)',
             }}>

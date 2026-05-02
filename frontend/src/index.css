@@ -800,6 +800,23 @@ select option:active {
 }
 .btn-cancel-styled:hover { background: rgba(255,255,255,0.04); }
 
+/* Responsive Header Utils */
+@media (max-width: 640px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+  
+  .header-logo-container {
+    transform: scale(0.8) !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .header-logo-container {
+    transform: scale(1.1) !important;
+  }
+}
+
 .mini-input {
   background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
