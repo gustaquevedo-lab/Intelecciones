@@ -484,6 +484,15 @@ const SuperAdmin = () => {
     } catch (err) { console.error(err); }
   };
 
+  const handleResetPassword = async (id: number) => {
+    if (!confirm('¿Forzar a este usuario a cambiar su contraseña en el próximo ingreso?')) return;
+    try {
+      await api.post(`/admin/users/${id}/reset-password`);
+      alert('Reset exitoso. El usuario deberá asignar una nueva clave al entrar.');
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
   useEffect(() => {
     const lookup = async () => {
       if (newUserCI.length >= 5) {
@@ -1320,6 +1329,14 @@ const SuperAdmin = () => {
                   setIsUserVerified(true);
                   setShowModal('user'); 
                 }}><Edit2 size={14} /></button>
+                <button 
+                  className="icon-btn" 
+                  style={{ color: 'var(--yellow)' }} 
+                  onClick={() => handleResetPassword(u.id)}
+                  title="Resetear Contraseña (Forzar Cambio)"
+                >
+                  <Key size={14} />
+                </button>
                 <button className="icon-btn delete" onClick={() => handleDeleteUser(u.id)} disabled={u.username === 'admin'}><Trash2 size={14} /></button>
               </div>
             )

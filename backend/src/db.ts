@@ -64,6 +64,7 @@ db.exec(`
     assigned_list_id INTEGER,
     nombre TEXT,
     photo_url TEXT,
+    needs_password_change INTEGER DEFAULT 0,
     FOREIGN KEY(assigned_list_id) REFERENCES lists(id)
   );
 

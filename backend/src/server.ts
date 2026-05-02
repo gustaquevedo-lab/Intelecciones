@@ -1158,6 +1158,15 @@ app.get('/api/stats/command', (req, res) => {
   }
 });
 
+app.post('/api/admin/users/:id/reset-password', (req, res) => {
+  try {
+    db.prepare('UPDATE users SET needs_password_change = 1 WHERE id = ?').run(req.params.id);
+    res.json({ success: true, message: 'El usuario deberá cambiar su contraseña al próximo ingreso.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/admin/requests', (req, res) => {
   const list_id = getListId(req);
   const role = getRole(req);
