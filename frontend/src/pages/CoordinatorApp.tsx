@@ -619,16 +619,40 @@ const CoordinatorApp = () => {
                     }}>
                       {elector.nombre} {elector.apellido}
                     </h2>
-                    <div style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                      padding: '0.2rem 0.65rem',
-                      background: 'rgba(0,71,171,0.25)', border: '1px solid rgba(59,130,246,0.35)',
-                      borderRadius: '7px', width: 'fit-content',
-                    }}>
-                      <span style={{ fontSize: '0.58rem', fontWeight: 800, color: 'var(--plra-200)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>C.I.</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', letterSpacing: '0.05em' }}>
-                        {Number(elector.ci).toLocaleString('es-PY')}
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                        padding: '0.2rem 0.65rem',
+                        background: 'rgba(0,71,171,0.25)', border: '1px solid rgba(59,130,246,0.35)',
+                        borderRadius: '7px', width: 'fit-content',
+                      }}>
+                        <span style={{ fontSize: '0.58rem', fontWeight: 800, color: 'var(--plra-200)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>C.I.</span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', letterSpacing: '0.05em' }}>
+                          {Number(elector.ci).toLocaleString('es-PY')}
+                        </span>
+                      </div>
+                      
+                      {/* JLRA TAG */}
+                      {(elector.edad && elector.edad <= 30) && (
+                        <div style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                          padding: '0.2rem 0.75rem',
+                          background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', // Gold/Orange for JLRA visibility
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          borderRadius: '7px',
+                          boxShadow: '0 4px 12px rgba(255,165,0,0.3)',
+                        }}>
+                          <span style={{ 
+                            fontSize: '0.65rem', 
+                            fontWeight: 900, 
+                            color: '#002F78', 
+                            letterSpacing: '0.15em', 
+                            fontFamily: 'var(--font-display)' 
+                          }}>
+                            JLRA
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
