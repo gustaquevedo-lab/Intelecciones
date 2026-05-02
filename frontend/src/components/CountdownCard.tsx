@@ -18,40 +18,55 @@ export const CountdownCard: React.FC<CountdownCardProps> = ({ targetDate, title,
       const now = new Date();
       const target = new Date(targetDate);
       
-      // Calculate start diff
-      const startDiff = target.getTime() - now.getTime();
+      // Reset hours to compare days only for "Day D" status
+      const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const targetDateOnly = new Date(target.getFullYear(), target.getMonth(), target.getDate());
 
-      if (startDiff > 0) {
-        // Still waiting for start
+      // If today is exactly the election day
+      const isElectionDay = todayDateOnly.getTime() === targetDateOnly.getTime();
+
+      if (!isElectionDay && target.getTime() > now.getTime()) {
+        // Still waiting for the election day
+        const diff = target.getTime() - now.getTime();
         setIsDayD(false);
+        setIsFinished(false);
         setTimeLeft({
-          days: Math.floor(startDiff / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((startDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((startDiff % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((startDiff % (1000 * 60)) / 1000)
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((diff % (1000 * 60)) / 1000)
         });
         return;
       }
 
-      // It's Day D! Now calculate time until closing (17:00)
-      setIsDayD(true);
-      const closingDate = new Date(target);
-      closingDate.setHours(17, 0, 0); // Default closing at 17:00
+      if (isElectionDay) {
+        setIsDayD(true);
+        // Closing time is 17:00 of the election day
+        const closingTime = new Date(targetDateOnly);
+        closingTime.setHours(17, 0, 0);
 
-      const closingDiff = closingDate.getTime() - now.getTime();
+        const closingDiff = closingTime.getTime() - now.getTime();
 
-      if (closingDiff <= 0) {
-        setIsFinished(true);
-        setTimeLeft(null);
+        if (closingDiff <= 0) {
+          setIsFinished(true);
+          setTimeLeft(null);
+        } else {
+          setIsFinished(false);
+          setTimeLeft({
+            days: 0,
+            hours: Math.floor((closingDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            minutes: Math.floor((closingDiff % (1000 * 60 * 60)) / (1000 * 60)),
+            seconds: Math.floor((closingDiff % (1000 * 60)) / 1000)
+          });
+        }
         return;
       }
 
-      setTimeLeft({
-        days: 0,
-        hours: Math.floor((closingDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((closingDiff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((closingDiff % (1000 * 60)) / 1000)
-      });
+      // If we are past the election day
+      if (now.getTime() > target.getTime()) {
+        setIsFinished(true);
+        setTimeLeft(null);
+      }
     };
 
     calculateTime();

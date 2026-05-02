@@ -214,14 +214,14 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
   );
 };
 
-const SidebarContent = ({ stats, activities, conflicts, onResolve }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void }) => {
+const SidebarContent = ({ stats, activities, conflicts, onResolve, settings }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any }) => {
   const criticalLocs = stats?.locations?.filter((l: any) => parseFloat(l.percentage) < 30).sort((a: any, b: any) => parseFloat(a.percentage) - parseFloat(b.percentage)).slice(0, 3) || [];
   const topCoordinators = stats?.top_coordinators || [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1.25rem' }}>
       <CountdownCard 
-        targetDate="2026-05-10T07:00:00Z" 
+        targetDate={settings.election_date} 
         title="Elecciones Internas PLRA" 
       />
 
@@ -340,6 +340,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve }: { stats: an
 
 const CommandCenter = () => {
   const { user: authUser, loading, activeListId } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const [locales, setLocales] = useState<any[]>([]);
   const [captures, setCaptures] = useState<any[]>([]);
@@ -503,7 +504,7 @@ const CommandCenter = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', height: 'calc(100vh - 110px)', overflow: 'hidden' }}>
         <aside style={{ overflowY: 'auto', background: 'var(--surface)', borderRight: '1px solid var(--border)' }}>
-          <SidebarContent stats={commandStats} activities={activities} conflicts={conflicts} onResolve={setShowResolveModal} />
+          <SidebarContent stats={commandStats} activities={activities} conflicts={conflicts} onResolve={setShowResolveModal} settings={settings} />
         </aside>
         <div style={{ position: 'relative', minWidth: 0, minHeight: 0 }}>
           {activeTab === 'map' ? (
