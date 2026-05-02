@@ -237,6 +237,7 @@ const SuperAdmin = () => {
   const [newUserRealName, setNewUserRealName] = useState('');
   const [newUserCI, setNewUserCI] = useState('');
   const [newUserList, setNewUserList] = useState('');
+  const [newUserCampaign, setNewUserCampaign] = useState('');
   const [userProfilePreview, setUserProfilePreview] = useState<any>(null);
   
   // List Form
@@ -453,6 +454,7 @@ const SuperAdmin = () => {
         nombre: newUserRealName,
         ci: newUserCI,
         list_id: newUserList,
+        campaign_id: newUserCampaign,
         photo_url: userProfilePreview?.photo_url
       });
       setShowModal(null);
@@ -468,6 +470,7 @@ const SuperAdmin = () => {
         role: newUserRole,
         nombre: newUserRealName,
         assigned_list_id: newUserList,
+        assigned_campaign_id: newUserCampaign,
         photo_url: userProfilePreview?.photo_url
       });
       setShowModal(null);
@@ -1273,6 +1276,7 @@ const SuperAdmin = () => {
           setNewUserPass('');
           setNewUserRole('COORDINADOR');
           setNewUserList('');
+          setNewUserCampaign('');
           setUserProfilePreview(null);
           setIsUserVerified(false);
           setShowModal('user');
@@ -1325,6 +1329,7 @@ const SuperAdmin = () => {
                   setNewUserName(u.username || ''); 
                   setNewUserRole(u.role);
                   setNewUserList(u.assigned_list_id?.toString() || '');
+                  setNewUserCampaign(u.assigned_campaign_id?.toString() || '');
                   setUserProfilePreview({ photo_url: u.photo_url, nombre: u.nombre });
                   setIsUserVerified(true);
                   setShowModal('user'); 
@@ -1738,6 +1743,20 @@ const SuperAdmin = () => {
                             {lists.map(l => (
                               <option key={l.id} value={l.id}>
                                 {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {newUserRole === 'JEFE_CAMPANA' && (
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Campaña que Administra</label>
+                          <select className="modern-input-premium-styled" value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
+                            <option value="">Seleccione la campaña para este jefe...</option>
+                            {campaigns.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
                               </option>
                             ))}
                           </select>

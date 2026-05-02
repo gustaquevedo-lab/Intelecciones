@@ -223,6 +223,7 @@ app.post('/api/login', (req, res) => {
       username: user.username,
       role: user.role,
       assigned_list_id: user.assigned_list_id,
+      assigned_campaign_id: user.assigned_campaign_id,
       nombre: user.nombre,
       photo_url: user.photo_url,
       needs_password_change: !!user.needs_password_change,

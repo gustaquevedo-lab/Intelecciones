@@ -62,10 +62,12 @@ db.exec(`
     password TEXT,
     role TEXT NOT NULL,
     assigned_list_id INTEGER,
+    assigned_campaign_id INTEGER,
     nombre TEXT,
     photo_url TEXT,
     needs_password_change INTEGER DEFAULT 0,
-    FOREIGN KEY(assigned_list_id) REFERENCES lists(id)
+    FOREIGN KEY(assigned_list_id) REFERENCES lists(id),
+    FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id)
   );
 
   CREATE TABLE IF NOT EXISTS voting_locations (
