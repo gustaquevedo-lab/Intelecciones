@@ -65,6 +65,7 @@ const Login = () => {
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ marginBottom: '1rem' }}><Logo variant="light" /></div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)', margin: 0 }}>Acceso Restringido</h2>
+            {error && <div style={{ color: 'var(--red)', marginTop: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>{error}</div>}
           </div>
           
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
