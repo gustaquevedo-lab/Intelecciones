@@ -20,7 +20,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const [lists, setLists] = useState<any[]>([]);
 
   useEffect(() => {
-    if (user?.role === 'SUPERUSUARIO') {
+    if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') {
       api.get('/lists').then(res => setLists(res.data)).catch(err => console.error(err));
     }
   }, [user]);
@@ -63,7 +63,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
         <div style={{ flexShrink: 1, display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0, overflow: 'hidden' }}>
           <ModuleSwitcher />
           
-          {user?.role === 'SUPERUSUARIO' && (
+          {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(59,130,246,0.1)', padding: '0.2rem 0.5rem', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.2)' }}>
               <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase' }}>VISTA:</span>
               <select 

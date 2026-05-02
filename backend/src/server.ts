@@ -733,10 +733,9 @@ app.put('/api/users/:id', (req, res) => {
 app.get('/api/lists', (req, res) => {
   try {
     const lists = db.prepare(`
-      SELECT l.*, c.name as campaign_name, e.nombre as candidate_nombre, e.apellido as candidate_apellido,
-      (SELECT COUNT(*) FROM elector_captures ec JOIN electors e2 ON ec.elector_ci = e2.ci WHERE e2.coordinador_asignado IN (SELECT username FROM users WHERE assigned_list_id = l.id)) as captures
+      SELECT l.*, c.name as campaign_name, e.nombre as candidate_nombre, e.apellido as candidate_apellido
       FROM lists l
-      JOIN campaigns c ON l.campaign_id = c.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
       LEFT JOIN electors e ON l.candidate_ci = e.ci
     `).all();
     res.json(lists);
