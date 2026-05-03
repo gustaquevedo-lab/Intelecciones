@@ -594,7 +594,7 @@ const CommandCenter = () => {
           transition: 'left 0.3s ease',
           boxShadow: isMobile && showSidebar ? '20px 0 50px rgba(0,0,0,0.5)' : 'none'
         }}>
-          <SidebarContent stats={commandStats} activities={activities} conflicts={conflicts} onResolve={setShowResolveModal} settings={settings} />
+          <SidebarContent stats={commandStats} activities={activities} conflicts={conflicts} onResolve={setShowResolveModal} settings={globalSettings} />
         </aside>
         <div style={{ position: 'relative', minWidth: 0, minHeight: 0 }}>
           {activeTab === 'map' ? (
