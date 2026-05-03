@@ -338,13 +338,18 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings }: {
   );
 };
 
-const MapHandler = ({ center }: { center: [number, number] | null }) => {
+const MapHandler = ({ center, selectedLocalId }: { center: [number, number] | null, selectedLocalId: string | null }) => {
   const map = useMap();
+  const [lastId, setLastId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (center) {
+    if (selectedLocalId && selectedLocalId !== lastId && center) {
       map.flyTo(center, 16, { duration: 1.5 });
+      setLastId(selectedLocalId);
+    } else if (!selectedLocalId && lastId) {
+      setLastId(null);
     }
-  }, [center, map]);
+  }, [center, selectedLocalId, lastId, map]);
   return null;
 };
 
@@ -654,7 +659,10 @@ const CommandCenter = () => {
               <MapContainer center={[-22.5422, -55.7336]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                 <ZoomControl position="bottomright" />
-                <MapHandler center={selectedLocal ? (locales.find(l => l.cod_local === selectedLocal) ? [locales.find(l => l.cod_local === selectedLocal).lat, locales.find(l => l.cod_local === selectedLocal).lng] : null) : null} />
+                <MapHandler 
+                  center={selectedLocal ? (locales.find(l => l.cod_local === selectedLocal) ? [locales.find(l => l.cod_local === selectedLocal).lat, locales.find(l => l.cod_local === selectedLocal).lng] : null) : null} 
+                  selectedLocalId={selectedLocal}
+                />
 
                 {locales.map((l: any) => {
                   const locStat = commandStats?.locations?.find((s: any) => s.cod_local === l.cod_local);
