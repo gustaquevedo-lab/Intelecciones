@@ -8,7 +8,7 @@ import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
   TrendingUp, TrendingDown, ChevronUp, ChevronDown,
   Download, MapPin, Activity, Bell, X, Search,
-  AlertCircle, ChevronRight, Truck, Target
+  AlertCircle, ChevronRight, Truck, Target, Phone, MessageSquare
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { ManagementTable } from '../components/ManagementTable';
@@ -737,58 +737,117 @@ const CommandCenter = () => {
               </MapContainer>
             </div>
           ) : activeTab === 'registry' ? (
-            <div style={{ height: '100%', overflowY: 'auto', padding: '1.5rem', background: 'var(--surface-dark)' }}>
-              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <div className="card-premium-styled" style={{ marginBottom: '1.5rem' }}>
-                  <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Search size={18} style={{ color: 'var(--plra-300)' }} /> Búsqueda en el Padrón
+            <div style={{ 
+              height: '100%', 
+              overflowY: 'auto', 
+              padding: isMobile ? '1rem' : '2rem', 
+              background: 'var(--surface-dark)',
+              zIndex: 1200, // Ensure it covers the map on mobile if needed
+              position: 'relative'
+            }}>
+              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <header style={{ marginBottom: '2rem' }}>
+                  <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.75rem', fontWeight: 900, color: 'white', marginBottom: '0.5rem' }}>
+                    Consulta de <span style={{ color: 'var(--plra-300)' }}>Padrón</span>
                   </h2>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Localice electores, verifique locales de votación y coordine acciones tácticas.</p>
+                </header>
+
+                <div className="card-premium-styled" style={{ 
+                  padding: '1.5rem', 
+                  marginBottom: '2rem',
+                  border: '1px solid var(--plra-500)',
+                  background: 'rgba(59,130,246,0.05)'
+                }}>
                   <div className="search-input-wrapper-premium">
+                    <Search size={20} style={{ marginLeft: '1rem', color: 'var(--plra-300)' }} />
                     <input 
                       type="text" 
                       className="modern-input-premium-styled" 
-                      placeholder="Ingrese nombre, apellido o C.I..."
+                      placeholder="Nombre, Apellido o Número de Cédula..."
+                      style={{ paddingLeft: '3rem', fontSize: '1rem' }}
                       onChange={(e) => handleSearch(e.target.value)}
+                      autoFocus
                     />
                     {isSearching && (
-                      <div className="loading-spinner-small" style={{ position: 'absolute', right: '1rem' }} />
+                      <div className="loading-spinner-small" style={{ marginRight: '1rem' }} />
                     )}
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                   {searchResults.map((elector: any) => (
-                    <div key={elector.ci} className="card-premium-styled" style={{ 
-                      padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)'
-                    }}>
-                      <div>
-                        <p style={{ fontWeight: 800, fontSize: '0.9rem' }}>{elector.nombre} {elector.apellido}</p>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>C.I. {elector.ci}</p>
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-2)' }}>📍 {elector.local_votacion}</span>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-2)' }}>🗳️ Mesa {elector.mesa}</span>
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      key={elector.ci} 
+                      className="card-premium-styled" 
+                      style={{ 
+                        padding: '1.25rem',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid var(--border)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <p style={{ fontWeight: 800, fontSize: '1rem', color: 'white' }}>{elector.nombre} {elector.apellido}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {elector.ci}</p>
+                        </div>
+                        <div style={{ 
+                          padding: '4px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.1)',
+                          fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', border: '1px solid rgba(59,130,246,0.2)'
+                        }}>
+                          {elector.partido || 'PLRA'}
                         </div>
                       </div>
-                      <button 
-                        className="mini-action-btn"
-                        onClick={() => {
-                          if (elector.lat && elector.lng) {
-                            setSelectedLocal(null); // Clear filter to see the specific point
-                            setActiveTab('map');
-                          } else {
-                            alert('Este elector aún no ha sido captado geográficamente.');
-                          }
-                        }}
-                      >
-                        VER EN MAPA
-                      </button>
-                    </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px' }}>
+                        <div>
+                          <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Local</p>
+                          <p style={{ fontSize: '0.7rem', color: 'white', fontWeight: 600 }}>{elector.local_votacion}</p>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Mesa / Orden</p>
+                          <p style={{ fontSize: '0.7rem', color: 'white', fontWeight: 600 }}>Mesa {elector.mesa} — # {elector.orden}</p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button 
+                          className="action-btn-primary" 
+                          style={{ flex: 1, padding: '0.6rem', fontSize: '0.7rem', gap: '0.4rem' }}
+                          onClick={() => {
+                            if (elector.lat && elector.lng) {
+                              setSelectedLocal(null);
+                              setActiveTab('map');
+                            } else {
+                              alert('Ubicación de contacto no disponible.');
+                            }
+                          }}
+                        >
+                          <MapPin size={14} /> UBICAR
+                        </button>
+                        <button 
+                          className="action-btn-secondary" 
+                          style={{ flex: 1, padding: '0.6rem', fontSize: '0.7rem', gap: '0.4rem', background: 'rgba(34,197,94,0.1)', color: '#4ade80', borderColor: 'rgba(34,197,94,0.2)' }}
+                          onClick={() => window.open(`https://wa.me/${elector.telefono?.replace(/\D/g, '')}`, '_blank')}
+                          disabled={!elector.telefono}
+                        >
+                          <MessageSquare size={14} /> WHATSAPP
+                        </button>
+                      </div>
+                    </motion.div>
                   ))}
+                  
                   {!isSearching && searchResults.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
-                      <Users size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-                      <p>Ingrese un criterio de búsqueda para localizar electores</p>
+                    <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '5rem 2rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', border: '1px dashed var(--border)' }}>
+                      <Search size={48} style={{ opacity: 0.1, marginBottom: '1.5rem' }} />
+                      <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>No hay electores que coincidan con la búsqueda</p>
+                      <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Intente buscar por el número de Cédula para mayor precisión.</p>
                     </div>
                   )}
                 </div>
