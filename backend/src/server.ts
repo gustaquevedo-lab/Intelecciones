@@ -613,6 +613,86 @@ app.put('/api/captures/:id', (req, res) => {
   }
 });
 
+app.get('/api/locales', (req, res) => {
+  try {
+    const locales = db.prepare('SELECT * FROM voting_locations').all();
+    res.json(locales);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/stats/command', (req, res) => {
+  const list_id = getListId(req);
+  try {
+    const listFilter = list_id ? `WHERE list_id = ${list_id}` : '';
+    const stats = db.prepare(`
+      SELECT 
+        SUM(CASE WHEN traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
+        SUM(CASE WHEN traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
+        SUM(CASE WHEN traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+        COUNT(*) as total
+      FROM elector_captures
+      ${listFilter}
+    `).get() as any;
+
+    const locations = db.prepare(`
+      SELECT e.local_votacion as name, e.cod_local, COUNT(ec.id) as total_captures
+      FROM electors e
+      LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
+      GROUP BY e.local_votacion
+    `).all();
+
+    res.json({
+      ...stats,
+      percentage: stats.total > 0 ? Math.round((stats.green / stats.total) * 100) : 0,
+      locations
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/conflicts', (req, res) => {
+  try {
+    const conflicts = db.prepare(`
+      SELECT ec.*, e.nombre as elector_nombre
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.elector_ci IN (
+        SELECT elector_ci FROM elector_captures GROUP BY elector_ci HAVING COUNT(*) > 1
+      )
+    `).all();
+    res.json(conflicts);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/activities', (req, res) => {
+  try {
+    const activities = db.prepare(`
+      SELECT ec.*, e.nombre as elector_nombre, u.username as coordinator_name
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      JOIN users u ON ec.coordinator_id = u.id
+      ORDER BY ec.timestamp DESC LIMIT 20
+    `).all();
+    res.json(activities);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/vehicles', (req, res) => {
+  try {
+    const vehicles = db.prepare('SELECT * FROM logistics').all();
+    res.json(vehicles);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/captures', (req, res) => {
   const list_id = getListId(req);
   const local_id = req.query.localId;
@@ -1354,6 +1434,6 @@ app.post('/api/veedor/mark-vote', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
