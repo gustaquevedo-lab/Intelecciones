@@ -473,6 +473,50 @@ const CommandCenter = () => {
       userName={authUser?.nombre || "Director"} 
       userPhoto={authUser?.photo_url}
     >
+      <div style={{ 
+        padding: isMobile ? '1.5rem 1rem 1rem' : '1.5rem 2rem',
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'center' : 'center',
+        justifyContent: isMobile ? 'center' : 'flex-start',
+        gap: isMobile ? '1rem' : '1.25rem',
+        textAlign: isMobile ? 'center' : 'left'
+      }}>
+        <div style={{ 
+          width: isMobile ? '42px' : '52px', 
+          height: isMobile ? '42px' : '52px', 
+          borderRadius: '16px', 
+          background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'white',
+          boxShadow: '0 8px 20px rgba(37,99,235,0.25)',
+          flexShrink: 0
+        }}>
+          <Target size={isMobile ? 22 : 28} />
+        </div>
+        <div>
+          <h1 style={{ 
+            fontSize: isMobile ? '1.1rem' : '1.75rem', 
+            fontWeight: 900, 
+            letterSpacing: '-0.02em', 
+            color: 'var(--text)',
+            lineHeight: 1.1
+          }}>
+            Centro de Decisiones <span style={{ color: 'var(--plra-300)' }}>Estratégicas</span>
+          </h1>
+          <p style={{ 
+            fontSize: isMobile ? '0.6rem' : '0.85rem', 
+            color: 'var(--text-3)', 
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            marginTop: '0.25rem'
+          }}>Monitoreo Táctico en Tiempo Real</p>
+        </div>
+      </div>
+
       <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '2rem', alignItems: 'center', background: 'rgba(255,255,255,0.01)' }}>
         <div 
           onClick={() => setActiveTab('map')}
