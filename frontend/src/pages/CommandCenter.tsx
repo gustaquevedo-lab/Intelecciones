@@ -637,7 +637,7 @@ const CommandCenter = () => {
                     animate={{ opacity: 1, x: 0 }}
                     style={{ 
                       padding: '0.6rem 1rem', borderRadius: '10px', 
-                      background: 'rgba(59,130,246,0.15)', 
+                      background: 'var(--accent-subtle)', 
                       color: 'var(--plra-200)',
                       border: '1px solid var(--plra-300)', fontSize: '0.7rem', fontWeight: 800,
                       display: 'flex', alignItems: 'center', gap: '0.75rem',

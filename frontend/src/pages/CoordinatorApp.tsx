@@ -90,7 +90,7 @@ const NumberBadge = ({ label, value }: { label: string; value: React.ReactNode }
     </span>
     <div style={{
       height: '3.25rem',
-      background: 'rgba(59,130,246,0.06)',
+      background: 'var(--accent-subtle)',
       border: '1px solid var(--border)',
       borderRadius: '10px',
       display: 'flex',
@@ -358,7 +358,7 @@ const CoordinatorApp = () => {
     >
       {isReadOnly && (
         <div style={{
-          background: 'rgba(59,130,246,0.1)',
+          background: 'var(--accent-subtle)',
           borderBottom: '1px solid var(--border)',
           padding: '0.6rem 1rem',
           display: 'flex',
@@ -858,8 +858,8 @@ const CoordinatorApp = () => {
               <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.25rem' }}>Describe brevemente lo que necesitas. Tu solicitud llegará al Comando Central.</p>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                <button onClick={() => setRequestType('TRANSPORT')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'TRANSPORT' ? 'var(--plra-500)' : 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logística</button>
-                <button onClick={() => setRequestType('RESOURCES')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'RESOURCES' ? 'var(--plra-500)' : 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Recursos</button>
+                <button onClick={() => setRequestType('TRANSPORT')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'TRANSPORT' ? 'var(--plra-500)' : 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logística</button>
+                <button onClick={() => setRequestType('RESOURCES')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'RESOURCES' ? 'var(--plra-500)' : 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Recursos</button>
               </div>
 
               <textarea 
@@ -899,7 +899,7 @@ const CoordinatorApp = () => {
               alignItems: 'flex-end',
               justifyContent: 'center',
               padding: '0 0 env(safe-area-inset-bottom)',
-              background: 'rgba(2,8,20,0.92)',
+              background: 'var(--surface)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
             }}
@@ -923,7 +923,7 @@ const CoordinatorApp = () => {
             >
               {/* Handle bar */}
               <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0 0' }}>
-                <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.12)' }} />
+                <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--border)' }} />
               </div>
 
               {/* Header */}
@@ -937,8 +937,8 @@ const CoordinatorApp = () => {
                     width: '32px',
                     height: '32px',
                     borderRadius: '9px',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'var(--surface-light)',
+                    border: '1px solid var(--border)',
                     color: 'var(--text-2)',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1009,7 +1009,7 @@ const CoordinatorApp = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0.85rem 1rem',
-                    background: needsTransport ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)',
+                    background: needsTransport ? 'var(--accent-subtle)' : 'var(--surface-light)',
                     border: `1px solid ${needsTransport ? 'var(--plra-300)' : 'var(--border)'}`,
                     borderRadius: '12px',
                     cursor: 'pointer',

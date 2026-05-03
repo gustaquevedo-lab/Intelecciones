@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = 'http://localhost:5000/api';
+import api from '../services/api';
 
 const LogisticsApp: React.FC = () => {
   const { user } = useAuth();
@@ -35,9 +35,9 @@ const LogisticsApp: React.FC = () => {
   const fetchData = async () => {
     try {
       const [v, p, u] = await Promise.all([
-        axios.get(`${API_BASE}/vehicles`),
-        axios.get(`${API_BASE}/logistics/pending`),
-        axios.get(`${API_BASE}/users`)
+        api.get('/vehicles'),
+        api.get('/logistics/pending'),
+        api.get('/users')
       ]);
       setVehicles(v.data);
       setPendingLogistics(p.data);
@@ -53,7 +53,7 @@ const LogisticsApp: React.FC = () => {
     const lookup = async () => {
       if (newVehicleDriverCI.length >= 5) {
         try {
-          const res = await axios.get(`${API_BASE}/electors/${newVehicleDriverCI}`);
+          const res = await api.get(`/electors/${newVehicleDriverCI}`);
           if (res.data) {
             setNewVehicleDriver(`${res.data.nombre} ${res.data.apellido}`);
           }
@@ -68,7 +68,7 @@ const LogisticsApp: React.FC = () => {
     // Manual override if needed
     if (!newVehicleDriverCI) return;
     try {
-      const res = await axios.get(`${API_BASE}/electors/${newVehicleDriverCI}`);
+      const res = await api.get(`/electors/${newVehicleDriverCI}`);
       if (res.data) {
         setNewVehicleDriver(`${res.data.nombre} ${res.data.apellido}`);
       } else {
@@ -79,7 +79,7 @@ const LogisticsApp: React.FC = () => {
 
   const handleAssignVehicle = async (capture_id: number, vehicle_id: string) => {
     try {
-      await axios.post(`${API_BASE}/logistics/assign`, { capture_id, vehicle_id });
+      await api.post('/logistics/assign', { capture_id, vehicle_id });
       fetchData();
     } catch (err) { console.error(err); }
   };
@@ -102,7 +102,7 @@ const LogisticsApp: React.FC = () => {
   const handleCreateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE}/vehicles`, {
+      await api.post('/vehicles', {
         description: newVehicleDesc,
         driver_name: newVehicleDriver,
         driver_phone: newVehiclePhone,

@@ -100,7 +100,7 @@ const VeedorApp = () => {
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', 
             gap: '0.5rem',
-            background: 'rgba(0,0,0,0.1)',
+            background: 'var(--surface-light)',
             padding: '0.5rem',
             borderRadius: '12px'
           }}>
@@ -129,7 +129,7 @@ const VeedorApp = () => {
                   <span style={{ 
                     fontSize: '0.65rem', 
                     fontWeight: 900, 
-                    color: isVoted ? 'rgba(255,255,255,0.6)' : 'var(--text-3)',
+                    color: isVoted ? 'rgba(0,0,0,0.3)' : 'var(--text-3)',
                     position: 'absolute',
                     top: '4px', left: '4px'
                   }}>

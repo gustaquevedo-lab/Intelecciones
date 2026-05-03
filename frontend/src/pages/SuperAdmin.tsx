@@ -783,7 +783,7 @@ const SuperAdmin = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
         <div style={{
-          background: 'rgba(59,130,246,0.05)',
+          background: 'var(--accent-subtle)',
           border: '1px solid rgba(59,130,246,0.15)',
           borderRadius: '16px',
           padding: '1.5rem',
@@ -907,7 +907,7 @@ const SuperAdmin = () => {
             accessor: (c: Campaign) => (
               <span style={{ 
                 padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
-                background: c.status === 'ACTIVE' ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)',
+                background: c.status === 'ACTIVE' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                 color: c.status === 'ACTIVE' ? 'var(--green)' : 'var(--text-3)'
               }}>
                 {c.status}
@@ -992,7 +992,7 @@ const SuperAdmin = () => {
             accessor: (l: any) => (
               <span style={{ 
                 padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800,
-                background: l.type === 'INTENDENTE' ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.05)',
+                background: l.type === 'INTENDENTE' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                 color: l.type === 'INTENDENTE' ? 'var(--plra-300)' : 'var(--text-3)'
               }}>
                 {l.type}
@@ -1213,7 +1213,7 @@ const SuperAdmin = () => {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
             {campaigns.map(c => (
-              <div key={c.id} style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={c.id} style={{ padding: '1rem', borderRadius: '12px', background: 'var(--surface-light)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white' }}>{c.name}</p>
                   <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
@@ -1314,7 +1314,7 @@ const SuperAdmin = () => {
             accessor: (u: any) => (
               <span style={{ 
                 padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
-                background: u.role === 'SUPERUSUARIO' ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.05)',
+                background: u.role === 'SUPERUSUARIO' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                 color: u.role === 'SUPERUSUARIO' ? 'var(--plra-300)' : 'var(--text-2)'
               }}>
                 {u.role}
@@ -1402,7 +1402,7 @@ const SuperAdmin = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {pendingLogistics.filter(p => !p.assigned_vehicle_id).map(cap => (
               <div key={cap.id} style={{ 
-                padding: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', 
+                padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', 
                 borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem'
               }}>
                 <div style={{ 
@@ -1447,7 +1447,7 @@ const SuperAdmin = () => {
               
               return (
               <div key={v.id} style={{ 
-                padding: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', 
+                padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', 
                 borderRadius: '12px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
@@ -1575,7 +1575,7 @@ const SuperAdmin = () => {
                       ].map(mod => (
                         <label key={mod.id} style={{ 
                           display: 'flex', alignItems: 'center', gap: '0.75rem', 
-                          padding: '0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)',
+                          padding: '0.75rem', borderRadius: '10px', background: 'var(--surface-light)',
                           border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.2s'
                         }}>
                           <input 
@@ -1628,7 +1628,7 @@ const SuperAdmin = () => {
                       ].map(mod => (
                         <label key={mod.id} style={{ 
                           display: 'flex', alignItems: 'center', gap: '0.75rem', 
-                          padding: '0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)',
+                          padding: '0.75rem', borderRadius: '10px', background: 'var(--surface-light)',
                           border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.2s'
                         }}>
                           <input 
@@ -2096,7 +2096,7 @@ const SuperAdmin = () => {
 
 const StatCard = ({ icon: Icon, label, value, color }: any) => (
   <div style={{
-    background: 'rgba(255,255,255,0.02)',
+    background: 'var(--surface)',
     border: '1px solid var(--border)',
     borderRadius: '16px',
     padding: '1.25rem',

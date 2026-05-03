@@ -66,7 +66,7 @@ export function ManagementTable<T extends { id?: number | string }>({
   return (
     <div style={{
       width: '100%',
-      background: 'rgba(255, 255, 255, 0.02)',
+      background: 'var(--surface)',
       border: '1px solid var(--border)',
       borderRadius: '12px',
       overflow: 'hidden',
@@ -79,7 +79,7 @@ export function ManagementTable<T extends { id?: number | string }>({
       }}>
         <thead>
           <tr style={{
-            background: 'rgba(59, 130, 246, 0.05)',
+            background: 'var(--accent-subtle)',
             borderBottom: '1px solid var(--border)',
           }}>
             {columns.map((col, idx) => {
@@ -145,7 +145,7 @@ export function ManagementTable<T extends { id?: number | string }>({
                   transition: 'background 0.15s',
                 }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(59, 130, 246, 0.03)';
+                  (e.currentTarget as HTMLTableRowElement).style.background = 'var(--surface-light)';
                 }}
                 onMouseLeave={e => {
                   (e.currentTarget as HTMLTableRowElement).style.background = 'transparent';
