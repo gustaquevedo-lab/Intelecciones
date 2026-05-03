@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Map, Users, Shield, Truck, MessageSquare, CheckSquare } from 'lucide-react';
+import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +16,7 @@ export const ModuleSwitcher: React.FC = () => {
   const modules = [
     { id: 'admin', label: 'Admin', path: '/admin', icon: Shield, roles: ['SUPERUSUARIO'], moduleKey: 'SUPER_ADMIN' },
     { id: 'comando', label: 'Comando', path: '/comando', icon: Map, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'COMMAND_CENTER' },
+    { id: 'diad', label: 'Día D', path: '/diad', icon: Zap, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'DAY_D', accent: '#22C47E' },
     { id: 'veedor', label: 'Veeduría', path: '/veedor', icon: CheckSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'MIEMBRO_DE_MESA'], moduleKey: 'DAY_D' },
     { id: 'logistics', label: 'Logística', path: '/logistica', icon: Truck, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'LOGISTICS' },
     { id: 'communications', label: 'WhatsApp', path: '/comunicaciones', icon: MessageSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'COMMUNICATIONS' },
@@ -44,6 +45,7 @@ export const ModuleSwitcher: React.FC = () => {
       {availableModules.map((m) => {
         const isActive = location.pathname === m.path;
         const Icon = m.icon;
+        const accentColor = (m as any).accent;
 
         return (
           <motion.button
@@ -57,9 +59,17 @@ export const ModuleSwitcher: React.FC = () => {
               gap: '0.5rem',
               padding: '0.4rem 0.8rem',
               borderRadius: '9px',
-              border: 'none',
-              background: isActive ? 'var(--plra-500)' : 'transparent',
-              color: isActive ? 'white' : 'var(--text-3)',
+              border: isActive && accentColor ? `1px solid ${accentColor}55` : 'none',
+              background: isActive
+                ? accentColor
+                  ? `linear-gradient(135deg, ${accentColor}33, ${accentColor}22)`
+                  : 'var(--plra-500)'
+                : 'transparent',
+              color: isActive
+                ? accentColor || 'white'
+                : accentColor
+                  ? accentColor + 'BB'
+                  : 'var(--text-3)',
               cursor: 'pointer',
               fontSize: '0.7rem',
               fontWeight: 700,

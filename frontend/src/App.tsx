@@ -7,6 +7,7 @@ import VeedorApp from './pages/VeedorApp';
 import SuperAdmin from './pages/SuperAdmin';
 import LogisticsApp from './pages/LogisticsApp';
 import Communications from './pages/Communications';
+import DiaDApp from './pages/DiaDApp';
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -26,6 +27,7 @@ function App() {
               <Route path="/admin" element={<SuperAdmin />} />
               <Route path="/logistica" element={<LogisticsApp />} />
               <Route path="/comunicaciones" element={<Communications />} />
+              <Route path="/diad" element={<DiaDApp />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </Router>

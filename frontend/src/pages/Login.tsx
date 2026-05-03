@@ -81,32 +81,30 @@ const Login = () => {
       {/* Fondos Animados Compartidos */}
       <PLRABackground />
       
-      {/* Título y Subtítulo - Flotando arriba del form */}
+      {/* Título hero — wordmark grande encima del form */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
         className="title-container"
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}
       >
-        <h1 className="main-title">
-          {settings.app_name}
-        </h1>
-        <p className="sub-title">
+        <Logo variant="light" size="large" />
+        <p className="sub-title" style={{ marginTop: '0.25rem' }}>
           Plataforma de Inteligencia Electoral y Análisis Geoespacial.
         </p>
       </motion.div>
 
       {/* Formulario de Acceso - Card Central */}
       <div className="form-container">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
           className="login-card"
         >
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ marginBottom: '1rem' }}><Logo variant="light" /></div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)', margin: 0 }}>Acceso Restringido</h2>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'rgba(255,255,255,0.7)', margin: '0 0 0.25rem', letterSpacing: '0.04em' }}>Acceso Restringido</h2>
             {error && <div style={{ color: 'var(--red)', marginTop: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>{error}</div>}
           </div>
           

@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="es-PY">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ═══ SEO PRIMARIO ═══ -->
+  <title>Intelecciones — Plataforma de Gestión Electoral para Paraguay | IntelliHouse</title>
+  <meta name="description" content="Intelecciones es la plataforma electoral más completa de Paraguay: centro de comando en tiempo real, app para coordinadores de campo, logística, veeduría digital y WhatsApp masivo. Desarrollado por IntelliHouse." />
+  <meta name="keywords" content="software electoral paraguay, gestión de campaña electoral, plataforma electoral, coordinación de campo, veeduría digital, logística electoral, WhatsApp campaña, PLRA, campaña política paraguay, intelecciones, intelihouse" />
+  <meta name="author" content="IntelliHouse" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://intelecciones.com.py/" />
+
+  <!-- ═══ OPEN GRAPH ═══ -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://intelecciones.com.py/" />
+  <meta property="og:title" content="Intelecciones — Gestión Integral de Campañas Electorales | Paraguay" />
+  <meta property="og:description" content="La plataforma más completa para ganar elecciones en Paraguay. Centro de comando, coordinación de campo, logística, veeduría y WhatsApp — todo en tiempo real." />
+  <meta property="og:image" content="https://intelecciones.com.py/og-image.jpg" />
+  <meta property="og:locale" content="es_PY" />
+  <meta property="og:site_name" content="Intelecciones" />
+
+  <!-- ═══ TWITTER CARD ═══ -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Intelecciones — Plataforma Electoral Paraguay" />
+  <meta name="twitter:description" content="Centro de comando, coordinación de campo, veeduría digital y WhatsApp masivo en una sola plataforma." />
+  <meta name="twitter:image" content="https://intelecciones.com.py/og-image.jpg" />
+
+  <!-- ═══ JSON-LD STRUCTURED DATA ═══ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Intelecciones",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web, iOS, Android",
+    "description": "Plataforma de gestión integral de campañas electorales para Paraguay. Centro de comando en tiempo real, coordinación de campo, logística, veeduría digital y mensajería masiva vía WhatsApp.",
+    "url": "https://intelecciones.com.py",
+    "offers": { "@type": "Offer", "priceCurrency": "PYG", "availability": "https://schema.org/InStock" },
+    "author": {
+      "@type": "Organization",
+      "name": "IntelliHouse",
+      "url": "https://intelihouse.com.py",
+      "addressCountry": "PY"
+    },
+    "inLanguage": "es",
+    "featureList": ["Centro de Comando en tiempo real","App móvil para coordinadores de campo","Módulo de Veeduría digital","Logística de transporte","WhatsApp Hub masivo","Control de Resultados","Mapa geoespacial interactivo","Multi-lista electoral","Roles diferenciados de acceso"]
+  }
+  </script>
+
+  <!-- ═══ FONTS ═══ -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════ RESET ═══ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #060C1A;
+      color: #E2EAF4;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════ TOKENS ═══ */
+    :root {
+      --blue:    #2E84F0;
+      --blue-lt: #5AACFF;
+      --green:   #25C882;
+      --green-dk:#169058;
+      --navy:    #1E3A6E;
+      --night:   #0D1F42;
+      --bg:      #060C1A;
+      --bg-2:    #0A1428;
+      --bg-3:    #0F1E38;
+      --border:  rgba(46,132,240,0.14);
+      --text:    #E2EAF4;
+      --text-2:  #A8BDD6;
+      --text-3:  #5A7A9F;
+      --r:       16px;
+      --font-d:  'Space Grotesk', sans-serif;
+      --font-b:  'Inter', sans-serif;
+      /* competitor neutral */
+      --rival:   #6B7F96;
+    }
+
+    /* ═══════════════════════════════════════ UTILITIES ═══ */
+    .container { max-width: 1160px; margin: 0 auto; padding: 0 1.5rem; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(46,132,240,0.1); border: 1px solid rgba(46,132,240,0.25);
+      color: var(--blue-lt); font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 0.3rem 0.75rem; border-radius: 100px;
+    }
+    .tag-green { background: rgba(37,200,130,0.1); border-color: rgba(37,200,130,0.25); color: var(--green); }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: linear-gradient(135deg, #2E84F0, #1558B0);
+      color: white; font-family: var(--font-d); font-weight: 700; font-size: 0.9rem;
+      padding: 0.85rem 2rem; border-radius: 12px; border: none; cursor: pointer;
+      text-decoration: none; box-shadow: 0 4px 24px rgba(46,132,240,0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(46,132,240,0.5); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: transparent; color: var(--text-2); font-family: var(--font-d);
+      font-weight: 600; font-size: 0.9rem; padding: 0.85rem 1.75rem;
+      border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+    }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.25); color: white; background: rgba(255,255,255,0.04); }
+    .gradient-text {
+      background: linear-gradient(135deg, #5AACFF 0%, #25C882 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .section-title { font-family: var(--font-d); font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; line-height: 1.12; letter-spacing: -0.03em; }
+    .section-sub { font-size: 1.05rem; color: var(--text-2); line-height: 1.7; max-width: 560px; }
+    .divider { height: 1px; background: var(--border); }
+    .fade-in { opacity: 0; transform: translateY(22px); transition: opacity 0.65s ease, transform 0.65s ease; }
+    .fade-in.visible { opacity: 1; transform: none; }
+
+    /* ═══════════════════════════════════════ NAV ═══ */
+    nav {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(6,12,26,0.88); backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .nav-logo { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; }
+    .nav-wordmark { font-family: var(--font-d); font-size: 1.05rem; line-height: 1; }
+    .nav-wordmark .int  { font-weight: 800; color: var(--blue-lt); }
+    .nav-wordmark .rest { font-weight: 300; color: var(--green); }
+    .nav-links { display: flex; align-items: center; gap: 0.25rem; }
+    .nav-link {
+      color: var(--text-3); font-size: 0.85rem; font-weight: 500;
+      padding: 0.4rem 0.85rem; border-radius: 8px; text-decoration: none; transition: all 0.15s;
+    }
+    .nav-link:hover { color: white; background: rgba(255,255,255,0.06); }
+    @media (max-width: 640px) { .nav-links { display: none; } }
+
+    /* ═══════════════════════════════════════ HERO ═══ */
+    .hero { position: relative; padding: 7rem 0 6rem; overflow: hidden; }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(46,132,240,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(37,200,130,0.08) 0%, transparent 55%);
+    }
+    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; position: relative; z-index: 2; }
+    @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 3rem; } }
+    .hero-title { font-family: var(--font-d); font-size: clamp(2.4rem, 5.5vw, 3.8rem); font-weight: 800; line-height: 1.08; letter-spacing: -0.04em; margin-bottom: 1.5rem; }
+    .hero-sub { font-size: clamp(1rem, 2vw, 1.12rem); color: var(--text-2); line-height: 1.7; margin-bottom: 2.5rem; max-width: 480px; }
+    .hero-ctas { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .hero-stats { display: flex; gap: 2rem; margin-top: 3rem; flex-wrap: wrap; }
+    .hero-stat-num { font-family: var(--font-d); font-size: 2rem; font-weight: 800; color: var(--blue-lt); line-height: 1; }
+    .hero-stat-lbl { font-size: 0.72rem; color: var(--text-3); font-weight: 500; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ─── MOCKUP BASE ─── */
+    .mockup-shell {
+      background: linear-gradient(145deg, rgba(14,26,52,0.92), rgba(6,12,26,0.96));
+      border: 1px solid rgba(46,132,240,0.22);
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(46,132,240,0.07);
+    }
+    .mockup-topbar {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.65rem 1rem; background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid rgba(46,132,240,0.1);
+    }
+    .m-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .m-title { font-size: 0.68rem; font-weight: 700; color: var(--text-3); font-family: var(--font-d); letter-spacing: 0.05em; margin-left: 0.3rem; }
+    .badge-live {
+      margin-left: auto; background: rgba(37,200,130,0.15); border: 1px solid rgba(37,200,130,0.3);
+      color: var(--green); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.12em;
+      padding: 0.18rem 0.5rem; border-radius: 100px;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .badge-live::before { content:''; width:5px; height:5px; border-radius:50%; background:var(--green); animation: blink 1.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .mockup-body { padding: 1rem; }
+
+    /* ─── HERO DASHBOARD ─── */
+    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.5rem; margin-bottom: 0.7rem; }
+    .stat-chip { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 0.55rem; text-align: center; }
+    .stat-chip-num { font-family: var(--font-d); font-size: 1rem; font-weight: 800; }
+    .stat-chip-lbl { font-size: 0.52rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-3); margin-top: 2px; }
+    .map-placeholder {
+      background: linear-gradient(135deg,rgba(14,26,52,0.8),rgba(10,20,40,0.9));
+      border: 1px solid rgba(46,132,240,0.1); border-radius: 10px;
+      height: 118px; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .map-dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; opacity: 0.85; }
+    .map-dot::after { content:''; position:absolute; inset:-4px; border-radius:50%; border:1.5px solid currentColor; opacity:0.4; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:.4} 50%{transform:scale(1.7);opacity:0} }
+    .map-lbl { font-family:var(--font-d); font-size:0.6rem; font-weight:700; color:var(--text-3); z-index:2; letter-spacing:0.08em; }
+    .alert-list { margin-top:0.6rem; display:flex; flex-direction:column; gap:0.35rem; }
+    .alert-item { display:flex; align-items:center; gap:0.45rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.4rem 0.65rem; font-size:0.65rem; color:var(--text-2); }
+    .a-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+
+    /* ─── COORDINATOR MOCKUP ─── */
+    .coord-search {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(46,132,240,0.2);
+      border-radius: 10px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem;
+    }
+    .coord-search-icon { color: var(--text-3); font-size: 0.85rem; }
+    .coord-search-text { font-size: 0.72rem; color: var(--text-3); font-family: var(--font-d); }
+    .coord-search-cursor { width:1px; height:12px; background:var(--blue-lt); animation: cursor-blink 1s infinite; }
+    @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .voter-card {
+      background: linear-gradient(135deg, rgba(14,30,70,0.9) 0%, rgba(8,18,45,0.95) 100%);
+      border: 1px solid rgba(46,132,240,0.25); border-radius: 14px; overflow: hidden;
+    }
+    .voter-card-header {
+      padding: 0.85rem 1rem;
+      background: linear-gradient(135deg, rgba(30,58,110,0.8), rgba(13,31,66,0.9));
+      display: flex; align-items: center; gap: 0.75rem;
+      border-bottom: 1px solid rgba(46,132,240,0.15);
+    }
+    .voter-avatar {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg,#1E3A6E,#0D1F42);
+      border: 2px solid rgba(90,172,255,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-d); font-size: 1rem; font-weight: 800; color: #5AACFF;
+    }
+    .voter-name { font-family: var(--font-d); font-size: 0.85rem; font-weight: 700; color: white; }
+    .voter-ci { font-size: 0.6rem; color: var(--blue-lt); margin-top: 1px; letter-spacing: 0.05em; }
+    .voter-badge-active {
+      margin-left: auto; background: rgba(37,200,130,0.15); border: 1px solid rgba(37,200,130,0.3);
+      color: var(--green); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em;
+      padding: 0.2rem 0.5rem; border-radius: 6px; text-transform: uppercase;
+    }
+    .voter-body { padding: 0.75rem 1rem; }
+    .voter-info-row { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+    .voter-info-item {
+      flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px; padding: 0.45rem 0.6rem;
+    }
+    .voter-info-lbl { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); margin-bottom: 2px; }
+    .voter-info-val { font-family: var(--font-d); font-size: 0.72rem; font-weight: 600; color: var(--text); }
+    .semaforo-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 0.4rem; }
+    .semaforo-row { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+    .sem-btn {
+      flex: 1; height: 26px; border-radius: 7px; border: none; cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .sem-green { background: linear-gradient(135deg,#22C47E,#169058); }
+    .sem-yellow { background: linear-gradient(135deg,#F59E0B,#D97706); }
+    .sem-red { background: linear-gradient(135deg,#EF4444,#B91C1C); }
+    .sem-active { transform: scaleY(1.12); box-shadow: 0 4px 12px rgba(34,196,126,0.4); }
+    .voter-cta {
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      background: linear-gradient(135deg,#2E84F0,#1558B0);
+      color: white; font-family: var(--font-d); font-size: 0.7rem; font-weight: 700;
+      padding: 0.55rem; border-radius: 9px; letter-spacing: 0.04em;
+      box-shadow: 0 4px 14px rgba(46,132,240,0.3);
+    }
+
+    /* ─── VEEDOR MOCKUP ─── */
+    .veedor-header { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(46,132,240,0.1); }
+    .veedor-local { font-family: var(--font-d); font-size: 0.78rem; font-weight: 700; color: white; }
+    .veedor-mesa-info { font-size: 0.6rem; color: var(--text-3); margin-top: 2px; display: flex; gap: 0.75rem; }
+    .veedor-progress { margin: 0.6rem 1rem; }
+    .vp-label { display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-3); margin-bottom: 4px; }
+    .vp-bar { height: 5px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+    .vp-fill { height: 100%; background: linear-gradient(90deg,#25C882,#169058); border-radius: 3px; }
+    .veedor-grid { display: grid; grid-template-columns: repeat(10,1fr); gap: 3px; padding: 0 0.75rem 0.75rem; }
+    .vg-cell {
+      aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.42rem; font-weight: 700; font-family: var(--font-d);
+      border: 1px solid rgba(255,255,255,0.06); cursor: pointer;
+    }
+    .vg-voted { background: rgba(37,200,130,0.2); border-color: rgba(37,200,130,0.35); color: var(--green); }
+    .vg-empty { background: rgba(255,255,255,0.03); color: var(--text-3); }
+
+    /* ─── RESULTS MOCKUP ─── */
+    .results-body { padding: 0.9rem; }
+    .results-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.5rem; margin-bottom: 0.8rem; }
+    .kpi-chip {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 0.6rem 0.5rem; text-align: center;
+    }
+    .kpi-num { font-family: var(--font-d); font-size: 1.1rem; font-weight: 800; }
+    .kpi-lbl { font-size: 0.5rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin-top: 2px; }
+    .results-chart { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.75rem; margin-bottom: 0.7rem; }
+    .chart-title { font-size: 0.55rem; font-weight: 700; color: var(--text-3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.6rem; }
+    .chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 55px; }
+    .c-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+    .c-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 4px; }
+    .c-bar-lbl { font-size: 0.42rem; color: var(--text-3); font-family: var(--font-d); font-weight: 600; }
+    .leaderboard { display: flex; flex-direction: column; gap: 0.35rem; }
+    .lb-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;
+    }
+    .lb-rank { font-family: var(--font-d); font-size: 0.65rem; font-weight: 800; color: var(--text-3); width: 14px; }
+    .lb-name { font-size: 0.68rem; font-weight: 600; color: var(--text); flex: 1; }
+    .lb-count { font-family: var(--font-d); font-size: 0.65rem; font-weight: 700; color: var(--green); }
+    .lb-bar-bg { width: 50px; height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; }
+    .lb-bar-fill { height: 100%; background: linear-gradient(90deg,#2E84F0,#25C882); border-radius: 2px; }
+
+    /* ═══════════════════════════════════════ PAIN ═══ */
+    .pain { padding: 6rem 0; }
+    .pain-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; margin-top: 3rem; }
+    @media (max-width:768px) { .pain-grid { grid-template-columns: 1fr; } }
+    .pain-card { background: rgba(255,80,80,0.04); border: 1px solid rgba(255,80,80,0.12); border-radius: var(--r); padding: 1.75rem; }
+    .pain-icon { font-size: 1.75rem; margin-bottom: 1rem; }
+    .pain-title { font-family: var(--font-d); font-size: 1rem; font-weight: 700; color: #FCA5A5; margin-bottom: 0.5rem; }
+    .pain-desc { font-size: 0.88rem; color: var(--text-2); line-height: 1.6; }
+
+    /* ═══════════════════════════════════════ MÓDULOS ═══ */
+    .modules { padding: 6rem 0; background: var(--bg-2); }
+    .modules-header { text-align: center; margin-bottom: 3.5rem; }
+    .modules-header .section-sub { margin: 1rem auto 0; text-align: center; }
+    .modules-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
+    @media (max-width:900px) { .modules-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width:560px) { .modules-grid { grid-template-columns: 1fr; } }
+    .module-card {
+      background: rgba(10,20,40,0.7); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 1.75rem;
+      transition: all 0.25s ease; cursor: default;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .module-card:hover { border-color: rgba(46,132,240,0.4); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.3); }
+    .module-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.1rem; font-size: 1.3rem; }
+    .module-title { font-family: var(--font-d); font-size: 1.02rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .module-desc { font-size: 0.85rem; color: var(--text-2); line-height: 1.6; margin-bottom: 1rem; }
+    .module-features { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; margin-top: auto; }
+    .module-features li { font-size: 0.78rem; color: var(--text-3); display: flex; align-items: flex-start; gap: 0.4rem; }
+    .module-features li::before { content: '✓'; color: var(--green); font-weight: 700; font-size: 0.82rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ═══════════════════════════════════════ SCREEN PREVIEWS ═══ */
+    .previews { padding: 6rem 0; }
+    .previews-header { text-align: center; margin-bottom: 4rem; }
+    .preview-block {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; margin-bottom: 5rem;
+    }
+    .preview-block.reverse { direction: rtl; }
+    .preview-block.reverse > * { direction: ltr; }
+    @media (max-width:860px) { .preview-block, .preview-block.reverse { grid-template-columns: 1fr; direction: ltr; } }
+    .preview-eyebrow { margin-bottom: 0.75rem; }
+    .preview-title { font-family: var(--font-d); font-size: clamp(1.5rem,3vw,2.1rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 0.9rem; }
+    .preview-desc { font-size: 0.95rem; color: var(--text-2); line-height: 1.7; margin-bottom: 1.5rem; }
+    .preview-bullets { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .preview-bullets li { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.88rem; color: var(--text-2); }
+    .preview-bullets li .bul-icon { color: var(--green); font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ═══════════════════════════════════════ HOW ═══ */
+    .how { padding: 6rem 0; background: var(--bg-2); }
+    .how-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; margin-top: 3rem; }
+    @media (max-width:768px) { .how-grid { grid-template-columns: 1fr; } }
+    .how-step { text-align: center; padding: 2.5rem 1.5rem; position: relative; }
+    .how-step:not(:last-child)::after { content: '→'; position: absolute; right: -0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 1.4rem; }
+    @media (max-width:768px) { .how-step::after { display: none; } }
+    .how-num { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,rgba(46,132,240,0.2),rgba(46,132,240,0.06)); border: 1.5px solid rgba(46,132,240,0.3); display: flex; align-items: center; justify-content: center; font-family: var(--font-d); font-size: 1.2rem; font-weight: 800; color: var(--blue-lt); margin: 0 auto 1.25rem; }
+    .how-title { font-family: var(--font-d); font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .how-desc { font-size: 0.85rem; color: var(--text-2); line-height: 1.6; }
+
+    /* ═══════════════════════════════════════ COMPARATIVA ═══ */
+    .compare { padding: 6rem 0; }
+    .compare-header { text-align: center; margin-bottom: 3.5rem; }
+    .compare-table { width: 100%; border-collapse: collapse; background: rgba(10,20,40,0.6); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+    .compare-table thead tr { background: rgba(0,0,0,0.3); }
+    .compare-table th { padding: 1.1rem 1.5rem; font-family: var(--font-d); font-size: 0.85rem; font-weight: 700; text-align: left; border-bottom: 1px solid var(--border); }
+    .th-feature { color: var(--text-3); width: 42%; }
+    .th-us { color: var(--blue-lt); text-align: center; }
+    .th-them { color: var(--rival); text-align: center; }
+    .compare-table td { padding: 0.9rem 1.5rem; font-size: 0.87rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table tr:hover td { background: rgba(46,132,240,0.03); }
+    .td-center { text-align: center; }
+    .check-yes { color: var(--green); font-size: 1.1rem; font-weight: 700; }
+    .check-partial { color: #F59E0B; font-size: 0.8rem; font-weight: 600; }
+    .check-no { color: rgba(255,255,255,0.18); font-size: 1.1rem; }
+    .feature-name { color: var(--text-2); }
+    .feature-name strong { color: var(--text); font-weight: 600; }
+    .compare-note { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: var(--text-3); }
+
+    /* ═══════════════════════════════════════ ECOSYSTEM ═══ */
+    .ecosystem { padding: 6rem 0; background: var(--bg-2); }
+    .eco-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+    @media (max-width:768px) { .eco-grid { grid-template-columns: 1fr; } }
+    .eco-products { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 2rem; }
+    .eco-product {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.85rem 1.1rem; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; transition: all 0.2s;
+    }
+    .eco-product:hover { border-color: rgba(46,132,240,0.22); background: rgba(46,132,240,0.04); }
+    .eco-active { border-color: rgba(37,200,130,0.3) !important; background: rgba(37,200,130,0.04) !important; }
+    .eco-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .eco-name { font-family: var(--font-d); font-size: 0.9rem; font-weight: 700; }
+    .eco-desc { font-size: 0.76rem; color: var(--text-3); }
+
+    /* ═══════════════════════════════════════ CTA ═══ */
+    .cta-section { padding: 7rem 0; position: relative; overflow: hidden; }
+    .cta-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(46,132,240,0.12) 0%, transparent 70%); }
+    .cta-inner { text-align: center; position: relative; z-index: 2; }
+    .cta-title { font-family: var(--font-d); font-size: clamp(2rem,5vw,3.2rem); font-weight: 800; letter-spacing: -0.04em; margin-bottom: 1.25rem; line-height: 1.1; }
+    .cta-sub { font-size: 1.05rem; color: var(--text-2); max-width: 480px; margin: 0 auto 2.5rem; line-height: 1.7; }
+    .cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .trust-row { display: flex; gap: 2rem; justify-content: center; margin-top: 3rem; flex-wrap: wrap; align-items: center; }
+    .trust-item { text-align: center; }
+    .trust-num { font-family: var(--font-d); font-size: 1.4rem; font-weight: 800; color: var(--blue-lt); }
+    .trust-lbl { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+    .trust-sep { width: 1px; height: 32px; background: var(--border); }
+
+    /* ═══════════════════════════════════════ FOOTER ═══ */
+    footer { background: var(--bg-2); border-top: 1px solid var(--border); padding: 2.5rem 0; }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .footer-brand { display: flex; align-items: center; gap: 0.65rem; }
+    .footer-copy { font-size: 0.75rem; color: var(--text-3); }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-link { font-size: 0.78rem; color: var(--text-3); text-decoration: none; transition: color 0.15s; }
+    .footer-link:hover { color: var(--text-2); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════ NAV -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo" aria-label="Intelecciones - Inicio">
+        <svg viewBox="0 0 80 80" width="34" height="34" fill="none" aria-hidden="true">
+          <defs><linearGradient id="nl" x1="15%" y1="0%" x2="85%" y2="110%"><stop offset="0%" stop-color="#1E3A6E"/><stop offset="100%" stop-color="#0D1F42"/></linearGradient></defs>
+          <rect width="80" height="80" rx="18" fill="url(#nl)"/>
+          <g transform="translate(40,30) rotate(-10)">
+            <rect x="-11" y="-14" width="22" height="19" rx="2" fill="white" opacity="0.97"/>
+            <line x1="-6" y1="-8" x2="6" y2="-8" stroke="#D0DCF0" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="-6" y1="-3" x2="2" y2="-3" stroke="#D0DCF0" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M-8,1 L-1,8 L10,-7" fill="none" stroke="#22C47E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <rect x="12" y="41" width="56" height="8" rx="2" fill="white" opacity="0.95"/>
+          <rect x="27" y="43" width="26" height="4" rx="1" fill="url(#nl)" opacity="0.45"/>
+          <rect x="15" y="47" width="50" height="29" rx="3" fill="white" opacity="0.95"/>
+          <circle cx="40" cy="63" r="4" fill="url(#nl)" opacity="0.18"/><circle cx="40" cy="63" r="2" fill="url(#nl)" opacity="0.3"/>
+          <circle cx="69" cy="12" r="7" fill="#2E84F0"/>
+        </svg>
+        <div class="nav-wordmark"><span class="int">Int</span><span class="rest">elecciones</span></div>
+      </a>
+      <div class="nav-links" role="navigation" aria-label="Menú principal">
+        <a href="#modulos" class="nav-link">Módulos</a>
+        <a href="#vistas" class="nav-link">Vistas</a>
+        <a href="#comparativa" class="nav-link">Comparativa</a>
+        <a href="#ecosistema" class="nav-link">Ecosistema</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <a href="https://app.intelecciones.com.py/login" class="btn-secondary" style="padding:0.55rem 1.1rem;font-size:0.82rem;border-color:rgba(90,172,255,0.25);color:var(--blue-lt)" aria-label="Ingresar al sistema">
+          Ingresar
+        </a>
+        <a href="#contacto" class="btn-primary" style="padding:0.55rem 1.1rem;font-size:0.82rem;" aria-label="Solicitar demo de Intelecciones">
+          Solicitar Demo →
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ══════════════════════════════════════════════ HERO -->
+<section class="hero" aria-label="Hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="hero-grid">
+
+      <div>
+        <div style="margin-bottom:1.5rem">
+          <span class="tag">🇵🇾 Plataforma electoral para Paraguay</span>
+        </div>
+        <h1 class="hero-title">
+          Gana quien<br/>
+          <span class="gradient-text">mejor organice</span><br/>
+          su campaña.
+        </h1>
+        <p class="hero-sub">
+          Centro de comando en tiempo real, coordinación de campo móvil, logística de transporte, veeduría digital y WhatsApp masivo — todo integrado, todo sincronizado.
+        </p>
+        <div class="hero-ctas">
+          <a href="#contacto" class="btn-primary">Solicitar Demo gratuita →</a>
+          <a href="#modulos" class="btn-secondary">Ver módulos</a>
+        </div>
+        <div class="hero-stats">
+          <div><div class="hero-stat-num">6</div><div class="hero-stat-lbl">Módulos integrados</div></div>
+          <div><div class="hero-stat-num">4</div><div class="hero-stat-lbl">Roles de acceso</div></div>
+          <div><div class="hero-stat-num">100%</div><div class="hero-stat-lbl">Tiempo real</div></div>
+          <div><div class="hero-stat-num">Web</div><div class="hero-stat-lbl">Sin instalar nada</div></div>
+        </div>
+      </div>
+
+      <!-- Dashboard mockup -->
+      <div class="fade-in" aria-hidden="true">
+        <div class="mockup-shell">
+          <div class="mockup-topbar">
+            <div class="m-dot" style="background:#FF5F57"></div>
+            <div class="m-dot" style="background:#FEBC2E"></div>
+            <div class="m-dot" style="background:#28C840"></div>
+            <span class="m-title">Centro de Comando — PLRA 2026</span>
+            <div class="badge-live">LIVE</div>
+          </div>
+          <div class="mockup-body">
+            <div class="stat-row">
+              <div class="stat-chip"><div class="stat-chip-num" style="color:#25C882">3.842</div><div class="stat-chip-lbl">A Favor</div></div>
+              <div class="stat-chip"><div class="stat-chip-num" style="color:#F59E0B">1.203</div><div class="stat-chip-lbl">Indeciso</div></div>
+              <div class="stat-chip"><div class="stat-chip-num" style="color:#F87171">412</div><div class="stat-chip-lbl">En Contra</div></div>
+              <div class="stat-chip"><div class="stat-chip-num" style="color:#5AACFF">2.541</div><div class="stat-chip-lbl">Sin Dato</div></div>
+            </div>
+            <div class="map-placeholder">
+              <div class="map-dot" style="background:#25C882;color:#25C882;top:30%;left:25%"></div>
+              <div class="map-dot" style="background:#25C882;color:#25C882;top:55%;left:60%"></div>
+              <div class="map-dot" style="background:#F59E0B;color:#F59E0B;top:38%;left:72%"></div>
+              <div class="map-dot" style="background:#2E84F0;color:#2E84F0;top:65%;left:38%"></div>
+              <div class="map-dot" style="background:#25C882;color:#25C882;top:22%;left:52%"></div>
+              <div class="map-dot" style="background:#F87171;color:#F87171;top:70%;left:78%"></div>
+              <div class="map-dot" style="background:#25C882;color:#25C882;top:48%;left:18%"></div>
+              <span class="map-lbl">🗺 LOCALES DE VOTACIÓN · EN VIVO</span>
+            </div>
+            <div class="alert-list">
+              <div class="alert-item"><div class="a-dot" style="background:#25C882"></div>Coordinador Barrio Obrero registró 12 electores</div>
+              <div class="alert-item"><div class="a-dot" style="background:#F59E0B"></div>Solicitud de transporte: Local 142 — Mesa 8</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ DOLOR -->
+<section class="pain" id="dolor" aria-labelledby="dolor-title">
+  <div class="container">
+    <div class="fade-in" style="max-width:640px">
+      <span class="tag" style="display:inline-flex;margin-bottom:1rem">El problema real</span>
+      <h2 class="section-title" id="dolor-title" style="margin-bottom:1rem">
+        Las campañas se pierden<br/>por <span style="color:#FCA5A5">falta de coordinación.</span>
+      </h2>
+      <p class="section-sub">No es falta de votos. Es no saber dónde están, no poder movilizarlos a tiempo y perder el control total el día D.</p>
+    </div>
+    <div class="pain-grid">
+      <div class="pain-card fade-in"><div class="pain-icon">📋</div><div class="pain-title">Padrones en papel o Excel</div><div class="pain-desc">Sin visibilidad en tiempo real de quiénes captaron tus coordinadores. La información llega tarde, duplicada o nunca llega.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">🚗</div><div class="pain-title">Logística improvisada el día D</div><div class="pain-desc">Vehículos sin asignar, electores sin transporte, coordinadores incomunicados. Votos que se pierden por pura desorganización.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">📍</div><div class="pain-title">Sin visión territorial</div><div class="pain-desc">¿Cuántos votos tenés asegurados por local? ¿Qué mesa necesita refuerzo? Sin mapa, sin datos, sin estrategia real.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">💬</div><div class="pain-title">WhatsApp manual e ineficiente</div><div class="pain-desc">Grupos caóticos, sin templates, sin seguimiento. Miles de electores que no reciben la convocatoria a tiempo.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">🗳️</div><div class="pain-title">Veeduría sin sistema</div><div class="pain-desc">Fiscales de mesa sin herramienta. No sabés en tiempo real cuántos de tus votantes ya ejercieron su voto.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">📊</div><div class="pain-title">Sin control de resultados</div><div class="pain-desc">Al cierre de urnas, no sabés qué coordinadores rindieron, qué zonas fallaron ni cómo comparás con el objetivo. Evaluás a ciegas.</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ MÓDULOS -->
+<section class="modules" id="modulos" aria-labelledby="modulos-title">
+  <div class="container">
+    <div class="modules-header fade-in">
+      <span class="tag tag-green">Plataforma completa</span>
+      <h2 class="section-title" id="modulos-title" style="margin-top:1rem">6 módulos. Un solo sistema.</h2>
+      <p class="section-sub">Cada rol de tu campaña tiene su herramienta específica, todos conectados y sincronizados en tiempo real.</p>
+    </div>
+    <div class="modules-grid">
+
+      <article class="module-card fade-in">
+        <div class="module-icon" style="background:rgba(46,132,240,0.12);border:1px solid rgba(46,132,240,0.2)">🗺️</div>
+        <div class="module-title">Centro de Comando</div>
+        <div class="module-desc">Panel estratégico para el Jefe de Campaña. Visión 360° en tiempo real de toda la operación.</div>
+        <ul class="module-features">
+          <li>Estadísticas en vivo: a favor / indeciso / en contra</li>
+          <li>Mapa interactivo de locales de votación</li>
+          <li>Alertas y solicitudes del campo</li>
+          <li>Tabla de gestión de electores</li>
+          <li>Countdown a la fecha electoral</li>
+        </ul>
+      </article>
+
+      <article class="module-card fade-in">
+        <div class="module-icon" style="background:rgba(37,200,130,0.1);border:1px solid rgba(37,200,130,0.2)">👥</div>
+        <div class="module-title">App de Coordinador</div>
+        <div class="module-desc">Herramienta móvil para coordinadores de campo. Capta y gestiona electores directamente desde el celular.</div>
+        <ul class="module-features">
+          <li>Búsqueda por cédula con autocompletado</li>
+          <li>Semáforo de apoyo: verde / amarillo / rojo</li>
+          <li>Datos de local, mesa y orden de votación</li>
+          <li>Solicitudes de transporte al comando</li>
+          <li>Historial y estadísticas propias</li>
+        </ul>
+      </article>
+
+      <article class="module-card fade-in">
+        <div class="module-icon" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2)">✅</div>
+        <div class="module-title">Veeduría Digital</div>
+        <div class="module-desc">Para fiscales de mesa. Registra quiénes ya votaron en tiempo real, sincronizado con el comando.</div>
+        <ul class="module-features">
+          <li>Grilla digital por número de orden</li>
+          <li>Marcado de voto con un solo toque</li>
+          <li>Sincronización inmediata con comando central</li>
+          <li>Vista de mesa asignada con información del local</li>
+        </ul>
+      </article>
+
+      <article class="module-card fade-in">
+        <div class="module-icon" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2)">🚗</div>
+        <div class="module-title">Logística</div>
+        <div class="module-desc">Gestión de flota y transporte de electores. El día D coordinado, sin improvisación.</div>
+        <ul class="module-features">
+          <li>Registro de vehículos, conductores y placas</li>
+          <li>Asignación de electores por unidad</li>
+          <li>Solicitudes pendientes en tiempo real</li>
+          <li>Control de capacidad por vehículo</li>
+        </ul>
+      </article>
+
+      <article class="module-card fade-in">
+        <div class="module-icon" style="background:rgba(37,200,130,0.1);border:1px solid rgba(37,200,130,0.2)">💬</div>
+        <div class="module-title">WhatsApp Hub</div>
+        <div class="module-desc">Envío masivo de mensajes personalizados a electores vía WhatsApp Business integrado.</div>
+        <ul class="module-features">
+          <li>Conexión vía QR — sin costo de API</li>
+          <li>Templates de mensajes personalizados</li>
+          <li>Envío segmentado por lista o zona</li>
+          <li>Estado de sesión en tiempo real</li>
+        </ul>
+      </article>
+
+      <article class="module-card fade-in" style="border-color:rgba(37,200,130,0.2);background:rgba(10,26,42,0.8)">
+        <div class="module-icon" style="background:rgba(37,200,130,0.12);border:1px solid rgba(37,200,130,0.25)">📊</div>
+        <div class="module-title">Control de Resultados <span style="font-size:0.6rem;background:rgba(37,200,130,0.15);border:1px solid rgba(37,200,130,0.3);color:var(--green);padding:0.15rem 0.5rem;border-radius:6px;font-weight:700;vertical-align:middle;letter-spacing:0.08em">PRÓXIMO</span></div>
+        <div class="module-desc">Seguimiento en tiempo real del avance vs meta, evaluación por coordinador y comparación entre listas.</div>
+        <ul class="module-features">
+          <li>Dashboard de avance vs objetivo global</li>
+          <li>Ranking y rendimiento por coordinador</li>
+          <li>Comparativa entre listas (Concejal / Intendente)</li>
+          <li>Análisis de zonas calientes y frías</li>
+          <li>Historial de actividad y exportación</li>
+        </ul>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ SCREEN PREVIEWS -->
+<section class="previews" id="vistas" aria-labelledby="vistas-title">
+  <div class="container">
+    <div class="previews-header fade-in">
+      <span class="tag" style="display:inline-flex;margin-bottom:1rem">Vistas reales</span>
+      <h2 class="section-title" id="vistas-title">Así se ve por dentro.</h2>
+      <p class="section-sub" style="margin:0.75rem auto 0;text-align:center">Cada módulo tiene una interfaz diseñada específicamente para su contexto de uso — campo, comando, mesa o análisis.</p>
+    </div>
+
+    <!-- Preview 1: Coordinator -->
+    <div class="preview-block" aria-label="App de Coordinador">
+      <div class="fade-in">
+        <div class="preview-eyebrow"><span class="tag tag-green">App de Coordinador</span></div>
+        <h3 class="preview-title">Tu equipo de campo, coordinado desde el celular.</h3>
+        <p class="preview-desc">El coordinador busca al elector por cédula, ve su local y mesa de votación, registra su nivel de apoyo con el semáforo y solicita transporte — todo desde una pantalla, en segundos.</p>
+        <ul class="preview-bullets">
+          <li><span class="bul-icon">✓</span> Búsqueda con autocompletado al escribir la cédula</li>
+          <li><span class="bul-icon">✓</span> Semáforo visual de apoyo (sin texto, solo color)</li>
+          <li><span class="bul-icon">✓</span> Información de local, mesa y orden de votación</li>
+          <li><span class="bul-icon">✓</span> Un toque para solicitar transporte al comando</li>
+        </ul>
+      </div>
+      <div class="fade-in" aria-hidden="true" style="max-width:340px;margin:0 auto;width:100%">
+        <div class="mockup-shell">
+          <div class="mockup-topbar">
+            <div class="m-dot" style="background:#FF5F57"></div>
+            <div class="m-dot" style="background:#FEBC2E"></div>
+            <div class="m-dot" style="background:#28C840"></div>
+            <span class="m-title">App Coordinador · Campo</span>
+          </div>
+          <div style="padding:0.85rem">
+            <!-- Search -->
+            <div class="coord-search">
+              <span class="coord-search-icon">🔍</span>
+              <span class="coord-search-text">4.521.836<span class="coord-search-cursor"></span></span>
+            </div>
+            <!-- Voter Card -->
+            <div class="voter-card">
+              <div class="voter-card-header">
+                <div class="voter-avatar">MR</div>
+                <div>
+                  <div class="voter-name">MARIO RODRÍGUEZ</div>
+                  <div class="voter-ci">CI: 4.521.836</div>
+                </div>
+                <div class="voter-badge-active">ACTIVO</div>
+              </div>
+              <div class="voter-body">
+                <div class="voter-info-row">
+                  <div class="voter-info-item">
+                    <div class="voter-info-lbl">Local</div>
+                    <div class="voter-info-val" style="font-size:0.65rem">Esc. Rep. Argentina</div>
+                  </div>
+                  <div class="voter-info-item">
+                    <div class="voter-info-lbl">Mesa</div>
+                    <div class="voter-info-val">45</div>
+                  </div>
+                  <div class="voter-info-item">
+                    <div class="voter-info-lbl">Orden</div>
+                    <div class="voter-info-val">#182</div>
+                  </div>
+                </div>
+                <div class="voter-info-row">
+                  <div class="voter-info-item" style="flex:2">
+                    <div class="voter-info-lbl">Dirección</div>
+                    <div class="voter-info-val" style="font-size:0.65rem">Av. España 1240, Asunción</div>
+                  </div>
+                  <div class="voter-info-item">
+                    <div class="voter-info-lbl">Barrio</div>
+                    <div class="voter-info-val" style="font-size:0.65rem">Central</div>
+                  </div>
+                </div>
+                <div class="semaforo-label">Nivel de apoyo</div>
+                <div class="semaforo-row">
+                  <button class="sem-btn sem-green sem-active" aria-label="A favor"></button>
+                  <button class="sem-btn sem-yellow" aria-label="Indeciso"></button>
+                  <button class="sem-btn sem-red" aria-label="En contra"></button>
+                </div>
+                <div class="voter-cta">
+                  ✅ Registrar Elector
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview 2: Veedor -->
+    <div class="preview-block reverse" aria-label="App de Veeduría">
+      <div class="fade-in">
+        <div class="preview-eyebrow"><span class="tag">Veeduría Digital</span></div>
+        <h3 class="preview-title">Fiscal de mesa digitalizado. Saber quién votó, en tiempo real.</h3>
+        <p class="preview-desc">El fiscal de mesa toca el número de orden cuando el elector vota. El comando ve el avance al instante. Sin papeles, sin llamadas, sin dudas.</p>
+        <ul class="preview-bullets">
+          <li><span class="bul-icon">✓</span> Grilla completa de electores de la mesa asignada</li>
+          <li><span class="bul-icon">✓</span> Marcado individual con confirmación visual</li>
+          <li><span class="bul-icon">✓</span> Barra de progreso: votaron X de Y</li>
+          <li><span class="bul-icon">✓</span> Sincronización instantánea con el Centro de Comando</li>
+        </ul>
+      </div>
+      <div class="fade-in" aria-hidden="true" style="max-width:360px;margin:0 auto;width:100%">
+        <div class="mockup-shell">
+          <div class="mockup-topbar">
+            <div class="m-dot" style="background:#FF5F57"></div>
+            <div class="m-dot" style="background:#FEBC2E"></div>
+            <div class="m-dot" style="background:#28C840"></div>
+            <span class="m-title">Veeduría · Mesa 45</span>
+            <div class="badge-live">EN VIVO</div>
+          </div>
+          <div class="veedor-header">
+            <div class="veedor-local">Esc. República Argentina</div>
+            <div class="veedor-mesa-info">
+              <span>Mesa 45</span>
+              <span>|</span>
+              <span>32 votaron</span>
+              <span>|</span>
+              <span>88 restantes</span>
+            </div>
+          </div>
+          <div class="veedor-progress">
+            <div class="vp-label"><span>Participación</span><span style="color:var(--green);font-weight:700">26.7%</span></div>
+            <div class="vp-bar"><div class="vp-fill" style="width:26.7%"></div></div>
+          </div>
+          <div class="veedor-grid" aria-label="Grilla de votación">
+            <!-- voted -->
+            <div class="vg-cell vg-voted">1</div><div class="vg-cell vg-voted">2</div>
+            <div class="vg-cell vg-voted">3</div><div class="vg-cell vg-voted">4</div>
+            <div class="vg-cell vg-empty">5</div><div class="vg-cell vg-voted">6</div>
+            <div class="vg-cell vg-voted">7</div><div class="vg-cell vg-empty">8</div>
+            <div class="vg-cell vg-voted">9</div><div class="vg-cell vg-voted">10</div>
+            <div class="vg-cell vg-voted">11</div><div class="vg-cell vg-empty">12</div>
+            <div class="vg-cell vg-voted">13</div><div class="vg-cell vg-voted">14</div>
+            <div class="vg-cell vg-empty">15</div><div class="vg-cell vg-voted">16</div>
+            <div class="vg-cell vg-empty">17</div><div class="vg-cell vg-voted">18</div>
+            <div class="vg-cell vg-voted">19</div><div class="vg-cell vg-empty">20</div>
+            <!-- empty rest -->
+            <div class="vg-cell vg-empty">21</div><div class="vg-cell vg-empty">22</div>
+            <div class="vg-cell vg-voted">23</div><div class="vg-cell vg-empty">24</div>
+            <div class="vg-cell vg-empty">25</div><div class="vg-cell vg-empty">26</div>
+            <div class="vg-cell vg-voted">27</div><div class="vg-cell vg-empty">28</div>
+            <div class="vg-cell vg-empty">29</div><div class="vg-cell vg-empty">30</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview 3: Results -->
+    <div class="preview-block" aria-label="Control de Resultados">
+      <div class="fade-in">
+        <div class="preview-eyebrow"><span class="tag tag-green">Control de Resultados <span style="font-size:0.65em">— Próximamente</span></span></div>
+        <h3 class="preview-title">Saber quién rindió y dónde ganaste.</h3>
+        <p class="preview-desc">El módulo de resultados cierra el ciclo: compará el rendimiento de cada coordinador, evaluá zonas, medí avance vs meta y tomá decisiones en tiempo real, no después de que sea tarde.</p>
+        <ul class="preview-bullets">
+          <li><span class="bul-icon">✓</span> Avance en tiempo real vs meta de electores</li>
+          <li><span class="bul-icon">✓</span> Ranking de coordinadores por captación</li>
+          <li><span class="bul-icon">✓</span> Comparativa entre listas (Concejal vs Intendente)</li>
+          <li><span class="bul-icon">✓</span> Zonas calientes y frías en el mapa</li>
+          <li><span class="bul-icon">✓</span> Exportación para presentar al candidato</li>
+        </ul>
+      </div>
+      <div class="fade-in" aria-hidden="true" style="max-width:360px;margin:0 auto;width:100%">
+        <div class="mockup-shell">
+          <div class="mockup-topbar">
+            <div class="m-dot" style="background:#FF5F57"></div>
+            <div class="m-dot" style="background:#FEBC2E"></div>
+            <div class="m-dot" style="background:#28C840"></div>
+            <span class="m-title">Control de Resultados</span>
+          </div>
+          <div class="results-body">
+            <!-- KPIs -->
+            <div class="results-kpi-row">
+              <div class="kpi-chip"><div class="kpi-num" style="color:#25C882">3.842</div><div class="kpi-lbl">Captados</div></div>
+              <div class="kpi-chip"><div class="kpi-num" style="color:#5AACFF">10.000</div><div class="kpi-lbl">Meta</div></div>
+              <div class="kpi-chip"><div class="kpi-num" style="color:#F59E0B">38.4%</div><div class="kpi-lbl">Avance</div></div>
+            </div>
+            <!-- Meta bar -->
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.65rem 0.75rem;margin-bottom:0.7rem">
+              <div style="display:flex;justify-content:space-between;font-size:0.55rem;color:var(--text-3);margin-bottom:5px">
+                <span style="font-weight:700;letter-spacing:0.08em;text-transform:uppercase">Avance global vs Meta</span>
+                <span style="color:var(--blue-lt);font-weight:700">38.4%</span>
+              </div>
+              <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:38.4%;background:linear-gradient(90deg,#2E84F0,#25C882);border-radius:3px"></div>
+              </div>
+            </div>
+            <!-- Chart -->
+            <div class="results-chart">
+              <div class="chart-title">Captaciones por zona</div>
+              <div class="chart-bars">
+                <div class="c-bar-wrap"><div class="c-bar" style="height:78%;background:linear-gradient(180deg,#2E84F0,#1558B0)"></div><div class="c-bar-lbl">Norte</div></div>
+                <div class="c-bar-wrap"><div class="c-bar" style="height:55%;background:linear-gradient(180deg,#2E84F0,#1558B0)"></div><div class="c-bar-lbl">Sur</div></div>
+                <div class="c-bar-wrap"><div class="c-bar" style="height:92%;background:linear-gradient(180deg,#25C882,#169058)"></div><div class="c-bar-lbl">Centro</div></div>
+                <div class="c-bar-wrap"><div class="c-bar" style="height:41%;background:linear-gradient(180deg,#2E84F0,#1558B0)"></div><div class="c-bar-lbl">Este</div></div>
+                <div class="c-bar-wrap"><div class="c-bar" style="height:63%;background:linear-gradient(180deg,#2E84F0,#1558B0)"></div><div class="c-bar-lbl">Oeste</div></div>
+              </div>
+            </div>
+            <!-- Leaderboard -->
+            <div class="leaderboard">
+              <div class="lb-row">
+                <span class="lb-rank">#1</span>
+                <span class="lb-name">A. González</span>
+                <span class="lb-count">312</span>
+                <div class="lb-bar-bg"><div class="lb-bar-fill" style="width:100%"></div></div>
+              </div>
+              <div class="lb-row">
+                <span class="lb-rank">#2</span>
+                <span class="lb-name">M. Benítez</span>
+                <span class="lb-count">287</span>
+                <div class="lb-bar-bg"><div class="lb-bar-fill" style="width:92%"></div></div>
+              </div>
+              <div class="lb-row">
+                <span class="lb-rank">#3</span>
+                <span class="lb-name">R. Cabral</span>
+                <span class="lb-count">241</span>
+                <div class="lb-bar-bg"><div class="lb-bar-fill" style="width:77%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ HOW IT WORKS -->
+<section class="how" id="como-funciona" aria-labelledby="how-title">
+  <div class="container">
+    <div class="fade-in" style="max-width:640px;margin-bottom:0">
+      <span class="tag" style="display:inline-flex;margin-bottom:1rem">Simple por diseño</span>
+      <h2 class="section-title" id="how-title">Arrancá en 3 pasos.</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-step fade-in">
+        <div class="how-num">1</div>
+        <div class="how-title">Configuramos tu campaña</div>
+        <div class="how-desc">Cargamos tus listas, locales de votación y estructura del equipo. Personalización completa con tu marca y fecha electoral.</div>
+      </div>
+      <div class="how-step fade-in">
+        <div class="how-num">2</div>
+        <div class="how-title">Activamos a tu equipo</div>
+        <div class="how-desc">Cada coordinador, veedor y logístico recibe su acceso con rol específico. Onboarding incluido — la app es intuitiva desde el primer uso.</div>
+      </div>
+      <div class="how-step fade-in">
+        <div class="how-num">3</div>
+        <div class="how-title">Ganás el día D</div>
+        <div class="how-desc">Vista completa en tiempo real, transporte coordinado, veeduría activa y comunicación masiva. Tu campaña en modo élite.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ COMPARATIVA -->
+<section class="compare" id="comparativa" aria-labelledby="compare-title">
+  <div class="container">
+    <div class="compare-header fade-in">
+      <span class="tag">Comparativa</span>
+      <h2 class="section-title" id="compare-title" style="margin-top:1rem">
+        <span class="gradient-text">Intelecciones</span> vs otras plataformas
+      </h2>
+      <p class="section-sub" style="margin:1rem auto 0;text-align:center">
+        No todas las herramientas electorales son iguales. Estas son las diferencias que importan en el terreno.
+      </p>
+    </div>
+    <div class="fade-in">
+      <table class="compare-table" role="table" aria-label="Comparativa de plataformas electorales">
+        <thead>
+          <tr>
+            <th class="th-feature" scope="col">Característica</th>
+            <th class="th-us" scope="col"><span style="font-size:0.8rem">⚡</span> Intelecciones</th>
+            <th class="th-them" scope="col" style="color:var(--rival)">Comicios</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- UNIQUELY OURS -->
+          <tr style="background:rgba(37,200,130,0.03)">
+            <td colspan="3" style="padding:0.5rem 1.5rem;font-size:0.6rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--green);border-bottom:1px solid rgba(37,200,130,0.1)">
+              Exclusivo de Intelecciones
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>WhatsApp Hub integrado</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Envío masivo a electores sin costo de API, con templates</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-no">—</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Logística de transporte</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Flota de vehículos, conductores y solicitudes en tiempo real</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-no">—</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Multi-lista (Concejal + Intendente)</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Vista global o por lista en un clic</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-no">—</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Ecosistema IntelliHouse integrado</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Inteliaudit + SueldOK + Inteligencia — misma plataforma</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-no">—</span></td>
+          </tr>
+
+          <!-- SHARED STRENGTHS -->
+          <tr style="background:rgba(46,132,240,0.03)">
+            <td colspan="3" style="padding:0.5rem 1.5rem;font-size:0.6rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--blue-lt);border-bottom:1px solid rgba(46,132,240,0.1);border-top:1px solid rgba(46,132,240,0.08)">
+              Capacidades compartidas
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>App de coordinador de campo</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Registro de electores y clasificación de apoyo</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Mapa territorial interactivo</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Visualización geoespacial de operaciones electorales</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Veeduría digital de mesa</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Fiscalización y control en tiempo real</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Semáforo de intención de voto</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Clasificación por nivel de apoyo elector a elector</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Roles diferenciados por función</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Jefe / Coordinador / Veedor / Candidato</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Control de resultados y evaluación</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Ranking, análisis por zona y avance vs meta</span></td>
+            <td class="td-center"><span class="check-partial" style="color:var(--green)">Próximo</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+
+          <!-- OPPORTUNITY AREAS -->
+          <tr style="background:rgba(245,158,11,0.03)">
+            <td colspan="3" style="padding:0.5rem 1.5rem;font-size:0.6rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#F59E0B;border-bottom:1px solid rgba(245,158,11,0.1);border-top:1px solid rgba(245,158,11,0.08)">
+              En desarrollo — roadmap 2026
+            </td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Modo offline para trabajo en campo</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Sincronización automática al recuperar conectividad</span></td>
+            <td class="td-center"><span class="check-partial">Próximo</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Cálculo D'Hondt automático</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Asignación de bancas en escrutinio final</span></td>
+            <td class="td-center"><span class="check-partial">Próximo</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td class="feature-name"><strong>Gamificación del equipo de campo</strong><br/><span style="font-size:0.75rem;color:var(--text-3)">Badges y rankings para motivar coordinadores</span></td>
+            <td class="td-center"><span class="check-partial">Próximo</span></td>
+            <td class="td-center"><span class="check-yes">✓</span></td>
+          </tr>
+
+        </tbody>
+      </table>
+      <p class="compare-note">* Basado en análisis de funcionalidades publicadas por ambas plataformas. Mayo 2026.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ ECOSISTEMA -->
+<section class="ecosystem" id="ecosistema" aria-labelledby="eco-title">
+  <div class="container">
+    <div class="eco-grid">
+      <div class="fade-in">
+        <span class="tag" style="display:inline-flex;margin-bottom:1.5rem">IntelliHouse Ecosystem</span>
+        <h2 class="section-title" id="eco-title">Parte de algo<br/><span class="gradient-text">más grande.</span></h2>
+        <p class="section-sub" style="margin-top:1rem">
+          Intelecciones es parte del ecosistema IntelliHouse — la suite de soluciones de inteligencia de datos para organizaciones en Paraguay y la región.
+        </p>
+        <p style="font-size:0.85rem;color:var(--text-3);margin-top:1rem;line-height:1.7">
+          La misma calidad, el mismo soporte y la misma obsesión por el detalle que ya impulsa las operaciones de nuestros clientes en auditoría y gestión de recursos humanos.
+        </p>
+      </div>
+      <div class="fade-in">
+        <div class="eco-products">
+          <div class="eco-product eco-active">
+            <div class="eco-icon" style="background:rgba(14,26,60,0.8);border:1px solid rgba(37,200,130,0.3)">
+              <svg viewBox="0 0 80 80" width="22" height="22" fill="none">
+                <rect width="80" height="80" rx="18" fill="#0D1F42"/>
+                <g transform="translate(40,30) rotate(-10)">
+                  <rect x="-11" y="-14" width="22" height="19" rx="2" fill="white" opacity="0.9"/>
+                  <path d="M-8,1 L-1,8 L10,-7" fill="none" stroke="#22C47E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
+                <rect x="12" y="41" width="56" height="8" rx="2" fill="white" opacity="0.85"/>
+                <rect x="15" y="47" width="50" height="29" rx="3" fill="white" opacity="0.85"/>
+                <circle cx="69" cy="12" r="7" fill="#2E84F0"/>
+              </svg>
+            </div>
+            <div>
+              <div class="eco-name"><span style="color:#5AACFF;font-weight:800">Int</span><span style="color:#25C882;font-weight:300">elecciones</span> <span style="font-size:0.6rem;color:var(--green);background:rgba(37,200,130,0.12);border:1px solid rgba(37,200,130,0.25);padding:0.15rem 0.5rem;border-radius:100px;font-weight:700;letter-spacing:0.08em">ACTIVO</span></div>
+              <div class="eco-desc">Gestión integral de campañas electorales</div>
+            </div>
+          </div>
+          <div class="eco-product">
+            <div class="eco-icon" style="background:rgba(46,132,240,0.1);border:1px solid rgba(46,132,240,0.2)">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2E84F0" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <div>
+              <div class="eco-name"><span style="color:#5AACFF;font-weight:800">Inteli</span><span style="color:#25C882;font-weight:300">audit</span></div>
+              <div class="eco-desc">Auditoría y control de gestión inteligente</div>
+            </div>
+          </div>
+          <div class="eco-product">
+            <div class="eco-icon" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2)">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#A855F7" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </div>
+            <div>
+              <div class="eco-name"><span style="color:#5AACFF;font-weight:800">Sueldo</span><span style="color:#25C882;font-weight:300">OK</span></div>
+              <div class="eco-desc">Gestión de recursos humanos y nómina</div>
+            </div>
+          </div>
+          <div class="eco-product">
+            <div class="eco-icon" style="background:rgba(37,200,130,0.1);border:1px solid rgba(37,200,130,0.2)">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#25C882" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div>
+              <div class="eco-name"><span style="color:#5AACFF;font-weight:800">Inteli</span><span style="color:#25C882;font-weight:300">gencia</span></div>
+              <div class="eco-desc">Business intelligence y análisis de datos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ CTA FINAL -->
+<section class="cta-section" id="contacto" aria-labelledby="cta-title">
+  <div class="cta-bg" aria-hidden="true"></div>
+  <div class="container">
+    <div class="cta-inner fade-in">
+      <span class="tag tag-green" style="display:inline-flex;margin-bottom:1.5rem">Precios a consultar</span>
+      <h2 class="cta-title" id="cta-title">
+        ¿Listo para ganar<br/>
+        <span class="gradient-text">con inteligencia?</span>
+      </h2>
+      <p class="cta-sub">
+        Cada campaña es única. Hablemos sobre tu estructura, equipo y objetivos — y diseñamos la solución ideal para vos.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://wa.me/595XXXXXXXXX?text=Hola%2C%20quiero%20solicitar%20una%20demo%20de%20Intelecciones" class="btn-primary" target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">
+          💬 Escribir por WhatsApp
+        </a>
+        <a href="mailto:hola@intelihouse.com.py?subject=Demo%20Intelecciones" class="btn-secondary" aria-label="Enviar correo">
+          Enviar correo →
+        </a>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-3)">
+        O escribinos a <a href="mailto:hola@intelihouse.com.py" style="color:var(--blue-lt);text-decoration:none">hola@intelihouse.com.py</a>
+      </p>
+      <div class="trust-row" aria-label="Puntos clave">
+        <div class="trust-item"><div class="trust-num">🇵🇾</div><div class="trust-lbl">100% Local</div></div>
+        <div class="trust-sep" aria-hidden="true"></div>
+        <div class="trust-item"><div class="trust-num">24/7</div><div class="trust-lbl">Soporte Día D</div></div>
+        <div class="trust-sep" aria-hidden="true"></div>
+        <div class="trust-item"><div class="trust-num">6</div><div class="trust-lbl">Módulos integrados</div></div>
+        <div class="trust-sep" aria-hidden="true"></div>
+        <div class="trust-item"><div class="trust-num">48h</div><div class="trust-lbl">Setup completo</div></div>
+        <div class="trust-sep" aria-hidden="true"></div>
+        <div class="trust-item"><div class="trust-num">Web</div><div class="trust-lbl">Sin instalar nada</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <svg viewBox="0 0 80 80" width="26" height="26" fill="none" aria-hidden="true">
+          <rect width="80" height="80" rx="18" fill="#0D1F42"/>
+          <g transform="translate(40,30) rotate(-10)">
+            <rect x="-11" y="-14" width="22" height="19" rx="2" fill="white" opacity="0.9"/>
+            <path d="M-8,1 L-1,8 L10,-7" fill="none" stroke="#22C47E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <rect x="12" y="41" width="56" height="8" rx="2" fill="white" opacity="0.85"/>
+          <rect x="15" y="47" width="50" height="29" rx="3" fill="white" opacity="0.85"/>
+          <circle cx="69" cy="12" r="7" fill="#2E84F0"/>
+        </svg>
+        <span style="font-family:var(--font-d);font-size:0.88rem">
+          <span style="font-weight:800;color:#5AACFF">Int</span><span style="font-weight:300;color:#25C882">elecciones</span>
+        </span>
+        <span class="footer-copy" style="margin-left:0.5rem">© 2026 IntelliHouse. Paraguay.</span>
+      </div>
+      <div class="footer-links">
+        <a href="#modulos" class="footer-link">Módulos</a>
+        <a href="#vistas" class="footer-link">Vistas</a>
+        <a href="#comparativa" class="footer-link">Comparativa</a>
+        <a href="#contacto" class="footer-link">Contacto</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ─── Scroll fade-in con stagger ───
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      el.classList.add('visible');
+      // stagger direct .fade-in children
+      let delay = 0;
+      el.querySelectorAll(':scope > .fade-in, :scope > * > .fade-in').forEach(child => {
+        if (!child.classList.contains('visible')) {
+          child.style.transitionDelay = delay + 'ms';
+          child.classList.add('visible');
+          delay += 90;
+        }
+      });
+      io.unobserve(el);
+    });
+  }, { threshold: 0.07, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+
+  // ─── Nav active state ───
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-link');
+  const onScroll = () => {
+    let cur = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) cur = s.id; });
+    navLinks.forEach(l => {
+      const href = l.getAttribute('href');
+      l.style.color = href === `#${cur}` ? '#5AACFF' : '';
+      l.style.background = href === `#${cur}` ? 'rgba(90,172,255,0.08)' : '';
+    });
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+</script>
+
+</body>
+</html>

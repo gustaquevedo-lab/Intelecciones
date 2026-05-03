@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(npm run *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "WebFetch(domain:comitium.com.py)",
+      "WebSearch",
+      "WebFetch(domain:avanzoft.com)",
+      "WebFetch(domain:web.archive.org)",
+      "mcp__Claude_in_Chrome__list_connected_browsers",
+      "mcp__Claude_in_Chrome__select_browser",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__get_page_text",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
