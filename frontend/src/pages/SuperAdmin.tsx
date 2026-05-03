@@ -278,33 +278,33 @@ const SuperAdmin = () => {
     };
   };
 
-  const onCropComplete = async (croppedBlob: Blob) => {
+  const onCropComplete = async (croppedImage: string) => {
     if (!cropperData) return;
-    const type = cropperData.type;
+    const { type } = cropperData;
     setCropperData(null);
 
     try {
+      // Convert base64 to blob for upload
+      const response = await fetch(croppedImage);
+      const blob = await response.blob();
       const formData = new FormData();
-      formData.append('photo', croppedBlob, 'photo.jpg');
+      formData.append('photo', blob, 'photo.jpg');
 
       const res = await api.post('/upload-photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
+      const photoUrl = res.data.photo_url;
+
       if (type === 'user') {
-        setUserProfilePreview((prev: any) => ({ ...prev, photo_url: res.data.photo_url }));
-        if (editingUser?.id === authUser?.id) {
-          updateUser({ photo_url: res.data.photo_url });
-        }
+        setUserProfilePreview((prev: any) => ({ ...(prev || {}), photo_url: photoUrl }));
       } else if (type === 'list') {
-        setListPhotoUrl(res.data.photo_url);
-        setCandidatePreview((prev: any) => ({ ...prev, photo_url: res.data.photo_url }));
-      } else if (type === 'app') {
-        updateSettings({ app_logo_url: res.data.photo_url });
+        setListPhotoUrl(photoUrl);
+        setCandidatePreview((prev: any) => ({ ...(prev || {}), photo_url: photoUrl }));
       } else if (type === 'campaign') {
-        setNewCampaignPhotoUrl(res.data.photo_url);
+        setNewCampaignPhotoUrl(photoUrl);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('Error uploading cropped image:', err); }
   };
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -1480,13 +1480,14 @@ const SuperAdmin = () => {
 
       <AnimatePresence>
         {showModal && (
-          <div className="modal-overlay" onClick={() => setShowModal(null)}>
+          <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} onClick={() => setShowModal(null)}>
             <motion.div 
               className="modal-content"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
+              style={{ width: 'auto', maxWidth: '95vw', padding: 0, overflowY: 'auto', maxHeight: '90vh' }}
             >
               {showModal === 'campaign' && (
                 <div style={{ maxWidth: '500px', width: '100%' }}>
@@ -1769,48 +1770,180 @@ const SuperAdmin = () => {
               )}
 
               {showModal === 'list' && (
+
                 <form onSubmit={editingList ? handleUpdateList : handleCreateList} style={{ maxWidth: '600px', width: '100%', padding: 0 }}>
                   <div style={{ 
-                    padding: '1rem 1.25rem', 
-                    background: 'linear-gradient(to bottom, rgba(37,99,235,0.08), transparent)',
+                    padding: '1.5rem', 
+                    background: 'linear-gradient(to bottom, rgba(37,99,235,0.1), transparent)',
                     borderBottom: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', gap: '1rem' 
+                    display: 'flex', alignItems: 'center', gap: '1.5rem' 
                   }}>
                     <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
-                    <div style={{ width: '80px', height: '80px', borderRadius: '18px', background: 'rgba(255,255,255,0.03)', border: '2px solid var(--border-mid)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer' }} onClick={() => fileInputRef.current?.click()}>
+                    <div style={{ 
+                      width: '90px', height: '90px', borderRadius: '20px', 
+                      background: 'rgba(255,255,255,0.03)', border: '2px solid var(--border-mid)', 
+                      overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                      position: 'relative', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.3)' 
+                    }} onClick={() => fileInputRef.current?.click()}>
                       {candidatePreview?.photo_url ? (
                         <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <User size={40} style={{ color: 'var(--text-3)' }} />
+                        <User size={44} style={{ color: 'var(--text-3)' }} />
                       )}
+                      <div className="avatar-edit-overlay" style={{ background: 'rgba(0,0,0,0.6)' }}>
+                        <Camera size={16} />
+                      </div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>
-                        {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Esperando Verificación'}
+                      <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                        {editingList ? 'Actualizar Lista' : 'Registro de Lista Electoral'}
+                      </div>
+                      <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Identificación de Candidato'}
                       </h2>
+                      {isCandidateVerified && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
+                          <span className="verified-badge-compact"><ShieldCheck size={12} /></span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Ciudadano Verificado (C.I. {newListCandidateCI})</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div style={{ padding: '1rem 1.25rem' }}>
-                    <div className="form-grid" style={{ gap: '0.5rem' }}>
-                      <div className="form-group">
-                        <label>Documento de Identidad</label>
+
+                  <div style={{ padding: '0.75rem 1.25rem' }}>
+                    <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Campaña Electoral</label>
+                        <select className="modern-input-premium-styled" value={newListCampaign} onChange={e => setNewListCampaign(e.target.value)} required>
+                          <option value="">Seleccione una campaña...</option>
+                          {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Candidato (C.I.)</label>
                         <div className="search-input-wrapper-premium">
-                          <input className="modern-input-premium-styled" value={newListCandidateCI} onChange={e => setNewListCandidateCI(e.target.value)} required />
-                          <button type="button" onClick={handleLookupCandidate} className="search-btn-action">VERIFICAR</button>
+                          <input 
+                            className="modern-input-premium-styled" 
+                            placeholder="Buscar en padrón..."
+                            value={newListCandidateCI} 
+                            onChange={e => setNewListCandidateCI(e.target.value)} 
+                            required 
+                          />
+                          <button type="button" onClick={handleLookupCandidate} className="search-btn-action">BUSCAR</button>
                         </div>
                       </div>
+
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Tipo de Candidatura</label>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          {['INTENDENTE', 'CONCEJAL'].map(t => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setNewListType(t)}
+                              style={{
+                                flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid',
+                                fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
+                                background: newListType === t ? 'var(--blue-lt)' : 'rgba(255,255,255,0.03)',
+                                borderColor: newListType === t ? 'var(--blue-lt)' : 'var(--border)',
+                                color: newListType === t ? 'white' : 'var(--text-3)',
+                              }}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="form-group">
-                        <label>Apodo / Alias</label>
-                        <input className="modern-input-premium-styled" value={newListAlias} onChange={(e) => setNewListAlias(e.target.value)} />
+                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Número de Lista</label>
+                        {newListType === 'INTENDENTE' ? (
+                          <input 
+                            className="modern-input-premium-styled" 
+                            placeholder="Ej: 2"
+                            value={newListNumber} 
+                            onChange={e => setNewListNumber(e.target.value)} 
+                            required 
+                          />
+                        ) : (
+                          <select 
+                            className="modern-input-premium-styled" 
+                            value={newListNumber} 
+                            onChange={e => setNewListNumber(e.target.value)}
+                            required
+                          >
+                            <option value="">Lista de Intendente...</option>
+                            {lists.filter(l => l.type === 'INTENDENTE' && l.campaign_id?.toString() === newListCampaign.toString()).map(l => (
+                              <option key={l.id} value={l.list_number}>{l.list_number} — {l.candidate_alias || l.candidate_nombre}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Meta de Votos</label>
+                        <input 
+                          type="number"
+                          className="modern-input-premium-styled" 
+                          value={newListGoal} 
+                          onChange={e => setNewListGoal(parseInt(e.target.value))} 
+                        />
+                      </div>
+
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Opción (Posición)</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '0.15rem' }}>
+                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => {
+                              const isTaken = takenOptions.includes(n);
+                              const isSelected = newListOption === n.toString();
+                              return (
+                                <button
+                                  key={n}
+                                  type="button"
+                                  disabled={isTaken && !isSelected}
+                                  onClick={() => setNewListOption(n.toString())}
+                                  style={{
+                                    height: '22px', borderRadius: '4px', border: '1px solid',
+                                    fontSize: '0.6rem', fontWeight: 800, cursor: isTaken ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.1s',
+                                    background: isSelected ? 'var(--blue-lt)' : isTaken ? 'rgba(255,0,0,0.1)' : 'rgba(255,255,255,0.03)',
+                                    borderColor: isSelected ? 'var(--blue-lt)' : isTaken ? 'rgba(255,0,0,0.2)' : 'var(--border)',
+                                    color: isSelected ? 'white' : isTaken ? 'var(--red)' : 'var(--text-3)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                  }}
+                                >
+                                  {n}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Alias del Candidato</label>
+                        <input 
+                          className="modern-input-premium-styled" 
+                          placeholder="Ej: El Líder"
+                          value={newListAlias} 
+                          onChange={e => setNewListAlias(e.target.value)} 
+                        />
                       </div>
                     </div>
                   </div>
-                  <div className="modal-footer-premium-styled">
-                    <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Descartar</button>
-                    <button type="submit" className="btn-confirm-styled" disabled={!isCandidateVerified}>Registrar Lista <ChevronRight size={18} /></button>
+
+                  <div className="modal-footer-premium-styled" style={{ padding: '0.75rem 2rem', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                    <button type="button" onClick={() => { setShowModal(null); setEditingList(null); }} className="btn-cancel-styled">DESCARTAR</button>
+                    <button type="submit" className="btn-confirm-styled" disabled={!isCandidateVerified}>
+                      {editingList ? 'GUARDAR' : 'REGISTRAR'} <ChevronRight size={14} />
+                    </button>
                   </div>
                 </form>
               )}
+
+
+
 
               {showModal === 'vehicle' && (
                 <form onSubmit={handleCreateVehicle} style={{ maxWidth: '500px', width: '100%', padding: '2rem' }}>

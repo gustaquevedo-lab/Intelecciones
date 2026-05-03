@@ -139,6 +139,14 @@ const DiaDApp: React.FC = () => {
   const [newListNumber, setNewListNumber] = useState('');
   const [newListAlias, setNewListAlias] = useState('');
   const [newListType, setNewListType] = useState('CONCEJAL');
+  const [newListCandidateCI, setNewListCandidateCI] = useState('');
+  const [candidatePreview, setCandidatePreview] = useState<any>(null);
+  const [isCandidateVerified, setIsCandidateVerified] = useState(false);
+  const [newListOption, setNewListOption] = useState('');
+  const [newListGoal, setNewListGoal] = useState(1000);
+  const [takenOptions, setTakenOptions] = useState<number[]>([]);
+  const [cropperData, setCropperData] = useState<{ image: string, type: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleLocal = (id: string) => {
     setExpandedLocales(prev => ({ ...prev, [id]: !prev[id] }));
@@ -199,14 +207,77 @@ const DiaDApp: React.FC = () => {
       await api.post('/diad/listas', {
         list_number: newListNumber,
         candidate_alias: newListAlias,
+        candidate_ci: newListCandidateCI,
         type: newListType,
+        option_number: newListOption,
+        goal: newListGoal,
         is_adversary: true
       });
       setShowListModal(false);
       setNewListNumber('');
       setNewListAlias('');
+      setNewListCandidateCI('');
+      setNewListOption('');
+      setCandidatePreview(null);
+      setIsCandidateVerified(false);
       fetchData();
     } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (newListNumber && newListType === 'CONCEJAL') {
+      const options = resultados
+        .filter(r => r.list_number === newListNumber && r.type === 'CONCEJAL')
+        .map(r => parseInt((r as any).option_number || '0'))
+        .filter(n => n > 0);
+      setTakenOptions(options);
+    } else {
+      setTakenOptions([]);
+    }
+  }, [newListNumber, newListType, resultados]);
+
+  const handleLookupCandidate = async () => {
+    if (!newListCandidateCI) return;
+    try {
+      const res = await api.get(`/admin/verify-candidate/${newListCandidateCI}`);
+      if (res.data) {
+        setCandidatePreview(res.data);
+        setIsCandidateVerified(true);
+        if (!newListAlias) setNewListAlias(`${res.data.nombre} ${res.data.apellido}`);
+      }
+    } catch (err) { 
+      alert('C.I. no encontrado en el padrón'); 
+      setIsCandidateVerified(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      setCropperData({ image: reader.result as string, type });
+      e.target.value = '';
+    };
+  };
+
+  const onCropComplete = async (croppedImage: string) => {
+    if (!cropperData) return;
+    const { type } = cropperData;
+    setCropperData(null);
+    try {
+      const response = await fetch(croppedImage);
+      const blob = await response.blob();
+      const formData = new FormData();
+      formData.append('photo', blob, 'photo.jpg');
+      const res = await api.post('/upload-photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (type === 'list') {
+        setCandidatePreview(prev => ({ ...(prev || {}), photo_url: res.data.photo_url }));
+      }
+    } catch (err) { console.error('Error uploading cropped image:', err); }
   };
 
   const fetchUsers = async () => {
@@ -1053,85 +1124,89 @@ const DiaDApp: React.FC = () => {
       {/* --- LIST MANAGEMENT MODAL --- */}
       <AnimatePresence>
         {showListModal && (
-          <div className="modal-overlay" onClick={() => setShowListModal(false)}>
+          <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} onClick={() => setShowListModal(false)}>
             <motion.div 
               className="modal-content"
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
-              style={{ maxWidth: '500px', padding: 0, overflow: 'hidden' }}
+              style={{ maxWidth: '500px', width: '100%', padding: 0, overflowY: 'auto', maxHeight: '90vh', position: 'relative' }}
             >
               <div style={{ 
-                padding: '1.5rem', 
+                padding: '1.25rem', 
                 background: 'linear-gradient(to bottom, rgba(37,99,235,0.1), transparent)',
                 borderBottom: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', gap: '1.25rem' 
               }}>
-                <div style={{ 
-                  width: '64px', height: '64px', borderRadius: '16px', 
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
-                }}>
-                  <Award size={32} style={{ color: 'var(--plra-300)' }} />
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
+                <div 
+                  className="avatar-edit-trigger"
+                  style={{ 
+                    width: '64px', height: '64px', borderRadius: '16px', 
+                    background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-mid)', 
+                    overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)', cursor: 'pointer', position: 'relative'
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {candidatePreview?.photo_url ? (
+                    <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Users size={32} style={{ color: 'var(--plra-300)' }} />
+                  )}
+                  <div className="avatar-edit-overlay">
+                    <Camera size={14} />
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)' }}>Registrar Lista Adversaria</h3>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Verificar Candidato'}
+                  </h3>
                   <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-3)', fontWeight: 600 }}>Cargar competidores para el cálculo D'Hondt</p>
                 </div>
                 <button 
                   onClick={() => setShowListModal(false)} 
-                  style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div style={{ padding: '2rem' }}>
-                <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', display: 'block' }}>
-                      Número de Lista
+              <div style={{ padding: '0.75rem 1.25rem' }}>
+                <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.2rem', display: 'block' }}>
+                      Candidato (C.I.)
                     </label>
-                    <input 
-                      className="modern-input-premium-styled" 
-                      value={newListNumber} 
-                      onChange={e => setNewListNumber(e.target.value)} 
-                      placeholder="Ej: Lista 1, Lista 10..." 
-                      autoFocus
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', display: 'block' }}>
-                      Sigla / Nombre de Alianza
-                    </label>
-                    <input 
-                      className="modern-input-premium-styled" 
-                      value={newListAlias} 
-                      onChange={e => setNewListAlias(e.target.value)} 
-                      placeholder="Ej: ANR, FG, Cruzada Nacional..." 
-                    />
+                    <div className="search-input-wrapper-premium">
+                      <input 
+                        className="modern-input-premium-styled" 
+                        value={newListCandidateCI} 
+                        onChange={e => setNewListCandidateCI(e.target.value)} 
+                        placeholder="Nº de Cédula" 
+                        autoFocus
+                      />
+                      <button type="button" onClick={handleLookupCandidate} className="search-btn-action">BUSCAR</button>
+                    </div>
                   </div>
 
-                  <div className="form-group">
-                    <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', display: 'block' }}>
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.2rem', display: 'block' }}>
                       Tipo de Candidatura
                     </label>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
                       {['INTENDENTE', 'CONCEJAL'].map(t => (
                         <button
                           key={t}
                           type="button"
                           onClick={() => setNewListType(t)}
                           style={{
-                            flex: 1, padding: '0.75rem', borderRadius: '12px', border: '1px solid',
-                            fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
+                            flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid',
+                            fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
                             background: newListType === t ? 'var(--blue-lt)' : 'rgba(255,255,255,0.03)',
                             borderColor: newListType === t ? 'var(--blue-lt)' : 'var(--border)',
                             color: newListType === t ? 'white' : 'var(--text-3)',
-                            boxShadow: newListType === t ? '0 4px 15px rgba(37,99,235,0.25)' : 'none'
                           }}
                         >
                           {t}
@@ -1139,12 +1214,93 @@ const DiaDApp: React.FC = () => {
                       ))}
                     </div>
                   </div>
+
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.2rem', display: 'block' }}>
+                      Número de Lista
+                    </label>
+                    {newListType === 'INTENDENTE' ? (
+                      <input 
+                        className="modern-input-premium-styled" 
+                        value={newListNumber} 
+                        onChange={e => setNewListNumber(e.target.value)} 
+                        placeholder="Ej: 2" 
+                      />
+                    ) : (
+                      <select 
+                        className="modern-input-premium-styled" 
+                        value={newListNumber} 
+                        onChange={e => setNewListNumber(e.target.value)}
+                        required
+                      >
+                        <option value="">Lista de Intendente...</option>
+                        {resultados.filter(r => r.type === 'INTENDENTE').map(r => (
+                          <option key={r.id} value={r.list_number}>{r.list_number} — {r.candidate_alias}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.2rem', display: 'block' }}>
+                      Meta de Votos
+                    </label>
+                    <input 
+                      type="number"
+                      className="modern-input-premium-styled" 
+                      value={newListGoal} 
+                      onChange={e => setNewListGoal(parseInt(e.target.value))} 
+                    />
+                  </div>
+
+                  {newListType === 'CONCEJAL' && (
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label style={{ fontSize: '0.6rem', marginBottom: '0.2rem', display: 'block', fontWeight: 800, color: 'var(--text-3)' }}>Opción (Posición)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '0.2rem' }}>
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => {
+                          const isTaken = takenOptions.includes(n);
+                          const isSelected = newListOption === n.toString();
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              disabled={isTaken && !isSelected}
+                              onClick={() => setNewListOption(n.toString())}
+                              style={{
+                                height: '22px', borderRadius: '4px', border: '1px solid',
+                                fontSize: '0.6rem', fontWeight: 800, cursor: isTaken ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.1s',
+                                background: isSelected ? 'var(--blue-lt)' : isTaken ? 'rgba(255,0,0,0.1)' : 'rgba(255,255,255,0.03)',
+                                borderColor: isSelected ? 'var(--blue-lt)' : isTaken ? 'rgba(255,0,0,0.2)' : 'var(--border)',
+                                color: isSelected ? 'white' : isTaken ? 'var(--red)' : 'var(--text-3)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.2rem', display: 'block' }}>
+                      Alias / Nombre Alianza
+                    </label>
+                    <input 
+                      className="modern-input-premium-styled" 
+                      value={newListAlias} 
+                      onChange={e => setNewListAlias(e.target.value)} 
+                      placeholder="Ej: ANR, FG..." 
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="modal-footer-premium-styled" style={{ padding: '1.25rem 2rem', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <div className="modal-footer-premium-styled" style={{ padding: '1rem 2rem', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                 <button onClick={() => setShowListModal(false)} className="btn-cancel-styled">CANCELAR</button>
-                <button onClick={handleCreateList} className="btn-confirm-styled" style={{ minWidth: '140px' }}>
+                <button onClick={handleCreateList} className="btn-confirm-styled" style={{ minWidth: '140px' }} disabled={!isCandidateVerified}>
                   REGISTRAR LISTA
                 </button>
               </div>
@@ -1352,6 +1508,15 @@ const DiaDApp: React.FC = () => {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {cropperData && (
+          <ImageCropperModal 
+            image={cropperData.image} 
+            onCropComplete={onCropComplete} 
+            onCancel={() => setCropperData(null)} 
+          />
         )}
       </AnimatePresence>
     </MainLayout>
