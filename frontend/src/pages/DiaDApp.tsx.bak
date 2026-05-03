@@ -211,8 +211,7 @@ const DiaDApp: React.FC = () => {
         type: newListType,
         option_number: newListOption,
         goal: newListGoal,
-        is_adversary: true,
-        photo_url: candidatePreview?.photo_url
+        is_adversary: true
       });
       setShowListModal(false);
       setNewListNumber('');
@@ -263,13 +262,15 @@ const DiaDApp: React.FC = () => {
     };
   };
 
-  const onCropComplete = async (croppedBlob: Blob) => {
+  const onCropComplete = async (croppedImage: string) => {
     if (!cropperData) return;
     const { type } = cropperData;
     setCropperData(null);
     try {
+      const response = await fetch(croppedImage);
+      const blob = await response.blob();
       const formData = new FormData();
-      formData.append('photo', croppedBlob, 'photo.jpg');
+      formData.append('photo', blob, 'photo.jpg');
       const res = await api.post('/upload-photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -1123,11 +1124,7 @@ const DiaDApp: React.FC = () => {
       {/* --- LIST MANAGEMENT MODAL --- */}
       <AnimatePresence>
         {showListModal && (
-          <div 
-            className="modal-overlay" 
-            style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} 
-            onClick={(e) => { if (e.target === e.currentTarget) setShowListModal(false); }}
-          >
+          <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} onClick={() => setShowListModal(false)}>
             <motion.div 
               className="modal-content"
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -1192,18 +1189,6 @@ const DiaDApp: React.FC = () => {
                       />
                       <button type="button" onClick={handleLookupCandidate} className="search-btn-action">BUSCAR</button>
                     </div>
-                  </div>
-
-                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.2rem', display: 'block' }}>
-                      Alias / Nombre Alianza
-                    </label>
-                    <input 
-                      className="modern-input-premium-styled" 
-                      value={newListAlias} 
-                      onChange={e => setNewListAlias(e.target.value)} 
-                      placeholder="Ej: ANR, FG..." 
-                    />
                   </div>
 
                   <div className="form-group" style={{ gridColumn: 'span 2' }}>
@@ -1299,6 +1284,17 @@ const DiaDApp: React.FC = () => {
                     </div>
                   )}
 
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.2rem', display: 'block' }}>
+                      Alias / Nombre Alianza
+                    </label>
+                    <input 
+                      className="modern-input-premium-styled" 
+                      value={newListAlias} 
+                      onChange={e => setNewListAlias(e.target.value)} 
+                      placeholder="Ej: ANR, FG..." 
+                    />
+                  </div>
                 </div>
               </div>
 

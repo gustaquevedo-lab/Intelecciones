@@ -278,14 +278,17 @@ const SuperAdmin = () => {
     };
   };
 
-  const onCropComplete = async (croppedBlob: Blob) => {
+  const onCropComplete = async (croppedImage: string) => {
     if (!cropperData) return;
     const { type } = cropperData;
     setCropperData(null);
 
     try {
+      // Convert base64 to blob for upload
+      const response = await fetch(croppedImage);
+      const blob = await response.blob();
       const formData = new FormData();
-      formData.append('photo', croppedBlob, 'photo.jpg');
+      formData.append('photo', blob, 'photo.jpg');
 
       const res = await api.post('/upload-photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -362,7 +365,7 @@ const SuperAdmin = () => {
         candidate_nombre: candidatePreview?.nombre,
         candidate_alias: newListAlias,
         goal: newListGoal,
-        photo_url: candidatePreview?.photo_url || listPhotoUrl
+        photo_url: listPhotoUrl
       });
       setShowModal(null);
       fetchData();
@@ -1477,11 +1480,7 @@ const SuperAdmin = () => {
 
       <AnimatePresence>
         {showModal && (
-          <div 
-            className="modal-overlay" 
-            style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} 
-            onClick={(e) => { if (e.target === e.currentTarget) setShowModal(null); }}
-          >
+          <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} onClick={() => setShowModal(null)}>
             <motion.div 
               className="modal-content"
               initial={{ scale: 0.9, opacity: 0 }}
@@ -1837,16 +1836,6 @@ const SuperAdmin = () => {
                       </div>
 
                       <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Alias del Candidato</label>
-                        <input 
-                          className="modern-input-premium-styled" 
-                          placeholder="Ej: El Líder"
-                          value={newListAlias} 
-                          onChange={e => setNewListAlias(e.target.value)} 
-                        />
-                      </div>
-
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
                         <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Tipo de Candidatura</label>
                         <div style={{ display: 'flex', gap: '0.4rem' }}>
                           {['INTENDENTE', 'CONCEJAL'].map(t => (
@@ -1932,6 +1921,15 @@ const SuperAdmin = () => {
                           </div>
                         </div>
 
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Alias del Candidato</label>
+                        <input 
+                          className="modern-input-premium-styled" 
+                          placeholder="Ej: El Líder"
+                          value={newListAlias} 
+                          onChange={e => setNewListAlias(e.target.value)} 
+                        />
+                      </div>
                     </div>
                   </div>
 
