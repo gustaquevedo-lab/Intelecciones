@@ -339,7 +339,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings }: {
 };
 
 const MapHandler = ({ center }: { center: [number, number] | null }) => {
-  const map = L.useMap();
+  const map = useMap();
   useEffect(() => {
     if (center) {
       map.flyTo(center, 16, { duration: 1.5 });
