@@ -1,22 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Logo } from './Logo';
-import { LogOut, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { ModuleSwitcher } from './ModuleSwitcher';
-import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
-
-interface MainLayoutProps {
-  children: React.ReactNode;
-  title: string;
-  userName: string;
-  userPhoto?: string;
-}
+import { LogOut, Shield, Moon, Sun, Monitor } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, userPhoto }) => {
   const navigate = useNavigate();
   const { user, activeListId, setActiveListId } = useAuth();
+  const { theme, setTheme, isDark } = useTheme();
   const [lists, setLists] = useState<any[]>([]);
 
   useEffect(() => {
@@ -24,8 +12,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
       api.get('/lists').then(res => setLists(res.data)).catch(err => console.error(err));
     }
   }, [user]);
+
   const initials = userName.slice(0, 2).toUpperCase();
-  console.log("DEBUG: MainLayout rendering with userPhoto:", userPhoto);
 
   const roleLabels = {
     'SUPERUSUARIO': 'Super Administrador',
@@ -41,10 +29,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
         position: 'sticky', top: 0, zIndex: 200,
         display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(4, 20, 40, 0.94)',
+        background: 'var(--glass-bg)',
         backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid rgba(59,130,246,0.18)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-md)',
+        transition: 'var(--theme-transition)'
       }}>
         {/* ROW 1: Logo | Switcher | User */}
         <div style={{
@@ -54,15 +43,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           height: '56px',
           padding: '0 1.25rem',
           gap: '1rem',
-          borderBottom: '1px solid rgba(255,255,255,0.03)',
-          position: 'relative' // Essential for absolute centering
+          borderBottom: '1px solid var(--border)',
+          position: 'relative'
         }}>
-          {/* Logo - Scaled Up */}
-          <div className="header-logo-container" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', transformOrigin: 'left' }}>
+          {/* Logo */}
+          <div className="header-logo-container" style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             <Logo />
           </div>
 
-          {/* List Selector - ABSOLUTELY CENTERED in Row 1 */}
+          {/* List Selector */}
           {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
             <div 
               className="hidden-mobile"
@@ -73,12 +62,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '0.4rem', 
-                background: 'rgba(59,130,246,0.1)', 
+                background: 'var(--surface-light)', 
                 padding: '0.3rem 0.75rem', 
                 borderRadius: '10px', 
-                border: '1px solid rgba(59,130,246,0.2)',
+                border: '1px solid var(--border)',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                boxShadow: 'var(--shadow-sm)',
                 zIndex: 10
               }}
             >
@@ -97,9 +86,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                   fontFamily: 'var(--font-display)'
                 }}
               >
-                <option value="null" style={{ background: '#041428' }}>🌎 GLOBAL</option>
+                <option value="null" style={{ background: 'var(--surface)' }}>🌎 GLOBAL</option>
                 {lists.map((l: any) => (
-                  <option key={l.id} value={l.id} style={{ background: '#041428' }}>
+                  <option key={l.id} value={l.id} style={{ background: 'var(--surface)' }}>
                     {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
                   </option>
                 ))}
@@ -107,52 +96,63 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
             </div>
           )}
 
-          {/* User Profile (Right side) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+          {/* Controls Unit */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Theme Toggle */}
+            <div style={{ 
+              display: 'flex', 
+              background: 'var(--surface-light)', 
+              padding: '2px', 
+              borderRadius: '10px',
+              border: '1px solid var(--border)'
+            }}>
+              {[
+                { id: 'light', icon: Sun },
+                { id: 'system', icon: Monitor },
+                { id: 'dark', icon: Moon }
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id as any)}
+                  style={{
+                    padding: '6px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: theme === t.id ? 'var(--primary)' : 'transparent',
+                    color: theme === t.id ? 'white' : 'var(--text-3)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title={t.id.toUpperCase()}
+                >
+                  <t.icon size={14} />
+                </button>
+              ))}
+            </div>
+
             <div className="hidden-mobile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-              <span style={{
-                fontSize: '0.8rem', fontWeight: 800, color: 'white',
-                fontFamily: 'var(--font-display)',
-                letterSpacing: '-0.01em'
-              }}>
-                {userName}
-              </span>
-              <span style={{
-                fontSize: '0.5rem', fontWeight: 700, color: 'var(--plra-300)',
-                textTransform: 'uppercase', letterSpacing: '0.08em',
-                display: 'flex', alignItems: 'center', gap: '0.3rem',
-                marginTop: '0.15rem'
-              }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{userName}</span>
+              <span style={{ fontSize: '0.5rem', fontWeight: 700, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--green)' }} />
                 {currentRoleLabel}
               </span>
             </div>
 
             <div style={{
-              width: '36px', height: '36px',
-              borderRadius: '10px',
-              overflow: 'hidden',
-              border: '2px solid rgba(59,130,246,0.3)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              background: 'var(--surface-light)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
+              width: '36px', height: '36px', borderRadius: '10px', overflow: 'hidden',
+              border: '2px solid var(--border)', boxShadow: 'var(--shadow-sm)',
+              background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              {userPhoto ? (
-                <img src={userPhoto} alt={userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--plra-300)' }}>{initials}</span>
-              )}
+              {userPhoto ? <img src={userPhoto} alt={userName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--plra-300)' }}>{initials}</span>}
             </div>
             
             <button 
               onClick={() => navigate('/logout')} 
               style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.2)',
-                color: '#FCA5A5',
-                padding: '0.4rem',
-                borderRadius: '10px',
-                cursor: 'pointer',
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                color: '#FCA5A5', padding: '0.4rem', borderRadius: '10px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}
             >

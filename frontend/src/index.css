@@ -6,7 +6,7 @@
    ============================================================ */
 
 :root {
-  /* PLRA Brand Blues */
+  /* PLRA Brand Blues (Persistent) */
   --plra-900: #020C1E;
   --plra-800: #041428;
   --plra-700: #071D38;
@@ -17,11 +17,32 @@
   --plra-200: #93C5FD;
   --plra-100: #DBEAFE;
 
-  /* Semantic */
+  /* Typography */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body:    'Inter', sans-serif;
+
+  /* Status colors */
+  --green:  #22C55E;
+  --yellow: #F59E0B;
+  --red:    #EF4444;
+
+  /* Radius */
+  --r-sm:  0.75rem;
+  --r-md:  1rem;
+  --r-lg:  1.5rem;
+  --r-xl:  2rem;
+  --r-full: 9999px;
+
+  /* Transitions */
+  --theme-transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s ease;
+}
+
+/* DARK MODE (Default & Manual) */
+:root, .dark-theme {
   --bg:        var(--plra-900);
-  --surface:   var(--plra-800);
-  --surface-2: var(--plra-700);
-  --surface-3: var(--plra-600);
+  --surface:   #041428;
+  --surface-light: #071D38;
+  --surface-3: #0A2548;
   --primary:   var(--plra-500);
   --primary-h: var(--plra-400);
   --primary-g: var(--plra-300);
@@ -34,30 +55,40 @@
   --text-2:       #7FA8D8;
   --text-3:       #3A6495;
 
-  /* Status colors */
-  --green:  #22C55E;
-  --green-bg: rgba(34, 197, 94, 0.1);
-  --yellow: #F59E0B;
-  --yellow-bg: rgba(245, 158, 11, 0.1);
-  --red:    #EF4444;
-  --red-bg: rgba(239, 68, 68, 0.1);
-
-  /* Typography */
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-body:    'Inter', sans-serif;
-
-  /* Shadows */
   --shadow-sm:  0 2px 8px rgba(0,0,0,0.4);
   --shadow-md:  0 8px 24px rgba(0,0,0,0.5);
   --shadow-lg:  0 20px 60px rgba(0,0,0,0.6);
   --shadow-blue: 0 0 40px rgba(0, 71, 171, 0.3);
 
-  /* Radius */
-  --r-sm:  0.75rem;
-  --r-md:  1rem;
-  --r-lg:  1.5rem;
-  --r-xl:  2rem;
-  --r-full: 9999px;
+  --glass-bg: rgba(4, 20, 40, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+/* LIGHT MODE */
+.light-theme {
+  --bg:        #F8FAFC;
+  --surface:   #FFFFFF;
+  --surface-light: #F1F5F9;
+  --surface-3: #E2E8F0;
+  --primary:   var(--plra-500);
+  --primary-h: var(--plra-600);
+  --primary-g: var(--plra-700);
+
+  --border:       rgba(0, 71, 171, 0.08);
+  --border-mid:   rgba(0, 71, 171, 0.15);
+  --border-hi:    rgba(0, 71, 171, 0.30);
+
+  --text:         #0F172A;
+  --text-2:       #475569;
+  --text-3:       #64748B;
+
+  --shadow-sm:  0 2px 8px rgba(0, 0, 71, 0.05);
+  --shadow-md:  0 8px 24px rgba(0, 0, 71, 0.08);
+  --shadow-lg:  0 20px 60px rgba(0, 0, 71, 0.12);
+  --shadow-blue: 0 0 40px rgba(0, 71, 171, 0.1);
+
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 71, 171, 0.1);
 }
 
 /* ============================================================
