@@ -751,9 +751,9 @@ app.post('/api/users', (req, res) => {
   const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url } = req.body;
   try {
     const result = db.prepare(`
-      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, nombre, photo_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, nombre, photo_url);
+      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url);
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${username} with role ${role}`);
     res.json({ id: Number(result.lastInsertRowid) });
@@ -799,9 +799,9 @@ app.put('/api/users/:id', (req, res) => {
   try {
     db.prepare(`
       UPDATE users 
-      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, nombre = ?, photo_url = ?
+      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?
       WHERE id = ?
-    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, nombre, photo_url, req.params.id);
+    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, req.params.id);
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
     res.json({ success: true });
   } catch (err: any) {
@@ -1396,13 +1396,21 @@ app.get('/api/veedor/table-status', (req, res) => {
   }
 
   try {
-    // In a real scenario, we'd get the assigned local/mesa from the user's token/session
-    // For now, we'll fetch a sample if none assigned to show the UI
-    const userId = 1; // Dummy for now
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.status(401).json({ error: 'No user ID provided' });
+
     const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
     
-    const local = user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
-    const mesa = user?.assigned_mesa || 1;
+    if (!user?.assigned_local) {
+      // Return a demo local if none assigned for testing
+      return res.json({
+        info: { local: 'SIN ASIGNACIÓN', mesa: 0, total: 400 },
+        votedOrders: []
+      });
+    }
+
+    const local = user.assigned_local;
+    const mesa = user.assigned_mesa || 1;
 
     // Get max order number for this table
     const stats = db.prepare('SELECT MAX(orden) as total FROM electors WHERE local_votacion = ? AND mesa = ?').get(local, mesa) as any;

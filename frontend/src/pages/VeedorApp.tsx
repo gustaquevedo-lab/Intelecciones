@@ -66,8 +66,11 @@ const VeedorApp = () => {
         <header className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <MapPin size={14} style={{ color: 'var(--plra-300)' }} />
-              <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>{tableInfo.local || 'Cargando...'}</h2>
+              <MapPin size={14} style={{ color: tableInfo.local === 'SIN ASIGNACIÓN' ? 'var(--red)' : 'var(--plra-300)' }} />
+              <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>
+                {tableInfo.local || 'Cargando...'}
+                {tableInfo.local === 'SIN ASIGNACIÓN' && <span style={{ color: 'var(--red)', marginLeft: '0.5rem', fontSize: '0.7rem' }}>(CONTACTE COORDINADOR)</span>}
+              </h2>
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700 }}>
@@ -80,7 +83,7 @@ const VeedorApp = () => {
           </div>
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--green)' }}>
-              {Math.round((votedOrders.size / tableInfo.total) * 100) || 0}%
+              {tableInfo.total > 0 ? Math.round((votedOrders.size / tableInfo.total) * 100) : 0}%
             </p>
             <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Participación</p>
           </div>

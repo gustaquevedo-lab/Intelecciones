@@ -906,7 +906,26 @@ select option:active {
   border: 1px solid var(--border);
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
+  position: relative;
 }
+
+.avatar-edit-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.premium-avatar-frame-compact:hover .avatar-edit-overlay {
+  opacity: 1;
+}
+
 .premium-avatar-frame-compact img {
   width: 100%; height: 100%;
   object-fit: cover;

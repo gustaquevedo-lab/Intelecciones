@@ -15,6 +15,7 @@ api.interceptors.request.use((config) => {
     const user = JSON.parse(userStr);
     config.headers['x-list-id'] = activeListId === 'null' ? '' : (activeListId || user.assigned_list_id || '');
     config.headers['x-user-role'] = user.role || '';
+    config.headers['x-user-id'] = user.id || '';
   }
   return config;
 });

@@ -292,7 +292,7 @@ const SuperAdmin = () => {
     });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'user' | 'list' | 'app') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'user' | 'list' | 'app' | 'campaign') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
