@@ -67,7 +67,7 @@ const VeedorApp = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
               <MapPin size={14} style={{ color: tableInfo.local === 'SIN ASIGNACIÓN' ? 'var(--red)' : 'var(--plra-300)' }} />
-              <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)' }}>
                 {tableInfo.local || 'Cargando...'}
                 {tableInfo.local === 'SIN ASIGNACIÓN' && <span style={{ color: 'var(--red)', marginLeft: '0.5rem', fontSize: '0.7rem' }}>(CONTACTE COORDINADOR)</span>}
               </h2>
@@ -77,7 +77,7 @@ const VeedorApp = () => {
                 MESA: <span style={{ color: 'var(--plra-200)' }}>{tableInfo.mesa || '—'}</span>
               </p>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700 }}>
-                TOTAL: <span style={{ color: 'white' }}>{tableInfo.total} electores</span>
+                TOTAL: <span style={{ color: 'var(--text)' }}>{tableInfo.total} electores</span>
               </p>
             </div>
           </div>

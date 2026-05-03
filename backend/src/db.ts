@@ -187,6 +187,17 @@ try {
   db.prepare("ALTER TABLE lists ADD COLUMN candidate_alias TEXT").run();
 } catch (e) {}
 
+// User migrations
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN assigned_local TEXT").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN assigned_mesa INTEGER").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN assigned_campaign_id INTEGER").run();
+} catch (e) {}
+
 /* Ensure default Super Admin exists */
 db.prepare(`
   INSERT OR REPLACE INTO users (id, username, password, role, nombre) 

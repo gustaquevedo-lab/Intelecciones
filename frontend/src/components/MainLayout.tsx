@@ -215,7 +215,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
               <Shield size={12} style={{ color: 'var(--plra-300)' }} />
               <span style={{
                 fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: 'white',
+                textTransform: 'uppercase', color: 'var(--text)',
                 fontFamily: 'var(--font-display)',
               }}>
                 {title}

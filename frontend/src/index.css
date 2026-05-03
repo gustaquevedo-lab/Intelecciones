@@ -62,33 +62,35 @@
 
   --glass-bg: rgba(4, 20, 40, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --input-bg: rgba(255, 255, 255, 0.03);
 }
 
 /* LIGHT MODE */
 .light-theme {
-  --bg:        #F8FAFC;
+  --bg:        #F1F5F9;
   --surface:   #FFFFFF;
-  --surface-light: #F1F5F9;
+  --surface-light: #F8FAFC;
   --surface-3: #E2E8F0;
   --primary:   var(--plra-500);
   --primary-h: var(--plra-600);
   --primary-g: var(--plra-700);
 
-  --border:       rgba(0, 71, 171, 0.08);
-  --border-mid:   rgba(0, 71, 171, 0.15);
-  --border-hi:    rgba(0, 71, 171, 0.30);
+  --border:       rgba(0, 71, 171, 0.15);
+  --border-mid:   rgba(0, 71, 171, 0.30);
+  --border-hi:    rgba(0, 71, 171, 0.50);
 
-  --text:         #0F172A;
-  --text-2:       #475569;
+  --text:         #020617;
+  --text-2:       #334155;
   --text-3:       #64748B;
 
-  --shadow-sm:  0 2px 8px rgba(0, 0, 71, 0.05);
-  --shadow-md:  0 8px 24px rgba(0, 0, 71, 0.08);
-  --shadow-lg:  0 20px 60px rgba(0, 0, 71, 0.12);
-  --shadow-blue: 0 0 40px rgba(0, 71, 171, 0.1);
+  --shadow-sm:  0 2px 8px rgba(0, 0, 71, 0.1);
+  --shadow-md:  0 8px 24px rgba(0, 0, 71, 0.15);
+  --shadow-lg:  0 20px 60px rgba(0, 0, 71, 0.2);
+  --shadow-blue: 0 0 40px rgba(0, 71, 171, 0.15);
 
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(0, 71, 171, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 71, 171, 0.2);
+  --input-bg: rgba(0, 71, 171, 0.03);
 }
 
 /* ============================================================
@@ -260,11 +262,12 @@ body::before {
 }
 
 /* Legacy alias */
-.card-premium {
+.card-premium, .card-premium-styled {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-md);
+  transition: var(--theme-transition);
 }
 
 .glass-premium {
@@ -816,9 +819,9 @@ select option:active {
 }
 
 .modern-input-premium-styled {
-  background: rgba(255,255,255,0.02);
+  background: var(--input-bg);
   border: 1px solid var(--border-mid);
-  border-radius: 10px; color: white;
+  border-radius: 10px; color: var(--text);
   padding: 0.85rem 1.1rem; width: 100%;
   font-family: var(--font-body); font-size: 0.85rem;
   transition: all 0.2s;
