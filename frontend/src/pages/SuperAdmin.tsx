@@ -715,10 +715,14 @@ const SuperAdmin = () => {
         const camps = await api.get('/campaigns');
         setCampaigns(camps.data);
       } else if (activeTab === 'users') {
-        const res = await api.get('/users');
+        const [res, lts, camps] = await Promise.all([
+          api.get('/users'),
+          api.get('/lists'),
+          api.get('/campaigns')
+        ]);
         setUsers(res.data);
-        const lts = await api.get('/lists');
         setLists(lts.data);
+        setCampaigns(camps.data);
       } else if (activeTab === 'audit') {
         await fetchAuditData();
       } else if (activeTab === 'logistics') {

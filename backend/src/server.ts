@@ -688,12 +688,12 @@ app.get('/api/coordinators/:id/history', (req, res) => {
 });
 
 app.post('/api/users', (req, res) => {
-  const { username, password, role, assigned_list_id, nombre, photo_url } = req.body;
+  const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url } = req.body;
   try {
     const result = db.prepare(`
-      INSERT INTO users (username, password, role, assigned_list_id, nombre, photo_url)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(username, password, role, assigned_list_id, nombre, photo_url);
+      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, nombre, photo_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, nombre, photo_url);
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${username} with role ${role}`);
     res.json({ id: Number(result.lastInsertRowid) });
@@ -705,9 +705,10 @@ app.post('/api/users', (req, res) => {
 app.get('/api/users', (req, res) => {
   try {
     const users = db.prepare(`
-      SELECT u.*, l.list_number, l.type as list_type
+      SELECT u.*, l.list_number, l.type as list_type, c.name as campaign_name
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN campaigns c ON u.assigned_campaign_id = c.id
     `).all();
     res.json(users);
   } catch (err: any) {
@@ -730,9 +731,9 @@ app.put('/api/users/:id', (req, res) => {
   try {
     db.prepare(`
       UPDATE users 
-      SET role = ?, assigned_list_id = ?, nombre = ?, photo_url = ?
+      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, nombre = ?, photo_url = ?
       WHERE id = ?
-    `).run(role, assigned_list_id, nombre, photo_url, req.params.id);
+    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, nombre, photo_url, req.params.id);
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
     res.json({ success: true });
   } catch (err: any) {
