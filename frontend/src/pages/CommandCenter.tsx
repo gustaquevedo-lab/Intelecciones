@@ -112,12 +112,12 @@ const RequestItem = ({ req, onResolve }: { req: any, onResolve: (status: string)
     NORMAL: 'var(--plra-300)'
   };
   return (
-    <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', marginBottom: '0.75rem' }}>
+    <div style={{ padding: '1rem', borderRadius: '12px', background: 'var(--surface-light)', border: '1px solid var(--border)', marginBottom: '0.75rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
         <span style={{ fontSize: '0.65rem', fontWeight: 800, color: priorityColors[req.priority as keyof typeof priorityColors] }}>{req.priority}</span>
         <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(req.timestamp).toLocaleTimeString()}</span>
       </div>
-      <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>{req.type}</p>
+      <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.25rem' }}>{req.type}</p>
       <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1rem' }}>{req.description}</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
         <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: 'white', fontWeight: 800 }}>
@@ -132,7 +132,7 @@ const RequestItem = ({ req, onResolve }: { req: any, onResolve: (status: string)
             <button onClick={() => onResolve('REJECTED')} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'rgba(239,68,68,0.2)', color: 'var(--red)', border: '1px solid var(--red)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Rechazar</button>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '0.4rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', fontSize: '0.7rem', fontStyle: 'italic' }}>
+          <div style={{ textAlign: 'center', padding: '0.4rem', borderRadius: '8px', background: 'var(--surface-light)', color: 'var(--text-3)', fontSize: '0.7rem', fontStyle: 'italic' }}>
             Esperando decisión de mando
           </div>
         )
@@ -159,12 +159,12 @@ const ActivityFeed = ({ activities }: { activities: any[] }) => (
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white' }}>{act.user_name}</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)' }}>{act.user_name}</span>
             <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>
             <span style={{ color: 'var(--text-2)' }}>{act.type === 'CAPTURE' ? 'Captó a ' : act.type === 'CONFLICT' ? 'Generó conflicto: ' : 'Solicitó: '}</span>
-            <span style={{ color: 'white', fontWeight: 600 }}>{act.entity_name}</span>
+            <span style={{ color: 'var(--text)', fontWeight: 600 }}>{act.entity_name}</span>
           </p>
         </div>
       </div>
@@ -233,8 +233,8 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings }: {
           onKeyDown={(e) => e.key === 'Enter' && (window as any).handleStrategicSearch((e.target as HTMLInputElement).value)}
           style={{
             width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-            borderRadius: '12px', color: 'white', fontSize: '0.8rem',
+            background: 'var(--surface-light)', border: '1px solid var(--border)',
+            borderRadius: '12px', color: 'var(--text)', fontSize: '0.8rem',
             outline: 'none', transition: 'border-color 0.2s'
           }}
         />
@@ -262,7 +262,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings }: {
             {criticalLocs.map((l: any) => (
               <div key={l.cod_local} style={{ padding: '0.6rem', borderRadius: '8px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                  <span style={{ color: 'white', fontWeight: 700 }}>{l.nombre}</span>
+                  <span style={{ color: 'var(--text)', fontWeight: 700 }}>{l.nombre}</span>
                   <span style={{ color: 'var(--red)', fontWeight: 800 }}>{l.percentage}%</span>
                 </div>
                 <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '5px' }}>
@@ -287,8 +287,8 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings }: {
               <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '20px', fontSize: '0.65rem', fontWeight: 900, color: i === 0 ? 'var(--yellow)' : 'var(--text-3)' }}>#{i + 1}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</div>
-                  <div style={{ width: '100%', height: '2px', background: 'rgba(255,255,255,0.03)', marginTop: '3px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</div>
+                  <div style={{ width: '100%', height: '2px', background: 'var(--surface-light)', marginTop: '3px' }}>
                     <div style={{ width: `${(c.capture_count / (topCoordinators[0].capture_count || 1)) * 100}%`, height: '100%', background: i === 0 ? 'var(--plra-300)' : 'var(--border)' }} />
                   </div>
                 </div>
@@ -821,7 +821,7 @@ const CommandCenter = () => {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <p style={{ fontWeight: 800, fontSize: '1rem', color: 'white' }}>{elector.nombre} {elector.apellido}</p>
+                          <p style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>{elector.nombre} {elector.apellido}</p>
                           <p style={{ fontSize: '0.75rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {elector.ci}</p>
                         </div>
                         <div style={{ 
@@ -835,11 +835,11 @@ const CommandCenter = () => {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px' }}>
                         <div>
                           <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Local</p>
-                          <p style={{ fontSize: '0.7rem', color: 'white', fontWeight: 600 }}>{elector.local_votacion}</p>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text)', fontWeight: 600 }}>{elector.local_votacion}</p>
                         </div>
                         <div>
                           <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Mesa / Orden</p>
-                          <p style={{ fontSize: '0.7rem', color: 'white', fontWeight: 600 }}>Mesa {elector.mesa} — # {elector.orden}</p>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text)', fontWeight: 600 }}>Mesa {elector.mesa} — # {elector.orden}</p>
                         </div>
                       </div>
 
@@ -881,10 +881,10 @@ const CommandCenter = () => {
               </div>
             </div>
           ) : activeTab === 'requests' ? (
-            <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--surface-dark)' }}>
+            <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white' }}>Centro de Decisiones Estratégicas</h3>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)' }}>Centro de Decisiones Estratégicas</h3>
                   <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Aprueba o rechaza las solicitudes de los coordinadores en campo.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -903,7 +903,7 @@ const CommandCenter = () => {
                           <AlertTriangle size={20} />
                         </div>
                         <div>
-                          <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>Disputas Globales Detectadas</h3>
+                          <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>Disputas Globales Detectadas</h3>
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Electores captados por más de una lista simultáneamente.</p>
                         </div>
                       </div>
@@ -912,7 +912,7 @@ const CommandCenter = () => {
                         {globalDisputes.map((d, i) => (
                           <div key={i} style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(239,68,68,0.1)' }}>
                             <div style={{ marginBottom: '0.75rem' }}>
-                              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>{d.nombre} {d.apellido}</p>
+                              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>{d.nombre} {d.apellido}</p>
                               <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>CI: {d.ci} | {d.local_votacion}</p>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -938,7 +938,7 @@ const CommandCenter = () => {
                         <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-300)' }}>
                           <Radio size={20} />
                         </div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white' }}>Solicitudes de Campo</h3>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>Solicitudes de Campo</h3>
                       </div>
                       {requests.map(req => (
                         <RequestItem key={req.id} req={req} isReadOnly={authUser?.role === 'CANDIDATO'} onResolve={(status) => handleResolveRequest(req.id, status)} />
@@ -950,11 +950,11 @@ const CommandCenter = () => {
                         <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)' }}>
                           <AlertTriangle size={20} />
                         </div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white' }}>Disputas Internas (Misma Lista)</h3>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>Disputas Internas (Misma Lista)</h3>
                       </div>
                       {conflicts.map(conf => (
                         <div key={conf.id} style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', marginBottom: '0.75rem' }}>
-                          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>{conf.nombre} {conf.apellido}</p>
+                          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.25rem' }}>{conf.nombre} {conf.apellido}</p>
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '1rem' }}>Elector captado por múltiples coordinadores de tu lista.</p>
                           {authUser?.role !== 'CANDIDATO' ? (
                             <button onClick={() => setShowResolveModal(conf)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
@@ -970,9 +970,9 @@ const CommandCenter = () => {
                 </div>
             </div>
           ) : (
-            <div style={{ padding: '1.5rem', height: '100%', overflowY: 'auto', background: 'var(--surface-dark)' }}>
+            <div style={{ padding: '1.5rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>Padrón Electoral Inteligente</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)' }}>Padrón Electoral Inteligente</h3>
                 <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>
                   {searchResults.length} registros cargados
                 </div>
