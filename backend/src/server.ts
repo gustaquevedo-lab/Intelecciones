@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'x-list-id', 'x-user-role']
+  allowedHeaders: ['Content-Type', 'x-list-id', 'x-user-role', 'x-user-id']
 }));
 app.use(express.json());
 
@@ -1433,8 +1433,10 @@ app.get('/api/veedor/table-status', (req, res) => {
 
 app.post('/api/veedor/mark-vote', (req, res) => {
   const { order } = req.body;
+  const userId = req.headers['x-user-id'];
+  if (!userId) return res.status(401).json({ error: 'No user ID provided' });
+
   try {
-    const userId = 1; // Dummy
     const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
     const local = user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
     const mesa = user?.assigned_mesa || 1;

@@ -4,7 +4,15 @@ import fs from 'fs';
 
 // Use path relative to /app/data for Railway persistence
 const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
-const dbPath = path.join(dbDir, 'intellecciones.db');
+let dbPath = path.join(dbDir, 'intellecciones.db');
+
+// Development safety: check if DB exists in backend/ if not in root
+if (process.env.NODE_ENV !== 'production' && !fs.existsSync(dbPath)) {
+  const altPath = path.join(dbDir, 'backend', 'intellecciones.db');
+  if (fs.existsSync(altPath)) {
+    dbPath = altPath;
+  }
+}
 
 // Migration: If we are in production and the volume DB is an empty placeholder (< 100KB)
 if (process.env.NODE_ENV === 'production') {

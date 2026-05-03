@@ -24,7 +24,7 @@ const VeedorApp = () => {
     try {
       setLoading(true);
       // Get the observer's assigned table data
-      const res = await api.get('/api/veedor/table-status');
+      const res = await api.get('/veedor/table-status');
       setTableInfo(res.data.info);
       
       // Initialize the voted orders from existing captures
@@ -46,7 +46,7 @@ const VeedorApp = () => {
 
     try {
       setShowSuccess(order);
-      await api.post('/api/veedor/mark-vote', { order });
+      await api.post('/veedor/mark-vote', { order });
       
       setVotedOrders(prev => new Set(prev).add(order));
       
