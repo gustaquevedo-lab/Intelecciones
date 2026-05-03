@@ -1,5 +1,19 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Logo } from './Logo';
 import { LogOut, Shield, Moon, Sun, Monitor } from 'lucide-react';
+import { ModuleSwitcher } from './ModuleSwitcher';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import api from '../services/api';
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+  title: string;
+  userName: string;
+  userPhoto?: string;
+}
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, userPhoto }) => {
   const navigate = useNavigate();
