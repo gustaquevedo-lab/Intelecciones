@@ -566,8 +566,8 @@ const CommandCenter = () => {
         position: 'relative',
         transition: 'grid-template-columns 0.3s ease'
       }}>
-        {/* Toggle Sidebar Button for Mobile/Tablet */}
-        {(isMobile || !showSidebar) && (
+        {/* Toggle Sidebar Button for Mobile/Tablet - ONLY ON MAP */}
+        {(isMobile || !showSidebar) && activeTab === 'map' && (
           <button 
             onClick={() => setShowSidebar(!showSidebar)}
             style={{
