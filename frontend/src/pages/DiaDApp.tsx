@@ -4,7 +4,7 @@ import {
   Activity, Map, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
   Image, ChevronDown, ChevronUp, Zap, Shield, Truck, UserPlus,
-  Plus, X
+  Plus, X, Camera, User, ChevronRight
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ import { useSettings } from '../context/SettingsContext';
 import api from '../services/api';
 import { MapContainer, TileLayer, CircleMarker, Popup, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 // ─── D'Hondt Algorithm ──────────────────────────────────────────────────────
 function calcularDHondt(
