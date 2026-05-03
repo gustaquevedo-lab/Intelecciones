@@ -437,7 +437,6 @@ const CommandCenter = () => {
   const handleSearch = async (query: string) => {
     if (!query) {
       setSearchResults([]);
-      setActiveTab('map');
       return;
     }
     setIsSearching(true);
@@ -546,7 +545,7 @@ const CommandCenter = () => {
           )}
         </div>
         <div 
-          onClick={() => { setActiveTab('registry'); handleSearch(''); }}
+          onClick={() => setActiveTab('registry')}
           style={{ 
             display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
             color: activeTab === 'registry' ? 'var(--plra-300)' : 'var(--text-3)',
