@@ -664,6 +664,32 @@ const CommandCenter = () => {
                     </Popup>
                   </Marker>
                 ))}
+
+                {/* Mobile Quick Stats Bar */}
+                {isMobile && !showSidebar && (
+                  <div style={{
+                    position: 'absolute', bottom: '1.5rem', left: '1rem', right: '1rem', zIndex: 1100,
+                    background: 'rgba(10, 14, 23, 0.85)', backdropFilter: 'blur(12px)',
+                    border: '1px solid var(--border)', borderRadius: '16px', padding: '0.75rem 1rem',
+                    display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>A Favor</p>
+                      <p style={{ fontSize: '1.1rem', color: 'var(--green)', fontWeight: 900 }}>{commandStats?.green || 0}</p>
+                    </div>
+                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Progreso</p>
+                      <p style={{ fontSize: '1.1rem', color: 'white', fontWeight: 900 }}>{commandStats?.percentage || 0}%</p>
+                    </div>
+                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Conflictos</p>
+                      <p style={{ fontSize: '1.1rem', color: conflicts.length > 0 ? 'var(--red)' : 'var(--green)', fontWeight: 900 }}>{conflicts.length}</p>
+                    </div>
+                  </div>
+                )}
               </MapContainer>
             </div>
           ) : activeTab === 'requests' ? (
