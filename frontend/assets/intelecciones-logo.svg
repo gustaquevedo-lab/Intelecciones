@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" width="860" height="500">
+<defs>
+  <linearGradient id="navy" x1="15%" y1="0%" x2="85%" y2="110%">
+    <stop offset="0%" stop-color="#1E3A6E"/>
+    <stop offset="100%" stop-color="#0D1F42"/>
+  </linearGradient>
+  <linearGradient id="navyD" x1="15%" y1="0%" x2="85%" y2="110%">
+    <stop offset="0%" stop-color="#2B4F96"/>
+    <stop offset="100%" stop-color="#162E60"/>
+  </linearGradient>
+  <linearGradient id="blueG" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#2E84F0"/>
+    <stop offset="100%" stop-color="#1558B0"/>
+  </linearGradient>
+  <linearGradient id="greenG" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#25C882"/>
+    <stop offset="100%" stop-color="#169058"/>
+  </linearGradient>
+  <linearGradient id="bgD" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#080E1C"/>
+    <stop offset="100%" stop-color="#0C1628"/>
+  </linearGradient>
+  <filter id="sh">
+    <feDropShadow dx="0" dy="3" stdDeviation="8" flood-color="#0D1F42" flood-opacity="0.28"/>
+  </filter>
+  <filter id="shD">
+    <feDropShadow dx="0" dy="4" stdDeviation="14" flood-color="#2E84F0" flood-opacity="0.35"/>
+  </filter>
+</defs>
+
+<rect width="860" height="500" fill="#F4F6FB"/>
+
+<!-- ══════════════════════════════════ PANEL 1 · Claro ══ -->
+<rect x="20" y="20" width="540" height="220" rx="16" fill="#fff" stroke="#E2E8F2" stroke-width="1"/>
+<text x="48" y="50" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="600" letter-spacing="3" fill="#B8C2D8">LOGO PRINCIPAL</text>
+
+<g transform="translate(48,60)" filter="url(#sh)">
+  <rect width="114" height="114" rx="25" fill="url(#navy)"/>
+  <!-- Papeleta inclinada entrando a la urna -->
+  <g transform="translate(57,43) rotate(-10)">
+    <rect x="-15" y="-21" width="30" height="26" rx="3" fill="white" opacity="0.97"/>
+    <line x1="-8" y1="-12" x2="8" y2="-12" stroke="#D0DCF0" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-8" y1="-5"  x2="4"  y2="-5"  stroke="#D0DCF0" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M-11,1 L-2,11 L13,-9" fill="none" stroke="#22C47E" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- Tapa urna -->
+  <rect x="17" y="58" width="80" height="11" rx="3" fill="white" opacity="0.95"/>
+  <!-- Ranura -->
+  <rect x="39" y="61" width="36" height="5" rx="1.5" fill="url(#navy)" opacity="0.45"/>
+  <!-- Cuerpo urna -->
+  <rect x="21" y="66" width="72" height="42" rx="4" fill="white" opacity="0.95"/>
+  <!-- Cerradura -->
+  <circle cx="57" cy="89" r="5.5" fill="url(#navy)" opacity="0.15"/>
+  <circle cx="57" cy="89" r="2.8" fill="url(#navy)" opacity="0.3"/>
+  <!-- Punto azul ecosistema -->
+  <circle cx="98" cy="17" r="9" fill="#2E84F0"/>
+</g>
+
+<text x="178" y="132" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" letter-spacing="-2">
+  <tspan font-weight="800" fill="url(#blueG)">Int</tspan><tspan font-weight="300" fill="url(#greenG)" letter-spacing="-1.5">elecciones</tspan>
+</text>
+<text x="179" y="159" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="10" letter-spacing="3.2" fill="#AABBCC">GESTIÓN INTEGRAL DE CAMPAÑAS ELECTORALES</text>
+<line x1="179" y1="172" x2="538" y2="172" stroke="#E2E8F2" stroke-width="0.8"/>
+<text x="179" y="222" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" letter-spacing="2" fill="#C8D4E4">INTELIHOUSE ECOSYSTEM · PARAGUAY</text>
+
+<!-- ══════════════════════════════════ PANEL 2 · Escalas ══ -->
+<rect x="578" y="20" width="262" height="220" rx="16" fill="#fff" stroke="#E2E8F2" stroke-width="1"/>
+<text x="606" y="50" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="600" letter-spacing="3" fill="#B8C2D8">ISOTIPOS</text>
+
+<!-- 80px -->
+<g transform="translate(606,60)">
+  <rect width="80" height="80" rx="18" fill="url(#navy)"/>
+  <g transform="translate(40,30) rotate(-10)">
+    <rect x="-11" y="-14" width="22" height="19" rx="2" fill="white" opacity="0.97"/>
+    <line x1="-6" y1="-8" x2="6" y2="-8" stroke="#D0DCF0" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="-6" y1="-3" x2="2" y2="-3" stroke="#D0DCF0" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M-8,1 L-1,8 L10,-7" fill="none" stroke="#22C47E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="12" y="41" width="56" height="8" rx="2" fill="white" opacity="0.95"/>
+  <rect x="27" y="43" width="26" height="4" rx="1" fill="url(#navy)" opacity="0.45"/>
+  <rect x="15" y="47" width="50" height="29" rx="3" fill="white" opacity="0.95"/>
+  <circle cx="40" cy="63" r="4" fill="url(#navy)" opacity="0.18"/>
+  <circle cx="40" cy="63" r="2" fill="url(#navy)" opacity="0.3"/>
+  <circle cx="69" cy="12" r="7" fill="#2E84F0"/>
+</g>
+<text x="646" y="151" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" fill="#AABBCC">80px</text>
+
+<!-- 46px -->
+<g transform="translate(714,74)">
+  <rect width="46" height="46" rx="11" fill="url(#navy)"/>
+  <g transform="translate(23,16) rotate(-10)">
+    <rect x="-7" y="-9" width="14" height="12" rx="1.5" fill="white" opacity="0.97"/>
+    <path d="M-5,1 L-1,5 L7,-5" fill="none" stroke="#22C47E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="7" y="23" width="32" height="6" rx="1.5" fill="white" opacity="0.95"/>
+  <rect x="15" y="25" width="16" height="2.5" rx="1" fill="url(#navy)" opacity="0.45"/>
+  <rect x="9" y="27" width="28" height="17" rx="2" fill="white" opacity="0.95"/>
+  <circle cx="40" cy="8" r="4.5" fill="#2E84F0"/>
+</g>
+<text x="737" y="131" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" fill="#AABBCC">46px</text>
+
+<!-- 28px -->
+<g transform="translate(798,88)">
+  <rect width="28" height="28" rx="6" fill="url(#navy)"/>
+  <g transform="translate(14,10) rotate(-10)">
+    <rect x="-4.5" y="-6" width="9" height="8" rx="1" fill="white" opacity="0.95"/>
+    <path d="M-3,1 L0,4 L5,-3" fill="none" stroke="#22C47E" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="4" y="15" width="20" height="4" rx="1" fill="white" opacity="0.9"/>
+  <rect x="7" y="16" width="10" height="2" rx="0.8" fill="url(#navy)" opacity="0.4"/>
+  <rect x="5" y="18" width="18" height="9" rx="1.5" fill="white" opacity="0.9"/>
+  <circle cx="24" cy="4.5" r="3" fill="#2E84F0"/>
+</g>
+<text x="812" y="127" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" fill="#AABBCC">28px</text>
+
+<!-- Familia -->
+<line x1="594" y1="168" x2="822" y2="168" stroke="#E2E8F2" stroke-width="0.8"/>
+<text x="606" y="186" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="600" letter-spacing="2.5" fill="#B8C2D8">FAMILIA INTELI</text>
+<g transform="translate(606,194)">
+  <rect width="22" height="22" rx="5" fill="#2E84F0"/>
+  <circle cx="11" cy="11" r="7" fill="white"/>
+  <path d="M7.5,11 L10,13.5 L15,8" fill="none" stroke="#169058" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="19" cy="3.5" r="2.4" fill="#22C47E"/>
+</g>
+<text x="634" y="210" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="11" font-weight="800" fill="#2E84F0">Inteli</text>
+<text x="660" y="210" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="11" font-weight="300" fill="#169058">audit</text>
+<g transform="translate(606,220)">
+  <rect width="22" height="22" rx="5" fill="url(#navy)"/>
+  <g transform="translate(11,8) rotate(-10)">
+    <rect x="-5" y="-6" width="10" height="8" rx="1" fill="white" opacity="0.95"/>
+    <path d="M-2,0.5 L0.5,3 L4,-2" fill="none" stroke="#22C47E" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="3" y="13" width="16" height="4" rx="1" fill="white" opacity="0.9"/>
+  <rect x="6" y="14" width="8" height="2" rx="0.7" fill="url(#navy)" opacity="0.4"/>
+  <rect x="4" y="16" width="14" height="6" rx="1.5" fill="white" opacity="0.9"/>
+  <circle cx="19" cy="3.5" r="2.4" fill="#2E84F0"/>
+</g>
+<text x="634" y="236" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="11" font-weight="800" fill="#2E84F0">Int</text>
+<text x="651" y="236" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="11" font-weight="300" fill="#169058">elecciones</text>
+
+<!-- ══════════════════════════════════ PANEL 3 · Dark ══ -->
+<rect x="20" y="258" width="540" height="220" rx="16" fill="url(#bgD)"/>
+<text x="48" y="288" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="600" letter-spacing="3" fill="#1A2D4C">VERSIÓN OSCURA</text>
+<g transform="translate(48,298)" filter="url(#shD)">
+  <rect width="114" height="114" rx="25" fill="url(#navyD)"/>
+  <g transform="translate(57,43) rotate(-10)">
+    <rect x="-15" y="-21" width="30" height="26" rx="3" fill="white" opacity="0.95"/>
+    <line x1="-8" y1="-12" x2="8" y2="-12" stroke="#B8C8DC" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-8" y1="-5"  x2="4"  y2="-5"  stroke="#B8C8DC" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M-11,1 L-2,11 L13,-9" fill="none" stroke="#22C47E" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="17" y="58" width="80" height="11" rx="3" fill="white" opacity="0.9"/>
+  <rect x="39" y="61" width="36" height="5" rx="1.5" fill="url(#navyD)" opacity="0.45"/>
+  <rect x="21" y="66" width="72" height="42" rx="4" fill="white" opacity="0.9"/>
+  <circle cx="57" cy="89" r="5.5" fill="url(#navyD)" opacity="0.15"/>
+  <circle cx="57" cy="89" r="2.8" fill="url(#navyD)" opacity="0.3"/>
+  <circle cx="98" cy="17" r="9" fill="#4A9EF5"/>
+</g>
+<text x="178" y="370" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" letter-spacing="-2">
+  <tspan font-weight="800" fill="#5AACFF">Int</tspan><tspan font-weight="300" fill="#25C882" letter-spacing="-1.5">elecciones</tspan>
+</text>
+<text x="179" y="397" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="10" letter-spacing="3.2" fill="#1A2D4C">GESTIÓN INTEGRAL DE CAMPAÑAS ELECTORALES</text>
+<line x1="179" y1="410" x2="538" y2="410" stroke="#101E34" stroke-width="0.8"/>
+<text x="179" y="462" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" letter-spacing="2" fill="#1A2D4C">INTELIHOUSE ECOSYSTEM · PARAGUAY</text>
+
+<!-- ══════════════════════════════════ PANEL 4 · Paleta ══ -->
+<rect x="578" y="258" width="262" height="220" rx="16" fill="#fff" stroke="#E2E8F2" stroke-width="1"/>
+<text x="606" y="288" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="600" letter-spacing="3" fill="#B8C2D8">PALETA</text>
+<rect x="606" y="300" width="44" height="32" rx="6" fill="#2E84F0"/>
+<text x="628" y="342" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#2E84F0 Int Blue</text>
+<rect x="658" y="300" width="44" height="32" rx="6" fill="#25C882"/>
+<text x="680" y="342" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#25C882 Green</text>
+<rect x="710" y="300" width="44" height="32" rx="6" fill="#1E3A6E"/>
+<text x="732" y="342" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#1E3A6E Navy</text>
+<rect x="762" y="300" width="44" height="32" rx="6" fill="#169058"/>
+<text x="784" y="342" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#169058 Deep</text>
+<rect x="606" y="356" width="44" height="32" rx="6" fill="#0D1F42"/>
+<text x="628" y="398" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#0D1F42 Night</text>
+<rect x="658" y="356" width="44" height="32" rx="6" fill="#5AACFF"/>
+<text x="680" y="398" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#5AACFF Light</text>
+<rect x="710" y="356" width="44" height="32" rx="6" fill="#AABBCC"/>
+<text x="732" y="398" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#AABBCC Gray</text>
+<rect x="762" y="356" width="44" height="32" rx="6" fill="#F4F6FB" stroke="#E2E8F2" stroke-width="1"/>
+<text x="784" y="398" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="7.5" fill="#7A90B0">#F4F6FB BG</text>
+<text x="606" y="430" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="8.5" fill="#AABBCC">Check verde = firma ecosistema Inteli</text>
+<text x="606" y="444" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="8.5" fill="#AABBCC">Urna + papeleta · Punto azul · Squircle navy</text>
+<text x="606" y="458" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="8.5" fill="#AABBCC">Int bold azul · elecciones light verde</text>
+</svg>

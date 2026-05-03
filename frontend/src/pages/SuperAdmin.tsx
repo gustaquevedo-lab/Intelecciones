@@ -240,6 +240,8 @@ const SuperAdmin = () => {
   const [newUserList, setNewUserList] = useState('');
   const [newUserCampaign, setNewUserCampaign] = useState('');
   const [userProfilePreview, setUserProfilePreview] = useState<any>(null);
+  const [newUserLocal, setNewUserLocal] = useState('');
+  const [newUserMesa, setNewUserMesa] = useState<number | null>(null);
   
   // List Form
   const [newListCampaign, setNewListCampaign] = useState('');
@@ -252,7 +254,7 @@ const SuperAdmin = () => {
   const [newListGoal, setNewListGoal] = useState(1000);
   const [listPhotoUrl, setListPhotoUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [cropperData, setCropperData] = useState<{ image: string, type: 'user' | 'list' | 'app' } | null>(null);
+  const [cropperData, setCropperData] = useState<{ image: string, type: 'user' | 'list' | 'app' | 'campaign' } | null>(null);
 
   const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
     return new Promise((resolve) => {
@@ -448,19 +450,25 @@ const SuperAdmin = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/users', {
-        username: newUserName || newUserCI,
-        password: newUserPass || newUserCI,
+      await api.post('/users', { 
+        username: newUserName || newUserCI, 
+        password: newUserPass || newUserCI, 
         role: newUserRole,
         nombre: newUserRealName,
-        ci: newUserCI,
-        list_id: newUserList,
-        campaign_id: newUserCampaign,
+        assigned_list_id: newUserList || null,
+        assigned_campaign_id: newUserCampaign || null,
+        assigned_local: newUserLocal || null,
+        assigned_mesa: newUserMesa || null,
         photo_url: userProfilePreview?.photo_url
       });
       setShowModal(null);
+      setNewUserLocal('');
+      setNewUserMesa(null);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      alert('Error al crear usuario. Verifique los datos.');
+    }
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
@@ -470,14 +478,21 @@ const SuperAdmin = () => {
       await api.put(`/users/${editingUser.id}`, {
         role: newUserRole,
         nombre: newUserRealName,
-        assigned_list_id: newUserList,
-        assigned_campaign_id: newUserCampaign,
+        assigned_list_id: newUserList || null,
+        assigned_campaign_id: newUserCampaign || null,
+        assigned_local: newUserLocal || null,
+        assigned_mesa: newUserMesa || null,
         photo_url: userProfilePreview?.photo_url
       });
       setShowModal(null);
       setEditingUser(null);
+      setNewUserLocal('');
+      setNewUserMesa(null);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      alert('Error al actualizar usuario.');
+    }
   };
 
   const handleDeleteUser = async (id: number) => {
@@ -1335,6 +1350,8 @@ const SuperAdmin = () => {
                   setNewUserRole(u.role);
                   setNewUserList(u.assigned_list_id?.toString() || '');
                   setNewUserCampaign(u.assigned_campaign_id?.toString() || '');
+                  setNewUserLocal(u.assigned_local || '');
+                  setNewUserMesa(u.assigned_mesa || null);
                   setUserProfilePreview({ photo_url: u.photo_url, nombre: u.nombre });
                   setIsUserVerified(true);
                   setShowModal('user'); 
@@ -1734,10 +1751,42 @@ const SuperAdmin = () => {
                         <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                           <option value="JEFE_CAMPANA">Jefe de Campaña</option>
                           <option value="COORDINADOR">Coordinador de Campo</option>
+                          <option value="MIEMBRO_DE_MESA">Miembro de Mesa</option>
                           <option value="CANDIDATO">Candidato (Solo Lectura)</option>
                           <option value="SUPERUSUARIO">Súper Usuario</option>
                         </select>
                       </div>
+
+                      {/* Miembro de Mesa Specific Fields */}
+                      {newUserRole === 'MIEMBRO_DE_MESA' && (
+                        <>
+                          <div className="form-group">
+                            <label>Local de Votación Asignado</label>
+                            <select 
+                              className="modern-input-premium-styled" 
+                              value={newUserLocal || ''} 
+                              onChange={e => setNewUserLocal(e.target.value)}
+                              required
+                            >
+                              <option value="">Seleccione local...</option>
+                              {locales.map(l => (
+                                <option key={l.cod_local} value={l.nombre}>{l.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label>Número de Mesa</label>
+                            <input 
+                              type="number"
+                              className="modern-input-premium-styled" 
+                              placeholder="Ej: 5"
+                              value={newUserMesa || ''} 
+                              onChange={e => setNewUserMesa(parseInt(e.target.value))}
+                              required
+                            />
+                          </div>
+                        </>
+                      )}
 
                       {/* Row 3: Assignment (Conditional, Full Width) */}
                       {(newUserRole === 'COORDINADOR' || newUserRole === 'CANDIDATO') && (
