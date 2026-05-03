@@ -166,6 +166,24 @@ const SuperAdmin = () => {
   const [isCandidateVerified, setIsCandidateVerified] = useState(false);
   const [isVehicleDriverVerified, setIsVehicleDriverVerified] = useState(false);
 
+  // Vehicle states
+  const [newVehicleDesc, setNewVehicleDesc] = useState('');
+  const [newVehicleDriver, setNewVehicleDriver] = useState('');
+  const [newVehiclePhone, setNewVehiclePhone] = useState('');
+  const [newVehicleDriverCI, setNewVehicleDriverCI] = useState('');
+  const [newVehicleCapacity, setNewVehicleCapacity] = useState(4);
+  const [newVehicleStatus, setNewVehicleStatus] = useState<'AVAILABLE' | 'IN_TRANSIT' | 'MAINTENANCE'>('AVAILABLE');
+  const [newVehicleList, setNewVehicleList] = useState('');
+
+  // Locale State
+  const [editingLocale, setEditingLocale] = useState<any>(null);
+  const [newLocaleCod, setNewLocaleCod] = useState('');
+  const [newLocaleNombre, setNewLocaleNombre] = useState('');
+  const [newLocaleDireccion, setNewLocaleDireccion] = useState('');
+  const [newLocaleLat, setNewLocaleLat] = useState<string>('');
+  const [newLocaleLng, setNewLocaleLng] = useState<string>('');
+  const [newLocaleIcon, setNewLocaleIcon] = useState('Landmark');
+
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
     if (cleaned.startsWith('09')) {
@@ -223,16 +241,9 @@ const SuperAdmin = () => {
   const [newCampaignPhotoUrl, setNewCampaignPhotoUrl] = useState('');
   const [newCampaignModules, setNewCampaignModules] = useState<string[]>(['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP']);
   const [newUserName, setNewUserName] = useState('');
-  const [newVehicleDesc, setNewVehicleDesc] = useState('');
-  const [newVehicleDriver, setNewVehicleDriver] = useState('');
-  const [newVehiclePhone, setNewVehiclePhone] = useState('');
-  const [newVehicleList, setNewVehicleList] = useState('');
   const [takenOptions, setTakenOptions] = useState<number[]>([]);
   const [hasIntendente, setHasIntendente] = useState(false);
   const [intendenteListNumber, setIntendenteListNumber] = useState('');
-  const [newVehicleDriverCI, setNewVehicleDriverCI] = useState('');
-  const [newVehicleCapacity, setNewVehicleCapacity] = useState(4);
-  const [newVehicleStatus, setNewVehicleStatus] = useState('AVAILABLE');
   const [newUserPass, setNewUserPass] = useState('');
   const [newUserRole, setNewUserRole] = useState('COORDINADOR');
   const [newUserRealName, setNewUserRealName] = useState('');
@@ -242,7 +253,6 @@ const SuperAdmin = () => {
   const [userProfilePreview, setUserProfilePreview] = useState<any>(null);
   const [newUserLocal, setNewUserLocal] = useState('');
   const [newUserMesa, setNewUserMesa] = useState<number | null>(null);
-  
   // List Form
   const [newListCampaign, setNewListCampaign] = useState('');
   const [newListType, setNewListType] = useState('INTENDENTE');
@@ -256,42 +266,6 @@ const SuperAdmin = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropperData, setCropperData] = useState<{ image: string, type: 'user' | 'list' | 'app' | 'campaign' } | null>(null);
 
-  const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxWidth) {
-              height *= maxWidth / width;
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width *= maxHeight / height;
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          canvas.toBlob((blob) => {
-            resolve(blob as Blob);
-          }, 'image/jpeg', 0.85);
-        };
-      };
-    });
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'user' | 'list' | 'app' | 'campaign') => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -300,7 +274,6 @@ const SuperAdmin = () => {
     reader.readAsDataURL(file);
     reader.onload = () => {
       setCropperData({ image: reader.result as string, type });
-      // Reset input value to allow re-selecting same file
       e.target.value = '';
     };
   };
@@ -402,18 +375,6 @@ const SuperAdmin = () => {
   const handleUpdateList = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingList) return;
-    console.log("Updating list with data:", {
-      id: editingList.id,
-      goal: newListGoal,
-      photo_url: candidatePreview?.photo_url || listPhotoUrl,
-      type: newListType,
-      list_number: newListNumber,
-      option_number: newListOption,
-      campaign_id: newListCampaign,
-      candidate_alias: newListAlias,
-      candidate_nombre: candidatePreview?.nombre
-    });
-
     try {
       const res = await api.put(`/lists/${editingList.id}`, {
         goal: newListGoal,
@@ -610,7 +571,6 @@ const SuperAdmin = () => {
         .filter(n => n > 0);
       setTakenOptions(options);
 
-      // Auto-assign list number if it's a council member and intendant exists
       if (newListType === 'CONCEJAL' && intendant && !editingList) {
         setNewListNumber(intendant.list_number);
       }
@@ -641,13 +601,6 @@ const SuperAdmin = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleUpdateLocaleIcon = async (cod_local: string, icon: string) => {
-    try {
-      await api.put(`/voting-locations/${cod_local}/icon`, { icon });
-      fetchData();
-    } catch (err) { console.error(err); }
-  };
-
   const handleExportAudit = () => {
     window.open(`${API_BASE}/audit/export`, '_blank');
   };
@@ -668,6 +621,37 @@ const SuperAdmin = () => {
     } catch (err) { console.error(err); }
   };
 
+  const handleCreateLocale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = { 
+        cod_local: newLocaleCod, 
+        nombre: newLocaleNombre, 
+        direccion: newLocaleDireccion, 
+        lat: parseFloat(newLocaleLat), 
+        lng: parseFloat(newLocaleLng), 
+        icon: newLocaleIcon 
+      };
+      if (editingLocale) {
+        await api.put(`/locales/${newLocaleCod}`, payload);
+      } else {
+        await api.post('/locales', payload);
+      }
+      setShowModal(null);
+      fetchData();
+    } catch (err) { 
+      console.error(err); 
+      alert('Error al guardar el local. Verifique el código único.');
+    }
+  };
+
+  const handleDeleteLocale = async (cod: string) => {
+    if (!confirm('¿Seguro que desea eliminar este local?')) return;
+    try {
+      await api.delete(`/locales/${cod}`);
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
 
   const fetchAuditData = async () => {
     try {
@@ -700,13 +684,6 @@ const SuperAdmin = () => {
   }, [authUser, activeTab]);
 
   if (loading) return null;
-
-  const fetchVehicles = async () => {
-    try {
-      const res = await api.get('/vehicles');
-      setVehicles(res.data);
-    } catch (err) { console.error(err); }
-  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -1093,6 +1070,18 @@ const SuperAdmin = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Locales de Votación</h2>
+        <button className="action-btn-primary" onClick={() => {
+          setEditingLocale(null);
+          setNewLocaleCod('');
+          setNewLocaleNombre('');
+          setNewLocaleDireccion('');
+          setNewLocaleLat('');
+          setNewLocaleLng('');
+          setNewLocaleIcon('Landmark');
+          setShowModal('locale');
+        }}>
+          <Plus size={18} /> Registrar Local
+        </button>
       </div>
       
       <ManagementTable 
@@ -1110,25 +1099,35 @@ const SuperAdmin = () => {
                   background: l.lat ? 'var(--green)' : 'var(--red)'
                 }} />
                 <span style={{ fontSize: '0.7rem', color: l.lat ? 'var(--text)' : 'var(--text-3)' }}>
-                  {l.lat ? `${l.lat.toFixed(4)}, ${l.lng.toFixed(4)}` : 'No ubicado'}
+                  {l.lat ? `${parseFloat(l.lat).toFixed(4)}, ${parseFloat(l.lng).toFixed(4)}` : 'No ubicado'}
                 </span>
               </div>
             )
           },
           {
-            header: 'Icono Mapa',
+            header: 'Icono',
             accessor: (l: any) => (
-              <select 
-                className="mini-input" 
-                value={l.icon || 'Landmark'} 
-                onChange={(e) => handleUpdateLocaleIcon(l.cod_local, e.target.value)}
-              >
-                <option value="Landmark">Institucional</option>
-                <option value="School">Escuela</option>
-                <option value="Building">Edificio</option>
-                <option value="Home">Casa/Local</option>
-                <option value="MapPin">Pin</option>
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: 'var(--plra-300)' }}>{l.icon || 'Landmark'}</span>
+              </div>
+            )
+          },
+          {
+            header: 'Acciones',
+            accessor: (l: any) => (
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="icon-btn" onClick={() => { 
+                  setEditingLocale(l); 
+                  setNewLocaleCod(l.cod_local);
+                  setNewLocaleNombre(l.nombre);
+                  setNewLocaleDireccion(l.direccion || '');
+                  setNewLocaleLat(l.lat?.toString() || '');
+                  setNewLocaleLng(l.lng?.toString() || '');
+                  setNewLocaleIcon(l.icon || 'Landmark');
+                  setShowModal('locale'); 
+                }}><Edit2 size={14} /></button>
+                <button className="icon-btn delete" onClick={() => handleDeleteLocale(l.cod_local)}><Trash2 size={14} /></button>
+              </div>
             )
           }
         ]}
@@ -1140,7 +1139,7 @@ const SuperAdmin = () => {
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           <ZoomControl position="bottomright" />
           {locales.filter(l => l.lat).map(l => (
-            <Marker key={l.cod_local} position={[l.lat, l.lng]} icon={createCustomIcon('var(--plra-500)', l.icon, 28)}>
+            <Marker key={l.cod_local} position={[parseFloat(l.lat), parseFloat(l.lng)]} icon={createCustomIcon('var(--plra-500)', l.icon, 28)}>
               <Popup>
                 <div style={{ color: 'black' }}>
                   <strong>{l.nombre}</strong><br/>
@@ -1157,7 +1156,6 @@ const SuperAdmin = () => {
   const renderSettings = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1000px' }}>
       
-      {/* Group 1: General Info & Brand */}
       <section>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Settings size={18} /> Identidad & Marca
@@ -1179,7 +1177,6 @@ const SuperAdmin = () => {
         </div>
       </section>
 
-      {/* Group 2: D-Day Logistics */}
       <section>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Clock size={18} /> Logística del Día D
@@ -1202,7 +1199,6 @@ const SuperAdmin = () => {
         </div>
       </section>
 
-      {/* Group 3: Multitenancy / SaaS Center */}
       <section>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Shield size={18} /> Control de Multitenancia (SaaS)
@@ -1240,7 +1236,6 @@ const SuperAdmin = () => {
         </div>
       </section>
 
-      {/* Group 4: Security & Master Key */}
       <section>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--red)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <AlertTriangle size={18} /> Seguridad Crítica
@@ -1394,7 +1389,6 @@ const SuperAdmin = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
-        {/* Column 1: Pending Requests */}
         <div className="card-premium-styled">
           <h3 style={{ fontSize: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Clock size={18} style={{ color: 'var(--plra-300)' }} /> Solicitudes Pendientes
@@ -1415,17 +1409,6 @@ const SuperAdmin = () => {
                   <p style={{ fontSize: '0.85rem', fontWeight: 700 }}>{cap.nombre} {cap.apellido}</p>
                   <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Local: {cap.local_votacion}</p>
                 </div>
-                <select 
-                  className="mini-input" 
-                  onChange={(e) => handleAssignVehicle(cap.id, e.target.value)}
-                  defaultValue=""
-                  style={{ width: '120px' }}
-                >
-                  <option value="" disabled>Asignar...</option>
-                  {vehicles.map(v => (
-                    <option key={v.id} value={v.id}>{v.description}</option>
-                  ))}
-                </select>
               </div>
             ))}
             {pendingLogistics.filter(p => !p.assigned_vehicle_id).length === 0 && (
@@ -1434,56 +1417,22 @@ const SuperAdmin = () => {
           </div>
         </div>
 
-        {/* Column 2: Fleet Status */}
         <div className="card-premium-styled">
           <h3 style={{ fontSize: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Truck size={18} style={{ color: 'var(--green)' }} /> Flota de Vehículos
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {vehicles.map(v => {
-              const assignedCount = pendingLogistics.filter(p => p.assigned_vehicle_id === v.id).length;
               const statusColor = v.status === 'AVAILABLE' ? 'var(--green)' : v.status === 'IN_TRANSIT' ? 'var(--yellow)' : 'var(--red)';
               const statusLabel = v.status === 'AVAILABLE' ? 'Disponible' : v.status === 'IN_TRANSIT' ? 'En Ruta' : 'Mantenimiento';
-              
               return (
-              <div key={v.id} style={{ 
-                padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', 
-                borderRadius: '12px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+              <div key={v.id} style={{ padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <p style={{ fontSize: '0.9rem', fontWeight: 800 }}>{v.description}</p>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', marginTop: '0.2rem' }}>
-                      Chofer: <strong>{v.driver_name}</strong> {v.driver_ci && <span style={{ opacity: 0.7 }}>(CI: {v.driver_ci})</span>}
-                    </div>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Chofer: {v.driver_name}</p>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
-                    <span style={{ 
-                      fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
-                      background: `rgba(${v.status === 'AVAILABLE' ? '34,197,94' : v.status === 'IN_TRANSIT' ? '234,179,8' : '239,68,68'}, 0.15)`,
-                      color: statusColor
-                    }}>
-                      {statusLabel}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
-                      Capacidad: {assignedCount} / {v.capacity || 4}
-                    </span>
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                  {pendingLogistics.filter(p => p.assigned_vehicle_id === v.id).map(cap => (
-                    <div key={cap.id} style={{ 
-                      padding: '0.2rem 0.5rem', background: 'rgba(34,197,94,0.1)', 
-                      border: '1px solid rgba(34,197,94,0.2)', borderRadius: '6px', 
-                      fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.3rem'
-                    }}>
-                      <User size={10} /> {cap.nombre}
-                    </div>
-                  ))}
-                  {assignedCount === 0 && (
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontStyle: 'italic' }}>Sin traslados asignados</span>
-                  )}
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: statusColor }}>{statusLabel}</span>
                 </div>
               </div>
             )})} 
@@ -1529,7 +1478,6 @@ const SuperAdmin = () => {
         </main>
       </div>
 
-      {/* --- MODALS --- */}
       <AnimatePresence>
         {showModal && (
           <div className="modal-overlay" onClick={() => setShowModal(null)}>
@@ -1541,62 +1489,66 @@ const SuperAdmin = () => {
               onClick={e => e.stopPropagation()}
             >
               {showModal === 'campaign' && (
-                <form onSubmit={handleCreateCampaign} style={{ padding: '2rem', maxWidth: '500px' }}>
-                  <h3>Nueva Campaña</h3>
-                  <div className="form-group">
-                    <label>Nombre de la Campaña</label>
-                    <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Ej: Municipales 2026" required />
+                <div style={{ maxWidth: '500px', width: '100%' }}>
+                  <div className="modal-header-section">
+                    <h3>Nueva Campaña</h3>
                   </div>
-                  <div className="form-group">
-                    <label>Eslogan</label>
-                    <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} placeholder="Ej: Por un cambio real" />
-                  </div>
-                  <div className="form-group">
-                    <label>Imagen Splash</label>
-                    <div className="search-input-wrapper-premium">
-                      <input className="modern-input-premium-styled" value={newCampaignPhotoUrl} onChange={e => setNewCampaignPhotoUrl(e.target.value)} placeholder="URL o subir archivo..." />
-                      <button type="button" onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*';
-                        input.onchange = (e: any) => handleFileUpload(e, 'campaign');
-                        input.click();
-                      }} className="search-btn-action">SUBIR</button>
+                  <form onSubmit={handleCreateCampaign} style={{ padding: '1.5rem' }}>
+                    <div className="form-group">
+                      <label>Nombre de la Campaña</label>
+                      <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} placeholder="Ej: Municipales 2026" required />
                     </div>
-                  </div>
-                  <div className="form-group">
-                    <label style={{ display: 'block', marginBottom: '1rem', color: 'var(--plra-300)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Módulos Habilitados (SaaS)</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                      {[
-                        { id: 'COMMAND_CENTER', label: 'Centro de Comando' },
-                        { id: 'REGISTRY', label: 'Padrón / Campo' },
-                        { id: 'LOGISTICS', label: 'Logística / Traslados' },
-                        { id: 'COMMUNICATIONS', label: 'WhatsApp Hub' }
-                      ].map(mod => (
-                        <label key={mod.id} style={{ 
-                          display: 'flex', alignItems: 'center', gap: '0.75rem', 
-                          padding: '0.75rem', borderRadius: '10px', background: 'var(--surface-light)',
-                          border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.2s'
-                        }}>
-                          <input 
-                            type="checkbox" 
-                            checked={newCampaignModules.includes(mod.id)} 
-                            onChange={(e) => {
-                              if (e.target.checked) setNewCampaignModules([...newCampaignModules, mod.id]);
-                              else setNewCampaignModules(newCampaignModules.filter(m => m !== mod.id));
-                            }}
-                            style={{ accentColor: 'var(--plra-300)' }}
-                          />
-                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-2)' }}>{mod.label}</span>
-                        </label>
-                      ))}
+                    <div className="form-group">
+                      <label>Eslogan</label>
+                      <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} placeholder="Ej: Por un cambio real" />
                     </div>
-                  </div>
-                  <div className="modal-footer-premium-styled">
-                    <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                    <button type="submit" className="btn-confirm-styled">Crear Campaña <ChevronRight size={18} /></button>
-                  </div>
-                </form>
+                    <div className="form-group">
+                      <label>Imagen Splash</label>
+                      <div className="search-input-wrapper-premium">
+                        <input className="modern-input-premium-styled" value={newCampaignPhotoUrl} onChange={e => setNewCampaignPhotoUrl(e.target.value)} placeholder="URL o subir archivo..." />
+                        <button type="button" onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = (e: any) => handleFileUpload(e, 'campaign');
+                          input.click();
+                        }} className="search-btn-action">SUBIR</button>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label style={{ display: 'block', marginBottom: '1rem', color: 'var(--plra-300)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Módulos Habilitados (SaaS)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        {[
+                          { id: 'COMMAND_CENTER', label: 'Centro de Comando' },
+                          { id: 'REGISTRY', label: 'Padrón / Campo' },
+                          { id: 'LOGISTICS', label: 'Logística / Traslados' },
+                          { id: 'COMMUNICATIONS', label: 'WhatsApp Hub' }
+                        ].map(mod => (
+                          <label key={mod.id} style={{ 
+                            display: 'flex', alignItems: 'center', gap: '0.75rem', 
+                            padding: '0.75rem', borderRadius: '10px', background: 'var(--surface-light)',
+                            border: '1px solid var(--border)', cursor: 'pointer', transition: 'all 0.2s'
+                          }}>
+                            <input 
+                              type="checkbox" 
+                              checked={newCampaignModules.includes(mod.id)} 
+                              onChange={(e) => {
+                                if (e.target.checked) setNewCampaignModules([...newCampaignModules, mod.id]);
+                                else setNewCampaignModules(newCampaignModules.filter(m => m !== mod.id));
+                              }}
+                              style={{ accentColor: 'var(--plra-300)' }}
+                            />
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-2)' }}>{mod.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="modal-footer-premium-styled">
+                      <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
+                      <button type="submit" className="btn-confirm-styled">Crear Campaña <ChevronRight size={18} /></button>
+                    </div>
+                  </form>
+                </div>
               )}
 
               {showModal === 'edit-campaign' && (
@@ -1654,7 +1606,6 @@ const SuperAdmin = () => {
 
               {showModal === 'user' && (
                 <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser} style={{ maxWidth: '650px', width: '100%', padding: 0 }}>
-                  {/* Header: User Profile with precise alignment */}
                   <div style={{ 
                     padding: '2rem', 
                     borderBottom: '1px solid var(--border)',
@@ -1703,11 +1654,8 @@ const SuperAdmin = () => {
                     </div>
                   </div>
 
-                  {/* Body: Structured Form Grid */}
                   <div style={{ padding: '2.5rem 2rem' }}>
                     <div className="form-grid">
-                      
-                      {/* Row 1: Identity Lookup & Internal Username */}
                       <div className="form-group">
                         <label>Documento de Identidad</label>
                         <div className="search-input-wrapper-premium">
@@ -1722,7 +1670,6 @@ const SuperAdmin = () => {
                           </button>
                         </div>
                       </div>
-
                       <div className="form-group">
                         <label>Nombre de Usuario</label>
                         <input 
@@ -1734,8 +1681,6 @@ const SuperAdmin = () => {
                           style={{ opacity: editingUser ? 0.6 : 1 }}
                         />
                       </div>
-
-                      {/* Row 2: Personal Info & Access Role */}
                       <div className="form-group">
                         <label>Nombre Completo</label>
                         <input 
@@ -1745,7 +1690,6 @@ const SuperAdmin = () => {
                           required 
                         />
                       </div>
-
                       <div className="form-group">
                         <label>Rol de Sistema</label>
                         <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
@@ -1756,8 +1700,6 @@ const SuperAdmin = () => {
                           <option value="SUPERUSUARIO">Súper Usuario</option>
                         </select>
                       </div>
-
-                      {/* Miembro de Mesa Specific Fields */}
                       {newUserRole === 'MIEMBRO_DE_MESA' && (
                         <>
                           <div className="form-group">
@@ -1787,8 +1729,6 @@ const SuperAdmin = () => {
                           </div>
                         </>
                       )}
-
-                      {/* Row 3: Assignment (Conditional, Full Width) */}
                       {(newUserRole === 'COORDINADOR' || newUserRole === 'CANDIDATO') && (
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Lista Electoral Asignada</label>
@@ -1802,7 +1742,6 @@ const SuperAdmin = () => {
                           </select>
                         </div>
                       )}
-
                       {newUserRole === 'JEFE_CAMPANA' && (
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Campaña que Administra</label>
@@ -1818,7 +1757,6 @@ const SuperAdmin = () => {
                       )}
                     </div>
                   </div>
-
                   <div className="modal-footer-premium-styled">
                     <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">
                       Cancelar
@@ -1832,14 +1770,6 @@ const SuperAdmin = () => {
 
               {showModal === 'list' && (
                 <form onSubmit={editingList ? handleUpdateList : handleCreateList} style={{ maxWidth: '600px', width: '100%', padding: 0 }}>
-                  <style>{`
-                    .premium-avatar-container-main { position: relative; cursor: pointer; transition: transform 0.2s; }
-                    .premium-avatar-frame-v2 { width: 80px; height: 80px; border-radius: 18px; background: rgba(255,255,255,0.03); border: 2px solid var(--border-mid); overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
-                    .premium-avatar-frame-v2 img { width: 100%; height: 100%; object-fit: cover; }
-                    .avatar-edit-badge { position: absolute; bottom: -4px; right: -4px; width: 32px; height: 32px; background: var(--plra-500); border: 3px solid #0a0e17; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 2; }
-                    .verified-status-tag { display: flex; align-items: center; gap: 4px; background: rgba(34,197,94,0.15); color: #4ade80; padding: 2px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: 900; letter-spacing: 0.05em; }
-                  `}</style>
-                  {/* Header: Candidate Identity with precise alignment */}
                   <div style={{ 
                     padding: '1rem 1.25rem', 
                     background: 'linear-gradient(to bottom, rgba(37,99,235,0.08), transparent)',
@@ -1847,177 +1777,37 @@ const SuperAdmin = () => {
                     display: 'flex', alignItems: 'center', gap: '1rem' 
                   }}>
                     <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
-                    <div className="premium-avatar-container-main" onClick={() => fileInputRef.current?.click()}>
-                      <div className="premium-avatar-frame-v2">
-                        {candidatePreview?.photo_url ? (
-                          <img src={candidatePreview.photo_url} alt="Candidato" />
-                        ) : (
-                          <User size={40} style={{ color: 'var(--text-3)' }} />
-                        )}
-                        <div className="avatar-edit-badge">
-                          <Camera size={14} />
-                        </div>
-                      </div>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '18px', background: 'rgba(255,255,255,0.03)', border: '2px solid var(--border-mid)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer' }} onClick={() => fileInputRef.current?.click()}>
+                      {candidatePreview?.photo_url ? (
+                        <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <User size={40} style={{ color: 'var(--text-3)' }} />
+                      )}
                     </div>
-
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-                        <span style={{ 
-                          fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-300)', 
-                          letterSpacing: '0.15em', textTransform: 'uppercase',
-                          background: 'rgba(59,130,246,0.1)', padding: '2px 8px', borderRadius: '4px'
-                        }}>
-                          Perfil del Candidato
-                        </span>
-                        {candidatePreview?.nombre && (
-                          <div className="verified-status-tag">
-                            <ShieldCheck size={12} />
-                            <span>VERIFICADO</span>
-                          </div>
-                        )}
-                      </div>
-                      <h2 style={{ 
-                        margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'white',
-                        fontFamily: 'var(--font-display)', letterSpacing: '-0.02em',
-                        lineHeight: 1.1
-                      }}>
+                      <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>
                         {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Esperando Verificación'}
                       </h2>
-                      <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <span style={{ opacity: 0.5 }}>C.I. Nº</span>
-                          <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>{newListCandidateCI || '---'}</span>
-                        </div>
-                      </div>
                     </div>
                   </div>
-
-                  {/* Body: Optimized Grid for Space and Flow */}
                   <div style={{ padding: '1rem 1.25rem' }}>
                     <div className="form-grid" style={{ gap: '0.5rem' }}>
-                      
-                      {/* Row 1: Identity & Alias */}
                       <div className="form-group">
                         <label>Documento de Identidad</label>
                         <div className="search-input-wrapper-premium">
-                          <input 
-                            className="modern-input-premium-styled" 
-                            placeholder="C.I. Nº"
-                            value={newListCandidateCI} 
-                            onChange={e => setNewListCandidateCI(e.target.value)} 
-                            required 
-                          />
-                          <button type="button" onClick={handleLookupCandidate} className="search-btn-action">
-                            VERIFICAR
-                          </button>
+                          <input className="modern-input-premium-styled" value={newListCandidateCI} onChange={e => setNewListCandidateCI(e.target.value)} required />
+                          <button type="button" onClick={handleLookupCandidate} className="search-btn-action">VERIFICAR</button>
                         </div>
                       </div>
-
                       <div className="form-group">
-                        <label>Nombre de Campaña / Apodo</label>
-                        <input 
-                          className="modern-input-premium-styled" 
-                          placeholder="Ej: El León del Norte"
-                          value={newListAlias}
-                          onChange={(e) => setNewListAlias(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label>Jerarquía</label>
-                        <select 
-                          className="modern-input-premium-styled" 
-                          value={newListType} 
-                          onChange={e => setNewListType(e.target.value)}
-                        >
-                          <option value="INTENDENTE" disabled={hasIntendente && !editingList}>Intendente {hasIntendente && !editingList ? '(Ya registrado)' : ''}</option>
-                          <option value="CONCEJAL">Concejal</option>
-                        </select>
-                      </div>
-
-                      {/* Row 2: Campaign (Full Width) */}
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label>Campaña Electoral</label>
-                        <select 
-                          className="modern-input-premium-styled" 
-                          value={newListCampaign} 
-                          onChange={e => setNewListCampaign(e.target.value)} 
-                          required
-                        >
-                          <option value="">Seleccione Campaña de Destino</option>
-                          {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      </div>
-
-                      {/* Row 3: List Number and Option */}
-                      <div className="form-group">
-                        <label>Número de Lista</label>
-                        <input 
-                          className="modern-input-premium-styled" 
-                          value={newListNumber} 
-                          onChange={e => setNewListNumber(e.target.value)} 
-                          placeholder="Ej: 100"
-                          required 
-                        />
-                      </div>
-
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label>{newListType === 'CONCEJAL' ? 'Número de Opción (Posición)' : 'Información Adicional'}</label>
-                        {newListType === 'CONCEJAL' ? (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(opt => {
-                              const isTaken = takenOptions.includes(opt) && (editingList?.option_number !== opt.toString());
-                              return (
-                                <button
-                                  key={opt}
-                                  type="button"
-                                  onClick={() => setNewListOption(opt.toString())}
-                                  disabled={isTaken}
-                                  style={{
-                                    padding: '0.5rem 0.75rem',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--border)',
-                                    background: newListOption === opt.toString() ? 'var(--plra-500)' : isTaken ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
-                                    color: newListOption === opt.toString() ? 'white' : isTaken ? 'var(--red)' : 'var(--text-2)',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    cursor: isTaken ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s',
-                                    opacity: isTaken ? 0.5 : 1,
-                                    minWidth: '40px'
-                                  }}
-                                >
-                                  {opt}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', fontSize: '0.75rem', color: 'var(--text-3)' }}>
-                            {hasIntendente && !editingList ? 'Ya existe un Intendente en esta campaña.' : 'Candidatura única para Intendencia.'}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label>Meta de Votos (Capturas Objetivo)</label>
-                        <input 
-                          type="number"
-                          className="modern-input-premium-styled" 
-                          value={newListGoal} 
-                          onChange={e => setNewListGoal(parseInt(e.target.value))} 
-                        />
+                        <label>Apodo / Alias</label>
+                        <input className="modern-input-premium-styled" value={newListAlias} onChange={(e) => setNewListAlias(e.target.value)} />
                       </div>
                     </div>
                   </div>
-
                   <div className="modal-footer-premium-styled">
-                    <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">
-                      Descartar
-                    </button>
-                    <button type="submit" className="btn-confirm-styled" disabled={!isCandidateVerified}>
-                      Registrar Lista <ChevronRight size={18} />
-                    </button>
+                    <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Descartar</button>
+                    <button type="submit" className="btn-confirm-styled" disabled={!isCandidateVerified}>Registrar Lista <ChevronRight size={18} /></button>
                   </div>
                 </form>
               )}
@@ -2026,56 +1816,67 @@ const SuperAdmin = () => {
                 <form onSubmit={handleCreateVehicle} style={{ maxWidth: '500px', width: '100%', padding: '2rem' }}>
                   <h3 style={{ marginBottom: '1.5rem', color: 'var(--text)' }}>Registrar Nuevo Vehículo</h3>
                   <div className="form-group">
-                    <label>Descripción del Vehículo</label>
-                    <input className="modern-input-premium-styled" placeholder="Ej: Camioneta Blanca - Chapa ABC 123" value={newVehicleDesc} onChange={e => setNewVehicleDesc(e.target.value)} required />
+                    <label>Descripción</label>
+                    <input className="modern-input-premium-styled" value={newVehicleDesc} onChange={e => setNewVehicleDesc(e.target.value)} required />
                   </div>
                   <div className="form-group">
                     <label>C.I. del Chofer</label>
                     <div className="search-input-wrapper-premium">
-                      <input className="modern-input-premium-styled" placeholder="Nº de Cédula" value={newVehicleDriverCI} onChange={e => setNewVehicleDriverCI(e.target.value)} required />
+                      <input className="modern-input-premium-styled" value={newVehicleDriverCI} onChange={e => setNewVehicleDriverCI(e.target.value)} required />
                       <button type="button" onClick={handleLookupDriverCI} className="search-btn-action">VERIFICAR</button>
                     </div>
-                  </div>
-                  <div className="form-group">
-                    <label>Nombre del Chofer</label>
-                    <input className="modern-input-premium-styled" value={newVehicleDriver} onChange={e => setNewVehicleDriver(e.target.value)} placeholder="Autocompletado o Manual" required />
-                  </div>
-                  <div className="form-group">
-                    <label>Teléfono del Chofer (WhatsApp)</label>
-                    <input 
-                      className="modern-input-premium-styled" 
-                      value={newVehiclePhone} 
-                      onChange={e => formatPhone(e.target.value)} 
-                      placeholder="+595 9xx xxx xxx"
-                      required 
-                    />
-                  </div>
-                  <div className="form-grid" style={{ gap: '1rem' }}>
-                    <div className="form-group">
-                      <label>Capacidad (Pasajeros)</label>
-                      <input type="number" className="modern-input-premium-styled" value={newVehicleCapacity} onChange={e => setNewVehicleCapacity(parseInt(e.target.value))} required />
-                    </div>
-                    <div className="form-group">
-                      <label>Estado</label>
-                      <select className="modern-input-premium-styled" value={newVehicleStatus} onChange={e => setNewVehicleStatus(e.target.value)}>
-                        <option value="AVAILABLE">Disponible</option>
-                        <option value="IN_TRANSIT">En Ruta</option>
-                        <option value="MAINTENANCE">Mantenimiento</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>Asignar a Lista (Opcional)</label>
-                    <select className="modern-input-premium-styled" value={newVehicleList} onChange={e => setNewVehicleList(e.target.value)}>
-                      <option value="">Uso General (Sin lista fija)</option>
-                      {lists.map(l => <option key={l.id} value={l.id}>Lista {l.list_number} - {l.candidate_nombre}</option>)}
-                    </select>
                   </div>
                   <div className="modal-footer-premium-styled">
                     <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
                     <button type="submit" className="btn-confirm-styled" disabled={!isVehicleDriverVerified}>Guardar Vehículo <ChevronRight size={18} /></button>
                   </div>
                 </form>
+              )}
+
+              {showModal === 'locale' && (
+                <div style={{ maxWidth: '500px', width: '100%' }}>
+                  <div className="modal-header-section">
+                    <h3>{editingLocale ? 'Editar Local' : 'Nuevo Local de Votación'}</h3>
+                  </div>
+                  <form onSubmit={handleCreateLocale} style={{ padding: '1.5rem' }}>
+                    <div className="form-group">
+                      <label>Código de Local</label>
+                      <input className="modern-input-premium-styled" value={newLocaleCod} onChange={e => setNewLocaleCod(e.target.value)} placeholder="Ej: 101" required disabled={!!editingLocale} />
+                    </div>
+                    <div className="form-group">
+                      <label>Nombre de la Institución</label>
+                      <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value)} placeholder="Ej: Escuela Graduada Nro 1" required />
+                    </div>
+                    <div className="form-group">
+                      <label>Dirección</label>
+                      <input className="modern-input-premium-styled" value={newLocaleDireccion} onChange={e => setNewLocaleDireccion(e.target.value)} placeholder="Ej: Calle Principal c/ Ayolas" />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div className="form-group">
+                        <label>Latitud</label>
+                        <input className="modern-input-premium-styled" value={newLocaleLat} onChange={e => setNewLocaleLat(e.target.value)} placeholder="-22.5447" required />
+                      </div>
+                      <div className="form-group">
+                        <label>Longitud</label>
+                        <input className="modern-input-premium-styled" value={newLocaleLng} onChange={e => setNewLocaleLng(e.target.value)} placeholder="-55.7333" required />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Icono</label>
+                      <select className="modern-input-premium-styled" value={newLocaleIcon} onChange={e => setNewLocaleIcon(e.target.value)}>
+                        <option value="Landmark">Institucional</option>
+                        <option value="School">Escuela</option>
+                        <option value="Building">Edificio</option>
+                        <option value="Home">Casa/Local</option>
+                        <option value="MapPin">Pin</option>
+                      </select>
+                    </div>
+                    <div className="modal-footer-premium-styled">
+                      <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
+                      <button type="submit" className="btn-confirm-styled">{editingLocale ? 'Guardar Cambios' : 'Crear Local'}</button>
+                    </div>
+                  </form>
+                </div>
               )}
             </motion.div>
           </div>

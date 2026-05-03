@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Map, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
-  Image, ChevronDown, ChevronUp, Zap, Shield
+  Image, ChevronDown, ChevronUp, Zap, Shield, Truck, UserPlus
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -47,7 +47,7 @@ const CoverageRing: React.FC<{ pct: number; reported: number; total: number }> =
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
       <svg width="130" height="130" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="65" cy="65" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+        <circle cx="65" cy="65" r={r} fill="none" stroke="var(--border)" strokeWidth="10" />
         <motion.circle
           cx="65" cy="65" r={r} fill="none"
           stroke={pct >= 80 ? '#25C882' : pct >= 40 ? '#F59E0B' : '#2E84F0'}
@@ -59,7 +59,7 @@ const CoverageRing: React.FC<{ pct: number; reported: number; total: number }> =
         />
         <text
           x="65" y="65" textAnchor="middle" dominantBaseline="central"
-          style={{ fill: 'white', fontSize: '1.4rem', fontWeight: 800, fontFamily: 'Space Grotesk', transform: 'rotate(90deg)', transformOrigin: '65px 65px' }}
+          style={{ fill: 'var(--text)', fontSize: '1.4rem', fontWeight: 800, fontFamily: 'Space Grotesk', transform: 'rotate(90deg)', transformOrigin: '65px 65px' }}
         >
           {pct.toFixed(0)}%
         </text>
@@ -77,7 +77,7 @@ const StatCard: React.FC<{ label: string; value: string | number; color?: string
   label, value, color = 'var(--text)', sub, icon
 }) => (
   <div style={{
-    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+    background: 'var(--surface-light)', border: '1px solid var(--border)',
     borderRadius: '12px', padding: '1rem 1.1rem',
     display: 'flex', flexDirection: 'column', gap: '0.3rem'
   }}>
@@ -102,10 +102,15 @@ const DiaDApp: React.FC = () => {
 
   // Data
   const [coverage, setCoverage] = useState({
-    total_mesas: 0, mesas_reportadas: 0, mesas_pendientes: 0,
+    total_mesas: 0, 
+    mesas_operativas: 0, op_porcentaje: 0,
+    mesas_reportadas: 0, mesas_pendientes: 0,
     votos_procesados: 0, porcentaje: 0,
-    mesas: [] as { id: number; numero: number; local: string; lat: number; lng: number; reportada: boolean }[]
+    total_coordinadores: 0, total_vehiculos: 0,
+    mesas: [] as { id: number; numero: number; local: string; lat: number; lng: number; reportada: boolean; operativa: boolean }[]
   });
+  const [locations, setLocations] = useState<any[]>([]);
+  const [fleetLocations, setFleetLocations] = useState<any[]>([]);
   const [resultados, setResultados] = useState<{
     id: number; list_number: string; candidate_alias: string; type: string;
     votos: number; porcentaje: number;
@@ -115,18 +120,98 @@ const DiaDApp: React.FC = () => {
     votos_total: number; foto_url: string | null; submitted_at: string;
   }[]>([]);
   const [bancasConcejal, setBancasConcejal] = useState(15);
-  const [expandedActa, setExpandedActa] = useState<number | null>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedMesa, setSelectedMesa] = useState<{local: string, numero: number} | null>(null);
+  const [usersToAssign, setUsersToAssign] = useState<any[]>([]);
+  const [assigningLoading, setAssigningLoading] = useState(false);
+  const [expandedLocales, setExpandedLocales] = useState<Record<string, boolean>>({});
+  const [showGlobalRegister, setShowGlobalRegister] = useState(false);
+  const [globalRegCI, setGlobalRegCI] = useState('');
+  const [globalRegData, setGlobalRegData] = useState<any>(null);
+  const [globalRegLocal, setGlobalRegLocal] = useState('');
+  const [globalRegMesa, setGlobalRegMesa] = useState<number | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [globalRegRole, setGlobalRegRole] = useState('VOCAL');
+  const [membersList, setMembersList] = useState<any[]>([]);
+  const [memberFilter, setMemberFilter] = useState('');
+
+  const toggleLocal = (id: string) => {
+    setExpandedLocales(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+
+  const handleLookupGlobalCI = async () => {
+    if (!globalRegCI) return;
+    setIsVerifying(true);
+    try {
+      const res = await api.get(`/electors/${globalRegCI}`);
+      if (res.data) {
+        setGlobalRegData(res.data);
+      } else {
+        alert('Cédula no encontrada en el padrón nacional');
+        setGlobalRegData(null);
+      }
+    } catch (err) { 
+      console.error(err);
+      alert('Error al consultar el padrón');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleGlobalAssign = async () => {
+    if (!globalRegData || !globalRegLocal || !globalRegMesa) {
+      alert('Por favor complete todos los campos (CI, Local y Mesa)');
+      return;
+    }
+    setAssigningLoading(true);
+    try {
+      await api.post('/diad/members/assign', {
+        ci: globalRegCI,
+        local: globalRegLocal,
+        mesa: globalRegMesa,
+        role: globalRegRole
+      });
+      setShowGlobalRegister(false);
+      setGlobalRegCI('');
+      setGlobalRegData(null);
+      setGlobalRegLocal('');
+      setGlobalRegMesa(null);
+      setGlobalRegRole('VOCAL');
+      fetchData();
+      alert('Miembro asignado correctamente');
+    } catch (err) {
+      console.error(err);
+      alert('Error al realizar la asignación');
+    } finally {
+      setAssigningLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      // Only users that can be members
+      setUsersToAssign(res.data.filter((u: any) => ['COORDINADOR', 'VEEDOR', 'MIEMBRO_MESA'].includes(u.role)));
+    } catch (err) { console.error(err); }
+  };
 
   const fetchData = useCallback(async () => {
     try {
-      const [covRes, resRes, actasRes] = await Promise.all([
+      const [covRes, resRes, actasRes, locRes, fleetRes, memRes] = await Promise.all([
         api.get('/diad/coverage').catch(() => ({ data: null })),
         api.get('/diad/results').catch(() => ({ data: null })),
         api.get('/diad/actas').catch(() => ({ data: null })),
+        api.get('/voting-locations').catch(() => ({ data: [] })),
+        api.get('/logistics/clusters').catch(() => ({ data: [] })),
+        api.get('/diad/members').catch(() => ({ data: [] }))
       ]);
       if (covRes.data) setCoverage(covRes.data);
       if (resRes.data) setResultados(resRes.data);
       if (actasRes.data) setActas(actasRes.data);
+      if (locRes.data) setLocations(locRes.data);
+      if (fleetRes.data) setFleetLocations(fleetRes.data);
+      if (memRes.data) setMembersList(memRes.data);
       setLastRefresh(new Date());
     } catch (err) {
       console.error('DiaDApp fetch error:', err);
@@ -141,7 +226,7 @@ const DiaDApp: React.FC = () => {
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchData, 30000); // every 30s
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchData]);
 
@@ -154,6 +239,7 @@ const DiaDApp: React.FC = () => {
 
   const TABS = [
     { id: 'cobertura', label: 'Cobertura', icon: <Activity size={14} /> },
+    { id: 'miembros', label: 'Staff Mesas', icon: <Users size={14} /> },
     { id: 'resultados', label: 'Resultados', icon: <BarChart3 size={14} /> },
     { id: 'dhondt', label: "D'Hondt", icon: <Award size={14} /> },
     { id: 'actas', label: 'Actas', icon: <FileText size={14} /> },
@@ -166,7 +252,7 @@ const DiaDApp: React.FC = () => {
         {/* ── Top control bar ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0.65rem 1.25rem', background: 'rgba(4,20,40,0.5)',
+          padding: '0.65rem 1.25rem', background: 'var(--surface)',
           borderBottom: '1px solid var(--border)', flexShrink: 0, flexWrap: 'wrap', gap: '0.5rem'
         }}>
           {/* Tabs */}
@@ -232,77 +318,157 @@ const DiaDApp: React.FC = () => {
             {activeTab === 'cobertura' && (
               <motion.div key="cobertura" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1.5rem', alignItems: 'start', marginBottom: '1.5rem' }}>
-                  {/* Ring */}
+                  {/* Operational Ring */}
                   <div style={{
-                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                    background: 'var(--surface)', border: '1px solid var(--border)',
                     borderRadius: '16px', padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'
                   }}>
-                    <p style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '0.25rem' }}>
-                      Cobertura de Mesas
+                    <p style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--plra-300)', marginBottom: '0.25rem' }}>
+                      Operativa: Miembros de Mesa
                     </p>
                     <CoverageRing
-                      pct={coverage.porcentaje}
-                      reported={coverage.mesas_reportadas}
+                      pct={coverage.op_porcentaje}
+                      reported={coverage.mesas_operativas}
                       total={coverage.total_mesas}
                     />
                     <div style={{
                       display: 'flex', gap: '0.5rem', marginTop: '0.25rem'
                     }}>
-                      <span style={{ fontSize: '0.6rem', color: 'var(--green)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <CheckCircle2 size={10} /> {coverage.mesas_reportadas} con acta
+                      <span style={{ fontSize: '0.6rem', color: 'var(--blue-lt)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Users size={10} /> {coverage.mesas_operativas} cubiertas
                       </span>
                       <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock size={10} /> {coverage.mesas_pendientes} pendientes
+                        <AlertCircle size={10} /> {coverage.total_mesas - coverage.mesas_operativas} sin miembro
                       </span>
                     </div>
                   </div>
 
-                  {/* KPIs */}
+                  {/* KPIs Operativos */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
                     <StatCard
-                      label="Votos procesados"
-                      value={coverage.votos_procesados.toLocaleString('es-PY')}
+                      label="Total Mesas"
+                      value={coverage.total_mesas}
+                      color="var(--text)"
+                      icon={<Activity size={12} />}
+                    />
+                    <StatCard
+                      label="Mesas Cubiertas"
+                      value={coverage.mesas_operativas}
                       color="var(--blue-lt)"
                       icon={<Users size={12} />}
                     />
                     <StatCard
-                      label="Mesas reportadas"
-                      value={`${coverage.mesas_reportadas}/${coverage.total_mesas}`}
-                      color="var(--green)"
-                      icon={<CheckCircle2 size={12} />}
-                    />
-                    <StatCard
-                      label="Cobertura"
-                      value={`${coverage.porcentaje.toFixed(1)}%`}
-                      color={coverage.porcentaje >= 80 ? 'var(--green)' : coverage.porcentaje >= 40 ? '#F59E0B' : 'var(--blue-lt)'}
-                      sub="del total de mesas"
+                      label="Cobertura Operativa"
+                      value={`${coverage.op_porcentaje.toFixed(1)}%`}
+                      color={coverage.op_porcentaje >= 90 ? 'var(--green)' : coverage.op_porcentaje >= 50 ? '#F59E0B' : 'var(--red)'}
+                      sub="Disponibilidad de personal"
                       icon={<TrendingUp size={12} />}
                     />
                     <StatCard
-                      label="Mesas pendientes"
-                      value={coverage.mesas_pendientes}
-                      color={coverage.mesas_pendientes > 0 ? '#F59E0B' : 'var(--green)'}
-                      sub="sin acta cargada"
-                      icon={<AlertCircle size={12} />}
+                      label="Coordinadores"
+                      value={coverage.total_coordinadores}
+                      color="var(--blue-lt)"
+                      icon={<Users size={12} />}
+                      sub="En campo"
                     />
                     <StatCard
-                      label="Campaña"
-                      value={settings.app_name || 'PLRA 2026'}
-                      color="var(--text)"
-                      icon={<Shield size={12} />}
+                      label="Móviles Activos"
+                      value={coverage.total_vehiculos}
+                      color="var(--plra-300)"
+                      icon={<Truck size={12} />}
+                      sub="Flota logística"
                     />
-                    <StatCard
-                      label="Estado"
-                      value={coverage.porcentaje >= 100 ? '✓ COMPLETO' : '● EN VIVO'}
-                      color={coverage.porcentaje >= 100 ? 'var(--green)' : '#F59E0B'}
-                    />
+                    
+                    {/* Territorial Distribution - Main View */}
+                    <div className="card-premium-styled" style={{ gridColumn: 'span 3', padding: '1.25rem' }}>
+                      <h4 style={{ fontSize: '0.85rem', marginBottom: '1.25rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>
+                        <Map size={16} style={{ color: 'var(--blue-lt)' }} /> Distribución Territorial & Presencia
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                        {locations.map(loc => {
+                          const mesasInLoc = coverage.mesas.filter(m => m.local === loc.nombre);
+                          const assignedInLoc = mesasInLoc.filter(m => m.operativa).length;
+                          const pct = mesasInLoc.length > 0 ? (assignedInLoc / mesasInLoc.length) * 100 : 0;
+                          const isExpanded = !!expandedLocales[loc.cod_local];
+
+                          return (
+                            <div key={loc.cod_local} style={{ 
+                              padding: '1rem', background: 'var(--surface-light)', borderRadius: '12px',
+                              border: `1px solid ${pct >= 100 ? 'rgba(37,200,130,0.3)' : 'var(--border)'}`,
+                              display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                              transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div style={{ flex: 1 }}>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', display: 'block', lineHeight: 1.2 }}>{loc.nombre}</span>
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>{mesasInLoc.length} Mesas totales</span>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: pct >= 100 ? 'var(--green)' : pct > 0 ? '#F59E0B' : 'var(--red)', display: 'block' }}>{assignedInLoc}</span>
+                                  <span style={{ fontSize: '0.55rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>Presencia</span>
+                                </div>
+                              </div>
+                              
+                              <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${pct}%` }}
+                                  style={{ height: '100%', background: pct >= 100 ? 'var(--green)' : pct > 0 ? '#F59E0B' : 'var(--red)' }}
+                                />
+                              </div>
+
+                              <button 
+                                onClick={() => toggleLocal(loc.cod_local)}
+                                style={{ 
+                                  width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)',
+                                  background: 'rgba(255,255,255,0.02)', color: 'var(--text-2)', fontSize: '0.65rem', fontWeight: 700,
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                                }}
+                              >
+                                {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                {isExpanded ? 'CERRAR DETALLE' : 'GESTIONAR MESAS'}
+                              </button>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div 
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    style={{ overflow: 'hidden', marginTop: '0.5rem' }}
+                                  >
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
+                                      {mesasInLoc.map(m => (
+                                        <button
+                                          key={`${m.local}-${m.numero}`}
+                                          onClick={() => { setSelectedMesa({local: m.local, numero: m.numero}); setShowAssignModal(true); fetchUsers(); }}
+                                          style={{
+                                            padding: '0.4rem 0.2rem', borderRadius: '6px', border: '1px solid',
+                                            background: m.operativa ? 'rgba(37,200,130,0.1)' : 'rgba(239,68,68,0.05)',
+                                            borderColor: m.operativa ? 'rgba(37,200,130,0.2)' : 'rgba(239,68,68,0.1)',
+                                            color: m.operativa ? 'var(--green)' : 'var(--text-3)',
+                                            fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer'
+                                          }}
+                                        >
+                                          M{m.numero}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Map */}
                 <div style={{
-                  background: 'rgba(4,20,40,0.6)', border: '1px solid var(--border)',
-                  borderRadius: '14px', overflow: 'hidden', height: '380px'
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  borderRadius: '14px', overflow: 'hidden', height: '450px'
                 }}>
                   <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <Map size={14} style={{ color: 'var(--plra-300)' }} />
@@ -311,8 +477,8 @@ const DiaDApp: React.FC = () => {
                     </span>
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
                       {[
-                        { color: '#25C882', label: 'Acta cargada' },
-                        { color: '#F59E0B', label: 'Pendiente' },
+                        { color: 'var(--blue-lt)', label: 'Con Miembro' },
+                        { color: 'var(--red)', label: 'Sin Miembro' },
                       ].map(l => (
                         <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.6rem', color: 'var(--text-3)' }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.color, display: 'inline-block' }} />
@@ -322,34 +488,90 @@ const DiaDApp: React.FC = () => {
                     </div>
                   </div>
                   <MapContainer
-                    center={[-25.2867, -57.647]}
-                    zoom={12}
+                    center={[-22.5447, -55.7333]}
+                    zoom={13}
                     style={{ height: 'calc(100% - 42px)', width: '100%' }}
                     zoomControl={false}
                   >
                     <TileLayer
-                      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                      attribution='&copy; CartoDB'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; OpenStreetMap'
                     />
                     <ZoomControl position="bottomright" />
-                    {coverage.mesas.map(mesa => (
+                    
+                    {/* Voting Locations Pins */}
+                    {locations.map(loc => (
                       <CircleMarker
-                        key={mesa.id}
-                        center={[mesa.lat, mesa.lng]}
-                        radius={7}
+                        key={`loc-${loc.id}`}
+                        center={[loc.lat || -22.5447, loc.lng || -55.7333]}
+                        radius={6}
                         pathOptions={{
-                          color: mesa.reportada ? '#25C882' : '#F59E0B',
-                          fillColor: mesa.reportada ? '#25C882' : '#F59E0B',
-                          fillOpacity: 0.85,
+                          color: 'var(--plra-500)',
+                          fillColor: 'var(--plra-300)',
+                          fillOpacity: 0.8,
                           weight: 2
                         }}
                       >
                         <Popup>
-                          <strong>Mesa {mesa.numero}</strong><br />
-                          {mesa.local}<br />
-                          <span style={{ color: mesa.reportada ? '#22c55e' : '#f59e0b' }}>
-                            {mesa.reportada ? '✓ Acta cargada' : '⏳ Pendiente'}
-                          </span>
+                          <strong>Local: {loc.nombre}</strong><br />
+                          <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
+                            <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.2rem' }}>{loc.nombre}</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Local de Votación</p>
+                          </div>
+                        </Popup>
+                      </CircleMarker>
+                    ))}
+
+                    {/* Fleet Heatmap / Clusters */}
+                    {fleetLocations.map((fleet, idx) => (
+                      <CircleMarker
+                        key={`fleet-${idx}`}
+                        center={[fleet.lat, fleet.lng]}
+                        radius={Math.min(20, 8 + fleet.count * 2)}
+                        pathOptions={{
+                          color: 'transparent',
+                          fillColor: 'var(--red)',
+                          fillOpacity: 0.3,
+                        }}
+                      />
+                    ))}
+
+                    {/* Mesas (Operational Status) */}
+                    {coverage.mesas.map(mesa => (
+                      <CircleMarker
+                        key={`mesa-${mesa.local}-${mesa.numero}`}
+                        center={[parseFloat(mesa.lat || "-22.5447") + (Math.random()-0.5)*0.003, parseFloat(mesa.lng || "-55.7333") + (Math.random()-0.5)*0.003]}
+                        radius={6}
+                        pathOptions={{
+                          color: mesa.operativa ? 'var(--blue-lt)' : 'var(--red)',
+                          fillColor: mesa.operativa ? 'var(--blue-lt)' : 'var(--red)',
+                          fillOpacity: 0.6,
+                          weight: 1
+                        }}
+                      >
+                        <Popup>
+                          <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
+                            <p style={{ fontWeight: 800, fontSize: '0.85rem' }}>{mesa.local}</p>
+                            <p style={{ fontSize: '0.75rem', fontWeight: 700 }}>MESA {mesa.numero}</p>
+                            <p style={{ 
+                              fontSize: '0.65rem', color: mesa.operativa ? 'var(--green)' : 'var(--red)',
+                              fontWeight: 800, marginTop: '0.4rem', textTransform: 'uppercase'
+                            }}>
+                              {mesa.operativa ? '● OPERATIVA (MIEMBRO ASIGNADO)' : '○ PENDIENTE DE MIEMBRO'}
+                            </p>
+                            {!mesa.operativa && (
+                              <button 
+                                onClick={() => { setSelectedMesa({local: mesa.local, numero: mesa.numero}); setShowAssignModal(true); fetchUsers(); }}
+                                style={{
+                                  marginTop: '0.6rem', padding: '0.4rem 0.8rem', width: '100%',
+                                  background: 'var(--red)', color: 'white', border: 'none',
+                                  borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer'
+                                }}
+                              >
+                                ASIGNAR AHORA
+                              </button>
+                            )}
+                          </div>
                         </Popup>
                       </CircleMarker>
                     ))}
@@ -361,6 +583,45 @@ const DiaDApp: React.FC = () => {
             {/* ══════════ TAB: RESULTADOS ══════════ */}
             {activeTab === 'resultados' && (
               <motion.div key="resultados" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                
+                {/* Results Coverage Header */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1.5rem', alignItems: 'start', marginBottom: '2rem' }}>
+                  <div style={{
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: '16px', padding: '1.2rem 1.8rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem'
+                  }}>
+                    <p style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '0.2rem' }}>
+                      Escrutinio de Mesas
+                    </p>
+                    <CoverageRing
+                      pct={coverage.porcentaje}
+                      reported={coverage.mesas_reportadas}
+                      total={coverage.total_mesas}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
+                    <StatCard
+                      label="Campaña Activa"
+                      value={settings.app_name || 'PLRA 2026'}
+                      color="var(--blue-lt)"
+                      icon={<Shield size={12} />}
+                      sub={settings.campaign_slogan}
+                    />
+                    <StatCard
+                      label="Votos Contabilizados"
+                      value={coverage.votos_procesados.toLocaleString('es-PY')}
+                      color="var(--green)"
+                      icon={<Users size={12} />}
+                    />
+                    <StatCard
+                      label="Estado de Carga"
+                      value={coverage.porcentaje >= 100 ? '✓ COMPLETO' : '● EN VIVO'}
+                      color={coverage.porcentaje >= 100 ? 'var(--green)' : '#F59E0B'}
+                      sub={`${coverage.mesas_reportadas} de ${coverage.total_mesas} mesas`}
+                    />
+                  </div>
+                </div>
 
                 {/* Intendente */}
                 {intendentes.length > 0 && (
@@ -513,7 +774,6 @@ const DiaDApp: React.FC = () => {
 
                 {concejales.length > 0 ? (
                   <>
-                    {/* D'Hondt visual result */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
                       {[...concejales]
                         .sort((a, b) => (dhondtResult[b.id] || 0) - (dhondtResult[a.id] || 0))
@@ -557,45 +817,6 @@ const DiaDApp: React.FC = () => {
                           );
                         })}
                     </div>
-
-                    {/* Seat visualization */}
-                    <div style={{
-                      background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: '14px', padding: '1.25rem'
-                    }}>
-                      <p style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '1rem' }}>
-                        Distribución visual — {bancasConcejal} bancas
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {(() => {
-                          const seats: JSX.Element[] = [];
-                          [...concejales]
-                            .sort((a, b) => (dhondtResult[b.id] || 0) - (dhondtResult[a.id] || 0))
-                            .forEach((r, i) => {
-                              const b = dhondtResult[r.id] || 0;
-                              const color = LIST_COLORS[i % LIST_COLORS.length];
-                              for (let s = 0; s < b; s++) {
-                                seats.push(
-                                  <div
-                                    key={`${r.id}-${s}`}
-                                    title={`${r.candidate_alias || r.list_number} — banca ${s + 1}`}
-                                    style={{
-                                      width: 28, height: 28, borderRadius: '50%',
-                                      background: color,
-                                      boxShadow: `0 2px 8px ${color}60`,
-                                      cursor: 'default'
-                                    }}
-                                  />
-                                );
-                              }
-                            });
-                          return seats;
-                        })()}
-                      </div>
-                      <p style={{ fontSize: '0.62rem', color: 'var(--text-3)', marginTop: '0.75rem' }}>
-                        * Proyección basada en {coverage.porcentaje.toFixed(0)}% de actas procesadas. Resultado final sujeto a escrutinio oficial.
-                      </p>
-                    </div>
                   </>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>
@@ -607,7 +828,101 @@ const DiaDApp: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ══════════ TAB: ACTAS ══════════ */}
+            {/* ══════════ TAB: STAFF MESAS ══════════ */}
+            {activeTab === 'miembros' && (
+              <motion.div key="miembros" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.2rem' }}>
+                      Planilla de Miembros y Veedores
+                    </h3>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>{membersList.length} personas asignadas actualmente</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div className="search-input-wrapper-premium" style={{ maxWidth: '250px' }}>
+                      <input 
+                        className="modern-input-premium-styled" 
+                        placeholder="Buscar staff..."
+                        value={memberFilter}
+                        onChange={e => setMemberFilter(e.target.value)}
+                      />
+                    </div>
+                    <button 
+                      onClick={() => setShowGlobalRegister(true)}
+                      className="action-btn-primary" 
+                      style={{ padding: '0.65rem 1.25rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <UserPlus size={16} /> REGISTRAR MIEMBRO
+                    </button>
+                  </div>
+                </div>
+
+                <div className="card-premium-styled" style={{ padding: 0, overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead style={{ background: 'var(--surface-light)', borderBottom: '1px solid var(--border)' }}>
+                      <tr>
+                        <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Nombre / CI</th>
+                        <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Rol</th>
+                        <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Local Asignado</th>
+                        <th style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Mesa</th>
+                        <th style={{ padding: '1rem', textAlign: 'right', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {membersList
+                        .filter(m => !memberFilter || m.nombre.toLowerCase().includes(memberFilter.toLowerCase()) || m.assigned_local?.toLowerCase().includes(memberFilter.toLowerCase()))
+                        .map(m => (
+                        <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '1rem' }}>
+                            <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0 }}>{m.nombre}</p>
+                            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>CI: {m.ci || 'N/A'}</p>
+                          </td>
+                          <td style={{ padding: '1rem' }}>
+                            <span style={{ 
+                              padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 800,
+                              background: m.role === 'PRESIDENTE' ? 'rgba(245,158,11,0.1)' : 
+                                          m.role === 'VEEDOR' ? 'rgba(168,85,247,0.1)' : 
+                                          'rgba(37,200,130,0.1)',
+                              color: m.role === 'PRESIDENTE' ? '#F59E0B' : 
+                                     m.role === 'VEEDOR' ? '#A855F7' : 
+                                     '#25C882',
+                              border: `1px solid ${m.role === 'PRESIDENTE' ? '#F59E0B40' : 
+                                                 m.role === 'VEEDOR' ? '#A855F730' : 
+                                                 '#25C88230'}`
+                            }}>
+                              {m.role}
+                            </span>
+                          </td>
+                          <td style={{ padding: '1rem', color: 'var(--text-2)' }}>{m.assigned_local || '---'}</td>
+                          <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 800, color: 'var(--blue-lt)' }}>{m.assigned_mesa || '---'}</td>
+                          <td style={{ padding: '1rem', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                              <button 
+                                onClick={() => { setSelectedMesa({local: m.assigned_local, numero: m.assigned_mesa}); setShowAssignModal(true); fetchUsers(); }}
+                                className="action-btn-primary" style={{ padding: '0.4rem 0.75rem', fontSize: '0.65rem' }}
+                              >
+                                CAMBIAR
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (!confirm(`¿Liberar a ${m.nombre} de su mesa?`)) return;
+                                  await api.post('/diad/members/assign', { user_id: m.id, local: null, mesa: null });
+                                  fetchData();
+                                }}
+                                className="btn-cancel-styled" style={{ padding: '0.4rem 0.75rem', fontSize: '0.65rem', border: '1px solid var(--red-40)' }}
+                              >
+                                LIBERAR
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'actas' && (
               <motion.div key="actas" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
@@ -621,9 +936,6 @@ const DiaDApp: React.FC = () => {
                       {actas.length}
                     </span>
                   </h3>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>
-                    {coverage.mesas_reportadas}/{coverage.total_mesas} mesas
-                  </span>
                 </div>
 
                 {actas.length === 0 ? (
@@ -638,7 +950,7 @@ const DiaDApp: React.FC = () => {
                       <div
                         key={acta.id}
                         style={{
-                          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                          background: 'var(--surface-light)', border: '1px solid var(--border)',
                           borderRadius: '12px', overflow: 'hidden'
                         }}
                       >
@@ -671,7 +983,7 @@ const DiaDApp: React.FC = () => {
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
-                              style={{ overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                              style={{ overflow: 'hidden', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}
                             >
                               <div style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                                 <div style={{ flex: 1, minWidth: 200 }}>
@@ -708,6 +1020,207 @@ const DiaDApp: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* --- MODALS --- */}
+      <AnimatePresence>
+        {showGlobalRegister && (
+          <div className="modal-overlay" onClick={() => setShowGlobalRegister(false)}>
+            <motion.div 
+              className="modal-content"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '550px', padding: 0 }}
+            >
+              <div style={{ padding: '1.5rem', background: 'linear-gradient(to right, var(--blue-lt-10), transparent)', borderBottom: '1px solid var(--border)' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <UserPlus size={20} style={{ color: 'var(--blue-lt)' }} /> Registro de Miembro de Mesa
+                </h3>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>Vinculación directa con el padrón nacional</p>
+              </div>
+
+              <div style={{ padding: '2rem' }}>
+                <div className="form-group">
+                  <label>Cédula de Identidad</label>
+                  <div className="search-input-wrapper-premium" style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input 
+                      autoFocus
+                      className="modern-input-premium-styled" 
+                      placeholder="Ingrese CI para verificar..."
+                      value={globalRegCI}
+                      onChange={e => setGlobalRegCI(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={handleLookupGlobalCI} 
+                      className="search-btn-action"
+                      disabled={isVerifying}
+                    >
+                      {isVerifying ? 'BUSCANDO...' : 'VERIFICAR'}
+                    </button>
+                  </div>
+                </div>
+
+                {globalRegData && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    style={{ 
+                      padding: '1rem', background: 'rgba(37,200,130,0.05)', 
+                      border: '1px solid rgba(37,200,130,0.2)', borderRadius: '12px',
+                      marginBottom: '1.5rem'
+                    }}
+                  >
+                    <p style={{ fontSize: '0.6rem', color: 'var(--green)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Ciudadano Verificado</p>
+                    <p style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text)' }}>{globalRegData.nombre} {globalRegData.apellido}</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Local Padrón: {globalRegData.local_votacion} | Mesa: {globalRegData.mesa}</p>
+                  </motion.div>
+                )}
+
+                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label>Función en la Mesa</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    {['PRESIDENTE', 'VOCAL', 'VEEDOR'].map(r => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setGlobalRegRole(r)}
+                        style={{
+                          flex: 1, padding: '0.65rem', borderRadius: '10px', border: '1px solid',
+                          fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
+                          background: globalRegRole === r ? '#1558B0' : 'var(--surface-light)',
+                          borderColor: globalRegRole === r ? '#1558B0' : 'var(--border)',
+                          color: globalRegRole === r ? '#FFFFFF' : 'var(--text-3)',
+                          boxShadow: globalRegRole === r ? '0 4px 12px rgba(21,88,176,0.25)' : 'none',
+                          textTransform: 'uppercase', letterSpacing: '0.05em'
+                        }}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>Local de Votación (Destino)</label>
+                    <select 
+                      className="modern-input-premium-styled" 
+                      value={globalRegLocal}
+                      onChange={e => { setGlobalRegLocal(e.target.value); setGlobalRegMesa(null); }}
+                    >
+                      <option value="">Seleccione Local...</option>
+                      {locations.map(loc => <option key={loc.cod_local} value={loc.nombre}>{loc.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Mesa Asignada</label>
+                    <select 
+                      className="modern-input-premium-styled" 
+                      value={globalRegMesa || ''}
+                      onChange={e => setGlobalRegMesa(parseInt(e.target.value))}
+                      disabled={!globalRegLocal}
+                    >
+                      <option value="">Seleccione Mesa...</option>
+                      {coverage.mesas
+                        .filter(m => m.local === globalRegLocal)
+                        .map(m => (
+                          <option key={`${m.local}-${m.numero}`} value={m.numero}>
+                            Mesa {m.numero} {m.operativa ? '(Ocupada)' : '(Libre)'}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer-premium-styled" style={{ padding: '1rem 2rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" onClick={() => setShowGlobalRegister(false)} className="btn-cancel-styled">Cancelar</button>
+                <button 
+                  type="button" 
+                  onClick={handleGlobalAssign} 
+                  className="btn-confirm-styled"
+                  disabled={assigningLoading || !globalRegData || !globalRegLocal || !globalRegMesa}
+                >
+                  {assigningLoading ? 'PROCESANDO...' : 'ASIGNAR MIEMBRO'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAssignModal && selectedMesa && (
+          <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
+            <motion.div 
+              className="modal-content"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '450px', width: '90%' }}
+            >
+              <div className="modal-header-section">
+                <h3>Asignar Miembro de Mesa</h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.4rem' }}>
+                  Local: <strong>{selectedMesa.local}</strong> · Mesa: <strong>{selectedMesa.numero}</strong>
+                </p>
+              </div>
+
+              <div style={{ padding: '1.5rem' }}>
+                <div className="form-group">
+                  <label>Seleccionar Usuario</label>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    {usersToAssign.length === 0 && <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', textAlign: 'center' }}>No hay usuarios disponibles para asignar.</p>}
+                    {usersToAssign.map(u => (
+                      <button
+                        key={u.id}
+                        onClick={async () => {
+                          setAssigningLoading(true);
+                          try {
+                            await api.post('/diad/members/assign', { 
+                              user_id: u.id, 
+                              local: selectedMesa.local, 
+                              mesa: selectedMesa.numero 
+                            });
+                            setShowAssignModal(false);
+                            fetchData();
+                          } catch (err) { console.error(err); }
+                          finally { setAssigningLoading(false); }
+                        }}
+                        disabled={assigningLoading}
+                        style={{
+                          width: '100%', padding: '0.75rem', borderRadius: '10px',
+                          background: 'var(--surface-light)', border: '1px solid var(--border)',
+                          display: 'flex', alignItems: 'center', gap: '0.75rem', textAlign: 'left',
+                          cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                        className="btn-hover-effect"
+                      >
+                        <div style={{ 
+                          width: '32px', height: '32px', borderRadius: '50%', background: 'var(--blue)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: '0.7rem'
+                        }}>
+                          {u.nombre?.[0] || 'U'}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>{u.nombre}</p>
+                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>{u.role} · {u.username}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer-premium-styled">
+                <button onClick={() => setShowAssignModal(false)} className="btn-cancel-styled">Cancelar</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </MainLayout>
   );
 };

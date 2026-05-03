@@ -86,6 +86,8 @@ const CaptureSchema = z.object({
   telefono: z.string().min(6, "El teléfono es obligatorio"),
 });
 
+const getListId = (req: any) => req.headers['x-list-id'] ? parseInt(req.headers['x-list-id'] as string) : null;
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Intellecciones Backend' });
@@ -622,6 +624,42 @@ app.get('/api/locales', (req, res) => {
   }
 });
 
+app.post('/api/locales', (req, res) => {
+  const { cod_local, nombre, lat, lng, icon, direccion } = req.body;
+  try {
+    db.prepare(`
+      INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '');
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/locales/:cod', (req, res) => {
+  const { nombre, lat, lng, icon, direccion } = req.body;
+  try {
+    db.prepare(`
+      UPDATE voting_locations 
+      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?
+      WHERE cod_local = ?
+    `).run(nombre, lat, lng, icon, direccion || '', req.params.cod);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/locales/:cod', (req, res) => {
+  try {
+    db.prepare('DELETE FROM voting_locations WHERE cod_local = ?').run(req.params.cod);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/stats/command', (req, res) => {
   const list_id = getListId(req);
   try {
@@ -714,6 +752,96 @@ app.get('/api/captures', (req, res) => {
       ORDER BY ec.timestamp DESC
     `).all();
     res.json(captures);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/logistics/stats', (req, res) => {
+  const list_id = getListId(req);
+  const filter = list_id ? `AND ec.list_id = ${list_id}` : '';
+  try {
+    const stats = db.prepare(`
+      SELECT 
+        COUNT(*) as total_requests,
+        SUM(CASE WHEN assigned_vehicle_id IS NOT NULL THEN 1 ELSE 0 END) as assigned,
+        SUM(CASE WHEN e.is_priority = 1 THEN 1 ELSE 0 END) as priority
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.needs_transport = 1 ${filter}
+    `).get() as any;
+
+    const fleet = db.prepare(`
+      SELECT 
+        COUNT(*) as total_vehicles,
+        SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) as available
+      FROM vehicles
+      ${list_id ? `WHERE list_id = ${list_id}` : ''}
+    `).get() as any;
+
+    res.json({ ...stats, ...fleet });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/logistics/clusters', (req, res) => {
+  const list_id = getListId(req);
+  const filter = list_id ? `AND ec.list_id = ${list_id}` : '';
+  try {
+    const clusters = db.prepare(`
+      SELECT 
+        e.barrio,
+        COUNT(ec.id) as count,
+        AVG(ec.lat) as lat,
+        AVG(ec.lng) as lng
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filter}
+      GROUP BY e.barrio
+    `).all();
+    res.json(clusters);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/vehicles/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    db.prepare('UPDATE vehicles SET status = ? WHERE id = ?').run(status, id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/logistics/pending', (req, res) => {
+  const list_id = getListId(req);
+  const filter = list_id ? `AND ec.list_id = ${list_id}` : '';
+  try {
+    const pending = db.prepare(`
+      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, e.barrio, e.is_priority
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filter}
+      ORDER BY e.is_priority DESC, ec.timestamp ASC
+    `).all();
+    res.json(pending);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/logistics/assign', (req, res) => {
+  const { capture_id, vehicle_id } = req.body;
+  try {
+    db.transaction(() => {
+      db.prepare('UPDATE elector_captures SET assigned_vehicle_id = ? WHERE id = ?').run(vehicle_id, capture_id);
+      db.prepare('UPDATE vehicles SET status = "IN_TRANSIT" WHERE id = ?').run(vehicle_id);
+    })();
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1388,7 +1516,202 @@ app.post('/api/users/update-password', (req, res) => {
   }
 });
 
-// --- VEEDOR MODULE (Day D) ---
+// --- DIA D (Election Day) HUB ENDPOINTS ---
+
+app.get('/api/diad/coverage', (req, res) => {
+  const list_id = getListId(req);
+  try {
+    // 1. Total Mesas from electors
+    const { total_mesas } = db.prepare('SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as total_mesas FROM electors').get() as any;
+    
+    // 2. Operational Coverage: Mesas with at least 1 member assigned (VEEDOR or MIEMBRO_MESA)
+    // We check users assigned to local and mesa
+    const { assigned_mesas } = db.prepare(`
+      SELECT COUNT(DISTINCT assigned_local || "-" || assigned_mesa) as assigned_mesas 
+      FROM users 
+      WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') 
+      AND assigned_local IS NOT NULL 
+      AND assigned_mesa IS NOT NULL
+      ${list_id ? `AND assigned_list_id = ${list_id}` : ''}
+    `).get() as any;
+
+    // 3. Results Coverage: Mesas with actas submitted
+    // We check the 'results' table
+    const { reported_mesas } = db.prepare(`
+      SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as reported_mesas 
+      FROM results
+      ${list_id ? `WHERE tenant_id = ${list_id}` : ''}
+    `).get() as any;
+
+    // 4. Votos Procesados (Total of votos_nuestro, votos_oponente_1, etc.)
+    const votos = db.prepare(`
+      SELECT 
+        SUM(votos_nuestro + votos_oponente_1 + votos_oponente_2 + votos_otros + votos_nulos + votos_blancos) as total
+      FROM results
+      ${list_id ? `WHERE tenant_id = ${list_id}` : ''}
+    `).get() as any;
+
+    // 5. Mesas details for the map
+    const mesas = db.prepare(`
+      SELECT 
+        DISTINCT e.local_votacion as local, e.mesa as numero, 
+        vl.lat, vl.lng,
+        EXISTS(SELECT 1 FROM results r WHERE r.local_votacion = e.local_votacion AND r.mesa = e.mesa) as reportada,
+        EXISTS(SELECT 1 FROM users u WHERE u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa AND (u.role = 'VEEDOR' OR u.role = 'MIEMBRO_MESA')) as operativa
+      FROM electors e
+      JOIN voting_locations vl ON e.local_votacion = vl.nombre
+    `).all();
+
+    // 6. Active Coordinators
+    const { total_coordinadores } = db.prepare(`
+      SELECT COUNT(*) as total_coordinadores FROM users 
+      WHERE role = 'COORDINADOR'
+      ${list_id ? `AND assigned_list_id = ${list_id}` : ''}
+    `).get() as any;
+
+    // 7. Active Vehicles (Móviles)
+    const { total_vehiculos } = db.prepare(`
+      SELECT COUNT(*) as total_vehiculos FROM vehicles
+      ${list_id ? `WHERE assigned_list_id = ${list_id} OR list_id = ${list_id}` : ''}
+    `).get() as any;
+
+    res.json({
+      total_mesas,
+      mesas_operativas: assigned_mesas,
+      op_porcentaje: total_mesas > 0 ? (assigned_mesas / total_mesas) * 100 : 0,
+      mesas_reportadas: reported_mesas,
+      mesas_pendientes: total_mesas - reported_mesas,
+      porcentaje: total_mesas > 0 ? (reported_mesas / total_mesas) * 100 : 0,
+      votos_procesados: votos.total || 0,
+      total_coordinadores,
+      total_vehiculos,
+      mesas
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/diad/results', (req, res) => {
+  const list_id = getListId(req);
+  try {
+    const listFilter = list_id ? `WHERE campaign_id = (SELECT campaign_id FROM lists WHERE id = ${list_id})` : '';
+    const results = db.prepare(`
+      SELECT 
+        l.id, l.list_number, l.candidate_alias, l.type,
+        SUM(CASE 
+          WHEN l.list_number = 'Nuestro' THEN r.votos_nuestro 
+          WHEN l.list_number = 'Oponente 1' THEN r.votos_oponente_1 
+          ELSE 0 
+        END) as votos
+      FROM lists l
+      LEFT JOIN results r ON 1=1 -- This needs actual mapping in a real scenario
+      ${listFilter}
+      GROUP BY l.id
+    `).all();
+    
+    // For demo/initial state: aggregate current results table
+    const totals = db.prepare(`
+      SELECT 
+        SUM(votos_nuestro) as nuestro,
+        SUM(votos_oponente_1) as oponente_1,
+        SUM(votos_oponente_2) as oponente_2,
+        SUM(votos_otros) as otros
+      FROM results
+      ${list_id ? `WHERE tenant_id = ${list_id}` : ''}
+    `).get() as any;
+
+    const formatted = [
+      { id: 1, list_number: 'NUESTRO', candidate_alias: 'PLRA', type: 'INTENDENTE', votos: totals.nuestro || 0, porcentaje: 0 },
+      { id: 2, list_number: 'OPONENTE 1', candidate_alias: 'ANR', type: 'INTENDENTE', votos: totals.oponente_1 || 0, porcentaje: 0 },
+      { id: 3, list_number: 'OPONENTE 2', candidate_alias: 'FG', type: 'INTENDENTE', votos: totals.oponente_2 || 0, porcentaje: 0 },
+    ];
+    
+    const totalVotos = formatted.reduce((acc, curr) => acc + curr.votos, 0);
+    formatted.forEach(f => f.porcentaje = totalVotos > 0 ? (f.votos / totalVotos) * 100 : 0);
+
+    res.json(formatted);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/diad/actas', (req, res) => {
+  const list_id = getListId(req);
+  try {
+    const actas = db.prepare(`
+      SELECT 
+        r.id, r.mesa as mesa_numero, r.local_votacion as local,
+        u.nombre as submitted_by,
+        (r.votos_nuestro + r.votos_oponente_1 + r.votos_oponente_2 + r.votos_otros) as votos_total,
+        r.foto_acta_url as foto_url,
+        r.timestamp as submitted_at
+      FROM results r
+      LEFT JOIN users u ON r.veedor_id = u.id -- assuming we add veedor_id to results
+      ${list_id ? `WHERE r.tenant_id = ${list_id}` : ''}
+      ORDER BY r.timestamp DESC
+    `).all();
+    res.json(actas);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/diad/members', (req, res) => {
+  try {
+    const members = db.prepare(`
+      SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.role
+      FROM users u
+      WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA')
+    `).all();
+    res.json(members);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/diad/members/assign', (req, res) => {
+  const { ci, local, mesa, user_id, role } = req.body;
+  const targetRole = role || 'MIEMBRO_MESA';
+  try {
+    let targetId = user_id;
+    
+    if (ci && !targetId) {
+      // Find user by CI
+      const existingUser = db.prepare('SELECT id FROM users WHERE ci = ?').get(ci) as any;
+      if (existingUser) {
+        targetId = existingUser.id;
+      } else {
+        // Create new user from electors
+        const elector = db.prepare('SELECT nombre, apellido FROM electors WHERE ci = ?').get(ci) as any;
+        if (!elector) return res.status(404).json({ error: 'Ciudadano no encontrado en el padrón' });
+        
+        const username = `member_${ci}`;
+        const password = `pass_${ci}`;
+        const fullName = `${elector.nombre} ${elector.apellido}`;
+        
+        const result = db.prepare(`
+          INSERT INTO users (username, password, role, nombre, ci)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(username, password, targetRole, fullName, ci);
+        targetId = result.lastInsertRowid;
+      }
+    }
+
+    if (!targetId) return res.status(400).json({ error: 'No se pudo identificar al usuario' });
+
+    db.prepare(`
+      UPDATE users 
+      SET assigned_local = ?, assigned_mesa = ?, role = ?
+      WHERE id = ?
+    `).run(local, mesa, targetRole, targetId);
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/veedor/table-status', (req, res) => {
   const role = getRole(req);
   if (role !== 'VEEDOR' && role !== 'SUPERUSUARIO') {

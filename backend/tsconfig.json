@@ -15,6 +15,7 @@
     "noUncheckedIndexedAccess": false,
     "strict": false,
     "jsx": "react-jsx",
-    "isolatedModules": false
+    "isolatedModules": false,
+    "ignoreDeprecations": "6.0"
   }
 }
