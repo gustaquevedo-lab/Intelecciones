@@ -585,7 +585,7 @@ const CommandCenter = () => {
                     </Marker>
                   );
                 })}
-                {captures.map((cap) => (
+                {captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap) => (
                   <Marker key={`cap-${cap.id}`} position={[cap.lat, cap.lng]} icon={createCustomIcon(cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : 'var(--red)', 'MapPin', cap.needs_transport === 1)}>
                     <Popup>
                       <div style={{ padding: '0.5rem' }}>
@@ -597,6 +597,7 @@ const CommandCenter = () => {
                           <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>{cap.campaign_name}</span>
                         </div>
                         <p style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Captado por: <strong>{cap.coordinator_name}</strong></p>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>Local: {cap.local_votacion}</p>
                         {cap.needs_transport === 1 && (
                           <div style={{ marginTop: '0.5rem', padding: '0.3rem', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', border: '1px solid var(--plra-300)', fontSize: '0.65rem', color: 'var(--plra-200)', fontWeight: 700, textAlign: 'center' }}>
                             🚗 REQUIERE TRASLADO
