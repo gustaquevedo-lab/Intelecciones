@@ -356,6 +356,18 @@ const CommandCenter = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(window.innerWidth > 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) setShowSidebar(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -502,8 +514,42 @@ const CommandCenter = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', height: 'calc(100vh - 110px)', overflow: 'hidden' }}>
-        <aside style={{ overflowY: 'auto', background: 'var(--surface)', borderRight: '1px solid var(--border)' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '300px 1fr' : '0px 1fr'), 
+        height: isMobile ? 'calc(100vh - 110px)' : 'calc(100vh - 110px)', 
+        overflow: 'hidden',
+        position: 'relative',
+        transition: 'grid-template-columns 0.3s ease'
+      }}>
+        {/* Toggle Sidebar Button for Mobile/Tablet */}
+        {(isMobile || !showSidebar) && (
+          <button 
+            onClick={() => setShowSidebar(!showSidebar)}
+            style={{
+              position: 'absolute', top: '1rem', left: '1rem', zIndex: 1100,
+              width: '40px', height: '40px', borderRadius: '12px',
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              color: 'var(--plra-300)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)', cursor: 'pointer'
+            }}
+          >
+            {showSidebar ? <X size={20} /> : <BarChart3 size={20} />}
+          </button>
+        )}
+
+        <aside style={{ 
+          overflowY: 'auto', 
+          background: 'var(--surface)', 
+          borderRight: '1px solid var(--border)',
+          position: isMobile ? 'absolute' : 'relative',
+          left: isMobile && !showSidebar ? '-300px' : '0',
+          top: 0, bottom: 0,
+          width: isMobile ? '280px' : 'auto',
+          zIndex: 1050,
+          transition: 'left 0.3s ease',
+          boxShadow: isMobile && showSidebar ? '20px 0 50px rgba(0,0,0,0.5)' : 'none'
+        }}>
           <SidebarContent stats={commandStats} activities={activities} conflicts={conflicts} onResolve={setShowResolveModal} settings={settings} />
         </aside>
         <div style={{ position: 'relative', minWidth: 0, minHeight: 0 }}>
