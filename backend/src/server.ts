@@ -764,14 +764,22 @@ app.post('/api/users', (req, res) => {
 
 app.get('/api/users', (req, res) => {
   try {
+    // Simplified query to avoid losing users if relations are missing
     const users = db.prepare(`
-      SELECT u.*, l.list_number, l.type as list_type, c.name as campaign_name
+      SELECT 
+        u.*, 
+        l.list_number, 
+        l.type as list_type, 
+        c.name as campaign_name
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN campaigns c ON u.assigned_campaign_id = c.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
     `).all();
+    
+    console.log(`[ADMIN] Sirviendo ${users.length} usuarios.`);
     res.json(users);
   } catch (err: any) {
+    console.error('[ADMIN ERROR] Fallo al listar usuarios:', err);
     res.status(500).json({ error: err.message });
   }
 });
