@@ -326,27 +326,7 @@ app.post('/api/captures', (req, res) => {
   }
 });
 
-app.get('/api/captures', (req, res) => {
-  const list_id = getListId(req);
-  const role = getRole(req);
-  const isSuper = role === 'SUPERUSUARIO';
-
-  try {
-    const query = `
-      SELECT ec.*, e.nombre, e.apellido, l.list_number, c.name as campaign_name, u.nombre as coordinator_name
-      FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
-      JOIN lists l ON ec.list_id = l.id
-      JOIN campaigns c ON l.campaign_id = c.id
-      JOIN users u ON ec.coordinator_id = u.id
-      ${isSuper || !list_id ? '' : `WHERE ec.list_id = ${list_id}`}
-    `;
-    const captures = db.prepare(query).all();
-    res.json(captures);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Consolidated in the admin/management section for consistency
 
 app.get('/api/stats/neighborhoods', (req, res) => {
   const tenant_id = getTenant(req);
@@ -635,13 +615,13 @@ app.put('/api/captures/:id', (req, res) => {
 
 app.get('/api/captures', (req, res) => {
   const list_id = getListId(req);
-  const local_id = req.query.localId as string;
+  const local_id = req.query.localId;
   const role = getRole(req);
   const isSuper = role === 'SUPERUSUARIO';
 
   try {
     const listFilter = isSuper || !list_id ? '' : `AND ec.list_id = ${list_id}`;
-    const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
+    const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
 
     const captures = db.prepare(`
       SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.username as coordinator_name, l.list_number, c.name as campaign_name
