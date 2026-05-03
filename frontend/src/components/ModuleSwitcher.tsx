@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Map, Users, Shield, Truck, MessageSquare } from 'lucide-react';
+import { Layout, Map, Users, Shield, Truck, MessageSquare, CheckSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,13 +9,14 @@ export const ModuleSwitcher: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  if (!user || (user.role !== 'SUPERUSUARIO' && user.role !== 'JEFE_CAMPANA')) {
+  if (!user || (user.role !== 'SUPERUSUARIO' && user.role !== 'JEFE_CAMPANA' && user.role !== 'MIEMBRO_DE_MESA')) {
     return null;
   }
 
   const modules = [
     { id: 'admin', label: 'Admin', path: '/admin', icon: Shield, roles: ['SUPERUSUARIO'], moduleKey: 'SUPER_ADMIN' },
     { id: 'comando', label: 'Comando', path: '/comando', icon: Map, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'COMMAND_CENTER' },
+    { id: 'veedor', label: 'Veeduría', path: '/veedor', icon: CheckSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'MIEMBRO_DE_MESA'], moduleKey: 'DAY_D' },
     { id: 'logistics', label: 'Logística', path: '/logistica', icon: Truck, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'LOGISTICS' },
     { id: 'communications', label: 'WhatsApp', path: '/comunicaciones', icon: MessageSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'COMMUNICATIONS' },
     { id: 'coordinador', label: 'Campo', path: '/coordinador', icon: Users, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'REGISTRY' },
@@ -23,6 +24,7 @@ export const ModuleSwitcher: React.FC = () => {
 
   const availableModules = modules.filter(m => {
     if (user.role === 'SUPERUSUARIO') return true;
+    if (user.role === 'MIEMBRO_DE_MESA' && m.id === 'veedor') return true;
     const hasRole = m.roles.includes(user.role);
     const isEnabled = user.enabled_modules?.includes(m.moduleKey);
     return hasRole && isEnabled;

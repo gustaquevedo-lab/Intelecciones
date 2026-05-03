@@ -32,7 +32,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const roleLabels = {
     'SUPERUSUARIO': 'Super Administrador',
     'JEFE_CAMPANA': 'Jefe de Campaña',
-    'COORDINADOR': 'Coordinador de Campo'
+    'COORDINADOR': 'Coordinador de Campo',
+    'MIEMBRO_DE_MESA': 'Miembro de Mesa'
   };
 
   const currentRoleLabel = user ? roleLabels[user.role] : 'Usuario';

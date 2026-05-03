@@ -14,8 +14,11 @@ const VeedorApp = () => {
   const [tableInfo, setTableInfo] = useState({ local: '', mesa: '', total: 0 });
 
   useEffect(() => {
+    if (user?.role !== 'MIEMBRO_DE_MESA' && user?.role !== 'SUPERUSUARIO' && user?.role !== 'JEFE_CAMPANA') {
+      // Access allowed for management too
+    }
     loadTableData();
-  }, []);
+  }, [user]);
 
   const loadTableData = async () => {
     try {
