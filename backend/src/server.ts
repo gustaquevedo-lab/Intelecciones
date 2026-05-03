@@ -1300,6 +1300,60 @@ app.post('/api/users/update-password', (req, res) => {
   }
 });
 
-app.listen(Number(PORT), '0.0.0.0', () => {
+// --- VEEDOR MODULE (Day D) ---
+app.get('/api/veedor/table-status', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'VEEDOR' && role !== 'SUPERUSUARIO') {
+    // For demo purposes, we'll allow other roles to see a dummy table if not assigned
+  }
+
+  try {
+    // In a real scenario, we'd get the assigned local/mesa from the user's token/session
+    // For now, we'll fetch a sample if none assigned to show the UI
+    const userId = 1; // Dummy for now
+    const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
+    
+    const local = user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
+    const mesa = user?.assigned_mesa || 1;
+
+    // Get max order number for this table
+    const stats = db.prepare('SELECT MAX(orden) as total FROM electors WHERE local_votacion = ? AND mesa = ?').get(local, mesa) as any;
+    
+    // Get already voted orders
+    const voted = db.prepare('SELECT orden FROM participation_logs WHERE local_votacion = ? AND mesa = ?').all(local, mesa) as any[];
+
+    res.json({
+      info: {
+        local,
+        mesa,
+        total: stats?.total || 400
+      },
+      votedOrders: voted.map(v => v.orden)
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/veedor/mark-vote', (req, res) => {
+  const { order } = req.body;
+  try {
+    const userId = 1; // Dummy
+    const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
+    const local = user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
+    const mesa = user?.assigned_mesa || 1;
+
+    db.prepare(`
+      INSERT INTO participation_logs (local_votacion, mesa, orden, veedor_id)
+      VALUES (?, ?, ?, ?)
+    `).run(local, mesa, order, userId);
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

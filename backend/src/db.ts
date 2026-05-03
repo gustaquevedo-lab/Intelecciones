@@ -63,6 +63,8 @@ db.exec(`
     role TEXT NOT NULL,
     assigned_list_id INTEGER,
     assigned_campaign_id INTEGER,
+    assigned_local TEXT,
+    assigned_mesa INTEGER,
     nombre TEXT,
     photo_url TEXT,
     needs_password_change INTEGER DEFAULT 0,
@@ -85,6 +87,16 @@ db.exec(`
     mesa INTEGER NOT NULL,
     orden INTEGER NOT NULL,
     is_priority BOOLEAN DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS participation_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    local_votacion TEXT NOT NULL,
+    mesa INTEGER NOT NULL,
+    orden INTEGER NOT NULL,
+    veedor_id INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(veedor_id) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS audit_logs (
