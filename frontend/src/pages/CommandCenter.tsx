@@ -8,7 +8,7 @@ import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
   TrendingUp, TrendingDown, ChevronUp, ChevronDown,
   Download, MapPin, Activity, Bell, X, Search,
-  AlertCircle, ChevronRight, Truck
+  AlertCircle, ChevronRight, Truck, Target
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { ManagementTable } from '../components/ManagementTable';
