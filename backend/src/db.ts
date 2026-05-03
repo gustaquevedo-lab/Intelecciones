@@ -188,15 +188,23 @@ try {
 } catch (e) {}
 
 // User migrations
+// Lists migrations
 try {
-  db.prepare("ALTER TABLE users ADD COLUMN assigned_local TEXT").run();
+  db.prepare("ALTER TABLE lists ADD COLUMN is_adversary INTEGER DEFAULT 0").run();
 } catch (e) {}
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN assigned_mesa INTEGER").run();
-} catch (e) {}
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN assigned_campaign_id INTEGER").run();
-} catch (e) {}
+
+// Results refactor table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS acta_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    acta_id INTEGER,
+    lista_id INTEGER,
+    votos INTEGER,
+    FOREIGN KEY(acta_id) REFERENCES results(id),
+    FOREIGN KEY(lista_id) REFERENCES lists(id)
+  );
+`);
+
 
 /* Ensure default Super Admin exists */
 db.prepare(`

@@ -1595,43 +1595,87 @@ app.get('/api/diad/coverage', (req, res) => {
 app.get('/api/diad/results', (req, res) => {
   const list_id = getListId(req);
   try {
-    const listFilter = list_id ? `WHERE campaign_id = (SELECT campaign_id FROM lists WHERE id = ${list_id})` : '';
-    const results = db.prepare(`
+    const formatted = db.prepare(`
       SELECT 
-        l.id, l.list_number, l.candidate_alias, l.type,
-        SUM(CASE 
-          WHEN l.list_number = 'Nuestro' THEN r.votos_nuestro 
-          WHEN l.list_number = 'Oponente 1' THEN r.votos_oponente_1 
-          ELSE 0 
-        END) as votos
+        l.id, l.list_number, l.candidate_alias, l.type, l.candidate_nombre,
+        COALESCE(SUM(ar.votos), 0) as votos
       FROM lists l
-      LEFT JOIN results r ON 1=1 -- This needs actual mapping in a real scenario
-      ${listFilter}
+      LEFT JOIN acta_results ar ON l.id = ar.lista_id
       GROUP BY l.id
-    `).all();
-    
-    // For demo/initial state: aggregate current results table
-    const totals = db.prepare(`
-      SELECT 
-        SUM(votos_nuestro) as nuestro,
-        SUM(votos_oponente_1) as oponente_1,
-        SUM(votos_oponente_2) as oponente_2,
-        SUM(votos_otros) as otros
-      FROM results
-      ${list_id ? `WHERE tenant_id = ${list_id}` : ''}
-    `).get() as any;
-
-    const formatted = [
-      { id: 1, list_number: 'NUESTRO', candidate_alias: 'PLRA', type: 'INTENDENTE', votos: totals.nuestro || 0, porcentaje: 0 },
-      { id: 2, list_number: 'OPONENTE 1', candidate_alias: 'ANR', type: 'INTENDENTE', votos: totals.oponente_1 || 0, porcentaje: 0 },
-      { id: 3, list_number: 'OPONENTE 2', candidate_alias: 'FG', type: 'INTENDENTE', votos: totals.oponente_2 || 0, porcentaje: 0 },
-    ];
+      ORDER BY votos DESC
+    `).all() as any[];
     
     const totalVotos = formatted.reduce((acc, curr) => acc + curr.votos, 0);
     formatted.forEach(f => f.porcentaje = totalVotos > 0 ? (f.votos / totalVotos) * 100 : 0);
 
     res.json(formatted);
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/diad/listas', (req, res) => {
+  try {
+    const lists = db.prepare(`
+      SELECT id, candidate_alias as nombre, list_number, type, is_adversary
+      FROM lists
+      ORDER BY is_adversary ASC, list_number ASC
+    `).all();
+    res.json(lists);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/diad/listas', (req, res) => {
+  const { list_number, candidate_alias, type, is_adversary } = req.body;
+  try {
+    const result = db.prepare(`
+      INSERT INTO lists (list_number, candidate_alias, type, is_adversary, campaign_id)
+      VALUES (?, ?, ?, ?, 1)
+    `).run(list_number, candidate_alias, type, is_adversary ? 1 : 0);
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/diad/acta', upload.single('foto_acta'), (req, res) => {
+  const { mesa_id, votos_blanco, votos_nulos, listas } = req.body;
+  const userId = req.headers['x-user-id'];
+  
+  try {
+    const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const parsedListas = JSON.parse(listas);
+
+    db.transaction(() => {
+      // 1. Get mesa info
+      const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
+      const local = user?.assigned_local || 'PENDIENTE';
+      const mesa = user?.assigned_mesa || 0;
+
+      // 2. Create main result record
+      const result = db.prepare(`
+        INSERT INTO results (tenant_id, mesa, local_votacion, votos_blancos, votos_nulos, foto_acta_url, veedor_id)
+        VALUES (1, ?, ?, ?, ?, ?, ?)
+      `).run(mesa, local, votos_blanco || 0, votos_nulos || 0, photoUrl, userId);
+      
+      const actaId = result.lastInsertRowid;
+
+      // 3. Save per-list results
+      const insertResult = db.prepare(`
+        INSERT INTO acta_results (acta_id, lista_id, votos)
+        VALUES (?, ?, ?)
+      `);
+
+      for (const item of parsedListas) {
+        insertResult.run(actaId, item.lista_id, item.votos);
+      }
+    })();
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Acta error:', err);
     res.status(500).json({ error: err.message });
   }
 });

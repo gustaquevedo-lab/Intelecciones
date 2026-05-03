@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Map, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
-  Image, ChevronDown, ChevronUp, Zap, Shield, Truck, UserPlus
+  Image, ChevronDown, ChevronUp, Zap, Shield, Truck, UserPlus,
+  Plus, X
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -134,6 +135,10 @@ const DiaDApp: React.FC = () => {
   const [globalRegRole, setGlobalRegRole] = useState('VOCAL');
   const [membersList, setMembersList] = useState<any[]>([]);
   const [memberFilter, setMemberFilter] = useState('');
+  const [showListModal, setShowListModal] = useState(false);
+  const [newListNumber, setNewListNumber] = useState('');
+  const [newListAlias, setNewListAlias] = useState('');
+  const [newListType, setNewListType] = useState('CONCEJAL');
 
   const toggleLocal = (id: string) => {
     setExpandedLocales(prev => ({ ...prev, [id]: !prev[id] }));
@@ -188,6 +193,22 @@ const DiaDApp: React.FC = () => {
     }
   };
 
+  const handleCreateList = async () => {
+    if (!newListNumber || !newListAlias) return;
+    try {
+      await api.post('/diad/listas', {
+        list_number: newListNumber,
+        candidate_alias: newListAlias,
+        type: newListType,
+        is_adversary: true
+      });
+      setShowListModal(false);
+      setNewListNumber('');
+      setNewListAlias('');
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
   const fetchUsers = async () => {
     try {
       const res = await api.get('/users');
@@ -235,7 +256,7 @@ const DiaDApp: React.FC = () => {
   const intendentes = resultados.filter(r => r.type === 'INTENDENTE');
   const dhondtInput = concejales.map(r => ({ id: r.id, nombre: r.candidate_alias || r.list_number, votos: r.votos }));
   const dhondtResult = calcularDHondt(dhondtInput, bancasConcejal);
-  const maxVotos = Math.max(...resultados.map(r => r.votos), 1);
+  const maxVotos = Math.max(...resultados.map(r => r.votos || 0), 1);
 
   const TABS = [
     { id: 'cobertura', label: 'Cobertura', icon: <Activity size={14} /> },
@@ -757,14 +778,22 @@ const DiaDApp: React.FC = () => {
                       Asignación proporcional de bancas basada en votos procesados ({coverage.porcentaje.toFixed(0)}% de cobertura)
                     </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <label style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontWeight: 700 }}>Bancas en juego:</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button 
+                      onClick={() => setShowListModal(true)}
+                      className="btn-cancel-styled"
+                      style={{ fontSize: '0.65rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    >
+                      <Plus size={12} /> Gestionar Listas
+                    </button>
+                    <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
+                    <label style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontWeight: 700 }}>Bancas:</label>
                     <input
                       type="number"
                       value={bancasConcejal}
                       onChange={e => setBancasConcejal(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
                       style={{
-                        width: 60, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                        width: 50, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
                         borderRadius: '8px', color: 'var(--text)', padding: '0.3rem 0.5rem',
                         fontFamily: 'Space Grotesk', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center'
                       }}
@@ -1021,7 +1050,111 @@ const DiaDApp: React.FC = () => {
         </div>
       </div>
 
+      {/* --- LIST MANAGEMENT MODAL --- */}
+      <AnimatePresence>
+        {showListModal && (
+          <div className="modal-overlay" onClick={() => setShowListModal(false)}>
+            <motion.div 
+              className="modal-content"
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '500px', padding: 0, overflow: 'hidden' }}
+            >
+              <div style={{ 
+                padding: '1.5rem', 
+                background: 'linear-gradient(to bottom, rgba(37,99,235,0.1), transparent)',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', gap: '1.25rem' 
+              }}>
+                <div style={{ 
+                  width: '64px', height: '64px', borderRadius: '16px', 
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+                }}>
+                  <Award size={32} style={{ color: 'var(--plra-300)' }} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)' }}>Registrar Lista Adversaria</h3>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-3)', fontWeight: 600 }}>Cargar competidores para el cálculo D'Hondt</p>
+                </div>
+                <button 
+                  onClick={() => setShowListModal(false)} 
+                  style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ padding: '2rem' }}>
+                <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', display: 'block' }}>
+                      Número de Lista
+                    </label>
+                    <input 
+                      className="modern-input-premium-styled" 
+                      value={newListNumber} 
+                      onChange={e => setNewListNumber(e.target.value)} 
+                      placeholder="Ej: Lista 1, Lista 10..." 
+                      autoFocus
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', display: 'block' }}>
+                      Sigla / Nombre de Alianza
+                    </label>
+                    <input 
+                      className="modern-input-premium-styled" 
+                      value={newListAlias} 
+                      onChange={e => setNewListAlias(e.target.value)} 
+                      placeholder="Ej: ANR, FG, Cruzada Nacional..." 
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', display: 'block' }}>
+                      Tipo de Candidatura
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      {['INTENDENTE', 'CONCEJAL'].map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setNewListType(t)}
+                          style={{
+                            flex: 1, padding: '0.75rem', borderRadius: '12px', border: '1px solid',
+                            fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
+                            background: newListType === t ? 'var(--blue-lt)' : 'rgba(255,255,255,0.03)',
+                            borderColor: newListType === t ? 'var(--blue-lt)' : 'var(--border)',
+                            color: newListType === t ? 'white' : 'var(--text-3)',
+                            boxShadow: newListType === t ? '0 4px 15px rgba(37,99,235,0.25)' : 'none'
+                          }}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer-premium-styled" style={{ padding: '1.25rem 2rem', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button onClick={() => setShowListModal(false)} className="btn-cancel-styled">CANCELAR</button>
+                <button onClick={handleCreateList} className="btn-confirm-styled" style={{ minWidth: '140px' }}>
+                  REGISTRAR LISTA
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* --- MODALS --- */}
+
       <AnimatePresence>
         {showGlobalRegister && (
           <div className="modal-overlay" onClick={() => setShowGlobalRegister(false)}>
