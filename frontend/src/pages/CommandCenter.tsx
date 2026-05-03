@@ -736,6 +736,64 @@ const CommandCenter = () => {
                 )}
               </MapContainer>
             </div>
+          ) : activeTab === 'registry' ? (
+            <div style={{ height: '100%', overflowY: 'auto', padding: '1.5rem', background: 'var(--surface-dark)' }}>
+              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <div className="card-premium-styled" style={{ marginBottom: '1.5rem' }}>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Search size={18} style={{ color: 'var(--plra-300)' }} /> Búsqueda en el Padrón
+                  </h2>
+                  <div className="search-input-wrapper-premium">
+                    <input 
+                      type="text" 
+                      className="modern-input-premium-styled" 
+                      placeholder="Ingrese nombre, apellido o C.I..."
+                      onChange={(e) => handleSearch(e.target.value)}
+                    />
+                    {isSearching && (
+                      <div className="loading-spinner-small" style={{ position: 'absolute', right: '1rem' }} />
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {searchResults.map((elector: any) => (
+                    <div key={elector.ci} className="card-premium-styled" style={{ 
+                      padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)'
+                    }}>
+                      <div>
+                        <p style={{ fontWeight: 800, fontSize: '0.9rem' }}>{elector.nombre} {elector.apellido}</p>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>C.I. {elector.ci}</p>
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-2)' }}>📍 {elector.local_votacion}</span>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-2)' }}>🗳️ Mesa {elector.mesa}</span>
+                        </div>
+                      </div>
+                      <button 
+                        className="mini-action-btn"
+                        onClick={() => {
+                          if (elector.lat && elector.lng) {
+                            setSelectedLocal(null); // Clear filter to see the specific point
+                            setActiveTab('map');
+                          } else {
+                            alert('Este elector aún no ha sido captado geográficamente.');
+                          }
+                        }}
+                      >
+                        VER EN MAPA
+                      </button>
+                    </div>
+                  ))}
+                  {!isSearching && searchResults.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
+                      <Users size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                      <p>Ingrese un criterio de búsqueda para localizar electores</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : activeTab === 'requests' ? (
             <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--surface-dark)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
