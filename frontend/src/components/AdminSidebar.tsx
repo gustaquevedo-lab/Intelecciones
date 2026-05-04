@@ -65,7 +65,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
         gap: '0.5rem',
         position: 'relative',
         transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflowX: 'hidden'
+        overflow: 'visible',
+        zIndex: 50
       }}
     >
       {/* Toggle Button */}
@@ -73,10 +74,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
         onClick={() => setIsCollapsed(!isCollapsed)}
         style={{
           position: 'absolute',
-          right: '-12px',
+          right: '-14px',
           top: '60px',
-          width: '24px',
-          height: '24px',
+          width: '28px',
+          height: '28px',
           borderRadius: '50%',
           background: 'var(--plra-500)',
           border: '1px solid var(--border)',
@@ -85,8 +86,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          zIndex: 100,
-          boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+          zIndex: 999,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
         }}
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}

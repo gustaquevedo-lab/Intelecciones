@@ -105,7 +105,7 @@ const StatCard = ({ label, value, delta, trend, color, bg, border }: any) => (
   </div>
 );
 
-const RequestItem = ({ req, onResolve }: { req: any, onResolve: (status: string) => void }) => {
+const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (status: string) => void, isReadOnly: boolean }) => {
   const priorityColors = {
     CRITICAL: 'var(--red)',
     HIGH: 'var(--yellow)',
@@ -214,7 +214,7 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
   );
 };
 
-const SidebarContent = ({ stats, activities, conflicts, onResolve, settings }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any }) => {
+const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isReadOnly }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, isReadOnly: boolean }) => {
   const criticalLocs = stats?.locations?.filter((l: any) => parseFloat(l.percentage) < 30).sort((a: any, b: any) => parseFloat(a.percentage) - parseFloat(b.percentage)).slice(0, 3) || [];
   const topCoordinators = stats?.top_coordinators || [];
 
@@ -608,7 +608,14 @@ const CommandCenter = () => {
           transition: 'left 0.3s ease',
           boxShadow: isMobile && showSidebar ? '20px 0 50px rgba(0,0,0,0.5)' : 'none'
         }}>
-          <SidebarContent stats={commandStats} activities={activities} conflicts={conflicts} onResolve={setShowResolveModal} settings={settings} />
+          <SidebarContent 
+            stats={commandStats} 
+            activities={activities} 
+            conflicts={conflicts} 
+            onResolve={setShowResolveModal} 
+            settings={settings} 
+            isReadOnly={authUser?.role === 'COORDINADOR'} 
+          />
         </aside>
         <div style={{ position: 'relative', minWidth: 0, minHeight: 0 }}>
           {activeTab === 'map' ? (

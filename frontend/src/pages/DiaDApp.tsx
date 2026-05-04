@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Map, BarChart3, FileText, RefreshCw, Clock,
@@ -94,7 +94,7 @@ const StatCard: React.FC<{ label: string; value: string | number; color?: string
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const DiaDApp: React.FC = () => {
-  const { Users } = useAuth();
+  const { user } = useAuth();
   const { settings } = useSettings();
 
   const [activeTab, setActiveTab] = useState<'cobertura' | 'resultados' | 'dhondt' | 'actas'>('cobertura');

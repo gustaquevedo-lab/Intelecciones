@@ -1231,8 +1231,12 @@ app.get('/api/logistics/pending', (req, res) => {
 
 // Strategic Command Center Endpoints
 app.get('/api/admin/conflicts', (req, res) => {
+  const role = getRole(req);
+  const user_id = req.headers['x-user-id'];
+  const isPadrino = role === 'PADRINO';
+  
   try {
-    const conflicts = db.prepare(`
+    const query = `
       SELECT 
         cc.id as conflict_id,
         cc.status as conflict_status,
@@ -1249,7 +1253,9 @@ app.get('/api/admin/conflicts', (req, res) => {
       JOIN electors e ON cc.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       WHERE cc.status = 'PENDING'
-    `).all();
+      ${isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : ''}
+    `;
+    const conflicts = db.prepare(query).all();
     res.json(conflicts);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1258,6 +1264,7 @@ app.get('/api/admin/conflicts', (req, res) => {
 
 app.post('/api/admin/conflicts/resolve', (req, res) => {
   const { conflict_id, winner_capture_id } = req.body;
+  const user_id = req.headers['x-user-id'];
   try {
     db.transaction(() => {
       const conflict = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
@@ -1270,11 +1277,11 @@ app.post('/api/admin/conflicts/resolve', (req, res) => {
       // 2. Resolve the conflict record
       db.prepare(`
         UPDATE capture_conflicts 
-        SET status = 'RESOLVED', resolved_by_jefe_id = 1, resolved_coordinator_id = (SELECT coordinator_id FROM elector_captures WHERE id = ?)
+        SET status = 'RESOLVED', resolved_by_jefe_id = ?, resolved_coordinator_id = (SELECT coordinator_id FROM elector_captures WHERE id = ?)
         WHERE elector_ci = ?
-      `).run(winner_capture_id, conflict.elector_ci, conflict.elector_ci);
+      `).run(user_id, winner_capture_id, conflict.elector_ci);
 
-      logAction(1, 'RESOLVE_CONFLICT', 'ELECTOR', conflict.elector_ci, `Resolved conflict for ${conflict.elector_ci} in favor of capture ${winner_capture_id}`);
+      logAction(user_id, 'RESOLVE_CONFLICT', 'ELECTOR', conflict.elector_ci, `Resolved conflict for ${conflict.elector_ci} in favor of capture ${winner_capture_id}`);
     })();
     res.json({ success: true });
   } catch (err: any) {
@@ -1303,17 +1310,21 @@ app.get('/api/stats/command', (req, res) => {
   const list_id = getListId(req);
   const local_id = req.query.localId as string;
   const role = getRole(req);
+  const user_id = req.headers['x-user-id'];
   const isSuper = role === 'SUPERUSUARIO';
+  const isPadrino = role === 'PADRINO';
 
   try {
     const listFilter = isSuper || !list_id ? '' : `AND ec.list_id = ${list_id}`;
     const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
+    const hierarchyFilter = isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : '';
 
     const statsQuery = `
       SELECT traffic_light, COUNT(*) as count 
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter}
+      JOIN users u ON ec.coordinator_id = u.id
+      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter} ${hierarchyFilter}
       GROUP BY traffic_light
     `;
     
@@ -1323,7 +1334,8 @@ app.get('/api/stats/command', (req, res) => {
       SELECT COUNT(*) as count 
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter}
+      JOIN users u ON ec.coordinator_id = u.id
+      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter} ${hierarchyFilter}
     `;
     
     const totalCaptures = db.prepare(totalCapturesQuery).get() as any;
@@ -1379,14 +1391,18 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
 app.get('/api/admin/requests', (req, res) => {
   const list_id = getListId(req);
   const role = getRole(req);
+  const user_id = req.headers['x-user-id'];
   const isSuper = role === 'SUPERUSUARIO';
+  const isJefe = role === 'JEFE_CAMPANA';
+  const isPadrino = role === 'PADRINO';
 
   try {
     const query = `
       SELECT r.*, u.nombre as coordinator_name, u.username as coordinator_username
       FROM field_requests r
       JOIN users u ON r.coordinator_id = u.id
-      ${isSuper || !list_id ? '' : `WHERE r.list_id = ${list_id}`}
+      WHERE 1=1
+      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id ? `AND r.list_id = ${list_id}` : ''))}
       ORDER BY r.timestamp DESC
     `;
     const requests = db.prepare(query).all();
@@ -1431,7 +1447,9 @@ app.post('/api/coordinator/request', (req, res) => {
 app.get('/api/admin/activity', (req, res) => {
   const list_id = getListId(req);
   const role = getRole(req);
+  const user_id = req.headers['x-user-id'];
   const isSuper = role === 'SUPERUSUARIO';
+  const isPadrino = role === 'PADRINO';
 
   try {
     const query = `
@@ -1439,21 +1457,26 @@ app.get('/api/admin/activity', (req, res) => {
       FROM elector_captures ec
       JOIN users u ON ec.coordinator_id = u.id
       JOIN electors e ON ec.elector_ci = e.ci
-      ${isSuper || !list_id ? '' : `WHERE ec.list_id = ${list_id}`}
+      WHERE 1=1
+      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id ? `AND ec.list_id = ${list_id}` : ''))}
       
       UNION ALL
       
       SELECT 'REQUEST' as type, r.timestamp, u.nombre as user_name, r.type as entity_name, r.description as detail
       FROM field_requests r
       JOIN users u ON r.coordinator_id = u.id
-      ${isSuper || !list_id ? '' : `WHERE r.list_id = ${list_id}`}
+      WHERE 1=1
+      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id ? `AND r.list_id = ${list_id}` : ''))}
       
       UNION ALL
       
       SELECT 'CONFLICT' as type, cc.timestamp, 'Sistema' as user_name, e.nombre || ' ' || e.apellido as entity_name, 'Doble Captura' as detail
       FROM capture_conflicts cc
       JOIN electors e ON cc.elector_ci = e.ci
-      ${isSuper || !list_id ? '' : `WHERE cc.list_id = ${list_id}`}
+      JOIN elector_captures ec ON cc.capture_id = ec.id
+      JOIN users u ON ec.coordinator_id = u.id
+      WHERE 1=1
+      ${isSuper ? '' : (isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : (list_id ? `AND cc.list_id = ${list_id}` : ''))}
       
       ORDER BY timestamp DESC
       LIMIT 20

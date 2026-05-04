@@ -1459,7 +1459,7 @@ const SuperAdmin = () => {
       userName={authUser?.nombre || "Usuario"} 
       userPhoto={authUser?.photo_url}
     >
-      <div style={{ display: 'flex', height: 'calc(100vh - 102px)', overflowX: 'hidden' }}>
+      <div style={{ display: 'flex', height: 'calc(100vh - 102px)', overflow: 'visible' }}>
         <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         
         <main style={{ 
