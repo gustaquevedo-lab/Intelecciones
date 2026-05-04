@@ -198,12 +198,6 @@ const CoordinatorApp = () => {
     }
   };
 
-  useEffect(() => {
-    if (activeTab === 'coordinators') {
-      if (user?.role === 'PADRINO') fetchMyCoordinators();
-      if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
-    }
-  }, [user, activeTab]);
 
   const handleLookupCoordCI = async () => {
     if (!newCoordCI) return;
@@ -314,8 +308,6 @@ const CoordinatorApp = () => {
     }
   };
 
-  if (loading) return null;
-
   const isReadOnly = user?.role === 'CANDIDATO' || user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
 
   useEffect(() => {
@@ -419,12 +411,10 @@ const CoordinatorApp = () => {
       fetchHistory();
     }
     if (activeTab === 'coordinators') {
-      fetchMyCoordinators();
+      if (user?.role === 'PADRINO') fetchMyCoordinators();
+      if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
     }
-    if (activeTab === 'coordinators' && user?.role === 'JEFE_CAMPANA') {
-      fetchMyPadrinos();
-    }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   useEffect(() => {
     if (showModal && user?.id) {
@@ -529,6 +519,8 @@ const CoordinatorApp = () => {
       setTelefono('');
     }
   };
+
+  if (loading) return null;
 
   /* ─── render ──────────────────────────────────────────── */
   return (
