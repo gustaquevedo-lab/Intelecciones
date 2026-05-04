@@ -1459,13 +1459,14 @@ const SuperAdmin = () => {
       userName={authUser?.nombre || "Usuario"} 
       userPhoto={authUser?.photo_url}
     >
-      <div style={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
+      <div style={{ display: 'flex', height: 'calc(100vh - 102px)', overflowX: 'hidden' }}>
         <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         
         <main style={{ 
           flex: 1, 
-          padding: '2rem', 
+          padding: window.innerWidth < 768 ? '1rem' : '2rem', 
           overflowY: 'auto',
+          overflowX: 'hidden',
           background: 'linear-gradient(to bottom, transparent, rgba(0,71,171,0.03))'
         }}>
           <AnimatePresence mode="wait">

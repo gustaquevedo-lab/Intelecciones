@@ -636,6 +636,25 @@ const CoordinatorApp = () => {
             <HelpCircle size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Soporte
           </button>
           {user?.role === 'PADRINO' && (
+            <button
+              onClick={() => setActiveTab('coordinators')}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                background: activeTab === 'coordinators' ? 'var(--blue-lt)' : 'transparent',
+                color: activeTab === 'coordinators' ? 'white' : 'var(--text-3)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontFamily: 'var(--font-display)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}
+            >
+              <UserPlus size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Equipos
             </button>
           )}
           {user?.role === 'JEFE_CAMPANA' && (

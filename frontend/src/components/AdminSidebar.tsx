@@ -8,9 +8,12 @@ import {
   Settings,
   ShieldCheck,
   MapPin,
-  Truck
+  Truck,
+  ChevronLeft,
+  ChevronRight,
+  Menu
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 
@@ -32,6 +35,16 @@ const NAV_ITEMS = [
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActiveTab }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
+  const [isCollapsed, setIsCollapsed] = React.useState(window.innerWidth < 1024);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) setIsCollapsed(true);
+      else setIsCollapsed(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const filteredItems = NAV_ITEMS.filter(item => {
     if (user?.role === 'JEFE_CAMPANA') {
@@ -41,32 +54,69 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
   });
 
   return (
-    <div style={{
-      width: '240px',
-      background: 'rgba(2, 12, 27, 0.5)',
-      borderRight: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '1.25rem 0.75rem',
-      gap: '0.5rem',
-    }}>
+    <motion.div 
+      animate={{ width: isCollapsed ? '70px' : '240px' }}
+      style={{
+        background: 'rgba(2, 12, 27, 0.5)',
+        borderRight: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: isCollapsed ? '1.25rem 0.5rem' : '1.25rem 0.75rem',
+        gap: '0.5rem',
+        position: 'relative',
+        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        overflowX: 'hidden'
+      }}
+    >
+      {/* Toggle Button */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        style={{
+          position: 'absolute',
+          right: '-12px',
+          top: '60px',
+          width: '24px',
+          height: '24px',
+          borderRadius: '50%',
+          background: 'var(--plra-500)',
+          border: '1px solid var(--border)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 100,
+          boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+        }}
+      >
+        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
       <div style={{
-        padding: '0 0.5rem 1rem 0.5rem',
+        padding: isCollapsed ? '0' : '0 0.5rem 1rem 0.5rem',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: isCollapsed ? 'center' : 'flex-start',
         gap: '0.6rem',
+        marginBottom: isCollapsed ? '1rem' : '0'
       }}>
-        <ShieldCheck size={18} style={{ color: 'var(--plra-300)' }} />
-        <span style={{
-          fontSize: '0.65rem',
-          fontWeight: 800,
-          letterSpacing: '0.15em',
-          textTransform: 'uppercase',
-          color: 'var(--text-3)',
-          fontFamily: 'var(--font-display)',
-        }}>
-          {settings.app_name}
-        </span>
+        <ShieldCheck size={20} style={{ color: 'var(--plra-300)', minWidth: '20px' }} />
+        {!isCollapsed && (
+          <motion.span 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{
+              fontSize: '0.65rem',
+              fontWeight: 800,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-display)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {settings.app_name}
+          </motion.span>
+        )}
       </div>
 
       {filteredItems.map((item) => {
@@ -78,8 +128,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
-              padding: '0.75rem 0.85rem',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              padding: isCollapsed ? '0.75rem 0' : '0.75rem 0.85rem',
               borderRadius: '10px',
               border: 'none',
               background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
@@ -89,6 +139,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               position: 'relative',
               textAlign: 'left',
               width: '100%',
+              overflow: 'hidden'
             }}
             onMouseEnter={e => {
               if (!isActive) {
@@ -116,17 +167,24 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
                 }}
               />
             )}
-            <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-            <span style={{
-              fontSize: '0.85rem',
-              fontWeight: isActive ? 700 : 500,
-              fontFamily: 'var(--font-display)',
-            }}>
-              {item.label}
-            </span>
+            <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} style={{ minWidth: '20px' }} />
+            {!isCollapsed && (
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={{
+                  fontSize: '0.85rem',
+                  fontWeight: isActive ? 700 : 500,
+                  fontFamily: 'var(--font-display)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {item.label}
+              </motion.span>
+            )}
           </button>
         );
       })}
-    </div>
+    </motion.div>
   );
 };
