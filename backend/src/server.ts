@@ -877,12 +877,12 @@ app.get('/api/coordinators/:id/history', (req, res) => {
 });
 
 app.post('/api/users', (req, res) => {
-  const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono } = req.body;
+  const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
   try {
     const result = db.prepare(`
-      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null);
+      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, ci || null);
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${username} with role ${role}`);
     res.json({ id: Number(result.lastInsertRowid) });
@@ -933,13 +933,13 @@ app.delete('/api/users/:id', (req, res) => {
 });
 
 app.put('/api/users/:id', (req, res) => {
-  const { role, assigned_list_id, nombre, photo_url, parent_id, telefono } = req.body;
+  const { role, assigned_list_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
   try {
     db.prepare(`
       UPDATE users 
-      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?
+      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?, ci = ?
       WHERE id = ?
-    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, req.params.id);
+    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, ci || null, req.params.id);
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
     res.json({ success: true });
   } catch (err: any) {
@@ -1848,6 +1848,35 @@ app.post('/api/veedor/mark-vote', (req, res) => {
     `).run(local, mesa, order, userId);
 
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/system/wipe-captures', (req, res) => {
+  const { key } = req.body;
+  const masterKeyFromDb = db.prepare("SELECT value FROM settings WHERE key = 'master_key'").get() as any;
+  
+  if (key !== masterKeyFromDb?.value) {
+    return res.status(401).json({ error: 'Llave Maestra inválida' });
+  }
+
+  try {
+    db.transaction(() => {
+      // 1. Wipe dynamics
+      db.prepare('DELETE FROM elector_captures').run();
+      db.prepare('DELETE FROM capture_conflicts').run();
+      db.prepare('DELETE FROM field_requests').run();
+      db.prepare('DELETE FROM audit_logs').run();
+      db.prepare('DELETE FROM participation_logs').run();
+      db.prepare('DELETE FROM acta_results').run();
+      db.prepare('DELETE FROM results').run();
+
+      // 2. Note: We keep users, campaigns, lists, voting_locations, and electors
+      // We also keep vehicles and settings
+    })();
+
+    res.json({ success: true, message: 'Sistema purgado exitosamente' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

@@ -7,6 +7,7 @@ import './Login.css';
 
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import axios from 'axios';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -39,8 +40,12 @@ const Login = () => {
       }
     } catch (error: any) {
       const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      setError(`Error de acceso. Verificando conexión con: ${apiURL}`);
-      console.error(error);
+      if (error.message === 'Credenciales inválidas') {
+        setError('Usuario o contraseña incorrectos.');
+      } else {
+        setError(`Error de acceso. Verifique su conexión.`);
+        console.error("Login Error:", error);
+      }
     } finally {
       setIsLoading(false);
     }

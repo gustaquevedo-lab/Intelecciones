@@ -414,6 +414,7 @@ const SuperAdmin = () => {
         password: newUserPass || newUserCI, 
         role: newUserRole,
         nombre: newUserRealName,
+        ci: newUserCI,
         assigned_list_id: newUserList || null,
         assigned_campaign_id: newUserCampaign || null,
         assigned_local: newUserLocal || null,
@@ -425,6 +426,7 @@ const SuperAdmin = () => {
       setShowModal(null);
       setNewUserLocal('');
       setNewUserMesa(null);
+      setNewUserTelefono('');
       fetchData();
     } catch (err) { 
       console.error(err); 
@@ -439,6 +441,7 @@ const SuperAdmin = () => {
       await api.put(`/users/${editingUser.id}`, {
         role: newUserRole,
         nombre: newUserRealName,
+        ci: newUserCI,
         assigned_list_id: newUserList || null,
         assigned_campaign_id: newUserCampaign || null,
         assigned_local: newUserLocal || null,
@@ -451,6 +454,7 @@ const SuperAdmin = () => {
       setEditingUser(null);
       setNewUserLocal('');
       setNewUserMesa(null);
+      setNewUserTelefono('');
       fetchData();
     } catch (err) { 
       console.error(err); 
@@ -1307,6 +1311,7 @@ const SuperAdmin = () => {
         isLoading={isLoading}
         columns={[
           { header: 'Nombre', accessor: 'nombre', sortKey: 'nombre' },
+          { header: 'C.I.', accessor: 'ci', sortKey: 'ci' },
           { header: 'Usuario', accessor: 'username', sortKey: 'username' },
           { 
             header: 'Rol', 
@@ -1713,7 +1718,16 @@ const SuperAdmin = () => {
                           className="modern-input-premium-styled" 
                           placeholder="+595 9xx xxx xxx"
                           value={newUserTelefono} 
-                          onChange={e => setNewUserTelefono(e.target.value)} 
+                          onChange={e => {
+                            let val = e.target.value;
+                            if (val && !val.startsWith('+')) {
+                              // Auto format for Paraguay if it starts with 09
+                              if (val.startsWith('09')) val = '+595' + val.substring(1);
+                              else if (val.startsWith('9')) val = '+5959' + val.substring(1);
+                              else val = '+' + val.replace(/\D/g, '');
+                            }
+                            setNewUserTelefono(val);
+                          }} 
                         />
                       </div>
                       <div className="form-group">

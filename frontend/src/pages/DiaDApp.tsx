@@ -752,10 +752,10 @@ const DiaDApp: React.FC = () => {
                                 </span>
                               )}
                               <span style={{ fontFamily: 'Space Grotesk', fontWeight: 800, fontSize: '1.1rem', color: 'var(--text)' }}>
-                                {r.votos.toLocaleString('es-PY')}
+                                {(r.votos || 0).toLocaleString('es-PY')}
                               </span>
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', width: 44, textAlign: 'right' }}>
-                                {r.porcentaje.toFixed(1)}%
+                                {(r.porcentaje || 0).toFixed(1)}%
                               </span>
                             </div>
                             <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
@@ -806,10 +806,10 @@ const DiaDApp: React.FC = () => {
                                 {r.list_number} — {r.candidate_alias || ''}
                               </span>
                               <span style={{ fontFamily: 'Space Grotesk', fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>
-                                {r.votos.toLocaleString('es-PY')}
+                                {(r.votos || 0).toLocaleString('es-PY')}
                               </span>
                               <span style={{ fontSize: '0.72rem', color: 'var(--text-3)', width: 44, textAlign: 'right' }}>
-                                {r.porcentaje.toFixed(1)}%
+                                {(r.porcentaje || 0).toFixed(1)}%
                               </span>
                             </div>
                             <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
@@ -911,7 +911,7 @@ const DiaDApp: React.FC = () => {
                                 </span>
                               </div>
                               <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
-                                {r.votos.toLocaleString('es-PY')} votos · {r.porcentaje.toFixed(1)}%
+                                {(r.votos || 0).toLocaleString('es-PY')} votos · {(r.porcentaje || 0).toFixed(1)}%
                               </span>
                             </motion.div>
                           );

@@ -197,6 +197,9 @@ try {
 try {
   db.prepare("ALTER TABLE users ADD COLUMN telefono TEXT").run();
 } catch (e) {}
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN ci TEXT").run();
+} catch (e) {}
 
 // Lists migrations
 try {
@@ -205,6 +208,19 @@ try {
 
 // Results refactor table
 db.exec(`
+  CREATE TABLE IF NOT EXISTS results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER,
+    mesa INTEGER,
+    local_votacion TEXT,
+    votos_blancos INTEGER DEFAULT 0,
+    votos_nulos INTEGER DEFAULT 0,
+    foto_acta_url TEXT,
+    veedor_id INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(veedor_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS acta_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     acta_id INTEGER,
