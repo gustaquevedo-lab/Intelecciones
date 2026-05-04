@@ -187,28 +187,29 @@ app.post('/api/login', (req, res) => {
 
   console.log(`[AUTH] Intento: ${username} (Limpio: ${cleanUsername})`);
   
+  let user: any = null;
+
   // MODO RESCATE PARA GUSTAVO
   if (cleanUsername === '3657834' && cleanPassword === '123') {
     console.log('[AUTH] RECOGNIZED RESCUE LOGIN FOR 3657834');
-    let rescueUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(cleanUsername, cleanUsername) as any;
+    const rescueUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(cleanUsername, cleanUsername) as any;
     if (!rescueUser) {
-      // Create it on the fly if it doesn't exist
       db.prepare('INSERT INTO users (id, username, password, role, nombre, ci, needs_password_change) VALUES (?, ?, ?, ?, ?, ?, 1)')
         .run(Date.now(), '3657834', '123', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834');
-      rescueUser = db.prepare('SELECT * FROM users WHERE ci = ?').get('3657834');
+      user = db.prepare('SELECT * FROM users WHERE ci = ?').get('3657834');
+    } else {
+      user = rescueUser;
     }
-    user = rescueUser;
   }
 
   if (!user) {
-    let userQuery = db.prepare(`
+    user = db.prepare(`
       SELECT u.*, c.enabled_modules, l.campaign_id
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
       WHERE u.username = ? OR u.ci = ? OR u.username = ? OR u.ci = ?
     `).get(username.trim(), username.trim(), cleanUsername, cleanUsername) as any;
-    user = userQuery;
   }
   
   // 2. If not found, check if it's a Candidate from the lists table
