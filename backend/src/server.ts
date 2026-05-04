@@ -879,17 +879,39 @@ app.get('/api/coordinators/:id/history', (req, res) => {
 
 app.post('/api/users', (req, res) => {
   const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
+  
+  if (!username || !password || !role || !nombre) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios: Usuario, Contraseña, Rol y Nombre son requeridos.' });
+  }
+
   const cleanCI = ci ? ci.toString().replace(/\./g, '') : null;
+  const finalUsername = username.toString().trim();
+  const finalPassword = password.toString().trim();
+
   try {
     const result = db.prepare(`
       INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci, needs_password_change)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(username.trim(), password.trim(), role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, cleanCI);
+    `).run(
+      finalUsername, 
+      finalPassword, 
+      role, 
+      assigned_list_id || list_id || null, 
+      assigned_campaign_id || campaign_id || null, 
+      req.body.assigned_local || null, 
+      req.body.assigned_mesa || null, 
+      nombre, 
+      photo_url || null, 
+      parent_id || null, 
+      telefono || null, 
+      cleanCI
+    );
     
-    logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${username} with role ${role}`);
-    res.json({ id: Number(result.lastInsertRowid) });
+    logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${finalUsername} with role ${role}`);
+    res.json({ id: Number(result.lastInsertRowid), success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    console.error("Error creating user:", err);
+    res.status(500).json({ error: err.message.includes('UNIQUE constraint failed') ? 'El nombre de usuario o C.I. ya existe.' : err.message });
   }
 });
 
