@@ -1598,18 +1598,18 @@ const SuperAdmin = () => {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                           <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Cédula de Identidad</label>
-                          <div className="search-input-wrapper-premium" style={{ height: '38px' }}>
-                            <input className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserCI} onChange={e => setNewUserCI(e.target.value)} required disabled={!!editingUser} />
-                            {!editingUser && <button type="button" onClick={handleLookupUserCI} className="search-btn-action" style={{ height: '38px' }}>BUSCAR</button>}
+                          <div className="search-input-wrapper-premium" style={{ height: '42px' }}>
+                            <input className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserCI} onChange={e => setNewUserCI(e.target.value)} required disabled={!!editingUser} />
+                            {!editingUser && <button type="button" onClick={handleLookupUserCI} className="search-btn-action" style={{ height: '42px' }}>BUSCAR</button>}
                           </div>
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                           <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Nombre Completo</label>
-                          <input className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserRealName} onChange={e => setNewUserRealName(e.target.value)} required />
+                          <input className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserRealName} onChange={e => setNewUserRealName(e.target.value)} required />
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                           <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>WhatsApp (Formato Internacional)</label>
-                          <input className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserTelefono} placeholder="+595" onChange={e => {
+                          <input className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserTelefono} placeholder="+595" onChange={e => {
                             let v = e.target.value;
                             if (v.length >= 2 && !v.startsWith('+')) {
                               let d = v.replace(/\D/g, '');
@@ -1622,7 +1622,7 @@ const SuperAdmin = () => {
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                           <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Rol del Operador</label>
-                          <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
+                          <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                             <option value="COORDINADOR">Coordinador de Campo</option>
                             <option value="PADRINO">Padrino</option>
                             <option value="JEFE_CAMPANA">Jefe de Campaña</option>
@@ -1634,7 +1634,7 @@ const SuperAdmin = () => {
                         {newUserRole === 'JEFE_CAMPANA' && (
                           <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
                             <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Campaña que lidera</label>
-                            <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
+                            <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
                               <option value="">Seleccione Campaña...</option>
                               {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
@@ -1644,7 +1644,7 @@ const SuperAdmin = () => {
                         {newUserRole === 'PADRINO' && (
                           <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
                             <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Superior (Jefe de Campaña)</label>
-                            <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                            <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
                               <option value="">Seleccione Jefe...</option>
                               {users.filter(u => u.role === 'JEFE_CAMPANA').map(u => (
                                 <option key={u.id} value={u.id}>{u.nombre}</option>
@@ -1656,7 +1656,7 @@ const SuperAdmin = () => {
                         {newUserRole === 'COORDINADOR' && (
                           <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
                             <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Superior (Padrino)</label>
-                            <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                            <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
                               <option value="">Seleccione Padrino...</option>
                               {users.filter(u => u.role === 'PADRINO').map(u => (
                                 <option key={u.id} value={u.id}>{u.nombre}</option>
