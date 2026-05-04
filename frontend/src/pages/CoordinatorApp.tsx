@@ -5,7 +5,7 @@ import {
   Map, Building2, Home, Briefcase,
   ClipboardCheck, ArrowRight, AlertCircle,
   CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare,
-  UserPlus, Camera, Settings, LayoutList, CheckCircle
+  UserPlus, Camera, Settings, LayoutList, CheckCircle, Users
 } from 'lucide-react';
 import axios from 'axios';
 import MainLayout from '../components/MainLayout';
@@ -669,7 +669,7 @@ const CoordinatorApp = () => {
                 letterSpacing: '0.1em'
               }}
             >
-              <UsersIcon size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Padrinos
+              <Users size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Padrinos
             </button>
           )}
         </div>
@@ -1102,7 +1102,7 @@ const CoordinatorApp = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <SectionLabel 
-                icon={<UsersIcon size={13} />} 
+                icon={<Users size={13} />} 
                 text={user?.role === 'JEFE_CAMPANA' ? "Mis Padrinos" : "Mi Equipo de Trabajo"} 
               />
               <button 
@@ -1132,7 +1132,7 @@ const CoordinatorApp = () => {
                         <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <UsersIcon size={20} style={{ color: 'var(--text-3)' }} />
+                          <Users size={20} style={{ color: 'var(--text-3)' }} />
                         </div>
                       )}
                     </div>
