@@ -228,8 +228,10 @@ app.post('/api/login', (req, res) => {
       assigned_campaign_id: user.assigned_campaign_id,
       nombre: user.nombre,
       photo_url: user.photo_url,
+      ci: user.ci,
+      enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY'],
       needs_password_change: !!user.needs_password_change,
-      enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY']
+      v: "1.0.4"
     });
   } else {
     res.status(401).json({ error: 'Credenciales inválidas' });
