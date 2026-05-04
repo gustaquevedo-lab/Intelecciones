@@ -575,8 +575,68 @@
     }
     [data-theme="light"] .wa-float-label { background: #0D2040; color: #fff; }
     @media (max-width: 600px) {
+      /* ── NAV ── */
+      .nav-inner { gap: 0; }
+      .nav-wordmark { display: none; }
+      .theme-toggle { display: none; }
+      .nav-inner > div:last-child .btn-secondary,
+      .nav-inner > div:last-child .btn-primary { display: none; }
+      .nav-inner > div:last-child::after {
+        content: '≡'; font-size: 1.6rem; color: var(--blue-lt); cursor: pointer;
+        padding: 0 0.5rem;
+      }
+
+      /* ── HERO ── */
+      .hero { padding: 5rem 0 3rem; }
+      .hero-title { font-size: clamp(1.8rem, 8vw, 2.8rem); }
+      .hero-ctas { flex-direction: column; }
+      .hero-ctas .btn-primary, .hero-ctas .btn-secondary { width: 100%; justify-content: center; }
+      .hero-stats { gap: 1rem; }
+      .hero-stat-num { font-size: 1.4rem; }
+
+      /* ── MOCKUPS ── */
+      .stat-row { grid-template-columns: repeat(2, 1fr); }
+      .m-title { display: none; }
+
+      /* ── PAIN ── */
+      .pain { padding: 4rem 0; }
+
+      /* ── MODULES ── */
+      .modules { padding: 4rem 0; }
+
+      /* ── PREVIEWS ── */
+      .previews { padding: 4rem 0; }
+
+      /* ── HOW ── */
+      .how { padding: 4rem 0; }
+
+      /* ── COMPARE ── */
+      .compare { padding: 4rem 0; overflow-x: auto; }
+      .compare-table { min-width: 520px; }
+      .th-feature { width: 36%; }
+
+      /* ── ECOSYSTEM ── */
+      .ecosystem { padding: 4rem 0; }
+
+      /* ── CTA ── */
+      .cta-section { padding: 4rem 0; }
+      .cta-buttons { flex-direction: column; align-items: stretch; }
+      .cta-buttons .btn-primary, .cta-buttons .btn-secondary { width: 100%; justify-content: center; }
+      .trust-row { gap: 1rem; }
+      .trust-num { font-size: 1.1rem; }
+
+      /* ── FOOTER ── */
+      .footer-inner { flex-direction: column; text-align: center; gap: 1rem; }
+      .footer-links { flex-wrap: wrap; justify-content: center; }
+
+      /* ── WA FLOAT ── */
       .wa-float-label { display: none; }
-      .wa-float-btn { width: 52px; height: 52px; }
+      .wa-float-btn { width: 50px; height: 50px; }
+      .wa-float { bottom: 1rem; right: 1rem; }
+
+      /* ── GENERAL ── */
+      .section-title { font-size: clamp(1.5rem, 6vw, 2.2rem); }
+      .container { padding: 0 1rem; }
     }
   </style>
 </head>
