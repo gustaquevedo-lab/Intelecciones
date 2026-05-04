@@ -1254,7 +1254,7 @@ app.get('/api/logistics/pending', (req, res) => {
 // Strategic Command Center Endpoints
 app.get('/api/admin/conflicts', (req, res) => {
   const role = getRole(req);
-  const user_id = req.headers['x-user-id'];
+  const user_id = parseInt(req.headers['x-user-id'] as string || '0');
   const isPadrino = role === 'PADRINO';
   
   try {
@@ -1286,7 +1286,7 @@ app.get('/api/admin/conflicts', (req, res) => {
 
 app.post('/api/admin/conflicts/resolve', (req, res) => {
   const { conflict_id, winner_capture_id } = req.body;
-  const user_id = req.headers['x-user-id'];
+  const user_id = parseInt(req.headers['x-user-id'] as string || '0');
   try {
     db.transaction(() => {
       const conflict = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
