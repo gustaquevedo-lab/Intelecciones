@@ -1532,14 +1532,6 @@ const CoordinatorApp = () => {
                       }
                     }} 
                   />
-                </div>
-
-                <div className="modal-footer-premium-styled" style={{ padding: '1.25rem 2rem' }}>
-                  <button type="button" onClick={() => setShowCoordModal(false)} className="btn-cancel-styled">Cancelar</button>
-                  <button type="submit" className="btn-confirm-styled" disabled={!isCoordVerified || !newCoordPhoto || isLoading}>
-                    {isLoading ? <Spinner size={16} /> : 'Crear Usuario'}
-                  </button>
-                </div>
               </form>
             </motion.div>
           </motion.div>
