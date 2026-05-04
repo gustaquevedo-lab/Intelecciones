@@ -199,8 +199,9 @@ const CoordinatorApp = () => {
   };
 
   useEffect(() => {
-    if (user?.role === 'PADRINO' && activeTab === 'history') {
-      fetchMyCoordinators();
+    if (activeTab === 'coordinators') {
+      if (user?.role === 'PADRINO') fetchMyCoordinators();
+      if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
     }
   }, [user, activeTab]);
 
@@ -1128,26 +1129,31 @@ const CoordinatorApp = () => {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
-              {(user?.role === 'JEFE_CAMPANA' ? myPadrinos : myCoordinators).map(c => (
-                <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: '45px', height: '45px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                    {c.photo_url ? (
-                      <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <User size={20} style={{ color: 'var(--text-3)' }} />
-                      </div>
-                    )}
+              {(user?.role === 'JEFE_CAMPANA' ? (myPadrinos || []) : (myCoordinators || [])).map(c => {
+                if (!c) return null;
+                const formattedCI = !isNaN(Number(c.username)) ? Number(c.username).toLocaleString('es-PY') : c.username;
+                
+                return (
+                  <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ width: '45px', height: '45px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                      {c.photo_url ? (
+                        <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <UsersIcon size={20} style={{ color: 'var(--text-3)' }} />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>{c.nombre}</h5>
+                      <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {formattedCI} {c.telefono && `• ${c.telefono}`}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span className="badge badge-green" style={{ fontSize: '0.5rem' }}>{c.role === 'PADRINO' ? 'Padrino' : 'Activo'}</span>
+                    </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>{c.nombre}</h5>
-                    <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {Number(c.username).toLocaleString('es-PY')} {c.telefono && `• ${c.telefono}`}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span className="badge badge-green" style={{ fontSize: '0.5rem' }}>{c.role === 'PADRINO' ? 'Padrino' : 'Activo'}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         )}
