@@ -877,12 +877,12 @@ app.get('/api/coordinators/:id/history', (req, res) => {
 });
 
 app.post('/api/users', (req, res) => {
-  const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url } = req.body;
+  const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono } = req.body;
   try {
     const result = db.prepare(`
-      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url);
+      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null);
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${username} with role ${role}`);
     res.json({ id: Number(result.lastInsertRowid) });
@@ -894,16 +894,25 @@ app.post('/api/users', (req, res) => {
 app.get('/api/users', (req, res) => {
   try {
     // Simplified query to avoid losing users if relations are missing
-    const users = db.prepare(`
+    let query = `
       SELECT 
         u.*, 
         l.list_number, 
         l.type as list_type, 
-        c.name as campaign_name
+        c.name as campaign_name,
+        p.nombre as parent_name
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
-    `).all();
+      LEFT JOIN users p ON u.parent_id = p.id
+    `;
+    
+    let users;
+    if (req.query.parent_id) {
+      users = db.prepare(query + ' WHERE u.parent_id = ?').all(req.query.parent_id);
+    } else {
+      users = db.prepare(query).all();
+    }
     
     console.log(`[ADMIN] Sirviendo ${users.length} usuarios.`);
     res.json(users);
@@ -924,13 +933,13 @@ app.delete('/api/users/:id', (req, res) => {
 });
 
 app.put('/api/users/:id', (req, res) => {
-  const { role, assigned_list_id, nombre, photo_url } = req.body;
+  const { role, assigned_list_id, nombre, photo_url, parent_id, telefono } = req.body;
   try {
     db.prepare(`
       UPDATE users 
-      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?
+      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?
       WHERE id = ?
-    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, req.params.id);
+    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, req.params.id);
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
     res.json({ success: true });
   } catch (err: any) {

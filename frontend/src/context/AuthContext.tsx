@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface User {
     id: number;
     username: string;
-    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'COORDINADOR';
+    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR';
     nombre: string;
     party?: string;
     assigned_list_id?: number;

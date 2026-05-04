@@ -10,17 +10,17 @@ export const ModuleSwitcher: React.FC = () => {
   const location = useLocation();
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
 
-  if (!user || (user.role !== 'SUPERUSUARIO' && user.role !== 'JEFE_CAMPANA' && user.role !== 'MIEMBRO_DE_MESA')) {
+  if (!user || (user.role !== 'SUPERUSUARIO' && user.role !== 'JEFE_CAMPANA' && user.role !== 'PADRINO' && user.role !== 'MIEMBRO_DE_MESA')) {
     return null;
   }
 
   const modules = [
-    { id: 'coordinador', label: 'Coordinador', path: '/coordinador', icon: Users, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'REGISTRY' },
-    { id: 'comando', label: 'Comando', path: '/comando', icon: Map, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'COMMAND_CENTER' },
-    { id: 'logistics', label: 'Logística', path: '/logistica', icon: Truck, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'LOGISTICS' },
-    { id: 'veedor', label: 'Veedor', path: '/veedor', icon: CheckSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'MIEMBRO_DE_MESA'], moduleKey: 'DAY_D' },
-    { id: 'communications', label: 'WhatsApp', path: '/comunicaciones', icon: MessageSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'COMMUNICATIONS' },
-    { id: 'diad', label: 'Dia D', path: '/diad', icon: Zap, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA'], moduleKey: 'DAY_D', accent: '#22C47E' },
+    { id: 'coordinador', label: 'Coordinador', path: '/coordinador', icon: Users, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'REGISTRY' },
+    { id: 'comando', label: 'Comando', path: '/comando', icon: Map, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'COMMAND_CENTER' },
+    { id: 'logistics', label: 'Logística', path: '/logistica', icon: Truck, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'LOGISTICS' },
+    { id: 'veedor', label: 'Veedor', path: '/veedor', icon: CheckSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'MIEMBRO_DE_MESA'], moduleKey: 'DAY_D' },
+    { id: 'communications', label: 'WhatsApp', path: '/comunicaciones', icon: MessageSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'COMMUNICATIONS' },
+    { id: 'diad', label: 'Dia D', path: '/diad', icon: Zap, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'DAY_D', accent: '#22C47E' },
     { id: 'admin', label: 'Admin', path: '/admin', icon: Shield, roles: ['SUPERUSUARIO'], moduleKey: 'SUPER_ADMIN' },
   ];
 

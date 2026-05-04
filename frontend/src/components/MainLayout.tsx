@@ -22,7 +22,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const [lists, setLists] = useState<any[]>([]);
 
   useEffect(() => {
-    if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') {
+    if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO') {
       api.get('/lists').then(res => setLists(res.data)).catch(err => console.error(err));
     }
   }, [user]);
@@ -32,6 +32,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const roleLabels = {
     'SUPERUSUARIO': 'Super Administrador',
     'JEFE_CAMPANA': 'Jefe de Campaña',
+    'PADRINO': 'Padrino',
     'COORDINADOR': 'Coordinador de Campo',
     'MIEMBRO_DE_MESA': 'Miembro de Mesa'
   };
@@ -67,7 +68,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
 
           {/* List Selector */}
-          {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
+          {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO') && (
             <div 
               className="hidden-mobile"
               style={{ 

@@ -4,11 +4,13 @@ import {
   Search, MapPin, User, CheckCircle2,
   Map, Building2, Home, Briefcase,
   ClipboardCheck, ArrowRight, AlertCircle,
-  CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare
+  CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare,
+  UserPlus, Camera, Settings, LayoutList, CheckCircle
 } from 'lucide-react';
 import axios from 'axios';
 import MainLayout from '../components/MainLayout';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -119,7 +121,7 @@ const CoordinatorApp = () => {
   const [showModal, setShowModal] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [needsTransport, setNeedsTransport] = useState(false);
-  const [activeTab, setActiveTab] = useState<'search' | 'history' | 'support'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'history' | 'support' | 'coordinators'>('search');
   const [history, setHistory] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [editingCapture, setEditingCapture] = useState<any>(null);
@@ -127,6 +129,34 @@ const CoordinatorApp = () => {
   const [requestMsg, setRequestMsg] = useState('');
   const [requestType, setRequestType] = useState('RESOURCES');
   const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
+  
+  // Padrino specifics
+  const [myCoordinators, setMyCoordinators] = useState<any[]>([]);
+  const [showCoordModal, setShowCoordModal] = useState(false);
+  const [newCoordCI, setNewCoordCI] = useState('');
+  const [newCoordName, setNewCoordName] = useState('');
+  const [newCoordRealName, setNewCoordRealName] = useState('');
+  const [newCoordPhoto, setNewCoordPhoto] = useState<string | null>(null);
+  const [newCoordTelefono, setNewCoordTelefono] = useState('');
+  const [isCoordVerified, setIsCoordVerified] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  // Jefe de Campaña specifics
+  const [myPadrinos, setMyPadrinos] = useState<any[]>([]);
+  const [showPadrinoModal, setShowPadrinoModal] = useState(false);
+  const [newPadrinoCI, setNewPadrinoCI] = useState('');
+  const [newPadrinoRealName, setNewPadrinoRealName] = useState('');
+  const [newPadrinoPhoto, setNewPadrinoPhoto] = useState<string | null>(null);
+  const [newPadrinoTelefono, setNewPadrinoTelefono] = useState('');
+  const [isPadrinoVerified, setIsPadrinoVerified] = useState(false);
+
+  // Cropper states
+  const [cropperData, setCropperData] = useState<{ image: string } | null>(null);
+
+  const onCropComplete = (croppedImage: string) => {
+    setNewCoordPhoto(croppedImage);
+    setCropperData(null);
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -150,6 +180,134 @@ const CoordinatorApp = () => {
       setActiveTab('search');
     } catch (err) {
       setError('No se pudo enviar la solicitud.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchMyCoordinators = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get(`/users?parent_id=${user.id}`);
+      // The backend /api/users returns all users, so we filter here if needed, 
+      // but I should ideally have an endpoint for this.
+      // For now, let's assume we can filter or the backend supports the query param.
+      setMyCoordinators(res.data.filter((u: any) => u.parent_id === user.id));
+    } catch (err) {
+      console.error("Error fetching my coordinators", err);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.role === 'PADRINO' && activeTab === 'history') {
+      fetchMyCoordinators();
+    }
+  }, [user, activeTab]);
+
+  const handleLookupCoordCI = async () => {
+    if (!newCoordCI) return;
+    setIsLoading(true);
+    try {
+      const res = await api.get(`/electors/${newCoordCI}`);
+      setNewCoordRealName(`${res.data.nombre} ${res.data.apellido}`);
+      setNewCoordName(newCoordCI); // Default username is CI
+      setIsCoordVerified(true);
+      setError('');
+    } catch (err) {
+      setError('Cédula no encontrada en el padrón.');
+      setIsCoordVerified(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateCoordinator = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isCoordVerified || !newCoordPhoto) {
+      setError('Debe verificar la cédula e incluir una foto.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await api.post('/users', {
+        username: newCoordName,
+        password: newCoordCI, // Default password is CI
+        nombre: newCoordRealName,
+        role: 'COORDINADOR',
+        parent_id: user?.id,
+        photo_url: newCoordPhoto,
+        telefono: newCoordTelefono,
+        assigned_list_id: user?.assigned_list_id,
+        assigned_campaign_id: user?.assigned_campaign_id
+      });
+      setSuccessMsg('Coordinador creado correctamente.');
+      setShowCoordModal(false);
+      setNewCoordCI('');
+      setNewCoordPhoto(null);
+      setNewCoordRealName('');
+      setNewCoordTelefono('');
+      setIsCoordVerified(false);
+      fetchMyCoordinators();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al crear coordinador');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchMyPadrinos = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get(`/users?parent_id=${user.id}`);
+      setMyPadrinos(res.data.filter((u: any) => u.parent_id === user.id && u.role === 'PADRINO'));
+    } catch (err) {
+      console.error("Error fetching my padrinos", err);
+    }
+  };
+
+  const handleLookupPadrinoCI = async () => {
+    if (!newPadrinoCI) return;
+    setIsLoading(true);
+    try {
+      const res = await api.get(`/electors/${newPadrinoCI}`);
+      setNewPadrinoRealName(`${res.data.nombre} ${res.data.apellido}`);
+      setIsPadrinoVerified(true);
+      setError('');
+    } catch (err) {
+      setError('Cédula no encontrada.');
+      setIsPadrinoVerified(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreatePadrino = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isPadrinoVerified || !newPadrinoPhoto || !newPadrinoTelefono) {
+      setError('Verifique CI e incluya Foto y WhatsApp.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await api.post('/users', {
+        username: newPadrinoCI,
+        password: newPadrinoCI,
+        nombre: newPadrinoRealName,
+        role: 'PADRINO',
+        parent_id: user?.id,
+        photo_url: newPadrinoPhoto,
+        telefono: newPadrinoTelefono,
+        assigned_campaign_id: user?.assigned_campaign_id
+      });
+      setSuccessMsg('Padrino creado correctamente.');
+      setShowPadrinoModal(false);
+      setNewPadrinoCI('');
+      setNewPadrinoPhoto(null);
+      setNewPadrinoTelefono('');
+      setIsPadrinoVerified(false);
+      fetchMyPadrinos();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al crear padrino');
     } finally {
       setIsLoading(false);
     }
@@ -258,6 +416,12 @@ const CoordinatorApp = () => {
   useEffect(() => {
     if (activeTab === 'history') {
       fetchHistory();
+    }
+    if (activeTab === 'coordinators') {
+      fetchMyCoordinators();
+    }
+    if (activeTab === 'coordinators' && user?.role === 'JEFE_CAMPANA') {
+      fetchMyPadrinos();
     }
   }, [activeTab]);
 
@@ -471,6 +635,31 @@ const CoordinatorApp = () => {
           >
             <HelpCircle size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Soporte
           </button>
+          {user?.role === 'PADRINO' && (
+            </button>
+          )}
+          {user?.role === 'JEFE_CAMPANA' && (
+            <button
+              onClick={() => setActiveTab('coordinators')}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                background: activeTab === 'coordinators' ? 'var(--blue-lt)' : 'transparent',
+                color: activeTab === 'coordinators' ? 'white' : 'var(--text-3)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontFamily: 'var(--font-display)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}
+            >
+              <UsersIcon size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Padrinos
+            </button>
+          )}
         </div>
 
         {activeTab === 'search' ? (
@@ -896,6 +1085,53 @@ const CoordinatorApp = () => {
             </div>
           </motion.div>
         )}
+        
+        {activeTab === 'coordinators' && (user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <SectionLabel 
+                icon={<UsersIcon size={13} />} 
+                text={user?.role === 'JEFE_CAMPANA' ? "Mis Padrinos" : "Mi Equipo de Trabajo"} 
+              />
+              <button 
+                onClick={() => user?.role === 'JEFE_CAMPANA' ? setShowPadrinoModal(true) : setShowCoordModal(true)}
+                className="btn-confirm-styled" 
+                style={{ padding: '0.5rem 1rem', fontSize: '0.7rem', height: 'auto', borderRadius: '10px' }}
+              >
+                <UserPlus size={14} /> NUEVO
+              </button>
+            </div>
+
+            {(user?.role === 'JEFE_CAMPANA' ? myPadrinos : myCoordinators).length === 0 && (
+              <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed var(--border)' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Aún no tienes registros bajo tu cargo.</p>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+              {(user?.role === 'JEFE_CAMPANA' ? myPadrinos : myCoordinators).map(c => (
+                <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '45px', height: '45px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    {c.photo_url ? (
+                      <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={20} style={{ color: 'var(--text-3)' }} />
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>{c.nombre}</h5>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {Number(c.username).toLocaleString('es-PY')} {c.telefono && `• ${c.telefono}`}</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span className="badge badge-green" style={{ fontSize: '0.5rem' }}>{c.role === 'PADRINO' ? 'Padrino' : 'Activo'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════
@@ -1108,6 +1344,228 @@ const CoordinatorApp = () => {
                </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      {/* ══════════════════════════════════════════════════════
+          COORDINATOR CREATION MODAL (PADRINO)
+      ══════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showCoordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay-premium"
+            style={{ zIndex: 9999 }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="modal-content-premium-styled"
+              style={{ maxWidth: '500px', width: '100%', padding: 0 }}
+            >
+              <form onSubmit={handleCreateCoordinator}>
+                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Registrar Miembro de Equipo</h3>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>ASIGNACIÓN DIRECTA BAJO TU LIDERAZGO</p>
+                </div>
+
+                <div style={{ padding: '2rem' }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem' }}>
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ 
+                        width: '100px', height: '100px', borderRadius: '15px', 
+                        background: 'var(--surface-light)', border: '2px dashed var(--border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', overflow: 'hidden', position: 'relative'
+                      }}
+                    >
+                      {newCoordPhoto ? (
+                        <img src={newCoordPhoto} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Camera size={32} style={{ color: 'var(--text-3)' }} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Cédula de Identidad</label>
+                      <div className="search-input-wrapper-premium">
+                        <input 
+                          className="modern-input-premium-styled" 
+                          value={newCoordCI}
+                          onChange={e => setNewCoordCI(e.target.value)}
+                          placeholder="Buscar CI..."
+                        />
+                        <button type="button" onClick={handleLookupCoordCI} className="search-btn-action">BUSCAR</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isCoordVerified && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="form-group">
+                      <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Nombre Completo</label>
+                      <input className="modern-input-premium-styled" value={newCoordRealName} readOnly style={{ opacity: 0.8 }} />
+                    </motion.div>
+                  )}
+
+                  <div className="form-group" style={{ marginTop: '1rem' }}>
+                    <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Teléfono (WhatsApp)</label>
+                    <input 
+                      className="modern-input-premium-styled" 
+                      placeholder="+595 9xx xxx xxx"
+                      value={newCoordTelefono} 
+                      onChange={e => setNewCoordTelefono(e.target.value)} 
+                    />
+                  </div>
+
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    style={{ display: 'none' }} 
+                    accept="image/*" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setCropperData({ image: event.target?.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                </div>
+
+                <div className="modal-footer-premium-styled" style={{ padding: '1.25rem 2rem' }}>
+                  <button type="button" onClick={() => setShowCoordModal(false)} className="btn-cancel-styled">Cancelar</button>
+                  <button type="submit" className="btn-confirm-styled" disabled={!isCoordVerified || !newCoordPhoto || isLoading}>
+                    {isLoading ? <Spinner size={16} /> : 'Crear Usuario'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* ══════════════════════════════════════════════════════
+          PADRINO CREATION MODAL (JEFE DE CAMPANA)
+      ══════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showPadrinoModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay-premium"
+            style={{ zIndex: 9999 }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="modal-content-premium-styled"
+              style={{ maxWidth: '500px', width: '100%', padding: 0 }}
+            >
+              <form onSubmit={handleCreatePadrino}>
+                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Registrar Nuevo Padrino</h3>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>ADMINISTRADOR DE EQUIPO BAJO TU CARGO</p>
+                </div>
+
+                <div style={{ padding: '2rem' }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem' }}>
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ 
+                        width: '100px', height: '100px', borderRadius: '15px', 
+                        background: 'var(--surface-light)', border: '2px dashed var(--border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', overflow: 'hidden', position: 'relative'
+                      }}
+                    >
+                      {newPadrinoPhoto ? (
+                        <img src={newPadrinoPhoto} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Camera size={32} style={{ color: 'var(--text-3)' }} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Cédula del Padrino</label>
+                      <div className="search-input-wrapper-premium">
+                        <input 
+                          className="modern-input-premium-styled" 
+                          value={newPadrinoCI}
+                          onChange={e => setNewPadrinoCI(e.target.value)}
+                          placeholder="Buscar CI..."
+                        />
+                        <button type="button" onClick={handleLookupPadrinoCI} className="search-btn-action">BUSCAR</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isPadrinoVerified && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="form-group">
+                      <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Nombre Completo</label>
+                      <input className="modern-input-premium-styled" value={newPadrinoRealName} readOnly style={{ opacity: 0.8 }} />
+                    </motion.div>
+                  )}
+
+                  <div className="form-group" style={{ marginTop: '1rem' }}>
+                    <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Teléfono de WhatsApp (Obligatorio)</label>
+                    <input 
+                      className="modern-input-premium-styled" 
+                      placeholder="+595 9xx xxx xxx"
+                      value={newPadrinoTelefono} 
+                      onChange={e => setNewPadrinoTelefono(e.target.value)} 
+                      required
+                    />
+                  </div>
+
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    style={{ display: 'none' }} 
+                    accept="image/*" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setCropperData({ image: event.target?.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                </div>
+
+                <div className="modal-footer-premium-styled" style={{ padding: '1.25rem 2rem' }}>
+                  <button type="button" onClick={() => setShowPadrinoModal(false)} className="btn-cancel-styled">Cancelar</button>
+                  <button type="submit" className="btn-confirm-styled" disabled={!isPadrinoVerified || !newPadrinoPhoto || !newPadrinoTelefono || isLoading}>
+                    {isLoading ? <Spinner size={16} /> : 'Crear Padrino'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {cropperData && (
+          <ImageCropperModal 
+            image={cropperData.image} 
+            onCropComplete={(croppedImage) => {
+              if (showPadrinoModal) {
+                setNewPadrinoPhoto(croppedImage);
+              } else {
+                setNewCoordPhoto(croppedImage);
+              }
+              setCropperData(null);
+            }} 
+            onCancel={() => setCropperData(null)} 
+          />
         )}
       </AnimatePresence>
     </MainLayout>

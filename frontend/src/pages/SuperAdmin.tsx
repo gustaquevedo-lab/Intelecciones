@@ -35,7 +35,8 @@ import {
   Clock,
   PlusCircle,
   Save,
-  Key
+  Key,
+  Camera
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
@@ -251,6 +252,8 @@ const SuperAdmin = () => {
   const [userProfilePreview, setUserProfilePreview] = useState<any>(null);
   const [newUserLocal, setNewUserLocal] = useState('');
   const [newUserMesa, setNewUserMesa] = useState<number | null>(null);
+  const [newUserParent, setNewUserParent] = useState('');
+  const [newUserTelefono, setNewUserTelefono] = useState('');
   // List Form
   const [newListCampaign, setNewListCampaign] = useState('');
   const [newListType, setNewListType] = useState('INTENDENTE');
@@ -415,7 +418,9 @@ const SuperAdmin = () => {
         assigned_campaign_id: newUserCampaign || null,
         assigned_local: newUserLocal || null,
         assigned_mesa: newUserMesa || null,
-        photo_url: userProfilePreview?.photo_url
+        photo_url: userProfilePreview?.photo_url,
+        parent_id: newUserParent || null,
+        telefono: newUserTelefono || null
       });
       setShowModal(null);
       setNewUserLocal('');
@@ -438,7 +443,9 @@ const SuperAdmin = () => {
         assigned_campaign_id: newUserCampaign || null,
         assigned_local: newUserLocal || null,
         assigned_mesa: newUserMesa || null,
-        photo_url: userProfilePreview?.photo_url
+        photo_url: userProfilePreview?.photo_url,
+        parent_id: newUserParent || null,
+        telefono: newUserTelefono || null
       });
       setShowModal(null);
       setEditingUser(null);
@@ -1287,6 +1294,8 @@ const SuperAdmin = () => {
           setNewUserRole('COORDINADOR');
           setNewUserList('');
           setNewUserCampaign('');
+          setNewUserParent('');
+          setNewUserTelefono('');
           setUserProfilePreview(null);
           setIsUserVerified(false);
           setShowModal('user');
@@ -1311,6 +1320,11 @@ const SuperAdmin = () => {
               </span>
             ),
             sortKey: 'role'
+          },
+          {
+            header: 'Dependencia (Superior)',
+            accessor: (u: any) => u.parent_name || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>N/A</span>,
+            sortKey: 'parent_name'
           },
           { 
             header: 'Lista Asignada', 
@@ -1342,6 +1356,8 @@ const SuperAdmin = () => {
                   setNewUserCampaign(u.assigned_campaign_id?.toString() || '');
                   setNewUserLocal(u.assigned_local || '');
                   setNewUserMesa(u.assigned_mesa || null);
+                  setNewUserParent(u.parent_id?.toString() || '');
+                  setNewUserTelefono(u.telefono || '');
                   setUserProfilePreview({ photo_url: u.photo_url, nombre: u.nombre });
                   setIsUserVerified(true);
                   setShowModal('user'); 
@@ -1691,9 +1707,19 @@ const SuperAdmin = () => {
                         />
                       </div>
                       <div className="form-group">
+                        <label>Teléfono (WhatsApp)</label>
+                        <input 
+                          className="modern-input-premium-styled" 
+                          placeholder="+595 9xx xxx xxx"
+                          value={newUserTelefono} 
+                          onChange={e => setNewUserTelefono(e.target.value)} 
+                        />
+                      </div>
+                      <div className="form-group">
                         <label>Rol de Sistema</label>
                         <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                           <option value="JEFE_CAMPANA">Jefe de Campaña</option>
+                          <option value="PADRINO">Padrino</option>
                           <option value="COORDINADOR">Coordinador de Campo</option>
                           <option value="MIEMBRO_DE_MESA">Miembro de Mesa</option>
                           <option value="CANDIDATO">Candidato (Solo Lectura)</option>
@@ -1750,6 +1776,32 @@ const SuperAdmin = () => {
                             {campaigns.map(c => (
                               <option key={c.id} value={c.id}>
                                 {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {newUserRole === 'PADRINO' && (
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Jefe de Campaña (Dependencia)</label>
+                          <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                            <option value="">Seleccione el Jefe de Campaña...</option>
+                            {users.filter(u => u.role === 'JEFE_CAMPANA').map(u => (
+                              <option key={u.id} value={u.id}>
+                                {u.nombre}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {newUserRole === 'COORDINADOR' && (
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Padrino (Dependencia)</label>
+                          <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                            <option value="">Seleccione el Padrino...</option>
+                            {users.filter(u => u.role === 'PADRINO').map(u => (
+                              <option key={u.id} value={u.id}>
+                                {u.nombre}
                               </option>
                             ))}
                           </select>

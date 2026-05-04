@@ -76,8 +76,11 @@ db.exec(`
     nombre TEXT,
     photo_url TEXT,
     needs_password_change INTEGER DEFAULT 0,
+    parent_id INTEGER,
+    telefono TEXT,
     FOREIGN KEY(assigned_list_id) REFERENCES lists(id),
-    FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id)
+    FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id),
+    FOREIGN KEY(parent_id) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS voting_locations (
@@ -188,6 +191,13 @@ try {
 } catch (e) {}
 
 // User migrations
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN parent_id INTEGER").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN telefono TEXT").run();
+} catch (e) {}
+
 // Lists migrations
 try {
   db.prepare("ALTER TABLE lists ADD COLUMN is_adversary INTEGER DEFAULT 0").run();
