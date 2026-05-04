@@ -1620,11 +1620,47 @@ const SuperAdmin = () => {
                         <div className="form-group">
                           <label>Rol</label>
                           <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
-                            <option value="COORDINADOR">Coordinador</option>
+                            <option value="COORDINADOR">Coordinador de Campo</option>
                             <option value="PADRINO">Padrino</option>
                             <option value="JEFE_CAMPANA">Jefe de Campaña</option>
+                            <option value="SUPERUSUARIO">Súper Admin</option>
                           </select>
                         </div>
+
+                        {/* --- JERARQUÍA RESTAURADA --- */}
+                        {newUserRole === 'JEFE_CAMPANA' && (
+                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Campaña que lidera</label>
+                            <select className="modern-input-premium-styled" value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
+                              <option value="">Seleccione Campaña...</option>
+                              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                          </div>
+                        )}
+
+                        {newUserRole === 'PADRINO' && (
+                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Superior (Jefe de Campaña)</label>
+                            <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                              <option value="">Seleccione Jefe...</option>
+                              {users.filter(u => u.role === 'JEFE_CAMPANA').map(u => (
+                                <option key={u.id} value={u.id}>{u.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {newUserRole === 'COORDINADOR' && (
+                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Superior (Padrino)</label>
+                            <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                              <option value="">Seleccione Padrino...</option>
+                              {users.filter(u => u.role === 'PADRINO').map(u => (
+                                <option key={u.id} value={u.id}>{u.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                       <div className="modal-footer-premium-styled" style={{ marginTop: '1.5rem' }}>
                         <button type="button" onClick={() => { setShowModal(null); setEditingUser(null); }} className="btn-cancel-styled">Cancelar</button>
