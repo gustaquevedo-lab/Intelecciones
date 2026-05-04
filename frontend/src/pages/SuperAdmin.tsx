@@ -1575,38 +1575,41 @@ const SuperAdmin = () => {
               )}
 
               {showModal === 'user' && (
-                <div style={{ width: '700px', maxWidth: '95vw', display: 'flex', flexDirection: 'column', maxHeight: '85vh' }}>
-                  <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{editingUser ? 'Editar Operador' : 'Nuevo Operador'}</h2>
-                    <button className="icon-btn" onClick={() => { setShowModal(null); setEditingUser(null); }}><XCircle size={24} /></button>
+                <div style={{ width: '650px', maxWidth: '95vw', display: 'flex', flexDirection: 'column', background: 'var(--surface)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                    <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{editingUser ? 'Editar Operador' : 'Nuevo Operador'}</h2>
+                    <button className="icon-btn" onClick={() => { setShowModal(null); setEditingUser(null); }}><XCircle size={20} /></button>
                   </div>
-                  <div style={{ overflowY: 'auto', padding: '1.5rem' }}>
+                  
+                  <div style={{ padding: '1rem 1.25rem' }}>
                     <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1rem', background: 'rgba(0,71,171,0.05)', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
-                        <div className="premium-avatar-frame-compact" style={{ width: '60px', height: '60px' }} onClick={() => fileInputRef.current?.click()}>
-                          {userProfilePreview?.photo_url ? <img src={userProfilePreview.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="P" /> : <UsersIcon size={24} />}
+                      {/* Cabecera de Perfil Compacta */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', background: 'rgba(0,71,171,0.05)', borderRadius: '12px', marginBottom: '1rem', border: '1px solid var(--border-subtle)' }}>
+                        <div className="premium-avatar-frame-compact" style={{ width: '50px', height: '50px', flexShrink: 0 }} onClick={() => fileInputRef.current?.click()}>
+                          {userProfilePreview?.photo_url ? <img src={userProfilePreview.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="P" /> : <UsersIcon size={20} />}
                         </div>
-                        <div>
-                          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{userProfilePreview?.nombre ? `${userProfilePreview.nombre} ${userProfilePreview.apellido || ''}` : 'Identidad no verificada'}</h3>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--plra-300)' }}>C.I. {newUserCI || '---'}</div>
+                        <div style={{ minWidth: 0 }}>
+                          <h3 style={{ margin: 0, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{newUserRealName || 'Identidad no verificada'}</h3>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {newUserCI || '---'}</div>
                         </div>
                         <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={e => handleFileUpload(e, 'user')} />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div className="form-group">
-                          <label>Cédula</label>
-                          <div className="search-input-wrapper-premium">
-                            <input className="modern-input-premium-styled" value={newUserCI} onChange={e => setNewUserCI(e.target.value)} required disabled={!!editingUser} />
-                            {!editingUser && <button type="button" onClick={handleLookupUserCI} className="search-btn-action">BUSCAR</button>}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Cédula de Identidad</label>
+                          <div className="search-input-wrapper-premium" style={{ height: '38px' }}>
+                            <input className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserCI} onChange={e => setNewUserCI(e.target.value)} required disabled={!!editingUser} />
+                            {!editingUser && <button type="button" onClick={handleLookupUserCI} className="search-btn-action" style={{ height: '38px' }}>BUSCAR</button>}
                           </div>
                         </div>
-                        <div className="form-group">
-                          <label>Nombre Completo</label>
-                          <input className="modern-input-premium-styled" value={newUserRealName} onChange={e => setNewUserRealName(e.target.value)} required />
+                        <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Nombre Completo</label>
+                          <input className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserRealName} onChange={e => setNewUserRealName(e.target.value)} required />
                         </div>
-                        <div className="form-group">
-                          <label>WhatsApp</label>
-                          <input className="modern-input-premium-styled" value={newUserTelefono} placeholder="+595" onChange={e => {
+                        <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>WhatsApp (Formato Internacional)</label>
+                          <input className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserTelefono} placeholder="+595" onChange={e => {
                             let v = e.target.value;
                             if (v.length >= 2 && !v.startsWith('+')) {
                               let d = v.replace(/\D/g, '');
@@ -1617,9 +1620,9 @@ const SuperAdmin = () => {
                             setNewUserTelefono(v);
                           }} />
                         </div>
-                        <div className="form-group">
-                          <label>Rol</label>
-                          <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
+                        <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Rol del Operador</label>
+                          <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                             <option value="COORDINADOR">Coordinador de Campo</option>
                             <option value="PADRINO">Padrino</option>
                             <option value="JEFE_CAMPANA">Jefe de Campaña</option>
@@ -1627,11 +1630,11 @@ const SuperAdmin = () => {
                           </select>
                         </div>
 
-                        {/* --- JERARQUÍA RESTAURADA --- */}
+                        {/* --- JERARQUÍA OPTIMIZADA --- */}
                         {newUserRole === 'JEFE_CAMPANA' && (
-                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                            <label>Campaña que lidera</label>
-                            <select className="modern-input-premium-styled" value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
+                          <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
+                            <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Campaña que lidera</label>
+                            <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
                               <option value="">Seleccione Campaña...</option>
                               {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
@@ -1639,9 +1642,9 @@ const SuperAdmin = () => {
                         )}
 
                         {newUserRole === 'PADRINO' && (
-                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                            <label>Superior (Jefe de Campaña)</label>
-                            <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                          <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
+                            <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Superior (Jefe de Campaña)</label>
+                            <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
                               <option value="">Seleccione Jefe...</option>
                               {users.filter(u => u.role === 'JEFE_CAMPANA').map(u => (
                                 <option key={u.id} value={u.id}>{u.nombre}</option>
@@ -1651,9 +1654,9 @@ const SuperAdmin = () => {
                         )}
 
                         {newUserRole === 'COORDINADOR' && (
-                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                            <label>Superior (Padrino)</label>
-                            <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                          <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
+                            <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Superior (Padrino)</label>
+                            <select className="modern-input-premium-styled" style={{ height: '38px', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
                               <option value="">Seleccione Padrino...</option>
                               {users.filter(u => u.role === 'PADRINO').map(u => (
                                 <option key={u.id} value={u.id}>{u.nombre}</option>
@@ -1662,9 +1665,12 @@ const SuperAdmin = () => {
                           </div>
                         )}
                       </div>
-                      <div className="modal-footer-premium-styled" style={{ marginTop: '1.5rem' }}>
-                        <button type="button" onClick={() => { setShowModal(null); setEditingUser(null); }} className="btn-cancel-styled">Cancelar</button>
-                        <button type="submit" className="btn-confirm-styled" disabled={!isUserVerified}>Guardar Operador <Search size={18} /></button>
+
+                      <div className="modal-footer-premium-styled" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+                        <button type="button" onClick={() => { setShowModal(null); setEditingUser(null); }} className="btn-cancel-styled" style={{ padding: '0.5rem 1.5rem' }}>Cancelar</button>
+                        <button type="submit" className="btn-confirm-styled" style={{ padding: '0.5rem 1.5rem' }} disabled={!isUserVerified && !editingUser}>
+                          {editingUser ? 'Guardar Cambios' : 'Crear Operador'} <Search size={16} />
+                        </button>
                       </div>
                     </form>
                   </div>
