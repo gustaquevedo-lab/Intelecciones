@@ -218,15 +218,25 @@ const CoordinatorApp = () => {
 
   const handleCreateCoordinator = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isCoordVerified || !newCoordPhoto) {
-      setError('Debe verificar la cédula e incluir una foto.');
+    
+    if (!isCoordVerified) {
+      setError('⚠️ Debe verificar la cédula primero.');
       return;
     }
+    if (!newCoordPhoto) {
+      setError('⚠️ Debe incluir una foto del miembro.');
+      return;
+    }
+    if (!newCoordTelefono) {
+      setError('⚠️ El número de WhatsApp es obligatorio.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       await api.post('/users', {
-        username: newCoordName,
-        password: newCoordCI, // Default password is CI
+        username: newCoordName || newCoordCI,
+        password: newCoordCI, 
         nombre: newCoordRealName,
         role: 'COORDINADOR',
         parent_id: user?.id,
@@ -235,7 +245,7 @@ const CoordinatorApp = () => {
         assigned_list_id: user?.assigned_list_id,
         assigned_campaign_id: user?.assigned_campaign_id
       });
-      setSuccessMsg('Coordinador creado correctamente.');
+      setSuccessMsg('✅ Miembro registrado correctamente.');
       setShowCoordModal(false);
       setNewCoordCI('');
       setNewCoordPhoto(null);
@@ -1372,69 +1382,139 @@ const CoordinatorApp = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="modal-overlay-premium"
-            style={{ zIndex: 9999 }}
+            style={{ 
+              position: 'fixed', 
+              top: 0, left: 0, right: 0, bottom: 0, 
+              background: 'rgba(2, 8, 20, 0.98)', 
+              backdropFilter: 'blur(10px)',
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              zIndex: 20000,
+              padding: '1rem'
+            }}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="modal-content-premium-styled"
-              style={{ maxWidth: '500px', width: '100%', padding: 0 }}
+              initial={{ scale: 0.9, y: 50, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 50, opacity: 0 }}
+              style={{
+                width: '100%',
+                maxWidth: '460px',
+                maxHeight: '92vh',
+                background: 'var(--surface)',
+                borderRadius: '28px',
+                border: '1px solid var(--border-mid)',
+                boxShadow: '0 25px 70px -12px rgba(0, 0, 0, 0.7)',
+                overflowY: 'auto',
+                position: 'relative'
+              }}
+              className="custom-scrollbar"
             >
               <form onSubmit={handleCreateCoordinator}>
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Registrar Miembro de Equipo</h3>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>ASIGNACIÓN DIRECTA BAJO TU LIDERAZGO</p>
+                <div style={{ 
+                  padding: '1.5rem 1.75rem', 
+                  borderBottom: '1px solid var(--border)', 
+                  background: 'linear-gradient(to bottom, rgba(0,71,171,0.15), transparent)',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                  backdropFilter: 'blur(10px)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'var(--font-display)', color: 'white' }}>Registrar Coordinador</h3>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', margin: '0.2rem 0 0', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Gestión de Equipo Directo</p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowCoordModal(false)}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
 
-                <div style={{ padding: '2rem' }}>
-                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div style={{ padding: '1.75rem' }}>
+                  {error && (
+                    <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '0.85rem', borderRadius: '14px', color: 'var(--red)', fontSize: '0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <AlertCircle size={18} /> {error}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.75rem', alignItems: 'center' }}>
                     <div 
                       onClick={() => fileInputRef.current?.click()}
                       style={{ 
-                        width: '100px', height: '100px', borderRadius: '15px', 
+                        width: '96px', height: '96px', borderRadius: '22px', 
                         background: 'var(--surface-light)', border: '2px dashed var(--border)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', overflow: 'hidden', position: 'relative'
+                        cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
+                        position: 'relative', transition: 'all 0.3s'
                       }}
                     >
                       {newCoordPhoto ? (
-                        <img src={newCoordPhoto} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={newCoordPhoto} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <Camera size={32} style={{ color: 'var(--text-3)' }} />
+                        <div style={{ textAlign: 'center' }}>
+                          <Camera size={28} style={{ color: 'var(--text-3)' }} />
+                          <span style={{ display: 'block', fontSize: '0.5rem', color: 'var(--text-3)', marginTop: '0.3rem', fontWeight: 900 }}>FOTO</span>
+                        </div>
                       )}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Cédula de Identidad</label>
-                      <div className="search-input-wrapper-premium">
+                      <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', marginBottom: '0.6rem', display: 'block', letterSpacing: '0.05em' }}>Cédula de Identidad</label>
+                      <div style={{ display: 'flex', gap: '0.6rem' }}>
                         <input 
                           className="modern-input-premium-styled" 
+                          style={{ height: '44px', flex: 1, fontSize: '1rem' }}
+                          placeholder="Número CI"
                           value={newCoordCI}
                           onChange={e => setNewCoordCI(e.target.value)}
-                          placeholder="Buscar CI..."
                         />
-                        <button type="button" onClick={handleLookupCoordCI} className="search-btn-action">BUSCAR</button>
+                        <button type="button" onClick={handleLookupCoordCI} className="search-btn-action" style={{ height: '44px', padding: '0 1.25rem', fontSize: '0.7rem', fontWeight: 900 }}>VERIFICAR</button>
                       </div>
                     </div>
                   </div>
 
-                  {isCoordVerified && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="form-group">
-                      <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Nombre Completo</label>
-                      <input className="modern-input-premium-styled" value={newCoordRealName} readOnly style={{ opacity: 0.8 }} />
-                    </motion.div>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Nombre del Miembro (Padrón)</label>
+                      <input className="modern-input-premium-styled" style={{ height: '44px', background: 'rgba(255,255,255,0.03)', fontSize: '0.9rem' }} value={newCoordRealName} readOnly placeholder="Se cargará al verificar" />
+                    </div>
 
-                  <div className="form-group" style={{ marginTop: '1rem' }}>
-                    <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Teléfono (WhatsApp)</label>
-                    <input 
-                      className="modern-input-premium-styled" 
-                      placeholder="+595 9xx xxx xxx"
-                      value={newCoordTelefono} 
-                      onChange={e => setNewCoordTelefono(e.target.value)} 
-                    />
+                    <div className="form-group">
+                      <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>WhatsApp Directo</label>
+                      <input 
+                        className="modern-input-premium-styled" 
+                        style={{ height: '44px', fontSize: '0.9rem' }} 
+                        placeholder="+595 9xx xxx xxx"
+                        value={newCoordTelefono}
+                        onChange={e => setNewCoordTelefono(e.target.value)}
+                      />
+                    </div>
                   </div>
+                </div>
+
+                <div style={{ padding: '1.75rem', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.3)', display: 'flex', gap: '1rem' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowCoordModal(false)}
+                    style={{ flex: 1, height: '3.75rem', borderRadius: '16px', background: 'transparent', border: '1px solid var(--border)', color: 'white', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    CANCELAR
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isLoading || !isCoordVerified}
+                    className="btn btn-primary" 
+                    style={{ flex: 2, height: '3.75rem', borderRadius: '16px', fontWeight: 900, fontSize: '0.85rem' }}
+                  >
+                    {isLoading ? <Spinner /> : 'GUARDAR MIEMBRO'}
+                  </button>
+                </div>
 
                   <input 
                     type="file" 

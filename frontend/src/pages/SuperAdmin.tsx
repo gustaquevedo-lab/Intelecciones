@@ -408,12 +408,23 @@ const SuperAdmin = () => {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const finalNombre = newUserRealName.trim();
+    const finalRole = newUserRole;
+    const finalUsername = (newUserName || newUserCI).trim();
+    const finalPassword = (newUserPass || newUserCI).trim();
+
+    if (!finalNombre || !finalRole || !finalUsername) {
+      alert('⚠️ Faltan datos obligatorios. Asegúrese de verificar la C.I. para cargar el nombre.');
+      return;
+    }
+
     try {
       await api.post('/users', { 
-        username: newUserName || newUserCI, 
-        password: newUserPass || newUserCI, 
-        role: newUserRole,
-        nombre: newUserRealName,
+        username: finalUsername, 
+        password: finalPassword, 
+        role: finalRole,
+        nombre: finalNombre,
         ci: newUserCI,
         assigned_list_id: newUserList || null,
         assigned_campaign_id: newUserCampaign || null,
@@ -428,9 +439,9 @@ const SuperAdmin = () => {
       setNewUserMesa(null);
       setNewUserTelefono('');
       fetchData();
-    } catch (err) { 
+    } catch (err: any) { 
       console.error(err); 
-      alert('Error al crear usuario. Verifique los datos.');
+      alert('Error: ' + (err.response?.data?.error || 'No se pudo crear el usuario.'));
     }
   };
 
@@ -1525,11 +1536,12 @@ const SuperAdmin = () => {
                 width: 'auto', 
                 maxWidth: '95vw', 
                 padding: 0, 
-                overflow: 'hidden', // Evita que el contenedor crezca
-                maxHeight: '80vh',   // Limita la altura total al 80% de la pantalla
+                overflowY: 'auto',   // Permitir scroll interno
+                maxHeight: '90vh',   // Aumentar un poco el espacio útil
                 display: 'flex',
                 flexDirection: 'column',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                borderRadius: '20px'
               }}
             >
               {showModal === 'campaign' && (
