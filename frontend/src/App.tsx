@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import CoordinatorApp from './pages/CoordinatorApp';
 import CommandCenter from './pages/CommandCenter';
@@ -20,6 +21,7 @@ function App() {
         <AuthProvider>
           <Router>
             <Routes>
+              <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/coordinador" element={<CoordinatorApp />} />
               <Route path="/comando" element={<CommandCenter />} />
