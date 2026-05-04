@@ -4,7 +4,7 @@ import {
   Activity, Map, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
   Image, ChevronDown, ChevronUp, Zap, Shield, Truck, UserPlus,
-  Plus, X, Camera, User, ChevronRight
+  Plus, X
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -94,7 +94,7 @@ const StatCard: React.FC<{ label: string; value: string | number; color?: string
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const DiaDApp: React.FC = () => {
-  const { user } = useAuth();
+  const { Users } = useAuth();
   const { settings } = useSettings();
 
   const [activeTab, setActiveTab] = useState<'cobertura' | 'resultados' | 'dhondt' | 'actas'>('cobertura');
@@ -1160,7 +1160,7 @@ const DiaDApp: React.FC = () => {
                     <Users size={32} style={{ color: 'var(--plra-300)' }} />
                   )}
                   <div className="avatar-edit-overlay">
-                    <Camera size={14} />
+                    <Image size={14} />
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>

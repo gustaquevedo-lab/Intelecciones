@@ -14,15 +14,13 @@ import {
   Building2,
   Home,
   Check,
-  ChevronRight,
-  User,
-  ShieldCheck,
-  Layout,
-  Camera,
+  ChevronDown,
+  Users,
   Shield,
+  Layout,
+  Image,
   History,
   LayoutList,
-  Users,
   MapPin,
   Map,
   Landmark,
@@ -1547,7 +1545,7 @@ const SuperAdmin = () => {
                     </div>
                     <div className="modal-footer-premium-styled">
                       <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                      <button type="submit" className="btn-confirm-styled">Crear Campaña <ChevronRight size={18} /></button>
+                      <button type="submit" className="btn-confirm-styled">Crear Campaña <Search size={18} /></button>
                     </div>
                   </form>
                 </div>
@@ -1601,7 +1599,7 @@ const SuperAdmin = () => {
                   </div>
                   <div className="modal-footer-premium-styled">
                     <button type="button" onClick={() => { setShowModal(null); setEditingCampaign(null); }} className="btn-cancel-styled">Cancelar</button>
-                    <button type="submit" className="btn-confirm-styled">Guardar Cambios <ChevronRight size={18} /></button>
+                    <button type="submit" className="btn-confirm-styled">Guardar Cambios <Search size={18} /></button>
                   </div>
                 </form>
               )}
@@ -1648,7 +1646,7 @@ const SuperAdmin = () => {
                       {userProfilePreview?.nombre && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
                           <span className="verified-badge-compact" style={{ width: '20px', height: '20px' }}>
-                            <ShieldCheck size={12} />
+                            <Shield size={12} />
                           </span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>C.I. Nº {newUserCI}</span>
                         </div>
@@ -1764,7 +1762,7 @@ const SuperAdmin = () => {
                       Cancelar
                     </button>
                     <button type="submit" className="btn-confirm-styled" disabled={!isUserVerified}>
-                      Finalizar Registro <ChevronRight size={18} />
+                      Finalizar Registro <Search size={18} />
                     </button>
                   </div>
                 </form>
@@ -1789,10 +1787,10 @@ const SuperAdmin = () => {
                       {candidatePreview?.photo_url ? (
                         <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <User size={44} style={{ color: 'var(--text-3)' }} />
+                        <Users size={44} style={{ color: 'var(--text-3)' }} />
                       )}
                       <div className="avatar-edit-overlay" style={{ background: 'rgba(0,0,0,0.6)' }}>
-                        <Camera size={16} />
+                        <Image size={16} />
                       </div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1804,7 +1802,7 @@ const SuperAdmin = () => {
                       </h2>
                       {isCandidateVerified && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-                          <span className="verified-badge-compact"><ShieldCheck size={12} /></span>
+                          <span className="verified-badge-compact"><Shield size={12} /></span>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Ciudadano Verificado (C.I. {newListCandidateCI})</span>
                         </div>
                       )}
@@ -1938,7 +1936,7 @@ const SuperAdmin = () => {
                   <div className="modal-footer-premium-styled" style={{ padding: '0.75rem 2rem', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                     <button type="button" onClick={() => { setShowModal(null); setEditingList(null); }} className="btn-cancel-styled">DESCARTAR</button>
                     <button type="submit" className="btn-confirm-styled" disabled={!isCandidateVerified}>
-                      {editingList ? 'GUARDAR' : 'REGISTRAR'} <ChevronRight size={14} />
+                      {editingList ? 'GUARDAR' : 'REGISTRAR'} <Search size={14} />
                     </button>
                   </div>
                 </form>
@@ -1963,7 +1961,7 @@ const SuperAdmin = () => {
                   </div>
                   <div className="modal-footer-premium-styled">
                     <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                    <button type="submit" className="btn-confirm-styled" disabled={!isVehicleDriverVerified}>Guardar Vehículo <ChevronRight size={18} /></button>
+                    <button type="submit" className="btn-confirm-styled" disabled={!isVehicleDriverVerified}>Guardar Vehículo <Search size={18} /></button>
                   </div>
                 </form>
               )}
