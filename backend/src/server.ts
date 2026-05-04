@@ -174,9 +174,17 @@ const applyTenantFilter = (query: string, req: express.Request, params: any[] = 
 };
 
 app.post('/api/login', (req, res) => {
-  const cleanUsername = username?.toString().trim().replace(/\./g, '');
-  const cleanPassword = password?.toString().trim();
+  const { username, password } = req.body;
   
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+  }
+
+  const cleanUsername = username.toString().trim().replace(/\./g, '');
+  const cleanPassword = password.toString().trim();
+  
+  console.log(`[AUTH] Intento: ${username} (Limpio: ${cleanUsername})`);
+
   let user = db.prepare(`
     SELECT u.*, c.enabled_modules, l.campaign_id
     FROM users u
