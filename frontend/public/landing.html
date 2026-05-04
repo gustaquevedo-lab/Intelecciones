@@ -533,6 +533,47 @@
     }
     [data-theme="light"] .theme-toggle:hover { background: rgba(14,30,80,0.09); color: var(--text); }
 
+    /* ═══════════════════════════════════════ MOBILE MENU ═══ */
+    .mobile-menu-toggle { display: none; }
+    .mobile-menu-overlay {
+      position: fixed; inset: 0; z-index: 9990;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .mobile-menu-overlay.open { opacity: 1; pointer-events: auto; }
+    .mobile-menu {
+      position: fixed; top: 0; right: 0; z-index: 9991;
+      width: 80%; max-width: 320px; height: 100dvh;
+      background: var(--bg); border-left: 1px solid var(--border);
+      transform: translateX(100%); transition: transform 0.3s ease;
+      display: flex; flex-direction: column; overflow-y: auto;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+    }
+    .mobile-menu.open { transform: translateX(0); }
+    .mobile-menu-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+    }
+    .mobile-menu-close {
+      width: 36px; height: 36px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--bg-2);
+      color: var(--text-2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mobile-menu-links { padding: 1rem 0; flex: 1; }
+    .mobile-menu-link {
+      display: block; padding: 0.9rem 1.5rem;
+      font-family: var(--font-d); font-size: 1rem; font-weight: 600;
+      color: var(--text-2); text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: all 0.15s;
+    }
+    .mobile-menu-link:hover { color: white; background: rgba(255,255,255,0.04); padding-left: 2rem; }
+    .mobile-menu-cta {
+      padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
     /* ═══════════════════════════════════════ WA FLOAT WIDGET ═══ */
     .wa-float {
       position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 998;
@@ -577,14 +618,17 @@
     @media (max-width: 600px) {
       /* ── NAV ── */
       .nav-inner { gap: 0; }
-      .nav-wordmark { display: none; }
+      .mobile-menu-toggle {
+        display: flex; align-items: center; justify-content: center;
+        width: 38px; height: 38px; border-radius: 10px;
+        border: 1px solid var(--border); background: transparent;
+        color: var(--text-2); cursor: pointer;
+      }
       .theme-toggle { display: none; }
       .nav-inner > div:last-child .btn-secondary,
       .nav-inner > div:last-child .btn-primary { display: none; }
-      .nav-inner > div:last-child::after {
-        content: '≡'; font-size: 1.6rem; color: var(--blue-lt); cursor: pointer;
-        padding: 0 0.5rem;
-      }
+      .nav-logo svg { width: 30px; height: 30px; }
+      .nav-wordmark { font-size: 0.95rem; }
 
       /* ── HERO ── */
       .hero { padding: 5rem 0 3rem; }
@@ -671,6 +715,9 @@
         <a href="#ecosistema" class="nav-link">Ecosistema</a>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem">
+        <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Abrir menú">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema claro/oscuro" title="Cambiar tema">
           <!-- ícono se inyecta por JS -->
         </button>
@@ -685,6 +732,26 @@
   </div>
 </nav>
 
+<!-- ════════════════════════════════════ MOBILE MENU PANEL -->
+<div id="mobile-menu-overlay" class="mobile-menu-overlay"></div>
+<div id="mobile-menu" class="mobile-menu">
+  <div class="mobile-menu-header">
+    <div class="nav-wordmark" style="font-size:1.1rem"><span class="int">Int</span><span class="rest">elecciones</span></div>
+    <button id="mobile-menu-close" class="mobile-menu-close" aria-label="Cerrar menú">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="mobile-menu-links">
+    <a href="#modulos" class="mobile-menu-link">Módulos</a>
+    <a href="#vistas" class="mobile-menu-link">Vistas</a>
+    <a href="#comparativa" class="mobile-menu-link">Comparativa</a>
+    <a href="#ecosistema" class="mobile-menu-link">Ecosistema</a>
+  </div>
+  <div class="mobile-menu-cta">
+    <a href="/login" target="_top" class="btn-primary" style="width:100%;justify-content:center;text-align:center">Ingresar al Sistema</a>
+    <a href="#contacto" class="btn-secondary" style="width:100%;justify-content:center;text-align:center">Solicitar Demo →</a>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════ HERO -->
 <section class="hero" aria-label="Hero">
@@ -1462,6 +1529,32 @@
   // Auto-follow system preference when no manual override
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
     if (!localStorage.getItem('theme')) applyTheme(e.matches ? 'light' : 'dark');
+  });
+
+  // ─── Mobile menu ───
+  const menuToggle  = document.getElementById('mobile-menu-toggle');
+  const menuPanel   = document.getElementById('mobile-menu');
+  const menuOverlay = document.getElementById('mobile-menu-overlay');
+  const menuClose   = document.getElementById('mobile-menu-close');
+
+  function openMenu() {
+    menuPanel.classList.add('open');
+    menuOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMenu() {
+    menuPanel.classList.remove('open');
+    menuOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  menuToggle  && menuToggle.addEventListener('click', openMenu);
+  menuClose   && menuClose.addEventListener('click', closeMenu);
+  menuOverlay && menuOverlay.addEventListener('click', closeMenu);
+
+  // Close menu when clicking any link inside it
+  menuPanel && menuPanel.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', closeMenu);
   });
 </script>
 
