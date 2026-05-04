@@ -1908,5 +1908,3 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
-/ /   P R U E B A   D E   C A M B I O  
- 
