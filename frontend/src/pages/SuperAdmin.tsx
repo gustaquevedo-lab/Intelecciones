@@ -1499,16 +1499,38 @@ const SuperAdmin = () => {
         {showModal && (
           <div 
             className="modal-overlay" 
-            style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} 
+            style={{ 
+              zIndex: 99999, 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              justifyContent: 'center', 
+              padding: '5vh 2rem', // Añade margen superior del 5% de la pantalla
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.85)',
+              backdropFilter: 'blur(8px)'
+            }} 
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(null); }}
           >
             <motion.div 
-              className="modal-content"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              className="modal-content-premium"
+              initial={{ scale: 0.9, opacity: 0, y: -20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: -20 }}
               onClick={e => e.stopPropagation()}
-              style={{ width: 'auto', maxWidth: '95vw', padding: 0, overflowY: 'auto', maxHeight: '90vh' }}
+              style={{ 
+                width: 'auto', 
+                maxWidth: '95vw', 
+                padding: 0, 
+                overflow: 'hidden', // Evita que el contenedor crezca
+                maxHeight: '80vh',   // Limita la altura total al 80% de la pantalla
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+              }}
             >
               {showModal === 'campaign' && (
                 <div style={{ maxWidth: '500px', width: '100%', padding: '2rem' }}>
