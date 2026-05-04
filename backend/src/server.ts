@@ -86,7 +86,6 @@ const CaptureSchema = z.object({
   telefono: z.string().min(6, "El teléfono es obligatorio"),
 });
 
-const getListId = (req: any) => req.headers['x-list-id'] ? parseInt(req.headers['x-list-id'] as string) : null;
 
 // Health Check
 app.get('/api/health', (req, res) => {
