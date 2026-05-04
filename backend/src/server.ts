@@ -174,16 +174,16 @@ const applyTenantFilter = (query: string, req: express.Request, params: any[] = 
 };
 
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
+  const cleanUsername = username?.toString().trim().replace(/\./g, '');
+  const cleanPassword = password?.toString().trim();
   
-  // 1. First check if user exists
   let user = db.prepare(`
     SELECT u.*, c.enabled_modules, l.campaign_id
     FROM users u
     LEFT JOIN lists l ON u.assigned_list_id = l.id
     LEFT JOIN campaigns c ON l.campaign_id = c.id
-    WHERE u.username = ? OR u.ci = ?
-  `).get(username, username) as any;
+    WHERE u.username = ? OR u.ci = ? OR u.username = ? OR u.ci = ?
+  `).get(username.trim(), username.trim(), cleanUsername, cleanUsername) as any;
   
   // 2. If not found, check if it's a Candidate from the lists table
   if (!user) {
@@ -219,7 +219,7 @@ app.post('/api/login', (req, res) => {
 
   console.log(`[AUTH] Intento de login: ${username}. Encontrado: ${user ? 'SI' : 'NO'}`);
   
-  if (user && user.password === password) { 
+  if (user && user.password === cleanPassword) { 
     res.json({
       id: user.id,
       username: user.username,
@@ -878,11 +878,12 @@ app.get('/api/coordinators/:id/history', (req, res) => {
 
 app.post('/api/users', (req, res) => {
   const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
+  const cleanCI = ci ? ci.toString().replace(/\./g, '') : null;
   try {
     const result = db.prepare(`
       INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci, needs_password_change)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(username, password, role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, ci || null);
+    `).run(username.trim(), password.trim(), role, assigned_list_id || list_id || null, assigned_campaign_id || campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, cleanCI);
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${username} with role ${role}`);
     res.json({ id: Number(result.lastInsertRowid) });
@@ -934,12 +935,13 @@ app.delete('/api/users/:id', (req, res) => {
 
 app.put('/api/users/:id', (req, res) => {
   const { role, assigned_list_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
+  const cleanCI = ci ? ci.toString().replace(/\./g, '') : null;
   try {
     db.prepare(`
       UPDATE users 
       SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?, ci = ?
       WHERE id = ?
-    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, ci || null, req.params.id);
+    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, cleanCI, req.params.id);
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
     res.json({ success: true });
   } catch (err: any) {
