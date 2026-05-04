@@ -1068,7 +1068,7 @@ const CoordinatorApp = () => {
               </motion.div>
             ))}
           </div>
-        ) : (
+        ) : activeTab === 'support' ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <SectionLabel icon={<HelpCircle size={13} />} text="Solicitar Apoyo al Comando" />
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '1.5rem' }}>
