@@ -1075,7 +1075,7 @@ const CoordinatorApp = () => {
               <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.25rem' }}>Describe brevemente lo que necesitas. Tu solicitud llegará al Comando Central.</p>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                <button onClick={() => setRequestType('TRANSPORT') : null} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'TRANSPORT' ? 'var(--plra-500)' : 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logística</button>
+                <button onClick={() => setRequestType('TRANSPORT')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'TRANSPORT' ? 'var(--plra-500)' : 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logística</button>
                 <button onClick={() => setRequestType('RESOURCES')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'RESOURCES' ? 'var(--plra-500)' : 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Recursos</button>
               </div>
 
