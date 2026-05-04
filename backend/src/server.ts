@@ -81,7 +81,7 @@ const CaptureSchema = z.object({
   coordinator_id: z.number(), 
   lat: z.number(),
   lng: z.number(),
-  traffic_light: z.enum(['GREEN', 'YELLOW', 'RED']),
+  traffic_light: z.enum(['GREEN', 'YELLOW', 'RED', 'PURPLE']),
   needs_transport: z.boolean().optional(),
   telefono: z.string().min(6, "El teléfono es obligatorio"),
 });
@@ -669,6 +669,7 @@ app.get('/api/stats/command', (req, res) => {
         SUM(CASE WHEN traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
         SUM(CASE WHEN traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
         SUM(CASE WHEN traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+        SUM(CASE WHEN traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
         COUNT(*) as total
       FROM elector_captures
       ${listFilter}
@@ -1343,6 +1344,7 @@ app.get('/api/stats/command', (req, res) => {
       green: stats.find(s => s.traffic_light === 'GREEN')?.count || 0,
       yellow: stats.find(s => s.traffic_light === 'YELLOW')?.count || 0,
       red: stats.find(s => s.traffic_light === 'RED')?.count || 0,
+      purple: stats.find(s => s.traffic_light === 'PURPLE')?.count || 0,
       total_captures: totalCaptures.count,
       total_electors: totalElectors.count,
       percentage: totalElectors.count > 0 ? ((totalCaptures.count / totalElectors.count) * 100).toFixed(1) : 0,

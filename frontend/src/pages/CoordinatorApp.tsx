@@ -126,6 +126,7 @@ const CoordinatorApp = () => {
   const [telefono, setTelefono] = useState('');
   const [requestMsg, setRequestMsg] = useState('');
   const [requestType, setRequestType] = useState('RESOURCES');
+  const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -212,7 +213,7 @@ const CoordinatorApp = () => {
     );
   };
 
-  const handleCapture = async (color: 'GREEN' | 'YELLOW' | 'RED') => {
+  const handleCapture = async (color: 'GREEN' | 'YELLOW' | 'RED' | 'PURPLE') => {
     if (!elector || !location || isReadOnly || !user) return;
     if (!telefono || telefono.length < 10) {
       setError('El número de teléfono es obligatorio para registrar al elector.');
@@ -259,6 +260,21 @@ const CoordinatorApp = () => {
       fetchHistory();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (showModal && user?.id) {
+      api.get(`/coordinators/${user.id}/stats`)
+        .then(res => {
+          setColorCounts({
+            green: res.data.green || 0,
+            yellow: res.data.yellow || 0,
+            red: res.data.red || 0,
+            purple: res.data.purple || 0
+          });
+        })
+        .catch(err => console.error('Error fetching color counts', err));
+    }
+  }, [showModal, user?.id]);
 
   const handleEditHistory = (cap: any) => {
     setEditingCapture(cap);
@@ -834,9 +850,9 @@ const CoordinatorApp = () => {
             )}
             {history.map((cap) => (
               <motion.div key={cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : 'var(--red)', border: '1px solid currentColor' }}>
-                  <User size={20} />
-                </div>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', border: '1px solid currentColor' }}>
+                   <User size={20} />
+                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
@@ -1037,42 +1053,59 @@ const CoordinatorApp = () => {
                 </div>
               </div>
 
-              {/* Semaphore buttons — color only */}
-              <div style={{ display: 'flex', gap: '0.75rem', padding: '0 1.5rem 2rem' }}>
-                {[
-                  { color: 'GREEN',  bg: 'linear-gradient(160deg, #22C55E 0%, #15803D 100%)', glow: 'rgba(34,197,94,0.5)',  border: 'rgba(34,197,94,0.35)' },
-                  { color: 'YELLOW', bg: 'linear-gradient(160deg, #FBBF24 0%, #D97706 100%)', glow: 'rgba(251,191,36,0.5)', border: 'rgba(251,191,36,0.35)' },
-                  { color: 'RED',    bg: 'linear-gradient(160deg, #EF4444 0%, #B91C1C 100%)', glow: 'rgba(239,68,68,0.5)',  border: 'rgba(239,68,68,0.35)' },
-                ].map(({ color, bg, glow, border }) => (
-                  <motion.button
-                    key={color}
-                    whileHover={{ scale: 1.04, y: -3 }}
-                    whileTap={{ scale: 0.94 }}
-                    onClick={() => editingCapture ? handleUpdateCapture(color) : handleCapture(color as any)}
-                    disabled={isLoading}
-                    style={{
-                      flex: 1,
-                      height: '5.5rem',
-                      background: bg,
-                      border: `1px solid ${border}`,
-                      borderRadius: '1rem',
-                      cursor: 'pointer',
-                      boxShadow: `0 8px 28px ${glow}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'box-shadow 0.2s',
-                    }}
-                  >
-                    {isLoading ? <Spinner size={22} /> : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                        {color === 'GREEN' ? <ThumbsUp size={24} /> : color === 'YELLOW' ? <HelpCircle size={24} /> : <ThumbsDown size={24} />}
-                        <span style={{ fontSize: '0.5rem', fontWeight: 900 }}>{color}</span>
-                      </div>
-                    )}
-                  </motion.button>
-                ))}
-              </div>
+               {/* Semaphore buttons — color only */}
+               <div style={{ display: 'flex', gap: '0.75rem', padding: '0 1.5rem 2rem' }}>
+                 {[
+                   { color: 'GREEN',  bg: 'linear-gradient(160deg, #22C55E 0%, #15803D 100%)', glow: 'rgba(34,197,94,0.5)',  border: 'rgba(34,197,94,0.35)', count: colorCounts.green },
+                   { color: 'YELLOW', bg: 'linear-gradient(160deg, #FBBF24 0%, #D97706 100%)', glow: 'rgba(251,191,36,0.5)', border: 'rgba(251,191,36,0.35)', count: colorCounts.yellow },
+                   { color: 'RED',    bg: 'linear-gradient(160deg, #EF4444 0%, #B91C1C 100%)', glow: 'rgba(239,68,68,0.5)',  border: 'rgba(239,68,68,0.35)', count: colorCounts.red },
+                   { color: 'PURPLE', bg: 'linear-gradient(160deg, #A855F7 0%, #7E22CE 100%)', glow: 'rgba(168,85,247,0.5)', border: 'rgba(168,85,247,0.35)', count: colorCounts.purple },
+                 ].map(({ color, bg, glow, border, count }) => (
+                    <motion.button
+                      key={color}
+                      whileHover={{ scale: 1.04, y: -3 }}
+                      whileTap={{ scale: 0.94 }}
+                      onClick={() => editingCapture ? handleUpdateCapture(color) : handleCapture(color as any)}
+                      disabled={isLoading}
+                      style={{
+                        flex: 1,
+                        height: '5.5rem',
+                        background: bg,
+                        border: `1px solid ${border}`,
+                        borderRadius: '1rem',
+                        cursor: 'pointer',
+                        boxShadow: `0 8px 28px ${glow}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'box-shadow 0.2s',
+                        position: 'relative',
+                      }}
+                    >
+                      {isLoading ? <Spinner size={22} /> : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+                          {color === 'GREEN' ? <ThumbsUp size={24} /> : color === 'YELLOW' ? <HelpCircle size={24} /> : color === 'RED' ? <ThumbsDown size={24} /> : <AlertCircle size={24} />}
+                          <span style={{ fontSize: '0.5rem', fontWeight: 900 }}>{color === 'PURPLE' ? 'ATENCIÓN' : color}</span>
+                        </div>
+                      )}
+                      {!isLoading && (
+                        <span style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: 'white',
+                          borderRadius: '999px',
+                          fontSize: '0.6rem',
+                          fontWeight: 900,
+                          padding: '0.15rem 0.4rem',
+                          minWidth: '1rem',
+                          textAlign: 'center',
+                        }}>{count}</span>
+                      )}
+                   </motion.button>
+                 ))}
+               </div>
             </motion.div>
           </motion.div>
         )}

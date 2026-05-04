@@ -476,6 +476,7 @@ select option:active {
 .btn-green  { background: linear-gradient(135deg, #16A34A, #15803D); box-shadow: 0 8px 24px rgba(22,163,74,0.4); }
 .btn-yellow { background: linear-gradient(135deg, #D97706, #B45309); box-shadow: 0 8px 24px rgba(217,119,6,0.4); }
 .btn-red    { background: linear-gradient(135deg, #DC2626, #B91C1C); box-shadow: 0 8px 24px rgba(220,38,38,0.4); }
+.btn-purple { background: linear-gradient(135deg, #A855F7, #7E22CE); box-shadow: 0 8px 24px rgba(168,85,247,0.4); }
 
 /* ============================================================
    BADGES & CHIPS
