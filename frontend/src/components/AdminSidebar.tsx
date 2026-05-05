@@ -231,6 +231,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
           </button>
         );
       })}
-    </motion.div>
+      </motion.div>
+    </>
   );
 };
