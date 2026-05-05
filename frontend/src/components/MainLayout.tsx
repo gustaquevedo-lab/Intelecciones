@@ -6,6 +6,7 @@ import { LogOut, Shield, Moon, Sun, Monitor, Menu, Clock } from 'lucide-react';
 import { ModuleSwitcher } from './ModuleSwitcher';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useSettings } from '../context/SettingsContext';
 import api from '../services/api';
 
 interface MainLayoutProps {
