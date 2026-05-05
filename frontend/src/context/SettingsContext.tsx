@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 interface Settings {
   election_date: string;
@@ -38,10 +38,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const fetchSettings = async () => {
     try {
-      let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      if (!apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
-      apiBase = apiBase.replace(/\/$/, '');
-      const res = await axios.get(`${apiBase}/api/settings`);
+      const res = await api.get('/settings');
       setSettings(prev => ({ ...prev, ...res.data }));
       if (res.data.app_name) {
         document.title = res.data.app_name;
@@ -65,10 +62,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateSettings = async (newSettings: Partial<Settings>) => {
     try {
-      let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      if (!apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
-      apiBase = apiBase.replace(/\/$/, '');
-      await axios.post(`${apiBase}/api/settings`, newSettings);
+      await api.post('/settings', newSettings);
       setSettings(prev => ({ ...prev, ...newSettings }));
     } catch (err) {
       console.error("Error updating settings:", err);

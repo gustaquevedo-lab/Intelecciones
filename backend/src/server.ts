@@ -24,6 +24,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.url}`);
+  next();
+});
+
 // 📸 Multer Setup for Photos
 const uploadDir = process.env.NODE_ENV === 'production'
   ? '/app/data/uploads'
@@ -1001,7 +1006,7 @@ app.delete('/api/users/:id', (req, res) => {
   }
 });
 
-app.post('/api/users/update-password', (req, res) => {
+app.post('/api/users/change-p', (req, res) => {
   const { user_id, new_password } = req.body;
   console.log(`[AUTH] Updating password for user ID: ${user_id}`);
   try {

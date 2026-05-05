@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Logo } from '../components/Logo';
 import { PLRABackground } from '../components/PLRABackground';
+import api from '../services/api';
 import './Login.css';
 
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import axios from 'axios';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -35,16 +35,11 @@ const Login = () => {
       } else {
         if (loggedUser.role === 'SUPERUSUARIO') navigate('/admin');
         else if (loggedUser.role === 'JEFE_CAMPANA' || loggedUser.role === 'CANDIDATO') navigate('/comando');
-        else navigate('/coordinador'); // PADRINO and COORDINADOR go here
+        else navigate('/coordinador'); 
       }
     } catch (error: any) {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      if (error.message === 'Credenciales inválidas') {
-        setError('Usuario o contraseña incorrectos.');
-      } else {
-        setError(`Error de acceso. Verifique su conexión.`);
-        console.error("Login Error:", error);
-      }
+      console.error("Login Error:", error);
+      setError(`Error de acceso: ${error.message || 'Verifique su conexión'}`);
     } finally {
       setIsLoading(false);
     }
@@ -63,8 +58,7 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await axios.post(`${apiURL}/api/users/update-password`, {
+      await api.post('/users/change-p', {
         user_id: onboardingUser.id,
         new_password: newPassword
       });
