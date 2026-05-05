@@ -140,7 +140,13 @@ const CoordinatorApp = () => {
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const frontCameraInputRef = React.useRef<HTMLInputElement>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
   const padrinoFileInputRef = React.useRef<HTMLInputElement>(null);
+  const padrinoFrontCameraInputRef = React.useRef<HTMLInputElement>(null);
+  const padrinoGalleryInputRef = React.useRef<HTMLInputElement>(null);
+  
+  const [showPhotoSource, setShowPhotoSource] = useState<'NONE' | 'COORD' | 'PADRINO'>('NONE');
   const [teamStats, setTeamStats] = useState<any[]>([]);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [selectedCoordDetail, setSelectedCoordDetail] = useState<any>(null);
@@ -1688,6 +1694,43 @@ const CoordinatorApp = () => {
                   </button>
                 </div>
 
+                {/* Photo Source Selector Overlay */}
+                <AnimatePresence>
+                  {showPhotoSource === 'COORD' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      style={{ 
+                        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+                        background: 'rgba(10,14,23,0.95)', backdropFilter: 'blur(20px)',
+                        padding: '1.5rem', borderTop: '1px solid var(--border)',
+                        borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
+                        boxShadow: '0 -10px 40px rgba(0,0,0,0.5)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--plra-300)' }}>ORIGEN DE LA FOTO</span>
+                        <X size={18} onClick={() => setShowPhotoSource('NONE')} style={{ color: 'var(--text-3)', cursor: 'pointer' }} />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                        <button type="button" onClick={() => { fileInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+                          <Camera size={24} />
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>TRASERA</span>
+                        </button>
+                        <button type="button" onClick={() => { frontCameraInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+                          <User size={24} />
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>SELFIE</span>
+                        </button>
+                        <button type="button" onClick={() => { galleryInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+                          <LayoutList size={24} />
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>GALERÍA</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div style={{ padding: '1.75rem' }}>
                   {error && (
                     <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '0.85rem', borderRadius: '14px', color: 'var(--red)', fontSize: '0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1697,7 +1740,7 @@ const CoordinatorApp = () => {
 
                   <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
                     <div 
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => setShowPhotoSource('COORD')}
                       style={{ 
                         width: '80px', height: '80px', borderRadius: '18px', 
                         background: 'var(--surface-light)', border: '2px dashed var(--border)',
@@ -1767,19 +1810,33 @@ const CoordinatorApp = () => {
                   </button>
                 </div>
 
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    style={{ display: 'none' }} 
-                    accept="image/*" 
-                    capture="environment" /* Force camera on mobile */
+                  {/* Invisible Inputs for Coordinator */}
+                  <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" capture="environment" 
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
                         const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setCropperData({ image: event.target?.result as string });
-                        };
+                        reader.onload = (event) => setCropperData({ image: event.target?.result as string });
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                  <input type="file" ref={frontCameraInputRef} style={{ display: 'none' }} accept="image/*" capture="user" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => setCropperData({ image: event.target?.result as string });
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                  <input type="file" ref={galleryInputRef} style={{ display: 'none' }} accept="image/*" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => setCropperData({ image: event.target?.result as string });
                         reader.readAsDataURL(file);
                       }
                     }} 
@@ -1814,10 +1871,47 @@ const CoordinatorApp = () => {
                   <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>ADMINISTRADOR DE EQUIPO BAJO TU CARGO</p>
                 </div>
 
+                {/* Photo Source Selector Overlay (Padrino) */}
+                <AnimatePresence>
+                  {showPhotoSource === 'PADRINO' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      style={{ 
+                        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
+                        background: 'rgba(10,14,23,0.95)', backdropFilter: 'blur(20px)',
+                        padding: '1.5rem', borderTop: '1px solid var(--border)',
+                        borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
+                        boxShadow: '0 -10px 40px rgba(0,0,0,0.5)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--plra-300)' }}>ORIGEN DE LA FOTO</span>
+                        <X size={18} onClick={() => setShowPhotoSource('NONE')} style={{ color: 'var(--text-3)', cursor: 'pointer' }} />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                        <button type="button" onClick={() => { padrinoFileInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+                          <Camera size={24} />
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>TRASERA</span>
+                        </button>
+                        <button type="button" onClick={() => { padrinoFrontCameraInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+                          <User size={24} />
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>SELFIE</span>
+                        </button>
+                        <button type="button" onClick={() => { padrinoGalleryInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+                          <LayoutList size={24} />
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>GALERÍA</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div style={{ padding: '2rem' }}>
                   <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div 
-                      onClick={() => padrinoFileInputRef.current?.click()}
+                      onClick={() => setShowPhotoSource('PADRINO')}
                       style={{ 
                         width: '100px', height: '100px', borderRadius: '15px', 
                         background: 'var(--surface-light)', border: '2px dashed var(--border)',
@@ -1863,19 +1957,33 @@ const CoordinatorApp = () => {
                     />
                   </div>
 
-                  <input 
-                    type="file" 
-                    ref={padrinoFileInputRef} 
-                    style={{ display: 'none' }} 
-                    accept="image/*" 
-                    capture="environment" /* Force camera on mobile */
+                  {/* Invisible Inputs for Padrino */}
+                  <input type="file" ref={padrinoFileInputRef} style={{ display: 'none' }} accept="image/*" capture="environment" 
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
                         const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setCropperData({ image: event.target?.result as string });
-                        };
+                        reader.onload = (event) => setCropperData({ image: event.target?.result as string });
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                  <input type="file" ref={padrinoFrontCameraInputRef} style={{ display: 'none' }} accept="image/*" capture="user" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => setCropperData({ image: event.target?.result as string });
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                  <input type="file" ref={padrinoGalleryInputRef} style={{ display: 'none' }} accept="image/*" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => setCropperData({ image: event.target?.result as string });
                         reader.readAsDataURL(file);
                       }
                     }} 
