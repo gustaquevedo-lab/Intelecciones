@@ -14,6 +14,7 @@ import {
 import MainLayout from '../components/MainLayout';
 import { ManagementTable } from '../components/ManagementTable';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CountdownCard } from '../components/CountdownCard';
@@ -297,6 +298,7 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
 };
 
 const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isReadOnly }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, isReadOnly: boolean }) => {
+  const { isDark } = useTheme();
   const criticalLocs = stats?.locations?.filter((l: any) => parseFloat(l.percentage) < 30).sort((a: any, b: any) => parseFloat(a.percentage) - parseFloat(b.percentage)).slice(0, 3) || [];
   const topCoordinators = stats?.top_coordinators || [];
 
@@ -438,6 +440,7 @@ const MapHandler = ({ center, selectedLocalId }: { center: [number, number] | nu
 const CommandCenter = () => {
   const { user: authUser, loading, activeListId } = useAuth();
   const { settings } = useSettings();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const [locales, setLocales] = useState<any[]>([]);
   const [captures, setCaptures] = useState<any[]>([]);
