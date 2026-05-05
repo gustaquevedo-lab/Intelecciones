@@ -256,7 +256,7 @@ app.get('/api/electors/:ci', (req, res) => {
   const list_id = getListId(req);
   
   const elector = db.prepare(`
-    SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by
+    SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, c.telefono
     FROM electors e
     LEFT JOIN elector_captures c ON e.ci = c.elector_ci AND (c.list_id = ? OR ? IS NULL)
     WHERE e.ci = ?

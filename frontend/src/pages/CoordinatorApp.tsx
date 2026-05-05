@@ -33,7 +33,27 @@ const formatWhatsApp = (phone: string) => {
   return `595${normalized}`;
 };
 
-/* ─── tiny reusable pieces ─────────────────────────────── */
+const handlePhoneChange = (value: string, setter: (v: string) => void) => {
+  // Remove everything except digits
+  let clean = value.replace(/\D/g, '');
+  
+  // If starts with 595, keep only what follows to normalize
+  if (clean.startsWith('595')) {
+    clean = clean.substring(3);
+  }
+  
+  // If starts with 0, remove it (Paraguayan mobile standard)
+  if (clean.startsWith('0')) {
+    clean = clean.substring(1);
+  }
+  
+  // Re-apply prefix if there's any number
+  if (clean.length > 0) {
+    setter(`+595 ${clean}`);
+  } else {
+    setter('');
+  }
+};
 
 const Spinner = ({ size = 22 }: { size?: number }) => (
   <div
@@ -983,26 +1003,48 @@ const CoordinatorApp = () => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleShare}
-                    style={{
-                      width: '3.5rem', height: '3.5rem',
-                      borderRadius: '16px',
-                      background: 'rgba(255,255,255,0.12)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      flexShrink: 0
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
-                  >
-                    <Share2 size={22} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    {elector.telefono && (
+                      <a 
+                        href={`https://wa.me/${formatWhatsApp(elector.telefono)}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{ 
+                          width: '3.5rem', height: '3.5rem', 
+                          borderRadius: '16px', 
+                          background: '#25D366', 
+                          color: 'white', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          boxShadow: '0 8px 24px rgba(37,211,102,0.3)',
+                          textDecoration: 'none' 
+                        }}
+                      >
+                        <MessageSquare size={22} />
+                      </a>
+                    )}
+                    <button
+                      onClick={handleShare}
+                      style={{
+                        width: '3.5rem', height: '3.5rem',
+                        borderRadius: '16px',
+                        background: 'rgba(255,255,255,0.12)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        flexShrink: 0
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                    >
+                      <Share2 size={22} />
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ position: 'relative', zIndex: 5 }}>
@@ -1816,7 +1858,7 @@ const CoordinatorApp = () => {
                         style={{ height: '44px', fontSize: '0.9rem' }} 
                         placeholder="+595 9xx xxx xxx"
                         value={newCoordTelefono}
-                        onChange={e => setNewCoordTelefono(e.target.value)}
+                        onChange={e => handlePhoneChange(e.target.value, setNewCoordTelefono)}
                       />
                     </div>
                   </div>
@@ -1995,7 +2037,7 @@ const CoordinatorApp = () => {
                       className="modern-input-premium-styled" 
                       placeholder="+595 9xx xxx xxx"
                       value={newPadrinoTelefono} 
-                      onChange={e => setNewPadrinoTelefono(e.target.value)} 
+                      onChange={e => handlePhoneChange(e.target.value, setNewPadrinoTelefono)} 
                       required
                     />
                   </div>
