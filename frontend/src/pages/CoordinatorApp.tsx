@@ -4,7 +4,7 @@ import {
   Search, MapPin, User, CheckCircle2,
   Map, Building2, Home, Briefcase,
   ClipboardCheck, ArrowRight, AlertCircle,
-  CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare, Fingerprint,
+  CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare, Fingerprint, Landmark,
   UserPlus, Camera, Settings, LayoutList, CheckCircle, Users, Mic, Square, ChevronRight,
   Car, Inbox, ArrowLeft
 } from 'lucide-react';
@@ -1675,7 +1675,7 @@ const CoordinatorApp = () => {
                       inputMode="tel"
                       placeholder="+595 9xx xxx xxx"
                       value={telefono}
-                      onChange={(e) => formatWhatsApp(e.target.value)}
+                      onChange={(e) => handlePhoneChange(e.target.value, setTelefono)}
                       className="modern-input-premium-styled"
                       style={{ paddingLeft: '2.8rem', fontSize: '1rem', fontWeight: 700 }}
                     />
