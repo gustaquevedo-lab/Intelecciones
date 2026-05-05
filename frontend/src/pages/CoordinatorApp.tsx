@@ -421,7 +421,22 @@ const CoordinatorApp = () => {
   useEffect(() => {
     if (activeTab === 'history') fetchHistory();
     if (activeTab === 'coordinators') fetchMyCoordinators();
+    if (activeTab === 'support') fetchRequests();
   }, [activeTab]);
+
+  const fetchRequests = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get('/admin/requests');
+      // Filter for current coordinator if not admin
+      const filtered = user.role === 'SUPERUSUARIO' || user.role === 'JEFE_CAMPANA' 
+        ? res.data 
+        : res.data.filter((r: any) => r.coordinator_id === user.id);
+      setRequests(filtered);
+    } catch (err) {
+      console.error("Error fetching requests", err);
+    }
+  };
 
   useEffect(() => {
     const lookup = async () => {
@@ -1320,6 +1335,58 @@ const CoordinatorApp = () => {
               >
                 {isLoading ? <Spinner /> : 'Enviar Solicitud'}
               </button>
+            </div>
+
+            {/* List of past requests */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <SectionLabel icon={<History size={13} />} text="Mis Solicitudes Anteriores" />
+              {requests.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>No tienes solicitudes registradas.</p>
+                </div>
+              ) : requests.map((req) => (
+                <div key={req.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ 
+                        padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.55rem', fontWeight: 900,
+                        background: req.status === 'PENDING' ? 'rgba(245,158,11,0.1)' : req.status === 'APPROVED' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                        color: req.status === 'PENDING' ? 'var(--yellow)' : req.status === 'APPROVED' ? 'var(--green)' : 'var(--red)',
+                        border: '1px solid currentColor'
+                      }}>
+                        {req.status === 'PENDING' ? 'PENDIENTE' : req.status === 'APPROVED' ? 'APROBADO' : 'RECHAZADO'}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-300)' }}>{req.type}</span>
+                    </div>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(req.timestamp).toLocaleDateString()}</span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text)', margin: '0 0 1rem 0', lineHeight: '1.4' }}>{req.description}</p>
+                  
+                  {/* Multimedia in CoordinatorApp */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    {req.photo_url && (
+                      <div 
+                        onClick={() => window.open(req.photo_url, '_blank')}
+                        style={{ width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' }}
+                      >
+                        <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                          <Search size={16} color="white" />
+                        </div>
+                      </div>
+                    )}
+                    {req.audio_url && (
+                      <div style={{ flex: 1, minWidth: '150px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <Mic size={10} style={{ color: 'var(--plra-300)' }} />
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)' }}>Nota de voz</span>
+                        </div>
+                        <audio controls src={req.audio_url} style={{ width: '100%', height: '32px' }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </motion.div>
         ) : null}

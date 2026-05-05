@@ -129,20 +129,35 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
         <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(req.timestamp).toLocaleTimeString()}</span>
       </div>
       <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.25rem' }}>{req.type}</p>
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1rem' }}>{req.description}</p>
+      <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1rem', lineHeight: '1.4' }}>{req.description}</p>
       
-      {/* Multimedia Display */}
-      {req.photo_url && (
-        <div style={{ marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-          <img src={req.photo_url} alt="Reporte" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
-        </div>
-      )}
-      
-      {req.audio_url && (
-        <div style={{ marginBottom: '1rem' }}>
-          <audio controls src={req.audio_url} style={{ width: '100%', height: '32px' }} />
-        </div>
-      )}
+      {/* Multimedia Display (Premium) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        {req.photo_url && (
+          <div 
+            onClick={() => window.open(req.photo_url, '_blank')}
+            style={{ 
+              width: '100%', maxWidth: '100%', height: '120px', borderRadius: '12px', 
+              overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' 
+            }}
+          >
+            <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+              <Search size={20} color="white" />
+            </div>
+          </div>
+        )}
+        
+        {req.audio_url && (
+          <div style={{ width: '100%', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <Mic size={12} style={{ color: 'var(--plra-300)' }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Reporte de Audio</span>
+            </div>
+            <audio controls src={req.audio_url} style={{ width: '100%', height: '32px' }} />
+          </div>
+        )}
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
