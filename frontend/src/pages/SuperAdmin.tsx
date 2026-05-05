@@ -47,7 +47,7 @@ import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leafl
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -1531,6 +1531,7 @@ const SuperAdmin = () => {
               {activeTab === 'logistics' && renderLogistics()}
               {activeTab === 'audit' && renderAudit()}
               {activeTab === 'locales' && renderLocales()}
+              {activeTab === 'whatsapp' && <Navigate to="/comunicaciones" />}
               {activeTab === 'settings' && renderSettings()}
             </motion.div>
           </AnimatePresence>

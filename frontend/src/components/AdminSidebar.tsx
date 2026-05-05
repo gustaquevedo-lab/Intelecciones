@@ -11,7 +11,8 @@ import {
   Truck,
   ChevronLeft,
   ChevronRight,
-  Menu
+  Menu,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { id: 'lists',     label: 'Listas',     icon: ListOrdered },
   { id: 'users',     label: 'Usuarios',   icon: Users },
   { id: 'locales',   label: 'Locales',    icon: MapPin },
+  { id: 'whatsapp',  label: 'WhatsApp',   icon: MessageSquare },
   { id: 'audit',     label: 'Auditoría',  icon: History },
   { id: 'settings',  label: 'Ajustes',    icon: Settings },
 ];
@@ -55,7 +57,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
 
   return (
     <motion.div 
-      animate={{ width: isCollapsed ? '70px' : '220px' }}
+      animate={{ width: isCollapsed ? '70px' : '200px' }}
       style={{
         background: 'rgba(2, 12, 27, 0.5)',
         borderRight: '1px solid var(--border)',
@@ -130,8 +132,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               display: 'flex',
               alignItems: 'center',
               justifyContent: isCollapsed ? 'center' : 'flex-start',
-              padding: isCollapsed ? '0.75rem 0' : '0.75rem 1rem',
-              borderRadius: '12px',
+              padding: isCollapsed ? '0.75rem 0' : '0.55rem 0.85rem',
+              borderRadius: '10px',
               border: 'none',
               background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
               color: isActive ? 'var(--plra-200)' : 'var(--text-3)',
@@ -141,7 +143,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               textAlign: 'left',
               width: '100%',
               overflow: 'hidden',
-              gap: '0.85rem'
+              gap: '0.75rem'
             }}
             onMouseEnter={e => {
               if (!isActive) {
@@ -169,13 +171,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
                 }}
               />
             )}
-            <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} style={{ minWidth: '20px' }} />
+            <item.icon size={18} strokeWidth={isActive ? 2.2 : 1.5} style={{ minWidth: '18px' }} />
             {!isCollapsed && (
               <motion.span 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 style={{
-                  fontSize: '0.85rem',
+                  fontSize: '0.8rem',
                   fontWeight: isActive ? 700 : 500,
                   fontFamily: 'var(--font-display)',
                   whiteSpace: 'nowrap'

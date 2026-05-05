@@ -1618,14 +1618,130 @@ app.post('/api/whatsapp/disconnect', (req, res) => {
   res.json({ success: true });
 });
 
+app.get('/api/whatsapp/templates', (req, res) => {
+  try {
+    const templates = db.prepare('SELECT * FROM whatsapp_templates ORDER BY created_at DESC').all();
+    res.json(templates);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/whatsapp/templates', (req, res) => {
+  const { name, content, media_url, media_type, lat, lng } = req.body;
+  try {
+    const result = db.prepare(`
+      INSERT INTO whatsapp_templates (name, content, media_url, media_type, lat, lng)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(name, content, media_url, media_type, lat, lng);
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/whatsapp/templates/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM whatsapp_templates WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/broadcast/logs', (req, res) => {
+  try {
+    const logs = db.prepare(`
+      SELECT l.*, t.name as template_name 
+      FROM whatsapp_broadcast_logs l
+      JOIN whatsapp_templates t ON l.template_id = t.id
+      ORDER BY l.timestamp DESC LIMIT 50
+    `).all();
+    res.json(logs);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/whatsapp/broadcast', async (req, res) => {
-  const { template_id, target_list_id, custom_message } = req.body;
+  const { template_id, target_list_id, target_role, traffic_light } = req.body;
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
 
   try {
-    // Logic for mass sending with delays
-    res.json({ success: true, queued: 1240 });
+    const template = db.prepare('SELECT * FROM whatsapp_templates WHERE id = ?').get(template_id) as any;
+    if (!template) return res.status(404).json({ error: 'Plantilla no encontrada' });
+
+    // Identify targets
+    let targets: any[] = [];
+    if (target_role) {
+      // Targets are users
+      let query = 'SELECT telefono, nombre FROM users WHERE telefono IS NOT NULL AND telefono != ""';
+      const params: any[] = [];
+      if (target_role !== 'ALL') {
+        query += ' AND role = ?';
+        params.push(target_role);
+      }
+      if (target_list_id) {
+        query += ' AND assigned_list_id = ?';
+        params.push(target_list_id);
+      }
+      targets = db.prepare(query).all(...params);
+    } else if (traffic_light) {
+      // Targets are electors from captures
+      let query = 'SELECT telefono, elector_ci FROM elector_captures WHERE telefono IS NOT NULL AND telefono != ""';
+      const params: any[] = [];
+      if (traffic_light !== 'ALL') {
+        query += ' AND traffic_light = ?';
+        params.push(traffic_light);
+      }
+      if (target_list_id) {
+        query += ' AND list_id = ?';
+        params.push(target_list_id);
+      }
+      targets = db.prepare(query).all(...params);
+    }
+
+    if (targets.length === 0) return res.status(400).json({ error: 'No se encontraron destinatarios con teléfono' });
+
+    // Create log entry
+    const logResult = db.prepare(`
+      INSERT INTO whatsapp_broadcast_logs (template_id, target_count, status)
+      VALUES (?, ?, 'RUNNING')
+    `).run(template_id, targets.length);
+    const logId = logResult.lastInsertRowid;
+
+    // Start background process
+    const runBroadcast = async () => {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const target of targets) {
+        try {
+          // Anti-ban delay: 2-5 seconds
+          await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
+          
+          if (template.media_type === 'VOICE') {
+            await whatsappService.sendVoice(target.telefono, template.media_url);
+          } else if (template.media_type === 'LOCATION') {
+            await whatsappService.sendLocation(target.telefono, template.lat, template.lng, template.content);
+          } else if (template.media_url) {
+            await whatsappService.sendMedia(target.telefono, template.media_url, template.content);
+          } else {
+            await whatsappService.sendMessage(target.telefono, template.content);
+          }
+          successCount++;
+        } catch (err) {
+          console.error(`Broadcast failed for ${target.telefono}:`, err);
+          failCount++;
+        }
+        
+        // Update progress every 5 messages
+        if ((successCount + failCount) % 5 === 0) {
+          db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
+            .run(successCount, failCount, logId);
+        }
+      }
+
+      db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ?, status = "COMPLETED" WHERE id = ?')
+        .run(successCount, failCount, logId);
+    };
+
+    runBroadcast(); // Non-blocking
+
+    res.json({ success: true, log_id: logId, target_count: targets.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

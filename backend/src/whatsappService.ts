@@ -1,5 +1,6 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
+import axios from 'axios';
 
 class WhatsAppService {
   private client: Client;
@@ -14,7 +15,16 @@ class WhatsAppService {
     this.client = new Client({
       authStrategy: new LocalAuth({ dataPath: sessionPath }),
       puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu'
+        ],
         headless: true
       }
     });
@@ -70,10 +80,61 @@ class WhatsAppService {
     return { status: this.status, qr: this.qrCode };
   }
 
+  private async getChatId(number: string) {
+    let cleanNumber = number.replace(/\D/g, '');
+    if (!cleanNumber.startsWith('595')) {
+      cleanNumber = `595${cleanNumber.replace(/^0/, '')}`;
+    }
+    return `${cleanNumber}@c.us`;
+  }
+
   async sendMessage(number: string, message: string) {
-    if (this.status !== 'CONNECTED') throw new Error('WhatsApp not connected');
-    const chatId = number.includes('@c.us') ? number : `${number}@c.us`;
+    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
+    const chatId = await this.getChatId(number);
     return await this.client.sendMessage(chatId, message);
+  }
+
+  async sendMedia(number: string, mediaUrl: string, caption?: string) {
+    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
+    const chatId = await this.getChatId(number);
+    
+    const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
+    const mimetype = response.headers['content-type'];
+    const media = new MessageMedia(
+      mimetype,
+      Buffer.from(response.data).toString('base64'),
+      mediaUrl.split('/').pop()
+    );
+
+    return await this.client.sendMessage(chatId, media, { caption });
+  }
+
+  async sendVoice(number: string, audioUrl: string) {
+    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
+    const chatId = await this.getChatId(number);
+    
+    const response = await axios.get(audioUrl, { responseType: 'arraybuffer' });
+    const mimetype = response.headers['content-type'];
+    const media = new MessageMedia(
+      mimetype,
+      Buffer.from(response.data).toString('base64')
+    );
+
+    // sendAudio with sendAudioAsVoice: true makes it appear as a voice note (PTT)
+    return await this.client.sendMessage(chatId, media, { sendAudioAsVoice: true });
+  }
+
+  async sendLocation(number: string, lat: number, lng: number, description?: string) {
+    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
+    const chatId = await this.getChatId(number);
+    // In whatsapp-web.js, we send locations like this:
+    return await this.client.sendMessage(chatId, {
+      location: {
+        latitude: lat,
+        longitude: lng,
+        description: description || 'Ubicación compartida'
+      }
+    } as any);
   }
 }
 
