@@ -52,7 +52,7 @@ import { useAuth } from '../context/AuthContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CountdownCard } from '../components/CountdownCard';
-import api from '../services/api';
+import api, { API_BASE } from '../services/api';
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -158,6 +158,7 @@ const SuperAdmin = () => {
   const [electionEndTime, setElectionEndTime] = useState('17:00');
   const [globalGoal, setGlobalGoal] = useState(10000);
   const [masterKey, setMasterKey] = useState('');
+  const [appName, setAppName] = useState('Intelecciones');
   const [appLogoUrl, setAppLogoUrl] = useState('');
   const [shareMessage, setShareMessage] = useState('🔹 *DATOS ELECTORALES* 🔹');
   const [shareMessageFooter, setShareMessageFooter] = useState('#Intelecciones #PLRA #DíaD');

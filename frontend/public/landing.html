@@ -623,9 +623,19 @@
         width: 38px; height: 38px; border-radius: 10px;
         border: 1px solid var(--border); background: transparent;
         color: var(--text-2); cursor: pointer;
+        order: 3;
       }
       .theme-toggle { display: none; }
-      .nav-inner > div:last-child .btn-secondary,
+      .nav-inner > div:last-child { gap: 0.75rem !important; }
+      .nav-inner > div:last-child .btn-secondary { 
+        display: flex !important; 
+        padding: 0.45rem 1rem !important;
+        font-size: 0.75rem !important;
+        background: linear-gradient(135deg, var(--blue), var(--navy)) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(46,132,240,0.3);
+      }
       .nav-inner > div:last-child .btn-primary { display: none; }
       .nav-logo svg { width: 30px; height: 30px; }
       .nav-wordmark { font-size: 0.95rem; }
@@ -633,8 +643,9 @@
       /* ── HERO ── */
       .hero { padding: 5rem 0 3rem; }
       .hero-title { font-size: clamp(1.8rem, 8vw, 2.8rem); }
-      .hero-ctas { flex-direction: column; }
+      .hero-ctas { flex-direction: column; gap: 0.75rem !important; }
       .hero-ctas .btn-primary, .hero-ctas .btn-secondary { width: 100%; justify-content: center; }
+      .hero-login-mobile { display: flex !important; margin-bottom: 0.5rem; }
       .hero-stats { gap: 1rem; }
       .hero-stat-num { font-size: 1.4rem; }
 
@@ -721,7 +732,7 @@
         <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema claro/oscuro" title="Cambiar tema">
           <!-- ícono se inyecta por JS -->
         </button>
-        <a href="/login" target="_top" class="btn-secondary" style="padding:0.55rem 1.1rem;font-size:0.82rem;border-color:rgba(90,172,255,0.25);color:var(--blue-lt)" aria-label="Ingresar al sistema">
+        <a href="/login" target="_top" class="btn-secondary btn-login-nav" style="padding:0.55rem 1.1rem;font-size:0.82rem;border-color:rgba(90,172,255,0.25);color:var(--blue-lt)" aria-label="Ingresar al sistema">
            Ingresar
          </a>
         <a href="#contacto" class="btn-primary" style="padding:0.55rem 1.1rem;font-size:0.82rem;" aria-label="Solicitar demo de Intelecciones">
@@ -772,6 +783,9 @@
           Centro de comando en tiempo real, coordinación de campo móvil, logística de transporte, veeduría digital y WhatsApp masivo — todo integrado, todo sincronizado.
         </p>
         <div class="hero-ctas">
+          <a href="/login" target="_top" class="btn-primary hero-login-mobile" style="display:none; background: linear-gradient(135deg, var(--blue), var(--blue-lt)); box-shadow: 0 8px 25px rgba(46,132,240,0.4);">
+             Acceder al Sistema
+          </a>
           <a href="#contacto" class="btn-primary">Solicitar Demo gratuita →</a>
           <a href="https://wa.me/595994516360?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20Intelecciones" class="btn-secondary" target="_blank" rel="noopener" style="gap:0.5rem">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#25D366" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.528 5.852L0 24l6.334-1.506A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.797 9.797 0 0 1-5.032-1.388l-.36-.214-3.762.895.952-3.666-.234-.375A9.794 9.794 0 0 1 2.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/></svg>
