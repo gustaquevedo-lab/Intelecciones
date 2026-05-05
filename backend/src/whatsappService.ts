@@ -127,7 +127,6 @@ class WhatsAppService {
   async sendLocation(number: string, lat: number, lng: number, description?: string) {
     if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
     const chatId = await this.getChatId(number);
-    // In whatsapp-web.js, we send locations like this:
     return await this.client.sendMessage(chatId, {
       location: {
         latitude: lat,
@@ -135,6 +134,16 @@ class WhatsAppService {
         description: description || 'Ubicación compartida'
       }
     } as any);
+  }
+
+  async sendContact(targetNumber: string, contactName: string, contactNumber: string) {
+    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
+    const chatId = await this.getChatId(targetNumber);
+    
+    // Generate simple VCard
+    const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${contactName}\nTEL;type=CELL;type=VOICE;waid=${contactNumber.replace(/\D/g, '')}:${contactNumber}\nEND:VCARD`;
+    
+    return await this.client.sendMessage(chatId, vcard);
   }
 }
 

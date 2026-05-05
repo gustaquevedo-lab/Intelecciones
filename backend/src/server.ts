@@ -1626,12 +1626,12 @@ app.get('/api/whatsapp/templates', (req, res) => {
 });
 
 app.post('/api/whatsapp/templates', (req, res) => {
-  const { name, content, media_url, media_type, lat, lng } = req.body;
+  const { name, content, media_url, media_type, lat, lng, contact_name, contact_phone } = req.body;
   try {
     const result = db.prepare(`
-      INSERT INTO whatsapp_templates (name, content, media_url, media_type, lat, lng)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(name, content, media_url, media_type, lat, lng);
+      INSERT INTO whatsapp_templates (name, content, media_url, media_type, lat, lng, contact_name, contact_phone)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(name, content, media_url, media_type, lat, lng, contact_name, contact_phone);
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -1680,15 +1680,20 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
       }
       targets = db.prepare(query).all(...params);
     } else if (traffic_light) {
-      // Targets are electors from captures
-      let query = 'SELECT telefono, elector_ci FROM elector_captures WHERE telefono IS NOT NULL AND telefono != ""';
+      // Targets are electors from captures - JOIN with electors to get names
+      let query = `
+        SELECT ec.telefono, e.nombre, ec.elector_ci 
+        FROM elector_captures ec
+        JOIN electors e ON ec.elector_ci = e.ci
+        WHERE ec.telefono IS NOT NULL AND ec.telefono != ""
+      `;
       const params: any[] = [];
       if (traffic_light !== 'ALL') {
-        query += ' AND traffic_light = ?';
+        query += ' AND ec.traffic_light = ?';
         params.push(traffic_light);
       }
       if (target_list_id) {
-        query += ' AND list_id = ?';
+        query += ' AND ec.list_id = ?';
         params.push(target_list_id);
       }
       targets = db.prepare(query).all(...params);
@@ -1713,14 +1718,19 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           // Anti-ban delay: 2-5 seconds
           await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
           
+          // Personalized content
+          const personalizedContent = template.content ? template.content.replace(/{{nombre}}/g, target.nombre || 'Amigo/a') : '';
+
           if (template.media_type === 'VOICE') {
             await whatsappService.sendVoice(target.telefono, template.media_url);
           } else if (template.media_type === 'LOCATION') {
-            await whatsappService.sendLocation(target.telefono, template.lat, template.lng, template.content);
+            await whatsappService.sendLocation(target.telefono, template.lat, template.lng, personalizedContent);
+          } else if (template.media_type === 'CONTACT') {
+            await whatsappService.sendContact(target.telefono, template.contact_name, template.contact_phone);
           } else if (template.media_url) {
-            await whatsappService.sendMedia(target.telefono, template.media_url, template.content);
+            await whatsappService.sendMedia(target.telefono, template.media_url, personalizedContent);
           } else {
-            await whatsappService.sendMessage(target.telefono, template.content);
+            await whatsappService.sendMessage(target.telefono, personalizedContent);
           }
           successCount++;
         } catch (err) {
@@ -1742,6 +1752,24 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
     runBroadcast(); // Non-blocking
 
     res.json({ success: true, log_id: logId, target_count: targets.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/whatsapp/direct-message', async (req, res) => {
+  const { number, message, media_url, media_type, lat, lng } = req.body;
+  try {
+    if (media_type === 'VOICE') {
+      await whatsappService.sendVoice(number, media_url);
+    } else if (media_type === 'LOCATION') {
+      await whatsappService.sendLocation(number, lat, lng, message);
+    } else if (media_url) {
+      await whatsappService.sendMedia(number, media_url, message);
+    } else {
+      await whatsappService.sendMessage(number, message);
+    }
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

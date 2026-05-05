@@ -179,6 +179,8 @@ db.exec(`
     media_type TEXT, -- 'IMAGE', 'VIDEO', 'AUDIO', 'VOICE', 'LOCATION'
     lat REAL,
     lng REAL,
+    contact_name TEXT,
+    contact_phone TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 

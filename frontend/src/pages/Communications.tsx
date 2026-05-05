@@ -30,7 +30,9 @@ const Communications = () => {
     media_url: '',
     media_type: 'TEXT',
     lat: -25.2637,
-    lng: -57.5759
+    lng: -57.5759,
+    contact_name: '',
+    contact_phone: ''
   });
 
   // Broadcast Form State
@@ -297,6 +299,7 @@ const Communications = () => {
                             {t.media_type === 'VIDEO' && <Video size={20} />}
                             {t.media_type === 'VOICE' && <Mic size={20} />}
                             {t.media_type === 'LOCATION' && <MapPin size={20} />}
+                            {t.media_type === 'CONTACT' && <Users size={20} />}
                             {t.media_type === 'TEXT' && <FileText size={20} />}
                           </div>
                           <div>
@@ -309,11 +312,18 @@ const Communications = () => {
                         </button>
                       </div>
 
-                      {t.media_url && (
+                      {t.media_url && t.media_type !== 'CONTACT' && (
                         <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}>
                           {t.media_type === 'IMAGE' && <img src={t.media_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                           {t.media_type === 'VIDEO' && <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Video size={40} style={{ opacity: 0.3 }} /></div>}
                           {t.media_type === 'VOICE' && <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Mic size={40} style={{ opacity: 0.3 }} /></div>}
+                        </div>
+                      )}
+
+                      {t.media_type === 'CONTACT' && (
+                        <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+                           <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>{t.contact_name}</p>
+                           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{t.contact_phone}</p>
                         </div>
                       )}
 
@@ -569,10 +579,11 @@ const Communications = () => {
                       <option value="VIDEO">Video</option>
                       <option value="VOICE">Nota de Voz (PTT)</option>
                       <option value="LOCATION">Ubicación GPS</option>
+                      <option value="CONTACT">Contacto (VCard)</option>
                     </select>
                   </div>
 
-                  {newTemplate.media_type !== 'TEXT' && newTemplate.media_type !== 'LOCATION' && (
+                  {newTemplate.media_type !== 'TEXT' && newTemplate.media_type !== 'LOCATION' && newTemplate.media_type !== 'CONTACT' && (
                     <div className="form-group">
                       <label>Archivo Multimedia</label>
                       <div 
@@ -599,6 +610,29 @@ const Communications = () => {
                       <div className="form-group">
                         <label>Longitud</label>
                         <input className="modern-input-premium-styled" type="number" step="any" value={newTemplate.lng} onChange={e => setNewTemplate(prev => ({ ...prev, lng: parseFloat(e.target.value) }))} />
+                      </div>
+                    </>
+                  )}
+
+                  {newTemplate.media_type === 'CONTACT' && (
+                    <>
+                      <div className="form-group">
+                        <label>Nombre del Contacto</label>
+                        <input 
+                          className="modern-input-premium-styled" 
+                          placeholder="Ej: Lic. Juan Pérez" 
+                          value={newTemplate.contact_name} 
+                          onChange={e => setNewTemplate(prev => ({ ...prev, contact_name: e.target.value }))} 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Teléfono (con prefijo)</label>
+                        <input 
+                          className="modern-input-premium-styled" 
+                          placeholder="Ej: 595981123456" 
+                          value={newTemplate.contact_phone} 
+                          onChange={e => setNewTemplate(prev => ({ ...prev, contact_phone: e.target.value }))} 
+                        />
                       </div>
                     </>
                   )}
