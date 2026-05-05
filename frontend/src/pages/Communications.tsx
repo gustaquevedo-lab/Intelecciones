@@ -396,7 +396,7 @@ const Communications = () => {
                              <h4 style={{ color: 'var(--green)', margin: '0 0 1rem' }}>Sugerencias de Seguridad</h4>
                              <ul style={{ padding: 0, margin: 0, color: 'var(--text-3)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                <li>• Se aplica un delay aleatorio de 2-5 seg entre envíos.</li>
-                               <li>• Los mensajes personalizados con <strong>{{nombre}}</strong> reducen el riesgo de baneo.</li>
+                               <li>• Los mensajes personalizados con <strong>{"{{nombre}}"}</strong> reducen el riesgo de baneo.</li>
                                <li>• No envíes a más de 500 contactos nuevos por día.</li>
                              </ul>
                           </div>
