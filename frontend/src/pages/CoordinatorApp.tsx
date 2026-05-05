@@ -1174,10 +1174,10 @@ const CoordinatorApp = () => {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h5 style={{ 
-                        fontSize: '0.8rem', 
+                        fontSize: '0.85rem', 
                         fontWeight: 700, 
                         margin: 0, 
-                        color: 'white',
+                        color: 'var(--text)',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis' 
@@ -1423,33 +1423,21 @@ const CoordinatorApp = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ 
-              position: 'fixed', 
-              top: 0, left: 0, right: 0, bottom: 0, 
-              background: 'rgba(2, 8, 20, 0.98)', 
-              backdropFilter: 'blur(10px)',
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              zIndex: 20000,
-              padding: '1rem'
-            }}
+            className="modal-overlay-premium"
+            style={{ zIndex: 20000 }}
           >
             <motion.div
               initial={{ scale: 0.9, y: 50, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 50, opacity: 0 }}
+              className="modal-content-premium-styled"
               style={{
                 width: '100%',
                 maxWidth: '460px',
-                maxHeight: '92vh',
-                background: 'var(--surface)',
-                borderRadius: '28px',
-                border: '1px solid var(--border-mid)',
-                boxShadow: '0 25px 70px -12px rgba(0, 0, 0, 0.7)',
-                overflowY: 'auto',
-                position: 'relative'
+                padding: 0,
+                overflow: 'hidden'
               }}
+            >
               className="custom-scrollbar"
             >
               <form onSubmit={handleCreateCoordinator}>
@@ -1466,8 +1454,8 @@ const CoordinatorApp = () => {
                   alignItems: 'center'
                 }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'var(--font-display)', color: 'white' }}>Registrar Coordinador</h3>
-                    <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', margin: '0.2rem 0 0', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Gestión de Equipo Directo</p>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontFamily: 'var(--font-display)', color: 'var(--text)' }}>Registrar Miembro</h3>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--plra-300)', margin: '0.2rem 0 0', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Gestión de Equipo Directo</p>
                   </div>
                   <button 
                     type="button" 
@@ -1543,7 +1531,7 @@ const CoordinatorApp = () => {
                   <button 
                     type="button" 
                     onClick={() => setShowCoordModal(false)}
-                    style={{ flex: 1, height: '3.75rem', borderRadius: '16px', background: 'transparent', border: '1px solid var(--border)', color: 'white', fontWeight: 800, cursor: 'pointer' }}
+                    style={{ flex: 1, height: '3.75rem', borderRadius: '16px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', fontWeight: 800, cursor: 'pointer' }}
                   >
                     CANCELAR
                   </button>
@@ -1598,9 +1586,9 @@ const CoordinatorApp = () => {
               style={{ maxWidth: '500px', width: '100%', padding: 0 }}
             >
               <form onSubmit={handleCreatePadrino}>
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Registrar Nuevo Padrino</h3>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>ADMINISTRADOR DE EQUIPO BAJO TU CARGO</p>
+                <div style={{ padding: '1.75rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)' }}>Registrar Nuevo Padrino</h3>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>ADMINISTRADOR DE EQUIPO BAJO TU CARGO</p>
                 </div>
 
                 <div style={{ padding: '2rem' }}>

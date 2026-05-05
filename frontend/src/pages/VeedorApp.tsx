@@ -153,7 +153,7 @@ const VeeduriaTab = ({ user }: { user: any }) => {
                   #{order}
                 </span>
                 {isVoted ? (
-                  <Check size={20} style={{ color: 'white' }} />
+                  <Check size={20} style={{ color: 'var(--white)' }} />
                 ) : (
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>{order}</span>
                 )}
@@ -169,7 +169,7 @@ const VeeduriaTab = ({ user }: { user: any }) => {
                         padding: '4px', boxShadow: '0 4px 15px rgba(34,197,94,0.4)'
                       }}
                     >
-                      <Check size={20} color="white" />
+                      <Check size={20} color="var(--white)" />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -308,7 +308,7 @@ const ActaFinalTab = ({ user }: { user: any }) => {
           boxShadow: '0 0 30px rgba(34,196,126,0.35)'
         }}
       >
-        <Check size={36} color="white" strokeWidth={3} />
+        <Check size={36} color="var(--white)" strokeWidth={3} />
       </motion.div>
       <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.5rem' }}>
         Acta Enviada
@@ -533,7 +533,7 @@ const ActaFinalTab = ({ user }: { user: any }) => {
           background: submitting
             ? 'rgba(34,196,126,0.3)'
             : 'linear-gradient(135deg, #22C47E 0%, #1aab6d 100%)',
-          color: 'white', fontWeight: 900, fontSize: '0.9rem',
+          color: 'var(--white)', fontWeight: 900, fontSize: '0.9rem',
           textTransform: 'uppercase', letterSpacing: '0.08em',
           cursor: submitting ? 'not-allowed' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Bus, CheckCircle2, User, Home, Save, Navigation } from 'lucide-react';
+import { Search, MapPin, Truck, CheckCircle2, User, Home, Save, Navigation } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, apiFetch } from '../context/AuthContext';
 
@@ -160,7 +160,7 @@ const ColectorApp: React.FC = () => {
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <div style={{ background: 'var(--primary)', padding: '0.75rem', borderRadius: '12px' }}>
-                                        <User color="white" />
+                                        <User color="var(--white)" />
                                     </div>
                                     <div>
                                         <h2 style={{ fontSize: '1.25rem' }}>{selectedElector.nombre}</h2>
@@ -169,7 +169,7 @@ const ColectorApp: React.FC = () => {
                                 </div>
                                 <div style={{ 
                                     background: user?.party === 'ANR' ? '#dc2626' : '#2563eb', 
-                                    color: 'white', 
+                                    color: 'var(--white)', 
                                     padding: '4px 12px', 
                                     borderRadius: '6px', 
                                     fontSize: '0.8rem', 
@@ -206,7 +206,7 @@ const ColectorApp: React.FC = () => {
 
                                     <label className="flex items-center justify-between p-3 bg-surface rounded-xl border border-border cursor-pointer">
                                         <div className="flex items-center gap-3">
-                                            <Bus size={18} color={needsTransport ? 'var(--primary)' : 'var(--text-muted)'} />
+                                            <Truck size={18} color={needsTransport ? 'var(--primary)' : 'var(--text-muted)'} />
                                             <span>¿Necesita transporte?</span>
                                         </div>
                                         <input 
