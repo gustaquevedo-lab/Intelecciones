@@ -72,8 +72,9 @@ const Login = () => {
       // Re-login or just navigate
       if (onboardingUser.role === 'JEFE_CAMPANA' || onboardingUser.role === 'CANDIDATO') navigate('/comando');
       else navigate('/coordinador'); // Includes PADRINO
-    } catch (err) {
-      setError('Error al actualizar contraseña.');
+    } catch (err: any) {
+      console.error('Password Update Error:', err.response?.data || err.message);
+      setError(`Error al actualizar contraseña: ${err.response?.data?.error || err.message}`);
     } finally {
       setIsLoading(false);
     }

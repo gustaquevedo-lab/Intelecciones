@@ -964,7 +964,11 @@ app.delete('/api/users/:id', (req, res) => {
       return res.status(403).json({ error: 'No se puede eliminar al administrador maestro (admin).' });
     }
 
-  try {
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
     const transaction = db.transaction(() => {
       // 1. Nullify references in elector_captures to avoid breaking historical data
       db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
@@ -980,11 +984,7 @@ app.delete('/api/users/:id', (req, res) => {
       db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(userId);
 
       // 5. Finally delete the user
-      const result = db.prepare('DELETE FROM users WHERE id = ?').run(userId);
-      
-      if (result.changes === 0) {
-        throw new Error('Usuario no encontrado');
-      }
+      db.prepare('DELETE FROM users WHERE id = ?').run(userId);
 
       logAction(1, 'DELETE', 'USER', userId, `Deleted user with ID ${userId} and cleaned up references`);
     });
@@ -993,6 +993,19 @@ app.delete('/api/users/:id', (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error('[DELETE USER ERROR]:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/users/update-password', (req, res) => {
+  const { user_id, new_password } = req.body;
+  console.log(`[AUTH] Updating password for user ID: ${user_id}`);
+  try {
+    db.prepare('UPDATE users SET password = ?, needs_password_change = 0 WHERE id = ?').run(new_password, user_id);
+    logAction(user_id, 'UPDATE_PASSWORD', 'USER', user_id, 'User updated their password');
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('[AUTH ERROR] Password update failed:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1013,15 +1026,6 @@ app.put('/api/users/:id', (req, res) => {
   }
 });
 
-app.post('/api/users/update-password', (req, res) => {
-  const { user_id, new_password } = req.body;
-  try {
-    db.prepare('UPDATE users SET password = ?, needs_password_change = 0 WHERE id = ?').run(new_password, user_id);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 app.post('/api/admin/users/:id/reset-password', (req, res) => {
   try {
@@ -1856,16 +1860,6 @@ app.get('/api/admin/disputes/global', (req, res) => {
   }
 });
 
-app.post('/api/users/update-password', (req, res) => {
-  const { user_id, new_password } = req.body;
-  try {
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(new_password, user_id);
-    logAction(user_id, 'UPDATE_PASSWORD', 'USER', user_id, 'User updated their password');
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // --- DIA D (Election Day) HUB ENDPOINTS ---
 
