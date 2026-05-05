@@ -1656,7 +1656,9 @@ const CoordinatorApp = () => {
                 width: '100%',
                 maxWidth: '460px',
                 padding: 0,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                marginTop: '15vh', /* Force it down */
+                marginBottom: '5vh'
               }}
             >
               <form onSubmit={handleCreateCoordinator}>
@@ -1802,7 +1804,7 @@ const CoordinatorApp = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className="modal-content-premium-styled"
-              style={{ maxWidth: '500px', width: '100%', padding: 0 }}
+              style={{ maxWidth: '500px', width: '100%', padding: 0, marginTop: '15vh', marginBottom: '5vh' }}
             >
               <form onSubmit={handleCreatePadrino}>
                 <div style={{ padding: '1.75rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)' }}>
