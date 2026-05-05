@@ -1491,7 +1491,6 @@ const CoordinatorApp = () => {
                         </a>
                       )}
                     </div>
-                  </div>
                 ))}
               </div>
             </motion.div>
