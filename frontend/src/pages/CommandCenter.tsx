@@ -21,9 +21,12 @@ import api from '../services/api';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
-  const clean = phone.replace(/\D/g, ''); 
-  const withoutLeadingZero = clean.replace(/^0/, ''); 
-  return `595${withoutLeadingZero}`;
+  let clean = phone.replace(/\D/g, ''); 
+  if (clean.startsWith('595')) {
+    clean = clean.substring(3);
+  }
+  const normalized = clean.replace(/^0/, ''); 
+  return `595${normalized}`;
 };
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;

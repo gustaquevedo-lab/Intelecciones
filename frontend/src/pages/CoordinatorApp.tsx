@@ -18,9 +18,19 @@ import api from '../services/api';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
-  const clean = phone.replace(/\D/g, ''); // Remove all non-digits
-  const withoutLeadingZero = clean.replace(/^0/, ''); // Remove leading 0 if exists
-  return `595${withoutLeadingZero}`;
+  // 1. Remove everything that is not a digit
+  let clean = phone.replace(/\D/g, ''); 
+  
+  // 2. If it starts with 595, remove it to normalize the base number
+  if (clean.startsWith('595')) {
+    clean = clean.substring(3);
+  }
+  
+  // 3. Remove leading 0 if it exists (e.g. 0981 -> 981)
+  const normalized = clean.replace(/^0/, ''); 
+  
+  // 4. Return with single 595 prefix
+  return `595${normalized}`;
 };
 
 /* ─── tiny reusable pieces ─────────────────────────────── */
