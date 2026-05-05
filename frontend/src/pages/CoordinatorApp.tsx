@@ -1430,15 +1430,13 @@ const CoordinatorApp = () => {
               initial={{ scale: 0.9, y: 50, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 50, opacity: 0 }}
-              className="modal-content-premium-styled"
+              className="modal-content-premium-styled custom-scrollbar"
               style={{
                 width: '100%',
                 maxWidth: '460px',
                 padding: 0,
                 overflow: 'hidden'
               }}
-            >
-              className="custom-scrollbar"
             >
               <form onSubmit={handleCreateCoordinator}>
                 <div style={{ 
