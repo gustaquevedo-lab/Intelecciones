@@ -1690,12 +1690,11 @@ app.get('/api/diad/coverage', (req, res) => {
       ${list_id ? `WHERE tenant_id = ${list_id}` : ''}
     `).get() as any;
 
-    // 4. Votos Procesados (Total of votos_nuestro, votos_oponente_1, etc.)
+    // 4. Votos Procesados (Total of acta_results + blancos + nulos)
     const votos = db.prepare(`
       SELECT 
-        SUM(votos_nuestro + votos_oponente_1 + votos_oponente_2 + votos_otros + votos_nulos + votos_blancos) as total
-      FROM results
-      ${list_id ? `WHERE tenant_id = ${list_id}` : ''}
+        (SELECT COALESCE(SUM(votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id ${list_id ? `WHERE r2.tenant_id = ${list_id}` : ''}) +
+        (SELECT COALESCE(SUM(votos_blancos + votos_nulos), 0) FROM results ${list_id ? `WHERE tenant_id = ${list_id}` : ''}) as total
     `).get() as any;
 
     // 5. Mesas details for the map
@@ -1834,11 +1833,11 @@ app.get('/api/diad/actas', (req, res) => {
       SELECT 
         r.id, r.mesa as mesa_numero, r.local_votacion as local,
         u.nombre as submitted_by,
-        (r.votos_nuestro + r.votos_oponente_1 + r.votos_oponente_2 + r.votos_otros) as votos_total,
+        ((SELECT COALESCE(SUM(votos), 0) FROM acta_results ar WHERE ar.acta_id = r.id) + r.votos_blancos + r.votos_nulos) as votos_total,
         r.foto_acta_url as foto_url,
         r.timestamp as submitted_at
       FROM results r
-      LEFT JOIN users u ON r.veedor_id = u.id -- assuming we add veedor_id to results
+      LEFT JOIN users u ON r.veedor_id = u.id
       ${list_id ? `WHERE r.tenant_id = ${list_id}` : ''}
       ORDER BY r.timestamp DESC
     `).all();
