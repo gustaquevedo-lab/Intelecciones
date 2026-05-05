@@ -128,8 +128,6 @@ const CoordinatorApp = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [telefono, setTelefono] = useState('');
-  const [requestMsg, setRequestMsg] = useState('');
-  const [requestType, setRequestType] = useState('RESOURCES');
   const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
   
   // Padrino specifics
