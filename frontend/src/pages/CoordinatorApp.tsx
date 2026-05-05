@@ -140,6 +140,7 @@ const CoordinatorApp = () => {
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const padrinoFileInputRef = React.useRef<HTMLInputElement>(null);
   const [teamStats, setTeamStats] = useState<any[]>([]);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [selectedCoordDetail, setSelectedCoordDetail] = useState<any>(null);
@@ -1771,6 +1772,7 @@ const CoordinatorApp = () => {
                     ref={fileInputRef} 
                     style={{ display: 'none' }} 
                     accept="image/*" 
+                    capture="environment" /* Force camera on mobile */
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
@@ -1815,7 +1817,7 @@ const CoordinatorApp = () => {
                 <div style={{ padding: '2rem' }}>
                   <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div 
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => padrinoFileInputRef.current?.click()}
                       style={{ 
                         width: '100px', height: '100px', borderRadius: '15px', 
                         background: 'var(--surface-light)', border: '2px dashed var(--border)',
@@ -1863,9 +1865,10 @@ const CoordinatorApp = () => {
 
                   <input 
                     type="file" 
-                    ref={fileInputRef} 
+                    ref={padrinoFileInputRef} 
                     style={{ display: 'none' }} 
                     accept="image/*" 
+                    capture="environment" /* Force camera on mobile */
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
@@ -1895,13 +1898,18 @@ const CoordinatorApp = () => {
         {cropperData && (
           <ImageCropperModal 
             image={cropperData.image} 
-            onCropComplete={(croppedImage) => {
-              if (showPadrinoModal) {
-                setNewPadrinoPhoto(croppedImage);
-              } else {
-                setNewCoordPhoto(croppedImage);
-              }
-              setCropperData(null);
+            onCropComplete={(croppedBlob) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const base64data = reader.result as string;
+                if (showPadrinoModal) {
+                  setNewPadrinoPhoto(base64data);
+                } else {
+                  setNewCoordPhoto(base64data);
+                }
+                setCropperData(null);
+              };
+              reader.readAsDataURL(croppedBlob);
             }} 
             onCancel={() => setCropperData(null)} 
           />
