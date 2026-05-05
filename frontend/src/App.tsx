@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-const Landing = React.lazy(() => import('./pages/Landing'));
 const Login = React.lazy(() => import('./pages/Login'));
 const CoordinatorApp = React.lazy(() => import('./pages/CoordinatorApp'));
 const CommandCenter = React.lazy(() => import('./pages/CommandCenter'));
@@ -32,7 +31,6 @@ function App() {
               </div>
             }>
               <Routes>
-                <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/coordinador" element={<CoordinatorApp />} />
                 <Route path="/comando" element={<CommandCenter />} />
