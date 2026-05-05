@@ -1026,9 +1026,10 @@ select option:active {
   -webkit-backdrop-filter: blur(12px) saturate(160%);
   z-index: 10000;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Changed from center */
   justify-content: center;
-  padding: 1rem;
+  padding: 4rem 1rem 1rem; /* More top padding to move it down */
+  overflow-y: auto;
 }
 
 .light-theme .modal-overlay-premium {
@@ -1040,7 +1041,7 @@ select option:active {
   border: 1px solid var(--border-mid);
   border-radius: 28px;
   box-shadow: 0 25px 70px -12px rgba(0, 0, 0, 0.8);
-  max-height: 92vh;
+  max-height: 85vh; /* Reduced from 92vh to fit with new padding */
   overflow-y: auto;
   position: relative;
   animation: modal-premium-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);

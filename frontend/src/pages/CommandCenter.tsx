@@ -115,17 +115,39 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
   return (
     <div style={{ padding: '1rem', borderRadius: '12px', background: 'var(--surface-light)', border: '1px solid var(--border)', marginBottom: '0.75rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: priorityColors[req.priority as keyof typeof priorityColors] }}>{req.priority}</span>
+        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: priorityColors[req.priority as keyof typeof priorityColors] || 'var(--plra-300)' }}>{req.priority}</span>
         <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(req.timestamp).toLocaleTimeString()}</span>
       </div>
       <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.25rem' }}>{req.type}</p>
       <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1rem' }}>{req.description}</p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: 'white', fontWeight: 800 }}>
-          {req.coordinator_name?.charAt(0)}
+      
+      {/* Multimedia Display */}
+      {req.photo_url && (
+        <div style={{ marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <img src={req.photo_url} alt="Reporte" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
         </div>
-        <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{req.coordinator_name}</span>
+      )}
+      
+      {req.audio_url && (
+        <div style={{ marginBottom: '1rem' }}>
+          <audio controls src={req.audio_url} style={{ width: '100%', height: '32px' }} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: 'white', fontWeight: 800 }}>
+            {req.coordinator_name?.charAt(0)}
+          </div>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text)', fontWeight: 600 }}>{req.coordinator_name}</span>
+        </div>
+        {req.padrino_name && (
+          <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginLeft: '1.75rem' }}>
+            Padrino: <span style={{ fontWeight: 700, color: 'var(--plra-200)' }}>{req.padrino_name}</span>
+          </div>
+        )}
       </div>
+
       {req.status === 'PENDING' ? (
         !isReadOnly ? (
           <div style={{ display: 'flex', gap: '0.5rem' }}>

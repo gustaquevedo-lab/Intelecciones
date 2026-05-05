@@ -160,26 +160,63 @@ const CoordinatorApp = () => {
     setCropperData(null);
   };
 
+  const [requestMsg, setRequestMsg] = useState('');
+  const [requestType, setRequestType] = useState('TRANSPORT');
+  const [supportPhoto, setSupportPhoto] = useState<File | null>(null);
+  const [supportAudio, setSupportAudio] = useState<Blob | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+
   useEffect(() => {
     if (!loading && !user) {
       navigate('/login');
     }
   }, [user, loading, navigate]);
 
-  const handleSendRequest = async () => {
-    if (!requestMsg || !user) return;
-    setIsLoading(true);
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const startRecording = async () => {
     try {
-      await axios.post(`${API_URL}/api/coordinator/request`, {
-        coordinator_id: user.id,
-        type: requestType,
-        description: requestMsg,
-        priority: 'NORMAL'
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        setSupportAudio(blob);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (err) { alert("Acceso al micrófono denegado."); }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleSendRequest = async () => {
+    if ((!requestMsg && !supportPhoto && !supportAudio) || !user) return;
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('coordinator_id', user.id.toString());
+      formData.append('type', requestType);
+      formData.append('description', requestMsg);
+      formData.append('priority', 'NORMAL');
+      formData.append('list_id', user.assigned_list_id?.toString() || '');
+      if (supportPhoto) formData.append('photo', supportPhoto);
+      if (supportAudio) formData.append('audio', supportAudio, 'voice_note.webm');
+
+      await api.post('/coordinator/request', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       setSuccessMsg('Solicitud enviada al Comando Central.');
       setRequestMsg('');
-      setActiveTab('search');
+      setSupportPhoto(null);
+      setSupportAudio(null);
     } catch (err) {
       setError('No se pudo enviar la solicitud.');
     } finally {
@@ -1115,7 +1152,7 @@ const CoordinatorApp = () => {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <SectionLabel icon={<HelpCircle size={13} />} text="Solicitar Apoyo al Comando" />
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '1.5rem' }}>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.25rem' }}>Describe brevemente lo que necesitas. Tu solicitud llegará al Comando Central.</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.25rem' }}>Describe brevemente lo que necesitas e incluye multimedia si es necesario.</p>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <button onClick={() => setRequestType('TRANSPORT')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'TRANSPORT' ? 'var(--plra-500)' : 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logística</button>
@@ -1126,12 +1163,72 @@ const CoordinatorApp = () => {
                 value={requestMsg}
                 onChange={(e) => setRequestMsg(e.target.value)}
                 placeholder="Escribe aquí tu solicitud..."
-                style={{ width: '100%', height: '120px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem', color: 'white', fontSize: '0.9rem', outline: 'none', resize: 'none', marginBottom: '1.5rem' }}
+                style={{ width: '100%', height: '100px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem', color: 'white', fontSize: '0.9rem', outline: 'none', resize: 'none', marginBottom: '1rem' }}
               />
+
+              {/* Multimedia Controls */}
+              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setSupportPhoto(file);
+                    }}
+                    style={{ display: 'none' }}
+                    id="support-photo-input"
+                  />
+                  <label 
+                    htmlFor="support-photo-input"
+                    style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      padding: '0.75rem', borderRadius: '12px', background: supportPhoto ? 'var(--green-lt)' : 'rgba(255,255,255,0.05)',
+                      border: supportPhoto ? '1px solid var(--green)' : '1px solid var(--border)',
+                      color: supportPhoto ? 'var(--green)' : 'var(--text-2)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700
+                    }}
+                  >
+                    <Camera size={16} /> {supportPhoto ? 'Foto Lista' : 'Tomar Foto'}
+                  </label>
+                  {supportPhoto && (
+                    <button 
+                      onClick={() => setSupportPhoto(null)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', width: '20px', height: '20px', borderRadius: '50%', background: 'var(--red)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <button 
+                    onClick={isRecording ? stopRecording : startRecording}
+                    style={{ 
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      padding: '0.75rem', borderRadius: '12px', 
+                      background: isRecording ? 'var(--red-lt)' : (supportAudio ? 'var(--plra-800)' : 'rgba(255,255,255,0.05)'),
+                      border: isRecording ? '1px solid var(--red)' : (supportAudio ? '1px solid var(--plra-300)' : '1px solid var(--border)'),
+                      color: isRecording ? 'var(--red)' : (supportAudio ? 'var(--plra-200)' : 'var(--text-2)'), cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700
+                    }}
+                  >
+                    {isRecording ? <Square size={16} /> : <Mic size={16} />}
+                    {isRecording ? 'Grabando...' : (supportAudio ? 'Audio Listo' : 'Nota de Voz')}
+                  </button>
+                  {supportAudio && !isRecording && (
+                    <button 
+                      onClick={() => setSupportAudio(null)}
+                      style={{ position: 'absolute', top: '-8px', right: '-8px', width: '20px', height: '20px', borderRadius: '50%', background: 'var(--red)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <button 
                 onClick={handleSendRequest}
-                disabled={!requestMsg || isLoading}
+                disabled={(!requestMsg && !supportPhoto && !supportAudio) || isLoading || isRecording}
                 className="btn btn-primary" 
                 style={{ width: '100%', borderRadius: '12px', height: '3.5rem' }}
               >

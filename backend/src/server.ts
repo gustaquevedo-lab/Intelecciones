@@ -1442,9 +1442,14 @@ app.get('/api/admin/requests', (req, res) => {
 
   try {
     const query = `
-      SELECT r.*, u.nombre as coordinator_name, u.username as coordinator_username
+      SELECT 
+        r.*, 
+        u.nombre as coordinator_name, 
+        u.username as coordinator_username,
+        p.nombre as padrino_name
       FROM field_requests r
       JOIN users u ON r.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
       WHERE 1=1
       ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id ? `AND r.list_id = ${list_id}` : ''))}
       ORDER BY r.timestamp DESC
@@ -1473,17 +1478,32 @@ app.post('/api/admin/requests/:id/resolve', (req, res) => {
   }
 });
 
-app.post('/api/coordinator/request', (req, res) => {
-  const { coordinator_id, type, description, priority } = req.body;
+app.post('/api/coordinator/request', upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'audio', maxCount: 1 }]), (req, res) => {
+  const { coordinator_id, type, description, priority, list_id } = req.body;
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  
   try {
+    const baseUrl = process.env.APP_URL || `http://${req.get('host')}`;
+    const photoUrl = files?.photo ? `${baseUrl}/uploads/${files.photo[0].filename}` : null;
+    const audioUrl = files?.audio ? `${baseUrl}/uploads/${files.audio[0].filename}` : null;
+
     const result = db.prepare(`
-      INSERT INTO field_requests (coordinator_id, type, description, priority)
-      VALUES (?, ?, ?, ?)
-    `).run(coordinator_id, type, description, priority || 'NORMAL');
+      INSERT INTO field_requests (coordinator_id, type, description, priority, list_id, photo_url, audio_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      coordinator_id, 
+      type, 
+      description, 
+      priority || 'NORMAL', 
+      list_id || null,
+      photoUrl,
+      audioUrl
+    );
     
-    logAction(coordinator_id, 'CREATE_REQUEST', 'FIELD_REQUEST', Number(result.lastInsertRowid), `New ${type} request from field`);
+    logAction(coordinator_id, 'CREATE_REQUEST', 'FIELD_REQUEST', Number(result.lastInsertRowid), `New ${type} request with multimedia`);
     res.json({ success: true, id: Number(result.lastInsertRowid) });
   } catch (err: any) {
+    console.error("Error creating request:", err);
     res.status(500).json({ error: err.message });
   }
 });
