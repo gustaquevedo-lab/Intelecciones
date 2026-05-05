@@ -9,6 +9,7 @@ interface Settings {
   global_goal: string;
   master_key: string;
   share_message: string;
+  share_message_footer: string;
 }
 
 interface SettingsContextType {
@@ -30,7 +31,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     app_logo_url: '',
     global_goal: '10000',
     master_key: '',
-    share_message: 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:'
+    share_message: 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:',
+    share_message_footer: '#Intelecciones #PLRA #DíaD'
   });
   const [loading, setLoading] = useState(true);
 

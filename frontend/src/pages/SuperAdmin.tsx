@@ -158,8 +158,9 @@ const SuperAdmin = () => {
   const [electionEndTime, setElectionEndTime] = useState('17:00');
   const [globalGoal, setGlobalGoal] = useState(10000);
   const [masterKey, setMasterKey] = useState('');
-  const [appName, setAppName] = useState('INTELECCIONES 2026');
   const [appLogoUrl, setAppLogoUrl] = useState('');
+  const [shareMessage, setShareMessage] = useState('🔹 *DATOS ELECTORALES* 🔹');
+  const [shareMessageFooter, setShareMessageFooter] = useState('#Intelecciones #PLRA #DíaD');
   
   const [isLoading, setIsLoading] = useState(true);
   const [isUserVerified, setIsUserVerified] = useState(false);
@@ -632,7 +633,9 @@ const SuperAdmin = () => {
         global_goal: globalGoal.toString(),
         master_key: masterKey,
         app_name: appName,
-        app_logo_url: appLogoUrl
+        app_logo_url: appLogoUrl,
+        share_message: shareMessage,
+        share_message_footer: shareMessageFooter
       });
       refreshSettings();
       alert('Configuración guardada correctamente.');
@@ -760,6 +763,8 @@ const SuperAdmin = () => {
         if (res.data.master_key) setMasterKey(res.data.master_key);
         if (res.data.app_name) setAppName(res.data.app_name);
         if (res.data.app_logo_url) setAppLogoUrl(res.data.app_logo_url);
+        if (res.data.share_message) setShareMessage(res.data.share_message);
+        if (res.data.share_message_footer) setShareMessageFooter(res.data.share_message_footer);
       }
     } catch (err) {
       console.error("Error fetching data", err);
@@ -1190,11 +1195,31 @@ const SuperAdmin = () => {
               <input className="modern-input-premium-styled" value={appName} onChange={e => setAppName(e.target.value)} />
             </div>
             <div className="form-group">
-              <label>Logo de la Institución (URL)</label>
+              <label>Logo de la App (URL)</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input className="modern-input-premium-styled" value={appLogoUrl} onChange={e => setAppLogoUrl(e.target.value)} />
                 <button className="icon-btn" onClick={() => fileInputRef.current?.click()}><Image size={18} /></button>
               </div>
+            </div>
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label>Encabezado de Mensaje Compartir (WhatsApp/Share)</label>
+              <textarea 
+                className="modern-input-premium-styled" 
+                value={shareMessage} 
+                onChange={e => setShareMessage(e.target.value)}
+                style={{ height: '60px', paddingTop: '0.75rem' }}
+                placeholder="Ej: 🔹 *DATOS ELECTORALES* 🔹"
+              />
+            </div>
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label>Pie de Mensaje Compartir (Hashtags)</label>
+              <textarea 
+                className="modern-input-premium-styled" 
+                value={shareMessageFooter} 
+                onChange={e => setShareMessageFooter(e.target.value)}
+                style={{ height: '60px', paddingTop: '0.75rem' }}
+                placeholder="Ej: #Intelecciones #PLRA"
+              />
             </div>
           </div>
         </div>

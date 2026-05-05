@@ -638,7 +638,7 @@ const CommandCenter = () => {
 
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '260px 1fr' : '0px 1fr'), 
+        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '280px 1fr' : '0px 1fr'), 
         height: isMobile ? 'calc(100vh - 110px)' : 'calc(100vh - 110px)', 
         overflow: 'hidden',
         position: 'relative',
@@ -662,6 +662,7 @@ const CommandCenter = () => {
 
         <aside style={{ 
           overflowY: 'auto', 
+          overflowX: 'hidden',
           background: 'var(--surface)', 
           borderRight: '1px solid var(--border)',
           position: isMobile ? 'absolute' : 'relative',

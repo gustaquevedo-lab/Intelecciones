@@ -14,9 +14,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'x-list-id', 'x-user-role', 'x-user-id']
+  origin: (origin, callback) => {
+    // Allow all origins in this development/production setup to avoid CORS blocks
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'Accept']
 }));
 app.use(express.json());
 
@@ -52,7 +56,9 @@ const logAction = (user_id: number | null, action: string, entity: string, entit
 
 app.post('/api/upload-photo', upload.single('photo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const baseUrl = process.env.APP_URL || `http://${req.get('host')}`;
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.get('host');
+  const baseUrl = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : `${protocol}://${host}`;
   const photoUrl = `${baseUrl}/uploads/${req.file.filename}`;
   res.json({ photo_url: photoUrl });
 });
@@ -142,7 +148,8 @@ app.post('/api/ingest', (req, res) => {
 
 // --- Multi-tenancy Helpers ---
 const getListId = (req: express.Request) => {
-  return parseInt(req.headers['x-list-id'] as string) || parseInt(req.query.listId as string) || null;
+  const id = parseInt(req.headers['x-list-id'] as string) || parseInt(req.query.listId as string);
+  return isNaN(id) ? null : id;
 };
 
 const getRole = (req: express.Request) => {
@@ -724,14 +731,7 @@ app.get('/api/activities', (req, res) => {
   }
 });
 
-app.get('/api/vehicles', (req, res) => {
-  try {
-    const vehicles = db.prepare('SELECT * FROM logistics').all();
-    res.json(vehicles);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Vehicles route is defined later in the file
 
 app.get('/api/captures', (req, res) => {
   const list_id = getListId(req);
@@ -740,7 +740,7 @@ app.get('/api/captures', (req, res) => {
   const isSuper = role === 'SUPERUSUARIO';
 
   try {
-    const listFilter = isSuper || !list_id ? '' : `AND ec.list_id = ${list_id}`;
+    const listFilter = isSuper || !list_id || isNaN(list_id) ? '' : `AND ec.list_id = ${list_id}`;
     const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
 
     const captures = db.prepare(`
@@ -1366,7 +1366,7 @@ app.get('/api/stats/command', (req, res) => {
   const isPadrino = role === 'PADRINO';
 
   try {
-    const listFilter = isSuper || !list_id ? '' : `AND ec.list_id = ${list_id}`;
+    const listFilter = isSuper || !list_id || isNaN(list_id) ? '' : `AND ec.list_id = ${list_id}`;
     const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
     const hierarchyFilter = isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : '';
 
@@ -1406,7 +1406,7 @@ app.get('/api/stats/command', (req, res) => {
         SUM(CASE WHEN ec.traffic_light = 'GREEN' AND ec.is_disputed = 0 THEN 1 ELSE 0 END) as green_captures
       FROM voting_locations l
       LEFT JOIN electors e ON l.cod_local = e.cod_local OR l.nombre = e.local_votacion
-      LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci ${isSuper || !list_id ? '' : `AND ec.list_id = ${list_id}`}
+      LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci ${isSuper || isNaN(list_id) ? '' : `AND ec.list_id = ${list_id}`}
       GROUP BY l.cod_local, l.nombre
     `;
     
@@ -1500,7 +1500,7 @@ app.get('/api/admin/requests', (req, res) => {
       JOIN users u ON r.coordinator_id = u.id
       LEFT JOIN users p ON u.parent_id = p.id
       WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id ? `AND r.list_id = ${list_id}` : ''))}
+      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id && !isNaN(list_id) ? `AND r.list_id = ${list_id}` : ''))}
       ORDER BY r.timestamp DESC
     `;
     const requests = db.prepare(query).all();
@@ -1532,7 +1532,9 @@ app.post('/api/coordinator/request', upload.fields([{ name: 'photo', maxCount: 1
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
   
   try {
-    const baseUrl = process.env.APP_URL || `http://${req.get('host')}`;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    const baseUrl = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : `${protocol}://${host}`;
     const photoUrl = files?.photo ? `${baseUrl}/uploads/${files.photo[0].filename}` : null;
     const audioUrl = files?.audio ? `${baseUrl}/uploads/${files.audio[0].filename}` : null;
 
@@ -1571,7 +1573,7 @@ app.get('/api/admin/activity', (req, res) => {
       JOIN users u ON ec.coordinator_id = u.id
       JOIN electors e ON ec.elector_ci = e.ci
       WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id ? `AND ec.list_id = ${list_id}` : ''))}
+      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id && !isNaN(list_id) ? `AND ec.list_id = ${list_id}` : ''))}
       
       UNION ALL
       
@@ -1579,7 +1581,7 @@ app.get('/api/admin/activity', (req, res) => {
       FROM field_requests r
       JOIN users u ON r.coordinator_id = u.id
       WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id ? `AND r.list_id = ${list_id}` : ''))}
+      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id && !isNaN(list_id) ? `AND r.list_id = ${list_id}` : ''))}
       
       UNION ALL
       
@@ -1589,7 +1591,7 @@ app.get('/api/admin/activity', (req, res) => {
       JOIN elector_captures ec ON cc.capture_id = ec.id
       JOIN users u ON ec.coordinator_id = u.id
       WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : (list_id ? `AND cc.list_id = ${list_id}` : ''))}
+      ${isSuper ? '' : (isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : (list_id && !isNaN(list_id) ? `AND cc.list_id = ${list_id}` : ''))}
       
       ORDER BY timestamp DESC
       LIMIT 20
@@ -1679,7 +1681,7 @@ app.get('/api/diad/coverage', (req, res) => {
       WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') 
       AND assigned_local IS NOT NULL 
       AND assigned_mesa IS NOT NULL
-      ${list_id ? `AND assigned_list_id = ${list_id}` : ''}
+      ${list_id && !isNaN(list_id) ? `AND assigned_list_id = ${list_id}` : ''}
     `).get() as any;
 
     // 3. Results Coverage: Mesas with actas submitted
@@ -1687,14 +1689,14 @@ app.get('/api/diad/coverage', (req, res) => {
     const { reported_mesas } = db.prepare(`
       SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as reported_mesas 
       FROM results
-      ${list_id ? `WHERE tenant_id = ${list_id}` : ''}
+      ${list_id && !isNaN(list_id) ? `WHERE tenant_id = ${list_id}` : ''}
     `).get() as any;
 
     // 4. Votos Procesados (Total of acta_results + blancos + nulos)
     const votos = db.prepare(`
       SELECT 
-        (SELECT COALESCE(SUM(votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id ${list_id ? `WHERE r2.tenant_id = ${list_id}` : ''}) +
-        (SELECT COALESCE(SUM(votos_blancos + votos_nulos), 0) FROM results ${list_id ? `WHERE tenant_id = ${list_id}` : ''}) as total
+        (SELECT COALESCE(SUM(votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id ${list_id && !isNaN(list_id) ? `WHERE r2.tenant_id = ${list_id}` : ''}) +
+        (SELECT COALESCE(SUM(votos_blancos + votos_nulos), 0) FROM results ${list_id && !isNaN(list_id) ? `WHERE tenant_id = ${list_id}` : ''}) as total
     `).get() as any;
 
     // 5. Mesas details for the map
@@ -1712,13 +1714,13 @@ app.get('/api/diad/coverage', (req, res) => {
     const { total_coordinadores } = db.prepare(`
       SELECT COUNT(*) as total_coordinadores FROM users 
       WHERE role = 'COORDINADOR'
-      ${list_id ? `AND assigned_list_id = ${list_id}` : ''}
+      ${list_id && !isNaN(list_id) ? `AND assigned_list_id = ${list_id}` : ''}
     `).get() as any;
 
     // 7. Active Vehicles (Móviles)
     const { total_vehiculos } = db.prepare(`
       SELECT COUNT(*) as total_vehiculos FROM vehicles
-      ${list_id ? `WHERE assigned_list_id = ${list_id} OR list_id = ${list_id}` : ''}
+      ${list_id && !isNaN(list_id) ? `WHERE (assigned_list_id = ${list_id} OR list_id = ${list_id})` : ''}
     `).get() as any;
 
     res.json({
@@ -1747,6 +1749,7 @@ app.get('/api/diad/results', (req, res) => {
         COALESCE(SUM(ar.votos), 0) as votos
       FROM lists l
       LEFT JOIN acta_results ar ON l.id = ar.lista_id
+      ${list_id && !isNaN(list_id) ? `WHERE l.campaign_id = (SELECT campaign_id FROM lists WHERE id = ${list_id})` : ''}
       GROUP BY l.id
       ORDER BY votos DESC
     `).all() as any[];
@@ -1838,7 +1841,7 @@ app.get('/api/diad/actas', (req, res) => {
         r.timestamp as submitted_at
       FROM results r
       LEFT JOIN users u ON r.veedor_id = u.id
-      ${list_id ? `WHERE r.tenant_id = ${list_id}` : ''}
+      ${list_id && !isNaN(list_id) ? `WHERE r.tenant_id = ${list_id}` : ''}
       ORDER BY r.timestamp DESC
     `).all();
     res.json(actas);

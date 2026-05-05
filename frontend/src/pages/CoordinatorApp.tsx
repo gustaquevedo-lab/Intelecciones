@@ -4,7 +4,7 @@ import {
   Search, MapPin, User, CheckCircle2,
   Map, Building2, Home, Briefcase,
   ClipboardCheck, ArrowRight, AlertCircle,
-  CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare,
+  CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare, Fingerprint,
   UserPlus, Camera, Settings, LayoutList, CheckCircle, Users, Mic, Square, ChevronRight,
   Car, Inbox, ArrowLeft
 } from 'lucide-react';
@@ -610,13 +610,14 @@ const CoordinatorApp = () => {
   const handleShare = async () => {
     if (!elector) return;
     const prefix = settings.share_message || '🔹 *DATOS ELECTORALES* 🔹';
+    const footer = settings.share_message_footer || '#Intelecciones #PLRA #DíaD';
     const text = `${prefix}\n\n` +
                  `👤 *Nombre:* ${elector.nombre} ${elector.apellido || ''}\n` +
                  `🆔 *C.I.:* ${Number(elector.ci).toLocaleString('es-PY')}\n\n` +
                  `📍 *Local:* ${elector.local_votacion}\n` +
                  `🗳️ *Mesa:* ${elector.mesa}\n` +
                  `🔢 *Orden:* ${elector.orden}\n\n` +
-                 `#Intelecciones #PLRA #DíaD`;
+                 `${footer}`;
     
     if (navigator.share) {
       try {

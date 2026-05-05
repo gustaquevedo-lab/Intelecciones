@@ -55,14 +55,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
 
   return (
     <motion.div 
-      animate={{ width: isCollapsed ? '70px' : '240px' }}
+      animate={{ width: isCollapsed ? '70px' : '220px' }}
       style={{
         background: 'rgba(2, 12, 27, 0.5)',
         borderRight: '1px solid var(--border)',
         display: 'flex',
         flexDirection: 'column',
         padding: isCollapsed ? '1.25rem 0.5rem' : '1.25rem 0.75rem',
-        gap: '0.5rem',
+        gap: '0.4rem',
         position: 'relative',
         transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'visible',
@@ -130,8 +130,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               display: 'flex',
               alignItems: 'center',
               justifyContent: isCollapsed ? 'center' : 'flex-start',
-              padding: isCollapsed ? '0.75rem 0' : '0.75rem 0.85rem',
-              borderRadius: '10px',
+              padding: isCollapsed ? '0.75rem 0' : '0.75rem 1rem',
+              borderRadius: '12px',
               border: 'none',
               background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
               color: isActive ? 'var(--plra-200)' : 'var(--text-3)',
@@ -140,7 +140,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               position: 'relative',
               textAlign: 'left',
               width: '100%',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              gap: '0.85rem'
             }}
             onMouseEnter={e => {
               if (!isActive) {
