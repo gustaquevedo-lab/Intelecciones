@@ -225,7 +225,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
         </div>
       </header>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', position: 'relative', zIndex: 10 }}>
         {children}
       </main>
     </div>

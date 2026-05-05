@@ -173,6 +173,8 @@ db.exec(`
 
   INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message', 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('app_logo_url', '');
 `);
 
 try {

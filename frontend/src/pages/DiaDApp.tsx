@@ -10,7 +10,8 @@ import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import api from '../services/api';
-import { MapContainer, TileLayer, CircleMarker, Popup, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
@@ -629,44 +630,53 @@ const DiaDApp: React.FC = () => {
                     ))}
 
                     {/* Mesas (Operational Status) */}
-                    {coverage.mesas.map(mesa => (
-                      <CircleMarker
-                        key={`mesa-${mesa.local}-${mesa.numero}`}
-                        center={[parseFloat(mesa.lat || "-22.5447") + (Math.random()-0.5)*0.003, parseFloat(mesa.lng || "-55.7333") + (Math.random()-0.5)*0.003]}
-                        radius={6}
-                        pathOptions={{
-                          color: mesa.operativa ? 'var(--blue-lt)' : 'var(--red)',
-                          fillColor: mesa.operativa ? 'var(--blue-lt)' : 'var(--red)',
-                          fillOpacity: 0.6,
-                          weight: 1
-                        }}
-                      >
-                        <Popup>
-                          <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
-                            <p style={{ fontWeight: 800, fontSize: '0.85rem' }}>{mesa.local}</p>
-                            <p style={{ fontSize: '0.75rem', fontWeight: 700 }}>MESA {mesa.numero}</p>
-                            <p style={{ 
-                              fontSize: '0.65rem', color: mesa.operativa ? 'var(--green)' : 'var(--red)',
-                              fontWeight: 800, marginTop: '0.4rem', textTransform: 'uppercase'
-                            }}>
-                              {mesa.operativa ? '● OPERATIVA (MIEMBRO ASIGNADO)' : '○ PENDIENTE DE MIEMBRO'}
-                            </p>
-                            {!mesa.operativa && (
-                              <button 
-                                onClick={() => { setSelectedMesa({local: mesa.local, numero: mesa.numero}); setShowAssignModal(true); fetchUsers(); }}
-                                style={{
-                                  marginTop: '0.6rem', padding: '0.4rem 0.8rem', width: '100%',
-                                  background: 'var(--red)', color: 'white', border: 'none',
-                                  borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer'
-                                }}
-                              >
-                                ASIGNAR AHORA
-                              </button>
-                            )}
-                          </div>
-                        </Popup>
-                      </CircleMarker>
-                    ))}
+                    <MarkerClusterGroup>
+                      {coverage.mesas.map(mesa => (
+                        <Marker 
+                          key={`mesa-${mesa.local}-${mesa.numero}`}
+                          position={[parseFloat(mesa.lat || "-22.5447"), parseFloat(mesa.lng || "-55.7333")]}
+                          icon={L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `
+                              <div style="
+                                width: 14px; height: 14px; 
+                                background: ${mesa.operativa ? 'var(--blue-lt)' : 'var(--red)'}; 
+                                border: 2px solid white; 
+                                border-radius: 50%; 
+                                box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                              "></div>
+                            `,
+                            iconSize: [14, 14],
+                            iconAnchor: [7, 7]
+                          })}
+                        >
+                          <Popup>
+                            <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
+                              <p style={{ fontWeight: 800, fontSize: '0.85rem' }}>{mesa.local}</p>
+                              <p style={{ fontSize: '0.75rem', fontWeight: 700 }}>MESA {mesa.numero}</p>
+                              <p style={{ 
+                                fontSize: '0.65rem', color: mesa.operativa ? 'var(--green)' : 'var(--red)',
+                                fontWeight: 800, marginTop: '0.4rem', textTransform: 'uppercase'
+                              }}>
+                                {mesa.operativa ? '● OPERATIVA (MIEMBRO ASIGNADO)' : '○ PENDIENTE DE MIEMBRO'}
+                              </p>
+                              {!mesa.operativa && (
+                                <button 
+                                  onClick={() => { setSelectedMesa({local: mesa.local, numero: mesa.numero}); setShowAssignModal(true); fetchUsers(); }}
+                                  style={{
+                                    marginTop: '0.6rem', padding: '0.4rem 0.8rem', width: '100%',
+                                    background: 'var(--red)', color: 'white', border: 'none',
+                                    borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer'
+                                  }}
+                                >
+                                  ASIGNAR AHORA
+                                </button>
+                              )}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MarkerClusterGroup>
                   </MapContainer>
                 </div>
               </motion.div>

@@ -62,13 +62,12 @@ export const Logo = ({
         display: 'flex',
         alignItems: 'center',
         gap: isLarge ? '0.9rem' : '0.65rem',
-        padding: isLarge ? '0.65rem 1.25rem' : '0.45rem 0.9rem',
-        background: variant === 'light'
-          ? 'rgba(255,255,255,0.07)'
-          : 'rgba(14,30,66,0.55)',
-        border: `1px solid ${variant === 'light' ? 'rgba(255,255,255,0.12)' : 'rgba(46,132,240,0.18)'}`,
-        borderRadius: '14px',
+        padding: isLarge ? '0.65rem 1.25rem' : '0.45rem 1.1rem',
+        background: 'var(--accent-subtle)',
+        border: '1px solid var(--border)',
+        borderRadius: '16px',
         backdropFilter: 'blur(12px)',
+        boxShadow: 'var(--shadow-sm)'
       }}>
 
         {/* Isotipo or custom image */}
@@ -90,22 +89,23 @@ export const Logo = ({
         )}
 
         {/* Wordmark */}
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1, gap: '4px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1, gap: '3px' }}>
           <span style={{
             fontFamily: 'var(--font-display, "Space Grotesk", sans-serif)',
             fontSize: wordmarkPx,
             letterSpacing: '-0.02em',
             lineHeight: 1,
           }}>
-            <span style={{ fontWeight: 800, color: '#5AACFF' }}>Int</span>
-            <span style={{ fontWeight: 300, color: '#25C882' }}>elecciones</span>
+            <span style={{ fontWeight: 800, color: 'var(--plra-400)' }}>Int</span>
+            <span style={{ fontWeight: 300, color: 'var(--green)' }}>elecciones</span>
           </span>
           <span style={{
             fontSize: taglinePx,
-            fontWeight: 700,
-            letterSpacing: '0.16em',
+            fontWeight: 800,
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: variant === 'light' ? 'rgba(255,255,255,0.32)' : 'rgba(90,172,255,0.38)',
+            color: 'var(--text-3)',
+            opacity: 0.8
           }}>
             Gestión Electoral
           </span>

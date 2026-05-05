@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import {
@@ -701,36 +702,48 @@ const CommandCenter = () => {
                     </Marker>
                   );
                 })}
-                {captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap, idx) => {
-                  // Apply a small jitter if multiple people are at the same exact location
-                  const jitter = 0.00003 * Math.sqrt(idx);
-                  const angle = idx * 137.5; // Golden angle
-                  const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
-                  const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
-                  
-                  return (
-                    <Marker key={`cap-${cap.id}`} position={[lat, lng]} icon={createCustomIcon(cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : 'var(--red)', 'MapPin', cap.needs_transport === 1)}>
-                      <Popup>
-                        <div style={{ padding: '0.5rem' }}>
-                          <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.25rem' }}>{cap.nombre} {cap.apellido}</p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                            <span style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: 'var(--plra-500)', color: 'white' }}>
-                              LISTA {cap.list_number}
-                            </span>
-                            <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>{cap.campaign_name}</span>
-                          </div>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Captado por: <strong>{cap.coordinator_name}</strong></p>
-                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>Local: {cap.local_votacion}</p>
-                          {cap.needs_transport === 1 && (
-                            <div style={{ marginTop: '0.5rem', padding: '0.3rem', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', border: '1px solid var(--plra-300)', fontSize: '0.65rem', color: 'var(--plra-200)', fontWeight: 700, textAlign: 'center' }}>
-                              🚗 REQUIERE TRASLADO
+                <MarkerClusterGroup>
+                  {captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap, idx) => {
+                    // Apply a small jitter if multiple people are at the same exact location
+                    const jitter = 0.00003 * Math.sqrt(idx);
+                    const angle = idx * 137.5; // Golden angle
+                    const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
+                    const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
+                    
+                    return (
+                      <Marker 
+                        key={`cap-${cap.id}`} 
+                        position={[lat, lng]} 
+                        icon={createCustomIcon(
+                          cap.traffic_light === 'GREEN' ? 'var(--green)' : 
+                          cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : 
+                          cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', 
+                          'MapPin', 
+                          cap.needs_transport === 1
+                        )}
+                      >
+                        <Popup>
+                          <div style={{ padding: '0.5rem' }}>
+                            <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.25rem' }}>{cap.nombre} {cap.apellido}</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: 'var(--plra-500)', color: 'white' }}>
+                                LISTA {cap.list_number}
+                              </span>
+                              <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>{cap.campaign_name}</span>
                             </div>
-                          )}
-                        </div>
-                      </Popup>
-                    </Marker>
-                  );
-                })}
+                            <p style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Captado por: <strong>{cap.coordinator_name}</strong></p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>Local: {cap.local_votacion}</p>
+                            {cap.needs_transport === 1 && (
+                              <div style={{ marginTop: '0.5rem', padding: '0.3rem', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', border: '1px solid var(--plra-300)', fontSize: '0.65rem', color: 'var(--plra-200)', fontWeight: 700, textAlign: 'center' }}>
+                                🚗 REQUIERE TRASLADO
+                              </div>
+                            )}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
+                </MarkerClusterGroup>
                 {showVehicles && vehicles.map((v) => (
                   <Marker key={`veh-${v.id}`} position={[v.lat, v.lng]} icon={createCustomIcon('var(--plra-300)', 'Car')}>
                     <Popup>

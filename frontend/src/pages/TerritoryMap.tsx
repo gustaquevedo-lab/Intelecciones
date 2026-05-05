@@ -145,9 +145,24 @@ const TerritoryMap: React.FC = () => {
                                 position={[e.lat, e.lng]}
                                 icon={L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: `<div style="background-color: ${e.tenant_status === 'Visitado' ? 'var(--primary)' : '#64748b'}; width: 12px; height: 12px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: `
+                                        <div style="
+                                            background-color: ${
+                                                e.traffic_light === 'GREEN' ? 'var(--green)' : 
+                                                e.traffic_light === 'YELLOW' ? 'var(--yellow)' : 
+                                                e.traffic_light === 'PURPLE' ? '#A855F7' : 
+                                                e.traffic_light === 'RED' ? 'var(--red)' : 
+                                                e.tenant_status === 'Visitado' ? 'var(--primary)' : '#64748b'
+                                            }; 
+                                            width: 14px; 
+                                            height: 14px; 
+                                            border: 2px solid white; 
+                                            border-radius: 50%; 
+                                            box-shadow: 0 0 10px rgba(0,0,0,0.4);
+                                        "></div>
+                                    `,
+                                    iconSize: [14, 14],
+                                    iconAnchor: [7, 7]
                                 })}
                             >
                                 <Popup>
@@ -166,7 +181,13 @@ const TerritoryMap: React.FC = () => {
                                         <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                             <p style={{ margin: 0 }}><strong>Local:</strong> {e.local_votacion}</p>
                                             <p style={{ margin: 0 }}><strong>Barrio:</strong> {e.barrio || 'No especificado'}</p>
-                                            <p style={{ margin: 0 }}><strong>Estado:</strong> {e.tenant_status || 'Pendiente'}</p>
+                                            <p style={{ margin: 0 }}><strong>Estado:</strong> <span style={{ 
+                                                color: e.traffic_light === 'GREEN' ? 'var(--green)' : 
+                                                       e.traffic_light === 'YELLOW' ? '#d97706' : 
+                                                       e.traffic_light === 'PURPLE' ? '#7c3aed' : 
+                                                       e.traffic_light === 'RED' ? 'var(--red)' : '#64748b',
+                                                fontWeight: 800
+                                            }}>{e.traffic_light ? `CAPTADO (${e.traffic_light})` : e.tenant_status || 'Pendiente'}</span></p>
                                         </div>
                                         
                                         <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>

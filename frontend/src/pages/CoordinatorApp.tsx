@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import api from '../services/api';
 
 /* ─── tiny reusable pieces ─────────────────────────────── */
@@ -112,6 +113,7 @@ const NumberBadge = ({ label, value }: { label: string; value: React.ReactNode }
 
 const CoordinatorApp = () => {
   const { user, loading } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
   const [ci, setCi] = useState('');
   const [elector, setElector] = useState<any>(null);
@@ -491,8 +493,9 @@ const CoordinatorApp = () => {
 
   const handleShare = async () => {
     if (!elector) return;
-    const text = `🔹 *DATOS ELECTORALES - INTELECCIONES 2026* 🔹\n\n` +
-                 `👤 *Nombre:* ${elector.nombre}\n` +
+    const prefix = settings.share_message || '🔹 *DATOS ELECTORALES* 🔹';
+    const text = `${prefix}\n\n` +
+                 `👤 *Nombre:* ${elector.nombre} ${elector.apellido || ''}\n` +
                  `🆔 *C.I.:* ${Number(elector.ci).toLocaleString('es-PY')}\n\n` +
                  `📍 *Local:* ${elector.local_votacion}\n` +
                  `🗳️ *Mesa:* ${elector.mesa}\n` +
@@ -571,20 +574,26 @@ const CoordinatorApp = () => {
       >
         <div style={{
           display: 'flex',
-          background: 'rgba(2,8,20,0.4)',
-          borderRadius: '16px',
-          padding: '0.4rem',
-          gap: '0.4rem',
+          background: 'rgba(2,8,20,0.6)',
+          borderRadius: '18px',
+          padding: '0.35rem',
+          gap: '0.35rem',
           border: '1px solid var(--border)',
-          marginBottom: '0.5rem'
-        }}>
+          marginBottom: '0.75rem',
+          overflowX: 'auto', // Permitir scroll horizontal en móviles
+          msOverflowStyle: 'none', // Ocultar scrollbar IE/Edge
+          scrollbarWidth: 'none', // Ocultar scrollbar Firefox
+          WebkitOverflowScrolling: 'touch' // Scroll suave en iOS
+        }} className="no-scrollbar">
           <button
             onClick={() => setActiveTab('search')}
             style={{
               flex: 1,
-              padding: '0.75rem',
+              flexShrink: 0,
+              minWidth: 'fit-content',
+              padding: '0.65rem 0.85rem',
               borderRadius: '12px',
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
               fontWeight: 800,
               background: activeTab === 'search' ? 'var(--plra-300)' : 'transparent',
               color: activeTab === 'search' ? 'white' : 'var(--text-3)',
@@ -596,15 +605,17 @@ const CoordinatorApp = () => {
               letterSpacing: '0.1em'
             }}
           >
-            <Search size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Consulta
+            <Search size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Consulta
           </button>
           <button
             onClick={() => setActiveTab('history')}
             style={{
               flex: 1,
-              padding: '0.75rem',
+              flexShrink: 0,
+              minWidth: 'fit-content',
+              padding: '0.65rem 0.85rem',
               borderRadius: '12px',
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
               fontWeight: 800,
               background: activeTab === 'history' ? 'var(--plra-300)' : 'transparent',
               color: activeTab === 'history' ? 'white' : 'var(--text-3)',
@@ -616,15 +627,17 @@ const CoordinatorApp = () => {
               letterSpacing: '0.1em'
             }}
           >
-            <History size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Historial
+            <History size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Historial
           </button>
           <button
             onClick={() => setActiveTab('support')}
             style={{
               flex: 1,
-              padding: '0.75rem',
+              flexShrink: 0,
+              minWidth: 'fit-content',
+              padding: '0.65rem 0.85rem',
               borderRadius: '12px',
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
               fontWeight: 800,
               background: activeTab === 'support' ? 'var(--red)' : 'transparent',
               color: activeTab === 'support' ? 'white' : 'var(--text-3)',
@@ -636,16 +649,18 @@ const CoordinatorApp = () => {
               letterSpacing: '0.1em'
             }}
           >
-            <HelpCircle size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Soporte
+            <HelpCircle size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Soporte
           </button>
           {user?.role === 'PADRINO' && (
             <button
               onClick={() => setActiveTab('coordinators')}
               style={{
                 flex: 1,
-                padding: '0.75rem',
+                flexShrink: 0,
+                minWidth: 'fit-content',
+                padding: '0.65rem 0.85rem',
                 borderRadius: '12px',
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
                 fontWeight: 800,
                 background: activeTab === 'coordinators' ? 'var(--blue-lt)' : 'transparent',
                 color: activeTab === 'coordinators' ? 'white' : 'var(--text-3)',
@@ -657,7 +672,7 @@ const CoordinatorApp = () => {
                 letterSpacing: '0.1em'
               }}
             >
-              <UserPlus size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Equipos
+              <UserPlus size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Equipos
             </button>
           )}
           {user?.role === 'JEFE_CAMPANA' && (
@@ -665,9 +680,11 @@ const CoordinatorApp = () => {
               onClick={() => setActiveTab('coordinators')}
               style={{
                 flex: 1,
-                padding: '0.75rem',
+                flexShrink: 0,
+                minWidth: 'fit-content',
+                padding: '0.65rem 0.85rem',
                 borderRadius: '12px',
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
                 fontWeight: 800,
                 background: activeTab === 'coordinators' ? 'var(--blue-lt)' : 'transparent',
                 color: activeTab === 'coordinators' ? 'white' : 'var(--text-3)',
@@ -679,7 +696,7 @@ const CoordinatorApp = () => {
                 letterSpacing: '0.1em'
               }}
             >
-              <Users size={14} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} /> Padrinos
+              <Users size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Padrinos
             </button>
           )}
         </div>
@@ -803,120 +820,119 @@ const CoordinatorApp = () => {
 
               {/* ── Card Header: Identity ── */}
               <div className="card-header-section" style={{
-                background: 'linear-gradient(135deg, rgba(0,47,120,0.6) 0%, rgba(7,29,56,0.8) 100%)',
-                borderBottom: '1px solid var(--border-mid)',
+                background: 'linear-gradient(135deg, var(--plra-700) 0%, var(--plra-900) 100%)',
+                borderBottom: '1px solid var(--border-hi)',
                 position: 'relative',
                 overflow: 'hidden',
+                padding: '2.5rem 1.5rem 2rem',
               }}>
                 {/* Watermark */}
                 <div style={{
-                  position: 'absolute', right: '-0.5rem', bottom: '-1rem',
-                  fontSize: '4.5rem', fontWeight: 900, color: 'rgba(59,130,246,0.04)',
+                  position: 'absolute', right: '-1.5rem', bottom: '-2rem',
+                  fontSize: '6rem', fontWeight: 900, color: 'rgba(59,130,246,0.05)',
                   fontFamily: 'var(--font-display)', letterSpacing: '-0.05em',
                   userSelect: 'none', pointerEvents: 'none', lineHeight: 1,
                 }}>PLRA</div>
 
-                {/* Status badge */}
-                <div className="badge badge-green" style={{ position: 'absolute', top: '0.85rem', right: '0.85rem' }}>
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--green)', animation: 'pulse-dot 2s infinite', display: 'inline-block' }} />
-                  Activo
-                </div>
-
-                {/* Avatar + Name */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', paddingRight: '4.5rem' }}>
-                  <div style={{
-                    width: '52px', height: '52px', borderRadius: '14px', flexShrink: 0,
-                    background: 'linear-gradient(135deg, var(--plra-500) 0%, var(--plra-400) 100%)',
-                    border: '2px solid rgba(59,130,246,0.4)',
-                    boxShadow: '0 6px 18px rgba(0,71,171,0.4)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.4rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)',
-                    fontFamily: 'var(--font-display)',
-                  }}>
-                    {elector.nombre?.charAt(0) ?? <User size={24} />}
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 0 }}>
-                    <h2 style={{
-                      fontFamily: 'var(--font-display)', fontWeight: 700,
-                      fontSize: 'clamp(0.95rem, 3.5vw, 1.3rem)',
-                      color: 'var(--text)', lineHeight: 1.2,
-                      textTransform: 'uppercase', letterSpacing: '-0.01em',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', position: 'relative', zIndex: 5 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{
+                      width: '68px', height: '68px', borderRadius: '20px', flexShrink: 0,
+                      background: 'linear-gradient(135deg, var(--plra-500) 0%, var(--plra-400) 100%)',
+                      border: '2.5px solid rgba(255,255,255,0.25)',
+                      boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.8rem', fontWeight: 800, color: 'white',
+                      fontFamily: 'var(--font-display)',
                     }}>
-                      {elector.nombre} {elector.apellido}
-                    </h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                        padding: '0.2rem 0.65rem',
-                        background: 'rgba(0,71,171,0.25)', border: '1px solid rgba(59,130,246,0.35)',
-                        borderRadius: '7px', width: 'fit-content',
-                      }}>
-                        <span style={{ fontSize: '0.58rem', fontWeight: 800, color: 'var(--plra-200)', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>C.I.</span>
-                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', letterSpacing: '0.05em' }}>
-                          {Number(elector.ci).toLocaleString('es-PY')}
-                        </span>
-                      </div>
-                      
-                      {/* JLRA TAG */}
-                      {(elector.edad && elector.edad <= 30) && (
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                          padding: '0.2rem 0.75rem',
-                          background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', // Gold/Orange for JLRA visibility
-                          border: '1px solid rgba(255,255,255,0.3)',
-                          borderRadius: '7px',
-                          boxShadow: '0 4px 12px rgba(255,165,0,0.3)',
+                      {elector.nombre?.charAt(0) ?? <User size={32} />}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                        <div className="badge" style={{ 
+                          background: 'rgba(34,197,94,0.25)', 
+                          color: '#4ADE80', 
+                          border: '1px solid rgba(34,197,94,0.4)',
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.62rem',
+                          fontWeight: 900
                         }}>
-                          <span style={{ 
-                            fontSize: '0.65rem', 
-                            fontWeight: 900, 
-                            color: '#002F78', 
-                            letterSpacing: '0.15em', 
-                            fontFamily: 'var(--font-display)' 
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ADE80', animation: 'pulse-dot 2s infinite' }} />
+                          ACTIVO / HABILITADO
+                        </div>
+                        {elector.edad && elector.edad <= 30 && (
+                          <div className="badge" style={{ 
+                            background: 'linear-gradient(135deg, #FFD700 0%, #F59E0B 100%)', 
+                            color: '#020C1E', 
+                            border: '1px solid rgba(255,255,255,0.4)',
+                            padding: '0.25rem 0.75rem',
+                            fontSize: '0.62rem',
+                            fontWeight: 900,
+                            boxShadow: '0 4px 12px rgba(245,158,11,0.3)'
                           }}>
                             JLRA
-                          </span>
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </div>
+                      <h2 style={{
+                        fontFamily: 'var(--font-display)', fontWeight: 800,
+                        fontSize: '1.35rem',
+                        color: 'white', lineHeight: 1.1,
+                        textTransform: 'uppercase', letterSpacing: '-0.02em',
+                        textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+                      }}>
+                        {elector.nombre} {elector.apellido}
+                      </h2>
                     </div>
                   </div>
+
+                  <button
+                    onClick={handleShare}
+                    style={{
+                      width: '3.5rem', height: '3.5rem',
+                      borderRadius: '16px',
+                      background: 'rgba(255,255,255,0.12)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                  >
+                    <Share2 size={22} />
+                  </button>
                 </div>
 
-                {/* Share Button — top right */}
-                <button
-                  onClick={handleShare}
-                  style={{
-                    position: 'absolute',
-                    top: '3.5rem',
-                    right: '1rem',
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '10px',
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    color: 'var(--plra-200)',
-                    display: 'flex',
+                <div style={{ position: 'relative', zIndex: 5 }}>
+                  <div style={{
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    zIndex: 5
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                >
-                  <Share2 size={18} />
-                </button>
+                    gap: '0.6rem',
+                    padding: '0.5rem 1rem',
+                    background: 'rgba(255,255,255,0.08)',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)'
+                  }}>
+                    <Fingerprint size={16} style={{ color: 'var(--plra-200)' }} />
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'white', letterSpacing: '0.08em' }}>
+                      C.I. {Number(elector.ci).toLocaleString('es-PY')}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* ── Section 1: Voting Location ── */}
-              <div className="card-section">
-                <SectionLabel icon={<Map size={13} />} text="Asignación de Local" />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                  <DataItem icon={<Building2 size={16} />} iconColor="blue" label="Establecimiento de Votación" value={elector.local_votacion} />
-                  <div style={{ display: 'flex', gap: '0.65rem' }}>
+              <div className="card-section" style={{ background: 'var(--surface)' }}>
+                <SectionLabel icon={<Map size={13} />} text="Local de Votación" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <DataItem icon={<Building2 size={18} />} iconColor="blue" label="Establecimiento" value={elector.local_votacion} />
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <NumberBadge label="Mesa No." value={elector.mesa} />
                     <NumberBadge label="Orden No." value={elector.orden} />
                   </div>
@@ -924,11 +940,11 @@ const CoordinatorApp = () => {
               </div>
 
               {/* ── Section 2: Territory ── */}
-              <div className="card-section">
+              <div className="card-section" style={{ background: 'var(--surface-light)', borderBottom: 'none' }}>
                 <SectionLabel icon={<MapPin size={13} />} text="Ubicación Territorial" color="var(--green)" />
                 <div className="territory-grid">
-                  <DataItem icon={<Home size={16} />} iconColor="green" label="Barrio / Residencia" value={elector.barrio || 'San Antonio'} />
-                  <DataItem icon={<Briefcase size={16} />} iconColor="teal" label="Comité / Distrito" value={elector.distrito || 'Distrito 1'} />
+                  <DataItem icon={<Home size={18} />} iconColor="green" label="Barrio / Residencia" value={elector.barrio || 'Dato no disponible'} />
+                  <DataItem icon={<Landmark size={18} />} iconColor="teal" label="Comité / Distrito" value={elector.distrito || elector.ciudad || 'Dato no disponible'} />
                 </div>
               </div>
 
@@ -1130,28 +1146,53 @@ const CoordinatorApp = () => {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
               {(user?.role === 'JEFE_CAMPANA' ? (myPadrinos || []) : (myCoordinators || [])).map(c => {
                 if (!c) return null;
                 const formattedCI = !isNaN(Number(c.username)) ? Number(c.username).toLocaleString('es-PY') : c.username;
                 
                 return (
-                  <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ width: '45px', height: '45px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div key={c.id} style={{ 
+                    background: 'var(--surface)', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '16px', 
+                    padding: '0.85rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.85rem',
+                    width: '100%',
+                    minWidth: 0 // Crucial para que el flex-item pueda encogerse
+                  }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
                       {c.photo_url ? (
                         <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Users size={20} style={{ color: 'var(--text-3)' }} />
+                          <Users size={18} style={{ color: 'var(--text-3)' }} />
                         </div>
                       )}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>{c.nombre}</h5>
-                      <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {formattedCI} {c.telefono && `• ${c.telefono}`}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h5 style={{ 
+                        fontSize: '0.8rem', 
+                        fontWeight: 700, 
+                        margin: 0, 
+                        color: 'white',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis' 
+                      }}>{c.nombre}</h5>
+                      <p style={{ 
+                        fontSize: '0.6rem', 
+                        color: 'var(--text-3)', 
+                        margin: 0,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>CI: {formattedCI} {c.telefono && `• ${c.telefono}`}</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span className="badge badge-green" style={{ fontSize: '0.5rem' }}>{c.role === 'PADRINO' ? 'Padrino' : 'Activo'}</span>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <span className="badge badge-green" style={{ fontSize: '0.45rem', padding: '0.2rem 0.5rem' }}>{c.role === 'PADRINO' ? 'Padrino' : 'Activo'}</span>
                     </div>
                   </div>
                 );
@@ -1206,7 +1247,7 @@ const CoordinatorApp = () => {
               </div>
 
               {/* Header */}
-              <div style={{ padding: '1.25rem 1.75rem 1.5rem', textAlign: 'center', position: 'relative' }}>
+              <div style={{ padding: '1.25rem 3.5rem 1.5rem', textAlign: 'center', position: 'relative' }}>
                 <button
                   onClick={() => setShowModal(false)}
                   style={{
@@ -1296,8 +1337,8 @@ const CoordinatorApp = () => {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Briefcase size={18} style={{ color: needsTransport ? 'var(--plra-300)' : 'var(--text-3)' }} />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>Necesita Transporte 🚗</span>
+                    <Truck size={18} style={{ color: needsTransport ? 'var(--plra-300)' : 'var(--text-3)' }} />
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)' }}>Necesita Transporte</span>
                   </div>
                   <div style={{
                     width: '36px', height: '18px', borderRadius: '9px',

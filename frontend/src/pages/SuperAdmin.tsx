@@ -44,6 +44,8 @@ import { ManagementTable } from '../components/ManagementTable';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
@@ -844,26 +846,30 @@ const SuperAdmin = () => {
         <MapContainer center={[-22.545, -55.72]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           <ZoomControl position="bottomright" />
-          {captures.filter(c => c.lat).map(c => (
-            <Marker 
-              key={`cap-${c.id}`} 
-              position={[c.lat, c.lng]} 
-              icon={createCustomIcon(
-                c.traffic_light === 'GREEN' ? 'var(--green)' : c.traffic_light === 'YELLOW' ? 'var(--yellow)' : 'var(--red)',
-                c.needs_transport === 1 ? 'Truck' : 'MapPin',
-                20
-              )}
-            >
-              <Popup>
-                <div style={{ color: 'black' }}>
-                  <strong>{c.nombre} {c.apellido}</strong><br/>
-                  Status: {c.traffic_light}<br/>
-                  {c.needs_transport === 1 ? '🚗 REQUIERE TRASLADO' : '🚶 Sin traslado'}<br/>
-                  <small>Por: {c.coordinator_name}</small>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          <MarkerClusterGroup>
+            {captures.filter(c => c.lat).map(c => (
+              <Marker 
+                key={`cap-${c.id}`} 
+                position={[c.lat, c.lng]} 
+                icon={createCustomIcon(
+                  c.traffic_light === 'GREEN' ? 'var(--green)' : 
+                  c.traffic_light === 'YELLOW' ? 'var(--yellow)' : 
+                  c.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)',
+                  c.needs_transport === 1 ? 'Truck' : 'MapPin',
+                  20
+                )}
+              >
+                <Popup>
+                  <div style={{ color: 'black' }}>
+                    <strong>{c.nombre} {c.apellido}</strong><br/>
+                    Status: {c.traffic_light}<br/>
+                    {c.needs_transport === 1 ? '🚗 REQUIERE TRASLADO' : '🚶 Sin traslado'}<br/>
+                    <small>Por: {c.coordinator_name}</small>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MarkerClusterGroup>
           {locales.filter(l => l.lat).map(l => (
             <Marker 
               key={`loc-${l.cod_local}`} 
@@ -1031,6 +1037,186 @@ const SuperAdmin = () => {
       />
     </div>
   );
+
+  const renderLocales = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Locales de Votación</h2>
+        <button className="action-btn-primary" onClick={() => {
+          setEditingLocale(null);
+          setNewLocaleCod('');
+          setNewLocaleNombre('');
+          setNewLocaleDireccion('');
+          setNewLocaleLat('');
+          setNewLocaleLng('');
+          setNewLocaleIcon('Landmark');
+          setShowModal('locale');
+        }}>
+          <Plus size={18} /> Registrar Local
+        </button>
+      </div>
+      
+      <ManagementTable 
+        isLoading={isLoading}
+        columns={[
+          { header: 'Código', accessor: 'cod_local', width: '80px' },
+          { header: 'Nombre', accessor: 'nombre' },
+          { header: 'Dirección', accessor: 'direccion' },
+          { 
+            header: 'Ubicación', 
+            accessor: (l: any) => (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ 
+                  width: '8px', height: '8px', borderRadius: '50%', 
+                  background: l.lat ? 'var(--green)' : 'var(--red)'
+                }} />
+                <span style={{ fontSize: '0.7rem', color: l.lat ? 'var(--text)' : 'var(--text-3)' }}>
+                  {l.lat ? `${parseFloat(l.lat).toFixed(4)}, ${parseFloat(l.lng).toFixed(4)}` : 'No ubicado'}
+                </span>
+              </div>
+            )
+          },
+          {
+            header: 'Icono',
+            accessor: (l: any) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: 'var(--plra-300)' }}>{l.icon || 'Landmark'}</span>
+              </div>
+            )
+          },
+          {
+            header: 'Acciones',
+            accessor: (l: any) => (
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="icon-btn" onClick={() => { 
+                  setEditingLocale(l); 
+                  setNewLocaleCod(l.cod_local);
+                  setNewLocaleNombre(l.nombre);
+                  setNewLocaleDireccion(l.direccion || '');
+                  setNewLocaleLat(l.lat?.toString() || '');
+                  setNewLocaleLng(l.lng?.toString() || '');
+                  setNewLocaleIcon(l.icon || 'Landmark');
+                  setShowModal('locale'); 
+                }}><Edit2 size={14} /></button>
+                <button className="icon-btn delete" onClick={() => handleDeleteLocale(l.cod_local)}><Trash2 size={14} /></button>
+              </div>
+            )
+          }
+        ]}
+        data={locales}
+      />
+    </div>
+  );
+
+  const renderSettings = () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [localShareMsg, setLocalShareMsg] = useState(globalSettings.share_message || '');
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [localMasterKey, setLocalMasterKey] = useState(globalSettings.master_key || '');
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [localLogoUrl, setLocalLogoUrl] = useState(globalSettings.app_logo_url || '');
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [localElectionDate, setLocalElectionDate] = useState(globalSettings.election_date || '');
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [localAppName, setLocalAppName] = useState(globalSettings.app_name || '');
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSave = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsSaving(true);
+      try {
+        await updateSettings({
+          share_message: localShareMsg,
+          master_key: localMasterKey,
+          app_logo_url: localLogoUrl,
+          election_date: localElectionDate,
+          app_name: localAppName
+        });
+        alert('Configuración guardada exitosamente');
+      } catch (err) {
+        alert('Error al guardar la configuración');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <div className="icon-box icon-box-blue icon-box-md">
+            <Settings size={24} />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', margin: 0 }}>Configuración del Sistema</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', margin: 0 }}>Ajustes globales de la plataforma y personalización</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+          <div className="card-premium" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+              <Layout size={18} style={{ color: 'var(--plra-300)' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>Identidad & Branding</h3>
+            </div>
+            
+            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Nombre de la Aplicación</label>
+                <input className="modern-input-premium-styled" value={localAppName} onChange={e => setLocalAppName(e.target.value)} placeholder="INTELECCIONES 2026" />
+              </div>
+              <div className="form-group">
+                <label>URL del Logo (Opcional)</label>
+                <input className="modern-input-premium-styled" value={localLogoUrl} onChange={e => setLocalLogoUrl(e.target.value)} placeholder="https://..." />
+              </div>
+            </div>
+          </div>
+
+          <div className="card-premium" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+              <Share2 size={18} style={{ color: 'var(--green)' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>Mensaje de WhatsApp</h3>
+            </div>
+            
+            <div className="form-group">
+              <label>Prefijo del mensaje al compartir elector</label>
+              <textarea 
+                className="modern-input-premium-styled" 
+                style={{ height: '100px', padding: '1rem', resize: 'none' }}
+                value={localShareMsg} 
+                onChange={e => setLocalShareMsg(e.target.value)}
+                placeholder="Hola! Te comparto los datos de..."
+              />
+            </div>
+          </div>
+
+          <div className="card-premium" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '0.25rem' }}>
+              <Shield size={18} style={{ color: 'var(--red)' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>Seguridad & Cronograma</h3>
+            </div>
+            
+            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Fecha de la Elección</label>
+                <input type="datetime-local" className="modern-input-premium-styled" value={localElectionDate.split('.')[0]} onChange={e => setLocalElectionDate(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Master Key (Clave Maestra)</label>
+                <input type="password" className="modern-input-premium-styled" value={localMasterKey} onChange={e => setLocalMasterKey(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <button type="submit" className="btn btn-primary" disabled={isSaving} style={{ width: '200px' }}>
+              {isSaving ? 'Guardando...' : <><Save size={18} /> Guardar Cambios</>}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  };
 
   const renderAudit = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

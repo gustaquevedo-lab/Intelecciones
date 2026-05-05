@@ -8,6 +8,7 @@ interface Settings {
   app_logo_url: string;
   global_goal: string;
   master_key: string;
+  share_message: string;
 }
 
 interface SettingsContextType {
@@ -28,7 +29,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     app_name: 'INTELECCIONES 2026',
     app_logo_url: '',
     global_goal: '10000',
-    master_key: ''
+    master_key: '',
+    share_message: 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:'
   });
   const [loading, setLoading] = useState(true);
 
