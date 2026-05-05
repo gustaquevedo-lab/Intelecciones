@@ -1775,6 +1775,30 @@ app.post('/api/whatsapp/direct-message', async (req, res) => {
   }
 });
 
+app.get('/api/whatsapp/messages', (req, res) => {
+  try {
+    const messages = db.prepare('SELECT * FROM whatsapp_messages ORDER BY timestamp ASC').all();
+    res.json(messages);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/chats', (req, res) => {
+  try {
+    const chats = db.prepare(`
+      SELECT 
+        m1.contact_number, 
+        COALESCE((SELECT m2.contact_name FROM whatsapp_messages m2 WHERE m2.contact_number = m1.contact_number AND m2.contact_name IS NOT NULL LIMIT 1), m1.contact_number) as contact_name,
+        m1.body as last_message, 
+        m1.timestamp, 
+        m1.is_incoming
+      FROM whatsapp_messages m1
+      WHERE m1.id IN (SELECT MAX(id) FROM whatsapp_messages GROUP BY contact_number)
+      ORDER BY m1.timestamp DESC
+    `).all();
+    res.json(chats);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/admin/disputes/global', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Acceso denegado' });

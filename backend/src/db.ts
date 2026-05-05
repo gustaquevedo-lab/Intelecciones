@@ -194,6 +194,17 @@ db.exec(`
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS whatsapp_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_number TEXT NOT NULL,
+    contact_name TEXT,
+    body TEXT,
+    type TEXT DEFAULT 'chat', -- 'chat', 'image', 'video', 'ptt', 'location', 'vcard'
+    media_url TEXT,
+    is_incoming INTEGER DEFAULT 0, -- 1 for true, 0 for false
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message', 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:');

@@ -1,6 +1,7 @@
 import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import axios from 'axios';
+import { db } from './db';
 
 class WhatsAppService {
   private client: Client;
@@ -30,29 +31,28 @@ class WhatsAppService {
     });
 
     this.client.on('qr', async (qr) => {
-      console.log('WhatsApp QR Received');
+      this.status = 'CONNECTING';
       this.qrCode = await qrcode.toDataURL(qr);
-      this.status = 'DISCONNECTED';
     });
 
     this.client.on('ready', () => {
-      console.log('WhatsApp Client Ready');
       this.status = 'CONNECTED';
       this.qrCode = null;
-    });
-
-    this.client.on('authenticated', () => {
-      console.log('WhatsApp Authenticated');
-    });
-
-    this.client.on('auth_failure', () => {
-      this.status = 'DISCONNECTED';
-      console.error('WhatsApp Auth Failure');
+      console.log('WhatsApp client is ready!');
     });
 
     this.client.on('disconnected', () => {
       this.status = 'DISCONNECTED';
-      console.log('WhatsApp Disconnected');
+    });
+
+    this.client.on('message', async (msg) => {
+      try {
+        const contact = await msg.getContact();
+        db.prepare(`
+          INSERT INTO whatsapp_messages (contact_number, contact_name, body, type, is_incoming)
+          VALUES (?, ?, ?, ?, 1)
+        `).run(msg.from, contact.pushname || contact.name || msg.from, msg.body, msg.type);
+      } catch (err) { console.error('Error saving message:', err); }
     });
   }
 
@@ -91,7 +91,15 @@ class WhatsAppService {
   async sendMessage(number: string, message: string) {
     if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
     const chatId = await this.getChatId(number);
-    return await this.client.sendMessage(chatId, message);
+    const res = await this.client.sendMessage(chatId, message);
+    
+    // Log outgoing message
+    db.prepare(`
+      INSERT INTO whatsapp_messages (contact_number, body, type, is_incoming)
+      VALUES (?, ?, 'chat', 0)
+    `).run(chatId, message);
+    
+    return res;
   }
 
   async sendMedia(number: string, mediaUrl: string, caption?: string) {
@@ -106,7 +114,15 @@ class WhatsAppService {
       mediaUrl.split('/').pop()
     );
 
-    return await this.client.sendMessage(chatId, media, { caption });
+    const res = await this.client.sendMessage(chatId, media, { caption });
+    
+    // Log outgoing message
+    db.prepare(`
+      INSERT INTO whatsapp_messages (contact_number, body, type, media_url, is_incoming)
+      VALUES (?, ?, ?, ?, 0)
+    `).run(chatId, caption || '', mimetype.split('/')[0], mediaUrl);
+    
+    return res;
   }
 
   async sendVoice(number: string, audioUrl: string) {

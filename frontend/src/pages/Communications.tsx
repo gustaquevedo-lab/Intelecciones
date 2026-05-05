@@ -8,653 +8,501 @@ import {
   CheckCircle2, AlertCircle, RefreshCw, Smartphone, 
   Clock, Settings, Search, Shield, Plus, Trash2, 
   Image as ImageIcon, Video, Mic, MapPin, X, Loader2,
-  ChevronRight, Car, BarChart3, Activity
+  ChevronRight, Car, BarChart3, Activity, Paperclip,
+  Smile, MoreVertical, Phone, Info, CornerDownLeft
 } from 'lucide-react';
 import api from '../services/api';
 
 const Communications = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('session');
+  const [activeTab, setActiveTab] = useState('inbox');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [wsStatus, setWsStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED'>('DISCONNECTED');
   const [templates, setTemplates] = useState<any[]>([]);
   const [broadcastLogs, setBroadcastLogs] = useState<any[]>([]);
+  const [chats, setChats] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [composerMessage, setComposerMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Template Form State
   const [newTemplate, setNewTemplate] = useState({
-    name: '',
-    content: '',
-    media_url: '',
-    media_type: 'TEXT',
-    lat: -25.2637,
-    lng: -57.5759,
-    contact_name: '',
-    contact_phone: ''
+    name: '', content: '', media_url: '', media_type: 'TEXT',
+    lat: -25.2637, lng: -57.5759, contact_name: '', contact_phone: ''
   });
 
   // Broadcast Form State
   const [broadcastSettings, setBroadcastSettings] = useState({
-    template_id: '',
-    target_type: 'ROLE', // 'ROLE' or 'TRAFFIC'
-    target_role: 'ALL',
-    traffic_light: 'ALL',
-    target_list_id: ''
+    template_id: '', target_type: 'ROLE', target_role: 'ALL', 
+    traffic_light: 'ALL', target_list_id: ''
   });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const fetchStatus = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.get('/whatsapp/status');
-      setWsStatus(res.data.status);
-      if (res.data.qr) setQrCode(res.data.qr);
-    } catch (err) { console.error(err); }
-  };
-
-  const fetchTemplates = async () => {
-    try {
-      const res = await api.get('/whatsapp/templates');
-      setTemplates(res.data);
-    } catch (err) { console.error(err); }
-  };
-
-  const fetchLogs = async () => {
-    try {
-      const res = await api.get('/whatsapp/broadcast/logs');
-      setBroadcastLogs(res.data);
+      const [statusRes, tempRes, logRes, chatRes, msgRes] = await Promise.all([
+        api.get('/whatsapp/status'),
+        api.get('/whatsapp/templates'),
+        api.get('/whatsapp/broadcast/logs'),
+        api.get('/whatsapp/chats'),
+        api.get('/whatsapp/messages')
+      ]);
+      
+      setWsStatus(statusRes.data.status);
+      if (statusRes.data.qr) setQrCode(statusRes.data.qr);
+      setTemplates(tempRes.data);
+      setBroadcastLogs(logRes.data);
+      setChats(chatRes.data);
+      setMessages(msgRes.data);
     } catch (err) { console.error(err); }
   };
 
   useEffect(() => {
-    fetchStatus();
-    fetchTemplates();
-    fetchLogs();
-    const interval = setInterval(() => {
-      fetchStatus();
-      fetchLogs();
-    }, 5000);
+    fetchData();
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, selectedChat]);
 
   const handleConnect = async () => {
     setWsStatus('CONNECTING');
     try { await api.post('/whatsapp/connect'); } catch (err) { console.error(err); }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSendMessage = async () => {
+    if (!composerMessage.trim() || !selectedChat) return;
+    try {
+      await api.post('/whatsapp/direct-message', {
+        number: selectedChat,
+        message: composerMessage
+      });
+      setComposerMessage('');
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isTemplate = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
     setIsLoading(true);
     const formData = new FormData();
-    formData.append('photo', file); // Reuse the generic upload-photo for simplicity
-
+    formData.append('photo', file);
     try {
       const res = await api.post('/upload-photo', formData);
-      setNewTemplate(prev => ({ ...prev, media_url: res.data.photo_url }));
+      if (isTemplate) {
+        setNewTemplate(prev => ({ ...prev, media_url: res.data.photo_url }));
+      } else if (selectedChat) {
+        await api.post('/whatsapp/direct-message', {
+          number: selectedChat,
+          media_url: res.data.photo_url,
+          media_type: file.type.startsWith('image') ? 'IMAGE' : 'VIDEO'
+        });
+        fetchData();
+      }
     } catch (err) { console.error(err); }
     setIsLoading(false);
   };
 
-  const handleCreateTemplate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post('/whatsapp/templates', newTemplate);
-      setShowTemplateModal(false);
-      setNewTemplate({ name: '', content: '', media_url: '', media_type: 'TEXT', lat: -25.2637, lng: -57.5759 });
-      fetchTemplates();
-    } catch (err) { console.error(err); }
-  };
-
-  const handleDeleteTemplate = async (id: number) => {
-    if (!confirm('¿Seguro que desea eliminar esta plantilla?')) return;
-    try {
-      await api.delete(`/whatsapp/templates/${id}`);
-      fetchTemplates();
-    } catch (err) { console.error(err); }
-  };
-
-  const handleStartBroadcast = async () => {
-    if (!broadcastSettings.template_id) return alert('Seleccione una plantilla');
-    if (!confirm('¿Desea iniciar el envío masivo? Esto puede tardar varios minutos.')) return;
-    
-    setIsLoading(true);
-    try {
-      await api.post('/whatsapp/broadcast', {
-        template_id: broadcastSettings.template_id,
-        target_list_id: broadcastSettings.target_list_id || null,
-        target_role: broadcastSettings.target_type === 'ROLE' ? broadcastSettings.target_role : null,
-        traffic_light: broadcastSettings.target_type === 'TRAFFIC' ? broadcastSettings.traffic_light : null
-      });
-      fetchLogs();
-      alert('Broadcast iniciado correctamente.');
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Error al iniciar broadcast');
-    }
-    setIsLoading(false);
-  };
+  const activeChatMessages = messages.filter(m => m.contact_number === selectedChat);
+  const activeChatInfo = chats.find(c => c.contact_number === selectedChat);
 
   return (
-    <MainLayout title="Comunicaciones" userName={user?.nombre || ''} userPhoto={user?.photo_url}>
-      <div style={{ display: 'flex', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
+    <MainLayout title="Centro de WhatsApp" userName={user?.nombre || ''} userPhoto={user?.photo_url}>
+      <div style={{ display: 'flex', height: 'calc(100vh - 64px)', background: '#020C1E', overflow: 'hidden' }}>
         
-        {/* Sidebar Mini - Refined */}
-        <div style={{ width: '260px', background: 'rgba(2, 12, 27, 0.6)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '2rem 1.5rem' }}>
-            <h2 style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
-              Canales Digitales
+        {/* PANEL 1: NAV TABS */}
+        <div style={{ width: '70px', background: 'rgba(2, 12, 27, 0.8)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem 0' }}>
+          {[
+            { id: 'inbox', icon: MessageSquare, label: 'Inbox' },
+            { id: 'broadcast', icon: Send, label: 'Broadcast' },
+            { id: 'templates', icon: FileText, label: 'Plantillas' },
+            { id: 'logs', icon: BarChart3, label: 'Logs' },
+            { id: 'session', icon: QrCode, label: 'QR' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                width: '45px', height: '45px', borderRadius: '12px', marginBottom: '1rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: activeTab === tab.id ? 'var(--plra-500)' : 'transparent',
+                color: activeTab === tab.id ? 'white' : 'var(--text-3)',
+                border: 'none', cursor: 'pointer', transition: 'all 0.2s', position: 'relative'
+              }}
+              title={tab.label}
+            >
+              <tab.icon size={22} />
+              {activeTab === tab.id && <motion.div layoutId="activeTab" style={{ position: 'absolute', left: '-15px', width: '4px', height: '20px', background: 'var(--plra-500)', borderRadius: '0 4px 4px 0' }} />}
+            </button>
+          ))}
+          <button 
+            onClick={() => navigate('/admin')}
+            style={{ marginTop: 'auto', color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <ChevronRight size={24} style={{ transform: 'rotate(180deg)' }} />
+          </button>
+        </div>
+
+        {/* PANEL 2: CHAT LIST OR TAB CONTENT */}
+        <div style={{ width: '350px', background: 'rgba(5, 25, 55, 0.3)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: '1rem' }}>
+              {activeTab === 'inbox' ? 'Chats Recientes' : activeTab.toUpperCase()}
             </h2>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {[
-                { id: 'session', label: 'Conexión QR', icon: QrCode, color: 'var(--green)' },
-                { id: 'templates', label: 'Plantillas Pro', icon: FileText, color: 'var(--plra-300)' },
-                { id: 'broadcast', label: 'Centro de Envío', icon: Send, color: '#FBBF24' },
-                { id: 'logs', label: 'Monitor de Actividad', icon: BarChart3, color: '#A855F7' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.85rem',
-                    padding: '0.85rem 1rem', borderRadius: '12px',
-                    background: activeTab === tab.id ? 'rgba(255,255,255,0.05)' : 'transparent',
-                    border: '1px solid',
-                    borderColor: activeTab === tab.id ? 'var(--border)' : 'transparent',
-                    color: activeTab === tab.id ? 'white' : 'var(--text-3)',
-                    fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s',
-                    textAlign: 'left'
-                  }}
-                >
-                  <tab.icon size={18} style={{ color: activeTab === tab.id ? tab.color : 'inherit' }} />
-                  {tab.label}
-                </button>
-              ))}
+            <div className="search-input-wrapper-premium">
+              <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-3)' }} />
+              <input 
+                placeholder="Buscar conversación..." 
+                className="modern-input-premium-styled" 
+                style={{ paddingLeft: '2.5rem', height: '40px', fontSize: '0.8rem' }}
+              />
             </div>
           </div>
 
-          <div style={{ marginTop: 'auto', padding: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <button 
-              onClick={() => navigate('/admin')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '0.75rem 1rem', borderRadius: '12px',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                color: 'var(--text-2)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer'
-              }}
-            >
-              <ChevronRight size={16} style={{ transform: 'rotate(180deg)' }} />
-              Volver al Panel
-            </button>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {activeTab === 'inbox' && (
+              chats.map(chat => (
+                <div 
+                  key={chat.contact_number}
+                  onClick={() => setSelectedChat(chat.contact_number)}
+                  style={{
+                    padding: '1rem 1.5rem', display: 'flex', gap: '1rem', cursor: 'pointer',
+                    background: selectedChat === chat.contact_number ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    borderLeft: selectedChat === chat.contact_number ? '4px solid var(--plra-500)' : '4px solid transparent',
+                    transition: 'all 0.2s', borderBottom: '1px solid rgba(255,255,255,0.02)'
+                  }}
+                >
+                  <div style={{ 
+                    width: '48px', height: '48px', borderRadius: '14px', 
+                    background: 'linear-gradient(45deg, var(--plra-700), var(--plra-500))',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: '1rem'
+                  }}>
+                    {(chat.contact_name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <span style={{ fontWeight: 700, color: 'white', fontSize: '0.9rem' }}>{chat.contact_name || chat.contact_number.split('@')[0]}</span>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>{new Date(chat.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {chat.is_incoming === 0 && <CheckCircle2 size={12} style={{ display: 'inline', marginRight: '4px', color: 'var(--green)' }} />}
+                      {chat.last_message || 'Archivo multimedia'}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)' }}>
-              <div style={{ 
-                width: '10px', height: '10px', borderRadius: '50%', 
-                background: wsStatus === 'CONNECTED' ? 'var(--green)' : wsStatus === 'CONNECTING' ? 'var(--yellow)' : 'var(--red)',
-                boxShadow: `0 0 8px ${wsStatus === 'CONNECTED' ? 'var(--green)' : 'var(--red)'}40`
-              }} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase' }}>WhatsApp: {wsStatus}</span>
-            </div>
+            {activeTab !== 'inbox' && (
+               <div style={{ padding: '1.5rem' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Selecciona una opción del menú lateral para gestionar el sistema de WhatsApp.</p>
+               </div>
+            )}
           </div>
         </div>
 
-        {/* Content Area */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '2.5rem', background: 'linear-gradient(135deg, #020C1E 0%, #051937 100%)' }}>
-          <AnimatePresence mode="wait">
-            {activeTab === 'session' && (
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-                <div style={{ maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
-                  <div className="premium-card" style={{ padding: '3.5rem 2rem' }}>
-                    <div style={{ 
-                      width: '80px', height: '80px', borderRadius: '24px', 
-                      background: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      margin: '0 auto 2rem', color: 'var(--green)',
-                      boxShadow: '0 15px 35px rgba(34,197,94,0.15)'
-                    }}>
-                      <Smartphone size={40} />
-                    </div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'white', marginBottom: '1rem', fontFamily: 'var(--font-display)' }}>Central de WhatsApp</h1>
-                    <p style={{ color: 'var(--text-3)', marginBottom: '3rem', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                      Escanea el código para habilitar el motor de envío masivo de multimedia y geolocalización.
-                    </p>
-
-                    <div style={{ 
-                      width: '320px', height: '320px', background: 'white', borderRadius: '28px',
-                      margin: '0 auto', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 30px 60px rgba(0,0,0,0.5)', position: 'relative', overflow: 'hidden'
-                    }}>
-                      {qrCode ? (
-                        <img src={qrCode} alt="QR Code" style={{ width: '100%', height: '100%', imageRendering: 'pixelated' }} />
-                      ) : (
-                        <div style={{ textAlign: 'center' }}>
-                          <Loader2 className="animate-spin" size={48} style={{ color: 'var(--plra-500)', marginBottom: '1.25rem' }} />
-                          <p style={{ fontSize: '0.75rem', color: '#666', fontWeight: 800, letterSpacing: '0.05em' }}>PREPARANDO QR...</p>
-                        </div>
-                      )}
-                      
-                      {wsStatus === 'CONNECTED' && (
-                        <div style={{ 
-                          position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.98)',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem'
-                        }}>
-                          <div style={{ width: '72px', height: '72px', borderRadius: '22px', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', boxShadow: '0 10px 25px rgba(34,197,94,0.3)' }}>
-                            <CheckCircle2 size={36} />
-                          </div>
-                          <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontWeight: 900, color: '#020C1E', fontSize: '1.1rem', letterSpacing: '-0.02em' }}>SISTEMA VINCULADO</p>
-                            <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>Motor de envío operando correctamente</p>
-                          </div>
-                          <button 
-                            onClick={() => api.post('/whatsapp/disconnect')}
-                            style={{ 
-                              marginTop: '1rem', padding: '0.6rem 1.25rem', borderRadius: '10px', 
-                              background: 'rgba(239,68,68,0.1)', color: 'var(--red)', fontWeight: 800, 
-                              fontSize: '0.7rem', border: 'none', cursor: 'pointer', transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
-                          >
-                            CERRAR SESIÓN
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {!qrCode && wsStatus === 'DISCONNECTED' && (
-                      <button onClick={handleConnect} className="btn-primary" style={{ marginTop: '2rem', padding: '1rem 2.5rem' }}>
-                        GENERAR NUEVA CONEXIÓN
-                      </button>
-                    )}
+        {/* PANEL 3: CHAT VIEW / TAB VIEW */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: activeTab === 'inbox' ? 'url("https://w0.peakpx.com/wallpaper/508/606/HD-wallpaper-whatsapp-dark-patterns-thumbnail.jpg")' : '#020C1E' }}>
+          
+          {activeTab === 'inbox' ? (
+            selectedChat ? (
+              <>
+                {/* Chat Header */}
+                <div style={{ padding: '0.75rem 2rem', background: 'rgba(5, 25, 55, 0.95)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1rem', backdropFilter: 'blur(10px)', zIndex: 10 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800 }}>
+                    {(activeChatInfo?.contact_name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'white' }}>{activeChatInfo?.contact_name || selectedChat.split('@')[0]}</h3>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--green)', fontWeight: 800 }}>EN LÍNEA</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-3)' }}>
+                    <Phone size={18} style={{ cursor: 'pointer' }} />
+                    <Info size={18} style={{ cursor: 'pointer' }} />
+                    <MoreVertical size={18} style={{ cursor: 'pointer' }} />
                   </div>
                 </div>
-              </motion.div>
-            )}
 
-            {activeTab === 'templates' && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-                  <div>
-                    <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>Plantillas Multimedia</h1>
-                    <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Gestione los contenidos masivos con potencia personalizable.</p>
-                  </div>
-                  <button 
-                    onClick={() => setShowTemplateModal(true)}
-                    className="btn-primary" 
-                    style={{ borderRadius: '12px', padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-                  >
-                    <Plus size={20} /> NUEVA PLANTILLA
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                  {templates.map(t => (
-                    <motion.div key={t.id} layout className="premium-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-300)' }}>
-                            {t.media_type === 'IMAGE' && <ImageIcon size={20} />}
-                            {t.media_type === 'VIDEO' && <Video size={20} />}
-                            {t.media_type === 'VOICE' && <Mic size={20} />}
-                            {t.media_type === 'LOCATION' && <MapPin size={20} />}
-                            {t.media_type === 'CONTACT' && <Users size={20} />}
-                            {t.media_type === 'TEXT' && <FileText size={20} />}
-                          </div>
-                          <div>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'white', margin: 0 }}>{t.name}</h3>
-                            <span style={{ fontSize: '0.6rem', color: 'var(--plra-300)', fontWeight: 800, textTransform: 'uppercase' }}>{t.media_type}</span>
-                          </div>
+                {/* Messages View */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {activeChatMessages.map(msg => (
+                    <div 
+                      key={msg.id} 
+                      style={{ 
+                        maxWidth: '70%', 
+                        alignSelf: msg.is_incoming ? 'flex-start' : 'flex-end',
+                        background: msg.is_incoming ? 'rgba(30, 41, 59, 0.9)' : 'var(--plra-600)',
+                        padding: '0.75rem 1rem',
+                        borderRadius: msg.is_incoming ? '0 18px 18px 18px' : '18px 0 18px 18px',
+                        color: 'white', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', position: 'relative'
+                      }}
+                    >
+                      {msg.media_url && (
+                        <div style={{ marginBottom: '0.5rem', borderRadius: '10px', overflow: 'hidden' }}>
+                          {msg.type === 'image' && <img src={msg.media_url} style={{ width: '100%', maxHeight: '300px', objectFit: 'cover' }} />}
+                          {(msg.type === 'video' || msg.type === 'video') && <div style={{ background: '#000', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Video size={40} /></div>}
                         </div>
-                        <button onClick={() => handleDeleteTemplate(t.id)} style={{ color: 'rgba(239,68,68,0.5)', padding: '0.5rem', borderRadius: '8px', border: 'none', background: 'none', cursor: 'pointer' }}>
-                          <Trash2 size={18} />
-                        </button>
+                      )}
+                      <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: '1.4' }}>{msg.body}</p>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        {!msg.is_incoming && <CheckCircle2 size={10} style={{ color: 'var(--green)' }} />}
                       </div>
-
-                      {t.media_url && t.media_type !== 'CONTACT' && (
-                        <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}>
-                          {t.media_type === 'IMAGE' && <img src={t.media_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                          {t.media_type === 'VIDEO' && <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Video size={40} style={{ opacity: 0.3 }} /></div>}
-                          {t.media_type === 'VOICE' && <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Mic size={40} style={{ opacity: 0.3 }} /></div>}
-                        </div>
-                      )}
-
-                      {t.media_type === 'CONTACT' && (
-                        <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
-                           <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>{t.contact_name}</p>
-                           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{t.contact_phone}</p>
-                        </div>
-                      )}
-
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.5' }}>
-                        {t.content}
-                      </p>
-                    </motion.div>
+                    </div>
                   ))}
+                  <div ref={chatEndRef} />
                 </div>
-              </motion.div>
-            )}
 
-            {activeTab === 'broadcast' && (
-              <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}>
-                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                      {/* Configuration */}
-                      <div className="premium-card" style={{ padding: '2rem' }}>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <Send size={24} style={{ color: 'var(--green)' }} />
-                          Nueva Campaña Masiva
-                        </h2>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                          <div className="form-group">
-                            <label>Plantilla a Enviar</label>
-                            <select 
-                              className="modern-input-premium-styled" 
-                              style={{ width: '100%' }}
-                              value={broadcastSettings.template_id}
-                              onChange={e => setBroadcastSettings(prev => ({ ...prev, template_id: e.target.value }))}
-                            >
-                              <option value="">Seleccione una plantilla...</option>
-                              {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                          </div>
-
-                          <div className="form-group">
-                            <label>Segmentación de Destinatarios</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
-                              <button 
-                                onClick={() => setBroadcastSettings(prev => ({ ...prev, target_type: 'ROLE' }))}
-                                style={{ 
-                                  padding: '0.75rem', borderRadius: '10px', 
-                                  background: broadcastSettings.target_type === 'ROLE' ? 'var(--plra-500)' : 'rgba(255,255,255,0.03)',
-                                  border: '1px solid var(--border)', color: 'white', fontWeight: 700, cursor: 'pointer'
-                                }}
-                              >
-                                Por Cargo
-                              </button>
-                              <button 
-                                onClick={() => setBroadcastSettings(prev => ({ ...prev, target_type: 'TRAFFIC' }))}
-                                style={{ 
-                                  padding: '0.75rem', borderRadius: '10px', 
-                                  background: broadcastSettings.target_type === 'TRAFFIC' ? 'var(--plra-500)' : 'rgba(255,255,255,0.03)',
-                                  border: '1px solid var(--border)', color: 'white', fontWeight: 700, cursor: 'pointer'
-                                }}
-                              >
-                                Por Semáforo
-                              </button>
-                            </div>
-                          </div>
-
-                          {broadcastSettings.target_type === 'ROLE' ? (
-                            <div className="form-group">
-                              <label>Filtrar por Cargo</label>
-                              <select 
-                                className="modern-input-premium-styled" 
-                                style={{ width: '100%' }}
-                                value={broadcastSettings.target_role}
-                                onChange={e => setBroadcastSettings(prev => ({ ...prev, target_role: e.target.value }))}
-                              >
-                                <option value="ALL">Todos los Operadores</option>
-                                <option value="COORDINADOR">Coordinadores de Campo</option>
-                                <option value="PADRINO">Padrinos</option>
-                                <option value="JEFE_CAMPANA">Jefes de Campaña</option>
-                              </select>
-                            </div>
-                          ) : (
-                            <div className="form-group">
-                              <label>Filtrar por Intención de Voto</label>
-                              <select 
-                                className="modern-input-premium-styled" 
-                                style={{ width: '100%' }}
-                                value={broadcastSettings.traffic_light}
-                                onChange={e => setBroadcastSettings(prev => ({ ...prev, traffic_light: e.target.value }))}
-                              >
-                                <option value="ALL">Todos los Captados</option>
-                                <option value="GREEN">Verdes (Fidelizados)</option>
-                                <option value="YELLOW">Amarillos (Dudosos)</option>
-                                <option value="RED">Rojos (En Contra)</option>
-                                <option value="PURPLE">Púrpura (Especiales)</option>
-                              </select>
-                            </div>
-                          )}
-
-                          <button 
-                            onClick={handleStartBroadcast}
-                            disabled={isLoading || wsStatus !== 'CONNECTED'}
-                            className="btn-primary" 
-                            style={{ height: '3.5rem', borderRadius: '14px', marginTop: '1rem', fontSize: '1rem' }}
-                          >
-                            {isLoading ? <Loader2 className="animate-spin" /> : 'INICIAR TRANSMISIÓN'}
-                          </button>
-                          
-                          {wsStatus !== 'CONNECTED' && (
-                            <p style={{ fontSize: '0.7rem', color: 'var(--red)', textAlign: 'center', fontWeight: 700 }}>
-                              <AlertCircle size={12} /> WhatsApp debe estar vinculado para enviar.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Preview / Instructions */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                         <div className="premium-card" style={{ padding: '2rem', background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.2)' }}>
-                           <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--green)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                             <Shield size={18} /> Potencia e Integridad
-                           </h3>
-                           <ul style={{ padding: 0, margin: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                             {[
-                               { title: 'Simulación Personal', desc: 'Las notas de voz se envían como grabadas personalmente, aumentando la efectividad.' },
-                               { title: 'Retraso Anti-Ban', desc: 'Sistema inteligente de pausas (2-5 seg) para proteger tu cuenta de bloqueos.' },
-                               { title: 'Multimedia Premium', desc: 'Envía fotos, videos y ubicaciones reales para guiar a tu equipo.' }
-                             ].map((item, idx) => (
-                               <li key={idx} style={{ display: 'flex', gap: '1rem' }}>
-                                 <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(34,197,94,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green)', fontSize: '0.6rem', fontWeight: 900 }}>{idx+1}</div>
-                                 <div>
-                                   <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white', margin: 0 }}>{item.title}</p>
-                                   <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: '0.15rem 0 0' }}>{item.desc}</p>
-                                 </div>
-                               </li>
-                             ))}
-                           </ul>
-                         </div>
-
-                         <div style={{ padding: '1.5rem', borderRadius: '20px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                               <Activity size={32} style={{ color: 'var(--plra-300)' }} />
-                               <div>
-                                 <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>Monitoreo en Vivo</p>
-                                 <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Los envíos se procesan en segundo plano. Puedes cerrar esta pestaña sin interrumpirlos.</p>
-                               </div>
-                            </div>
-                         </div>
+                {/* Composer */}
+                <div style={{ padding: '1.25rem 2rem', background: 'rgba(5, 25, 55, 0.95)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1rem', backdropFilter: 'blur(10px)' }}>
+                   <div style={{ display: 'flex', gap: '0.75rem', color: 'var(--text-3)' }}>
+                      <Smile size={22} style={{ cursor: 'pointer' }} />
+                      <Paperclip size={22} style={{ cursor: 'pointer' }} onClick={() => fileInputRef.current?.click()} />
+                   </div>
+                   <div style={{ flex: 1, position: 'relative' }}>
+                      <input 
+                        className="modern-input-premium-styled"
+                        placeholder="Escribe un mensaje..."
+                        value={composerMessage}
+                        onChange={e => setComposerMessage(e.target.value)}
+                        onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
+                        style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '24px', padding: '0.75rem 1.5rem', border: 'none' }}
+                      />
+                      <div style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: '0.5rem' }}>
+                         <button 
+                            onClick={() => setShowTemplateModal(true)}
+                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', color: 'white', fontWeight: 800, cursor: 'pointer' }}
+                         >
+                           PLANTILLAS
+                         </button>
                       </div>
                    </div>
+                   <button 
+                     onClick={handleSendMessage}
+                     disabled={!composerMessage.trim()}
+                     style={{ 
+                       width: '45px', height: '45px', borderRadius: '50%', background: 'var(--plra-500)', 
+                       border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                       cursor: 'pointer', boxShadow: '0 4px 15px rgba(37,99,235,0.3)'
+                     }}
+                   >
+                     <Send size={20} />
+                   </button>
+                   <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={(e) => handleFileUpload(e)} />
                 </div>
-              </motion.div>
-            )}
+              </>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+                <div style={{ width: '100px', height: '100px', borderRadius: '30px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem' }}>
+                   <Smartphone size={50} />
+                </div>
+                <h2 style={{ color: 'white', fontSize: '1.5rem', fontWeight: 800 }}>Selecciona un Chat</h2>
+                <p style={{ color: 'var(--text-3)', textAlign: 'center', maxWidth: '300px' }}>Selecciona una conversación de la izquierda para comenzar a mensajear.</p>
+              </div>
+            )
+          ) : (
+            /* TAB CONTENT: BROADCAST, TEMPLATES, LOGS, SESSION */
+            <div style={{ padding: '3rem', flex: 1, overflowY: 'auto' }}>
+               <AnimatePresence mode="wait">
+                  {activeTab === 'session' && (
+                    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
+                      <div className="premium-card" style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem', textAlign: 'center' }}>
+                         <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'white', marginBottom: '1rem' }}>Conexión WhatsApp</h1>
+                         <p style={{ color: 'var(--text-3)', marginBottom: '3rem' }}>Vincula tu cuenta para habilitar el envío masivo y la recepción de mensajes.</p>
+                         
+                         <div style={{ 
+                            width: '300px', height: '300px', background: 'white', borderRadius: '24px', margin: '0 auto',
+                            padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                         }}>
+                            {qrCode ? (
+                              <img src={qrCode} style={{ width: '100%' }} />
+                            ) : (
+                              wsStatus === 'CONNECTED' ? (
+                                <div style={{ textAlign: 'center', color: '#1a1a1a' }}>
+                                   <CheckCircle2 size={64} style={{ color: 'var(--green)', marginBottom: '1rem' }} />
+                                   <p style={{ fontWeight: 900 }}>VINCULADO</p>
+                                </div>
+                              ) : <Loader2 className="animate-spin" size={48} color="#666" />
+                            )}
+                         </div>
 
-            {activeTab === 'logs' && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', marginBottom: '2.5rem', fontFamily: 'var(--font-display)' }}>Monitor de Transmisiones</h1>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {broadcastLogs.map(log => (
-                    <div key={log.id} className="premium-card" style={{ padding: '1.5rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                        <div>
-                          <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.1em' }}>ID #{log.id}</span>
-                          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', margin: '0.2rem 0' }}>{log.template_name}</h3>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Iniciado el {new Date(log.timestamp).toLocaleString()}</span>
-                        </div>
-                        <div style={{ 
-                          padding: '0.4rem 0.85rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 900,
-                          background: log.status === 'RUNNING' ? 'rgba(59,130,246,0.1)' : 'rgba(34,197,94,0.1)',
-                          color: log.status === 'RUNNING' ? 'var(--plra-300)' : 'var(--green)',
-                          border: '1px solid currentColor'
-                        }}>
-                          {log.status === 'RUNNING' ? 'PROCESANDO' : 'COMPLETADO'}
-                        </div>
+                         {wsStatus === 'CONNECTED' ? (
+                           <button onClick={() => api.post('/whatsapp/disconnect')} className="btn-secondary" style={{ marginTop: '2rem', color: 'var(--red)' }}>Cerrar Sesión</button>
+                         ) : (
+                           <button onClick={handleConnect} className="btn-primary" style={{ marginTop: '2rem' }}>Generar QR</button>
+                         )}
                       </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-2)', fontWeight: 700 }}>
-                          <span>Progreso del envío</span>
-                          <span>{log.success_count + log.fail_count} / {log.target_count} ({Math.round(((log.success_count + log.fail_count) / log.target_count) * 100)}%)</span>
-                        </div>
-                        <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${((log.success_count + log.fail_count) / log.target_count) * 100}%` }}
-                            style={{ height: '100%', background: 'linear-gradient(90deg, var(--plra-500), var(--green))' }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)' }} />
-                            <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Exitosos: <strong>{log.success_count}</strong></span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red)' }} />
-                            <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Fallidos: <strong>{log.fail_count}</strong></span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {broadcastLogs.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '5rem 0', opacity: 0.3 }}>
-                      <BarChart3 size={64} style={{ margin: '0 auto 1.5rem' }} />
-                      <p style={{ fontWeight: 800, letterSpacing: '0.1em' }}>NO HAY REGISTROS DE ACTIVIDAD</p>
-                    </div>
+                    </motion.div>
                   )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+
+                  {activeTab === 'broadcast' && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                       <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', marginBottom: '2.5rem' }}>Envío Masivo (Broadcast)</h2>
+                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                          <div className="premium-card" style={{ padding: '2rem' }}>
+                             <div className="form-group">
+                                <label>Seleccionar Plantilla</label>
+                                <select 
+                                  className="modern-input-premium-styled"
+                                  value={broadcastSettings.template_id}
+                                  onChange={e => setBroadcastSettings(prev => ({ ...prev, template_id: e.target.value }))}
+                                >
+                                  <option value="">Elegir...</option>
+                                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                             </div>
+                             <div className="form-group" style={{ marginTop: '1.5rem' }}>
+                                <label>Destinatarios</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                                   <button onClick={() => setBroadcastSettings(p => ({ ...p, target_type: 'ROLE' }))} style={{ flex: 1, padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border)', background: broadcastSettings.target_type === 'ROLE' ? 'var(--plra-500)' : 'none', color: 'white' }}>Por Rol</button>
+                                   <button onClick={() => setBroadcastSettings(p => ({ ...p, target_type: 'TRAFFIC' }))} style={{ flex: 1, padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border)', background: broadcastSettings.target_type === 'TRAFFIC' ? 'var(--plra-500)' : 'none', color: 'white' }}>Por Semáforo</button>
+                                </div>
+                                {broadcastSettings.target_type === 'ROLE' ? (
+                                  <select className="modern-input-premium-styled" value={broadcastSettings.target_role} onChange={e => setBroadcastSettings(p => ({ ...p, target_role: e.target.value }))}>
+                                    <option value="ALL">Todos los Usuarios</option>
+                                    <option value="COORDINADOR">Coordinadores</option>
+                                    <option value="PADRINO">Padrinos</option>
+                                  </select>
+                                ) : (
+                                  <select className="modern-input-premium-styled" value={broadcastSettings.traffic_light} onChange={e => setBroadcastSettings(p => ({ ...p, traffic_light: e.target.value }))}>
+                                    <option value="ALL">Todos los Captados</option>
+                                    <option value="GREEN">Verdes</option>
+                                    <option value="YELLOW">Amarillos</option>
+                                  </select>
+                                )}
+                             </div>
+                             <button 
+                                onClick={async () => {
+                                  if (!broadcastSettings.template_id) return alert('Elige una plantilla');
+                                  await api.post('/whatsapp/broadcast', broadcastSettings);
+                                  alert('Broadcast iniciado');
+                                  setActiveTab('logs');
+                                }}
+                                className="btn-primary" 
+                                style={{ width: '100%', marginTop: '2rem', height: '3.5rem' }}
+                             >
+                               INICIAR TRANSMISIÓN
+                             </button>
+                          </div>
+                          <div className="premium-card" style={{ padding: '2rem', background: 'rgba(34,197,94,0.05)' }}>
+                             <h4 style={{ color: 'var(--green)', margin: '0 0 1rem' }}>Sugerencias de Seguridad</h4>
+                             <ul style={{ padding: 0, margin: 0, color: 'var(--text-3)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                               <li>• Se aplica un delay aleatorio de 2-5 seg entre envíos.</li>
+                               <li>• Los mensajes personalizados con <strong>{{nombre}}</strong> reducen el riesgo de baneo.</li>
+                               <li>• No envíes a más de 500 contactos nuevos por día.</li>
+                             </ul>
+                          </div>
+                       </div>
+                    </motion.div>
+                  )}
+
+                  {activeTab === 'templates' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>Gestión de Plantillas</h2>
+                          <button onClick={() => setShowTemplateModal(true)} className="btn-primary"><Plus size={18} /> NUEVA</button>
+                       </div>
+                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                          {templates.map(t => (
+                            <div key={t.id} className="premium-card" style={{ padding: '1.5rem' }}>
+                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-300)' }}>
+                                        {t.media_type === 'IMAGE' && <ImageIcon size={18} />}
+                                        {t.media_type === 'CONTACT' && <Users size={18} />}
+                                        {t.media_type === 'TEXT' && <FileText size={18} />}
+                                        {t.media_type === 'VOICE' && <Mic size={18} />}
+                                     </div>
+                                     <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>{t.name}</span>
+                                  </div>
+                                  <button onClick={() => api.delete(`/whatsapp/templates/${t.id}`).then(fetchData)} style={{ background: 'none', border: 'none', color: 'rgba(239,68,68,0.5)', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                               </div>
+                               <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', lineHeight: '1.5' }}>{t.content}</p>
+                            </div>
+                          ))}
+                       </div>
+                    </motion.div>
+                  )}
+
+                  {activeTab === 'logs' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                       <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', marginBottom: '2.5rem' }}>Historial de Campañas</h2>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          {broadcastLogs.map(log => (
+                            <div key={log.id} className="premium-card" style={{ padding: '1.5rem' }}>
+                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                  <div>
+                                     <h4 style={{ margin: 0, color: 'white' }}>{log.template_name}</h4>
+                                     <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>{new Date(log.timestamp).toLocaleString()}</span>
+                                  </div>
+                                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: log.status === 'COMPLETED' ? 'var(--green)' : 'var(--yellow)' }}>{log.status}</span>
+                               </div>
+                               <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${(log.success_count / log.target_count) * 100}%`, height: '100%', background: 'var(--green)' }} />
+                               </div>
+                               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--text-3)' }}>
+                                  <span>Total: {log.target_count}</span>
+                                  <span>Éxito: {log.success_count}</span>
+                                  <span>Error: {log.fail_count}</span>
+                               </div>
+                            </div>
+                          ))}
+                       </div>
+                    </motion.div>
+                  )}
+               </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Template Creation Modal */}
+      {/* MODAL: CREATE TEMPLATE */}
       <AnimatePresence>
         {showTemplateModal && (
-          <div className="modal-overlay-premium" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="premium-card"
-              style={{ width: '95%', maxWidth: '600px', padding: '2rem', position: 'relative' }}
-            >
-              <button onClick={() => setShowTemplateModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
-                <X size={24} />
-              </button>
-
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '2rem' }}>Crear Plantilla Pro</h2>
-              
-              <form onSubmit={handleCreateTemplate}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label>Nombre Identificador</label>
-                    <input 
-                      className="modern-input-premium-styled" 
-                      placeholder="Ej: Instrucciones Veedores" 
-                      value={newTemplate.name}
-                      onChange={e => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
-                      required 
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Tipo de Multimedia</label>
-                    <select 
-                      className="modern-input-premium-styled" 
-                      value={newTemplate.media_type}
-                      onChange={e => setNewTemplate(prev => ({ ...prev, media_type: e.target.value }))}
-                    >
-                      <option value="TEXT">Solo Texto</option>
-                      <option value="IMAGE">Imagen</option>
-                      <option value="VIDEO">Video</option>
-                      <option value="VOICE">Nota de Voz (PTT)</option>
-                      <option value="LOCATION">Ubicación GPS</option>
-                      <option value="CONTACT">Contacto (VCard)</option>
-                    </select>
-                  </div>
-
-                  {newTemplate.media_type !== 'TEXT' && newTemplate.media_type !== 'LOCATION' && newTemplate.media_type !== 'CONTACT' && (
-                    <div className="form-group">
-                      <label>Archivo Multimedia</label>
-                      <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        style={{ 
-                          height: '42px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', 
-                          border: '1.5px dashed var(--border)', display: 'flex', alignItems: 'center', 
-                          justifyContent: 'center', cursor: 'pointer', color: newTemplate.media_url ? 'var(--green)' : 'var(--text-3)',
-                          fontSize: '0.75rem', fontWeight: 700
-                        }}
-                      >
-                        {isLoading ? <Loader2 className="animate-spin" size={18} /> : (newTemplate.media_url ? 'Archivo Listo ✓' : 'Subir Archivo')}
-                      </div>
-                      <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
-                    </div>
-                  )}
-
-                  {newTemplate.media_type === 'LOCATION' && (
-                    <>
-                      <div className="form-group">
-                        <label>Latitud</label>
-                        <input className="modern-input-premium-styled" type="number" step="any" value={newTemplate.lat} onChange={e => setNewTemplate(prev => ({ ...prev, lat: parseFloat(e.target.value) }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Longitud</label>
-                        <input className="modern-input-premium-styled" type="number" step="any" value={newTemplate.lng} onChange={e => setNewTemplate(prev => ({ ...prev, lng: parseFloat(e.target.value) }))} />
-                      </div>
-                    </>
-                  )}
-
-                  {newTemplate.media_type === 'CONTACT' && (
-                    <>
-                      <div className="form-group">
-                        <label>Nombre del Contacto</label>
-                        <input 
-                          className="modern-input-premium-styled" 
-                          placeholder="Ej: Lic. Juan Pérez" 
-                          value={newTemplate.contact_name} 
-                          onChange={e => setNewTemplate(prev => ({ ...prev, contact_name: e.target.value }))} 
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Teléfono (con prefijo)</label>
-                        <input 
-                          className="modern-input-premium-styled" 
-                          placeholder="Ej: 595981123456" 
-                          value={newTemplate.contact_phone} 
-                          onChange={e => setNewTemplate(prev => ({ ...prev, contact_phone: e.target.value }))} 
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '2rem' }}>
-                  <label>{newTemplate.media_type === 'LOCATION' ? 'Descripción de Ubicación' : 'Cuerpo del Mensaje'}</label>
-                  <textarea 
-                    className="modern-input-premium-styled" 
-                    style={{ minHeight: '120px', resize: 'none', padding: '1rem' }}
-                    placeholder="Escribe el mensaje aquí..."
-                    value={newTemplate.content}
-                    onChange={e => setNewTemplate(prev => ({ ...prev, content: e.target.value }))}
-                  />
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>Usa <strong>{{nombre}}</strong> para personalizar.</p>
-                </div>
-
-                <div className="modal-footer-premium-styled">
-                  <button type="button" onClick={() => setShowTemplateModal(false)} className="btn-cancel-styled">Cancelar</button>
-                  <button type="submit" className="btn-confirm-styled" style={{ padding: '0 2rem' }}>Guardar Plantilla</button>
-                </div>
-              </form>
+          <div className="modal-overlay-premium" style={{ zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <motion.div className="premium-card" style={{ width: '500px', padding: '2rem' }}>
+               <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '1.5rem' }}>Nueva Plantilla</h2>
+               <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Nombre</label>
+                  <input className="modern-input-premium-styled" value={newTemplate.name} onChange={e => setNewTemplate(p => ({ ...p, name: e.target.value }))} />
+               </div>
+               <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Tipo Media</label>
+                  <select className="modern-input-premium-styled" value={newTemplate.media_type} onChange={e => setNewTemplate(p => ({ ...p, media_type: e.target.value }))}>
+                     <option value="TEXT">Texto</option>
+                     <option value="IMAGE">Imagen</option>
+                     <option value="VIDEO">Video</option>
+                     <option value="VOICE">Voz (PTT)</option>
+                     <option value="LOCATION">Ubicación</option>
+                     <option value="CONTACT">Contacto</option>
+                  </select>
+               </div>
+               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label>Contenido</label>
+                  <textarea className="modern-input-premium-styled" style={{ height: '100px' }} value={newTemplate.content} onChange={e => setNewTemplate(p => ({ ...p, content: e.target.value }))} />
+               </div>
+               <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button onClick={() => setShowTemplateModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cerrar</button>
+                  <button 
+                    onClick={async () => {
+                      await api.post('/whatsapp/templates', newTemplate);
+                      setShowTemplateModal(false);
+                      fetchData();
+                    }}
+                    className="btn-primary" 
+                    style={{ flex: 1 }}
+                  >
+                    Guardar
+                  </button>
+               </div>
             </motion.div>
           </div>
         )}
