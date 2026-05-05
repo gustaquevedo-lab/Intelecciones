@@ -1,7 +1,7 @@
 import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import axios from 'axios';
-import { db } from './db';
+import db from './db';
 
 class WhatsAppService {
   private client: Client;
@@ -107,7 +107,7 @@ class WhatsAppService {
     const chatId = await this.getChatId(number);
     
     const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
-    const mimetype = response.headers['content-type'];
+    const mimetype = response.headers['content-type'] as string || 'application/octet-stream';
     const media = new MessageMedia(
       mimetype,
       Buffer.from(response.data).toString('base64'),
@@ -120,7 +120,7 @@ class WhatsAppService {
     db.prepare(`
       INSERT INTO whatsapp_messages (contact_number, body, type, media_url, is_incoming)
       VALUES (?, ?, ?, ?, 0)
-    `).run(chatId, caption || '', mimetype.split('/')[0], mediaUrl);
+    `).run(chatId, caption || '', (mimetype as string).split('/')[0], mediaUrl);
     
     return res;
   }
@@ -130,7 +130,7 @@ class WhatsAppService {
     const chatId = await this.getChatId(number);
     
     const response = await axios.get(audioUrl, { responseType: 'arraybuffer' });
-    const mimetype = response.headers['content-type'];
+    const mimetype = response.headers['content-type'] as string || 'audio/ogg';
     const media = new MessageMedia(
       mimetype,
       Buffer.from(response.data).toString('base64')
