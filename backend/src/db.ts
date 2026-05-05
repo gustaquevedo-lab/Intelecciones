@@ -202,13 +202,16 @@ try {
 try {
   db.prepare("ALTER TABLE users ADD COLUMN ci TEXT").run();
 } catch (e) {}
+try {
+  db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 0').run();
+  console.log('Migration: Added needs_password_change to users');
+} catch (e) {}
 
 // Field requests migrations
 try {
-  db.prepare("ALTER TABLE field_requests ADD COLUMN photo_url TEXT").run();
-} catch (e) {}
-try {
-  db.prepare("ALTER TABLE field_requests ADD COLUMN audio_url TEXT").run();
+  db.prepare('ALTER TABLE field_requests ADD COLUMN photo_url TEXT').run();
+  db.prepare('ALTER TABLE field_requests ADD COLUMN audio_url TEXT').run();
+  console.log('Migration: Added multimedia columns to field_requests');
 } catch (e) {}
 
 // Lists migrations

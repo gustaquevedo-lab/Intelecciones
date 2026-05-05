@@ -889,6 +889,13 @@ app.post('/api/users', (req, res) => {
   const finalPassword = password.toString().trim();
 
   try {
+    if (cleanCI) {
+      const existingUser = db.prepare('SELECT role FROM users WHERE ci = ? OR username = ?').get(cleanCI, finalUsername) as any;
+      if (existingUser) {
+        return res.status(400).json({ error: `Esta persona ya está registrada como ${existingUser.role}.` });
+      }
+    }
+
     const result = db.prepare(`
       INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci, needs_password_change)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
