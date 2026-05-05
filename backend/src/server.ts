@@ -980,10 +980,14 @@ app.delete('/api/users/:id', (req, res) => {
       db.prepare('UPDATE field_requests SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
       db.prepare('UPDATE field_requests SET resolved_by_id = NULL WHERE resolved_by_id = ?').run(userId);
 
-      // 4. Update children users to have no parent (orphan them instead of deleting)
+      // 4. Nullify references in participation_logs and results
+      db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
+      db.prepare('UPDATE results SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
+
+      // 5. Update children users to have no parent (orphan them instead of deleting)
       db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(userId);
 
-      // 5. Finally delete the user
+      // 6. Finally delete the user
       db.prepare('DELETE FROM users WHERE id = ?').run(userId);
 
       logAction(1, 'DELETE', 'USER', userId, `Deleted user with ID ${userId} and cleaned up references`);
