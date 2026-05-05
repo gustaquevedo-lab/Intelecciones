@@ -1675,6 +1675,23 @@ const SuperAdmin = () => {
                             </select>
                           </div>
                         )}
+
+                        {newUserRole !== 'SUPERUSUARIO' && (
+                          <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
+                            <label>Lista Electoral Asignada <span style={{ color: 'var(--red)' }}>*</span></label>
+                            <select className="modern-input-premium-styled" value={newUserList} onChange={e => setNewUserList(e.target.value)} required>
+                              <option value="">Seleccione una lista...</option>
+                              {lists.map(l => (
+                                <option key={l.id} value={l.id}>
+                                  Lista {l.list_number} - {l.candidate_nombre} ({l.type})
+                                </option>
+                              ))}
+                            </select>
+                            <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>
+                              Obligatorio: Todos los operadores deben pertenecer a una lista.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="modal-footer-premium-styled" style={{ marginTop: '1.5rem', marginInline: '-2rem', marginBottom: '-2rem' }}>

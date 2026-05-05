@@ -34,9 +34,8 @@ const Login = () => {
         setShowOnboarding(true);
       } else {
         if (loggedUser.role === 'SUPERUSUARIO') navigate('/admin');
-        else if (loggedUser.role === 'JEFE_CAMPANA') navigate('/comando');
-        else if (loggedUser.role === 'CANDIDATO') navigate('/comando'); // Candidates also see Command Center
-        else navigate('/coordinador');
+        else if (loggedUser.role === 'JEFE_CAMPANA' || loggedUser.role === 'CANDIDATO') navigate('/comando');
+        else navigate('/coordinador'); // PADRINO and COORDINADOR go here
       }
     } catch (error: any) {
       const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -71,8 +70,8 @@ const Login = () => {
       });
       
       // Re-login or just navigate
-      if (onboardingUser.role === 'CANDIDATO') navigate('/comando');
-      else navigate('/coordinador');
+      if (onboardingUser.role === 'JEFE_CAMPANA' || onboardingUser.role === 'CANDIDATO') navigate('/comando');
+      else navigate('/coordinador'); // Includes PADRINO
     } catch (err) {
       setError('Error al actualizar contraseña.');
     } finally {
