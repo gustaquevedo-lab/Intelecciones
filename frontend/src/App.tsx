@@ -1,14 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import CoordinatorApp from './pages/CoordinatorApp';
-import CommandCenter from './pages/CommandCenter';
-import VeedorApp from './pages/VeedorApp';
-import SuperAdmin from './pages/SuperAdmin';
-import LogisticsApp from './pages/LogisticsApp';
-import Communications from './pages/Communications';
-import DiaDApp from './pages/DiaDApp';
+const Landing = React.lazy(() => import('./pages/Landing'));
+const Login = React.lazy(() => import('./pages/Login'));
+const CoordinatorApp = React.lazy(() => import('./pages/CoordinatorApp'));
+const CommandCenter = React.lazy(() => import('./pages/CommandCenter'));
+const VeedorApp = React.lazy(() => import('./pages/VeedorApp'));
+const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
+const LogisticsApp = React.lazy(() => import('./pages/LogisticsApp'));
+const Communications = React.lazy(() => import('./pages/Communications'));
+const DiaDApp = React.lazy(() => import('./pages/DiaDApp'));
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -20,18 +20,30 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/coordinador" element={<CoordinatorApp />} />
-              <Route path="/comando" element={<CommandCenter />} />
-              <Route path="/veedor" element={<VeedorApp />} />
-              <Route path="/admin" element={<SuperAdmin />} />
-              <Route path="/logistica" element={<LogisticsApp />} />
-              <Route path="/comunicaciones" element={<Communications />} />
-              <Route path="/diad" element={<DiaDApp />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
+            <React.Suspense fallback={
+              <div style={{ 
+                height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--plra-900)', color: 'white', fontFamily: 'sans-serif'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div className="spinner" style={{ width: '40px', height: '40px', margin: '0 auto 1rem' }}></div>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.1em', opacity: 0.8 }}>CARGANDO SISTEMA...</p>
+                </div>
+              </div>
+            }>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/coordinador" element={<CoordinatorApp />} />
+                <Route path="/comando" element={<CommandCenter />} />
+                <Route path="/veedor" element={<VeedorApp />} />
+                <Route path="/admin" element={<SuperAdmin />} />
+                <Route path="/logistica" element={<LogisticsApp />} />
+                <Route path="/comunicaciones" element={<Communications />} />
+                <Route path="/diad" element={<DiaDApp />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </React.Suspense>
           </Router>
         </AuthProvider>
       </ThemeProvider>

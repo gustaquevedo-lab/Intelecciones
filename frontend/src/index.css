@@ -35,6 +35,19 @@
 
   /* Transitions */
   --theme-transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s ease;
+
+  /* Performance optimization: Blur intensity */
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 24px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --blur-sm: 2px;
+    --blur-md: 4px;
+    --blur-lg: 8px;
+  }
 }
 
 /* DARK MODE (Default & Manual) */
@@ -1012,13 +1025,14 @@ select option:active {
   }
   
   .header-logo-container {
-    transform: scale(0.8) !important;
+    transform: scale(0.7) !important;
+    transform-origin: left center;
   }
 }
 
 @media (min-width: 641px) {
   .header-logo-container {
-    transform: scale(1.1) !important;
+    transform: scale(1.0) !important;
   }
 }
 
@@ -1123,8 +1137,14 @@ select option:active {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 120px 1rem 2rem;
+  padding: 80px 1rem 2rem;
   overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay-premium {
+    padding: 40px 0.5rem 1rem;
+  }
 }
 
 .light-theme .modal-overlay-premium {

@@ -96,7 +96,7 @@ export function ManagementTable<T extends { id?: number | string }>({
                     style={{
                       padding: '1rem 1.25rem',
                       fontWeight: 700,
-                      color: 'var(--text-3)',
+                      color: 'var(--text-2)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
                       fontSize: '0.65rem',

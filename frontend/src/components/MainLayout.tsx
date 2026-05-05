@@ -46,7 +46,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--glass-bg)',
-        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'blur(var(--blur-lg))', WebkitBackdropFilter: 'blur(var(--blur-lg))',
         borderBottom: '1px solid var(--border)',
         boxShadow: 'var(--shadow-md)',
         transition: 'var(--theme-transition)'
@@ -62,6 +62,22 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           borderBottom: '1px solid var(--border)',
           position: 'relative'
         }}>
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="sm:hidden"
+            onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+            style={{
+              background: 'var(--accent-subtle)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              padding: '0.4rem',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            <Menu size={20} />
+          </button>
+
           {/* Logo */}
           <div className="header-logo-container" style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             <Logo />
@@ -179,14 +195,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
 
         {/* ROW 2: Navigation Unit (Switcher + Title) - Absolutely Centered */}
         <div style={{
-          height: '46px',
+          minHeight: '46px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          padding: '0 1rem',
-          background: 'rgba(0, 0, 0, 0.15)',
-          borderTop: '1px solid rgba(255,255,255,0.02)'
+          padding: '0.25rem 1rem',
+          background: isDark ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 71, 171, 0.03)',
+          borderTop: isDark ? '1px solid rgba(255,255,255,0.02)' : '1px solid rgba(0,0,0,0.05)',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
         }}>
           <div style={{
             display: 'flex',
@@ -207,8 +225,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                 display: 'flex',
                 alignItems: 'center', gap: '0.5rem',
                 padding: '0.25rem 1rem',
-                background: 'rgba(59,130,246,0.12)',
-                border: '1px solid rgba(59,130,246,0.2)',
+                background: 'var(--accent-subtle)',
+                border: '1px solid var(--border-mid)',
                 borderRadius: '9999px',
                 whiteSpace: 'nowrap'
               }}

@@ -66,7 +66,7 @@ export const Logo = ({
         background: 'var(--accent-subtle)',
         border: '1px solid var(--border)',
         borderRadius: '16px',
-        backdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(var(--blur-md))',
         boxShadow: 'var(--shadow-sm)'
       }}>
 

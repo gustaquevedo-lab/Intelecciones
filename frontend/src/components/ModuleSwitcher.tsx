@@ -33,15 +33,20 @@ export const ModuleSwitcher: React.FC = () => {
   });
 
   return (
-    <div style={{
+    <div className="custom-scrollbar" style={{
       display: 'flex',
       alignItems: 'center',
       gap: '0.4rem',
-      background: 'rgba(0, 0, 0, 0.25)',
+      background: 'var(--accent-subtle)',
       padding: '0.3rem',
       borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.05)',
-      margin: '0 1rem'
+      border: '1px solid var(--border)',
+      margin: '0 1rem',
+      overflowX: 'auto',
+      maxWidth: 'calc(100vw - 2rem)',
+      WebkitOverflowScrolling: 'touch',
+      msOverflowStyle: 'none',
+      scrollbarWidth: 'none'
     }}>
       {availableModules.map((m) => {
         const isActive = location.pathname === m.path;
@@ -76,7 +81,7 @@ export const ModuleSwitcher: React.FC = () => {
                   ? accentColor || 'white'
                   : accentColor
                     ? accentColor + 'BB'
-                    : 'var(--text-3)',
+                    : 'var(--text-2)',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}

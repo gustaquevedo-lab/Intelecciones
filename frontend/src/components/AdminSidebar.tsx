@@ -18,6 +18,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 
+import { useTheme } from '../context/ThemeContext';
+
 interface AdminSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -37,15 +39,24 @@ const NAV_ITEMS = [
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActiveTab }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
+  const { isDark } = useTheme();
   const [isCollapsed, setIsCollapsed] = React.useState(window.innerWidth < 1024);
+  const [isMobileOpen, setIsMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024) setIsCollapsed(true);
       else setIsCollapsed(false);
     };
+    
+    const handleToggle = () => setIsMobileOpen(prev => !prev);
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    document.addEventListener('toggle-sidebar', handleToggle);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('toggle-sidebar', handleToggle);
+    };
   }, []);
   
   const filteredItems = NAV_ITEMS.filter(item => {
@@ -55,22 +66,51 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
     return true;
   });
 
+  const sidebarWidth = isCollapsed ? '70px' : '200px';
+
   return (
-    <motion.div 
-      animate={{ width: isCollapsed ? '70px' : '200px' }}
-      style={{
-        background: 'rgba(2, 12, 27, 0.5)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: isCollapsed ? '1.25rem 0.5rem' : '1.25rem 0.75rem',
-        gap: '0.4rem',
-        position: 'relative',
-        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'visible',
-        zIndex: 50
-      }}
-    >
+    <>
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMobileOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 45
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.div 
+        initial={false}
+        animate={{ 
+          width: sidebarWidth,
+          x: (window.innerWidth < 640 && !isMobileOpen) ? -200 : 0
+        }}
+        style={{
+          background: 'var(--glass-bg)',
+          backdropFilter: 'blur(var(--blur-md))',
+          borderRight: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: isCollapsed ? '1.25rem 0.5rem' : '1.25rem 0.75rem',
+          gap: '0.4rem',
+          position: window.innerWidth < 640 ? 'fixed' : 'relative',
+          top: window.innerWidth < 640 ? 0 : 'auto',
+          bottom: window.innerWidth < 640 ? 0 : 'auto',
+          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease',
+          overflow: 'visible',
+          zIndex: 50
+        }}
+      >
       {/* Toggle Button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -89,7 +129,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
           justifyContent: 'center',
           cursor: 'pointer',
           zIndex: 999,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+          boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.5)' : 'var(--shadow-md)'
         }}
       >
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -102,7 +142,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
         gap: '0.6rem',
         marginBottom: isCollapsed ? '1rem' : '0'
       }}>
-        <ShieldCheck size={20} style={{ color: 'var(--plra-300)', minWidth: '20px' }} />
+        <ShieldCheck size={20} style={{ color: isDark ? 'var(--plra-300)' : 'var(--plra-500)', minWidth: '20px' }} />
         {!isCollapsed && (
           <motion.span 
             initial={{ opacity: 0 }}
@@ -112,7 +152,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               fontWeight: 800,
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
-              color: 'var(--text-3)',
+              color: 'var(--text-2)',
               fontFamily: 'var(--font-display)',
               whiteSpace: 'nowrap'
             }}
@@ -135,8 +175,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               padding: isCollapsed ? '0.75rem 0' : '0.55rem 0.85rem',
               borderRadius: '10px',
               border: 'none',
-              background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-              color: isActive ? 'var(--plra-200)' : 'var(--text-3)',
+              background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(0, 71, 171, 0.08)') : 'transparent',
+              color: isActive 
+                ? (isDark ? 'var(--plra-200)' : 'var(--plra-500)') 
+                : 'var(--text-2)',
               cursor: 'pointer',
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               position: 'relative',
@@ -147,14 +189,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
             }}
             onMouseEnter={e => {
               if (!isActive) {
-                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.04)';
-                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)';
+                (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
               }
             }}
             onMouseLeave={e => {
               if (!isActive) {
                 (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)';
               }
             }}
           >
@@ -178,7 +220,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
                 animate={{ opacity: 1 }}
                 style={{
                   fontSize: '0.8rem',
-                  fontWeight: isActive ? 700 : 500,
+                  fontWeight: isActive ? 800 : 600,
                   fontFamily: 'var(--font-display)',
                   whiteSpace: 'nowrap'
                 }}
