@@ -11,6 +11,7 @@ import {
   Activity,
   CheckCircle2,
   XCircle,
+  X,
   Building2,
   Home,
   Check,
@@ -908,6 +909,28 @@ const SuperAdmin = () => {
           { header: 'ID', accessor: 'id', width: '80px', sortKey: 'id' },
           { header: 'Nombre', accessor: 'name', sortKey: 'name' },
           { 
+            header: 'Módulos', 
+            accessor: (c: any) => (
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {(c.enabled_modules || 'COMMAND_CENTER,REGISTRY').split(',').map((m: string) => (
+                  <div 
+                    key={m} 
+                    style={{ 
+                      padding: '2px 6px', 
+                      borderRadius: '4px', 
+                      fontSize: '0.6rem', 
+                      background: 'rgba(59,130,246,0.1)', 
+                      color: 'var(--plra-300)',
+                      border: '1px solid rgba(59,130,246,0.2)'
+                    }}
+                  >
+                    {m.replace('_', ' ')}
+                  </div>
+                ))}
+              </div>
+            )
+          },
+          { 
             header: 'Estado', 
             accessor: (c: Campaign) => (
               <span style={{ 
@@ -1248,42 +1271,6 @@ const SuperAdmin = () => {
         </div>
       </section>
 
-      <section>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Shield size={18} /> Control de Multitenancia (SaaS)
-        </h3>
-        <div className="card-premium-styled" style={{ padding: '2rem' }}>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.5rem' }}>
-            Administración centralizada de campañas y niveles de acceso por inquilino.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {campaigns.map(c => (
-              <div key={c.id} style={{ padding: '1rem', borderRadius: '12px', background: 'var(--surface-light)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white' }}>{c.name}</p>
-                  <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
-                    {c.enabled_modules?.split(',').map((m: string) => (
-                      <div key={m} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--plra-300)' }} title={m} />
-                    ))}
-                  </div>
-                </div>
-                <button className="icon-btn" onClick={() => { 
-                  setEditingCampaign(c); 
-                  setNewCampaignName(c.name); 
-                  setNewCampaignModules(c.enabled_modules ? c.enabled_modules.split(',') : []);
-                  setShowModal('edit-campaign'); 
-                }}><Edit2 size={14} /></button>
-              </div>
-            ))}
-            <button 
-              onClick={() => { setNewCampaignName(''); setNewCampaignModules(['COMMAND_CENTER', 'REGISTRY']); setShowModal('campaign'); }}
-              style={{ padding: '1rem', borderRadius: '12px', border: '1px dashed var(--plra-500)', background: 'transparent', color: 'var(--plra-300)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-            >
-              <Plus size={14} /> Nueva Campaña
-            </button>
-          </div>
-        </div>
-      </section>
 
       <section>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--red)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1564,42 +1551,46 @@ const SuperAdmin = () => {
               }}
             >
               {showModal === 'campaign' && (
-                <div style={{ maxWidth: '500px', width: '100%', padding: '2rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Nueva Campaña</h2>
-                    <button className="icon-btn" onClick={() => setShowModal(null)}><XCircle size={24} /></button>
+                <div style={{ width: '500px', maxWidth: '95vw', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '1.25rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-light)' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>Nueva Campaña</h2>
+                    <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
                   <form onSubmit={handleCreateCampaign}>
-                    <div className="form-group">
-                      <label>Nombre de la Campaña</label>
-                      <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
-                    </div>
-                    <div className="form-group">
-                      <label>Eslogan</label>
-                      <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+                    <div style={{ padding: '2rem' }}>
+                      <div className="form-group">
+                        <label>Nombre de la Campaña</label>
+                        <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Eslogan</label>
+                        <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+                      </div>
                     </div>
                     <div className="modal-footer-premium-styled">
                       <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                      <button type="submit" className="btn-confirm-styled">Crear <Search size={18} /></button>
+                      <button type="submit" className="btn-confirm-styled">Crear Campaña <Plus size={18} /></button>
                     </div>
                   </form>
                 </div>
               )}
 
               {showModal === 'edit-campaign' && (
-                <div style={{ maxWidth: '500px', width: '100%', padding: '2rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Editar Campaña</h2>
-                    <button className="icon-btn" onClick={() => setShowModal(null)}><XCircle size={24} /></button>
+                <div style={{ width: '500px', maxWidth: '95vw', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '1.25rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-light)' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>Editar Campaña</h2>
+                    <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
                   <form onSubmit={handleUpdateCampaign}>
-                    <div className="form-group">
-                      <label>Nombre</label>
-                      <input className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                    <div style={{ padding: '2rem' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Nombre</label>
+                        <input className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                      </div>
                     </div>
                     <div className="modal-footer-premium-styled">
                       <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                      <button type="submit" className="btn-confirm-styled">Guardar <Search size={18} /></button>
+                      <button type="submit" className="btn-confirm-styled">Guardar Cambios <Save size={18} /></button>
                     </div>
                   </form>
                 </div>
