@@ -578,9 +578,146 @@
       .wa-float-label { display: none; }
       .wa-float-btn { width: 52px; height: 52px; }
     }
+
+    /* ═══════════════════════════════════════ SKIP LINK ═══ */
+    .skip-link {
+      position: absolute; left: -9999px; top: 0;
+      padding: 0.5rem 1.1rem; background: var(--blue); color: white;
+      font-family: var(--font-d); font-size: 0.82rem; font-weight: 700;
+      z-index: 9999; border-radius: 0 0 10px 0;
+      transition: left 0s;
+    }
+    .skip-link:focus { left: 0; }
+
+    /* ═══════════════════════════════════════ FAQ ═══ */
+    .faq-section { padding: 5.5rem 0; background: var(--bg-2); }
+    .faq-section-header { text-align: center; margin-bottom: 3rem; }
+    .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+    @media (max-width: 700px) { .faq-grid { grid-template-columns: 1fr; } }
+    .faq-item {
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; transition: border-color 0.2s, background 0.2s;
+    }
+    .faq-item[open] { border-color: rgba(46,132,240,0.28); background: rgba(46,132,240,0.04); }
+    .faq-q {
+      padding: 1.05rem 1.25rem; font-family: var(--font-d); font-size: 0.88rem;
+      font-weight: 700; color: var(--text); cursor: pointer; list-style: none;
+      display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+      user-select: none; line-height: 1.4;
+    }
+    .faq-q::-webkit-details-marker { display: none; }
+    .faq-q::after {
+      content: '+'; font-size: 1.35rem; font-weight: 300; color: var(--text-3);
+      flex-shrink: 0; transition: transform 0.18s;
+    }
+    .faq-item[open] .faq-q::after { content: '−'; }
+    .faq-a { padding: 0 1.25rem 1.1rem; font-size: 0.86rem; color: var(--text-2); line-height: 1.72; margin: 0; }
+    [data-theme="light"] .faq-item { background: rgba(255,255,255,0.7); }
+    [data-theme="light"] .faq-item[open] { background: #fff; border-color: rgba(46,132,240,0.25); }
+    [data-theme="light"] .faq-a { color: var(--text-2); }
+
   </style>
+
+  <!-- ═══ THEME-COLOR (navegadores móviles) ═══ -->
+  <meta name="theme-color" content="#060C1A" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#F2F5FC" media="(prefers-color-scheme: light)" />
+
+  <!-- ═══ GEO LOCAL SEO ═══ -->
+  <meta name="geo.region" content="PY" />
+  <meta name="geo.placename" content="Asunción, Paraguay" />
+  <meta name="geo.position" content="-25.2867;-57.6470" />
+  <meta name="ICBM" content="-25.2867, -57.6470" />
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+  <!-- ═══ ORGANIZATION SCHEMA ═══ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "IntelliHouse",
+    "alternateName": "Intelihouse Paraguay",
+    "url": "https://intelihouse.com.py",
+    "logo": "https://intelecciones.com.py/logo.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+595-994-516360",
+      "contactType": "sales",
+      "areaServed": "PY",
+      "availableLanguage": "Spanish"
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "PY",
+      "addressLocality": "Asunción"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Soluciones IntelliHouse",
+      "itemListElement": [
+        { "@type": "Offer", "itemOffered": { "@type": "SoftwareApplication", "name": "Intelecciones", "applicationCategory": "BusinessApplication" } },
+        { "@type": "Offer", "itemOffered": { "@type": "SoftwareApplication", "name": "Inteliaudit", "applicationCategory": "BusinessApplication" } },
+        { "@type": "Offer", "itemOffered": { "@type": "SoftwareApplication", "name": "SueldOK", "applicationCategory": "BusinessApplication" } }
+      ]
+    }
+  }
+  </script>
+
+  <!-- ═══ WEBSITE SCHEMA ═══ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Intelecciones",
+    "url": "https://intelecciones.com.py",
+    "description": "Plataforma de gestión integral de campañas electorales para Paraguay.",
+    "publisher": { "@type": "Organization", "name": "IntelliHouse" },
+    "inLanguage": "es-PY"
+  }
+  </script>
+
+  <!-- ═══ FAQPAGE SCHEMA ═══ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "¿Qué es Intelecciones?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Intelecciones es una plataforma web de gestión integral de campañas electorales desarrollada por IntelliHouse para Paraguay. Integra centro de comando en tiempo real, app para coordinadores de campo, veeduría digital, logística de transporte y WhatsApp Hub masivo en un solo sistema." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Cuánto tiempo lleva implementar Intelecciones?",
+        "acceptedAnswer": { "@type": "Answer", "text": "El setup completo toma aproximadamente 48 horas. IntelliHouse configura listas, locales de votación, estructura del equipo y accesos. El onboarding de coordinadores y veedores está incluido." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Hay que instalar alguna aplicación?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. Intelecciones funciona 100% en el navegador web, tanto en computadoras como en smartphones. No requiere instalación. Coordinadores, veedores y el jefe de campaña acceden desde cualquier dispositivo con internet." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué roles de usuario tiene la plataforma?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Intelecciones tiene 4 roles: Jefe de Campaña (Centro de Comando completo), Coordinador de Campo (app móvil de captación), Miembro de Mesa/Veedor (veeduría digital) y Candidato (vista de solo lectura). Cada rol accede únicamente a lo que necesita para su función." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Funciona para elecciones municipales y departamentales en Paraguay?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Intelecciones está diseñado para cualquier elección en Paraguay: municipales (intendente y concejales), departamentales y nacionales. Soporta múltiples listas simultáneas con vista unificada o por lista." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Intelecciones funciona con conexión limitada en el interior del país?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. La interfaz está optimizada para conexiones móviles lentas, comunes en el interior de Paraguay. Es liviana por diseño y funciona desde cualquier smartphone con señal mínima. El soporte 24/7 está disponible el día D en todo el país." }
+      }
+    ]
+  }
+  </script>
+
 </head>
 <body>
+<a href="#contenido-principal" class="skip-link">Saltar al contenido principal</a>
 
 <!-- ══════════════════════════════════════════════ NAV -->
 <nav>
@@ -608,6 +745,7 @@
         <a href="#modulos" class="nav-link">Módulos</a>
         <a href="#vistas" class="nav-link">Vistas</a>
         <a href="#comparativa" class="nav-link">Comparativa</a>
+        <a href="#preguntas" class="nav-link">FAQ</a>
         <a href="#ecosistema" class="nav-link">Ecosistema</a>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem">
@@ -625,6 +763,7 @@
   </div>
 </nav>
 
+<main id="contenido-principal" tabindex="-1">
 
 <!-- ══════════════════════════════════════════════ HERO -->
 <section class="hero" aria-label="Hero">
@@ -711,12 +850,12 @@
       <p class="section-sub">No es falta de votos. Es no saber dónde están, no poder movilizarlos a tiempo y perder el control total el día D.</p>
     </div>
     <div class="pain-grid">
-      <div class="pain-card fade-in"><div class="pain-icon">📋</div><div class="pain-title">Padrones en papel o Excel</div><div class="pain-desc">Sin visibilidad en tiempo real de quiénes captaron tus coordinadores. La información llega tarde, duplicada o nunca llega.</div></div>
-      <div class="pain-card fade-in"><div class="pain-icon">🚗</div><div class="pain-title">Logística improvisada el día D</div><div class="pain-desc">Vehículos sin asignar, electores sin transporte, coordinadores incomunicados. Votos que se pierden por pura desorganización.</div></div>
-      <div class="pain-card fade-in"><div class="pain-icon">📍</div><div class="pain-title">Sin visión territorial</div><div class="pain-desc">¿Cuántos votos tenés asegurados por local? ¿Qué mesa necesita refuerzo? Sin mapa, sin datos, sin estrategia real.</div></div>
-      <div class="pain-card fade-in"><div class="pain-icon">💬</div><div class="pain-title">WhatsApp manual e ineficiente</div><div class="pain-desc">Grupos caóticos, sin templates, sin seguimiento. Miles de electores que no reciben la convocatoria a tiempo.</div></div>
-      <div class="pain-card fade-in"><div class="pain-icon">🗳️</div><div class="pain-title">Veeduría sin sistema</div><div class="pain-desc">Fiscales de mesa sin herramienta. No sabés en tiempo real cuántos de tus votantes ya ejercieron su voto.</div></div>
-      <div class="pain-card fade-in"><div class="pain-icon">📊</div><div class="pain-title">Sin control de resultados</div><div class="pain-desc">Al cierre de urnas, no sabés qué coordinadores rindieron, qué zonas fallaron ni cómo comparás con el objetivo. Evaluás a ciegas.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">📋</div><h3 class="pain-title">Padrones en papel o Excel</h3><div class="pain-desc">Sin visibilidad en tiempo real de quiénes captaron tus coordinadores. La información llega tarde, duplicada o nunca llega.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">🚗</div><h3 class="pain-title">Logística improvisada el día D</h3><div class="pain-desc">Vehículos sin asignar, electores sin transporte, coordinadores incomunicados. Votos que se pierden por pura desorganización.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">📍</div><h3 class="pain-title">Sin visión territorial</h3><div class="pain-desc">¿Cuántos votos tenés asegurados por local? ¿Qué mesa necesita refuerzo? Sin mapa, sin datos, sin estrategia real.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">💬</div><h3 class="pain-title">WhatsApp manual e ineficiente</h3><div class="pain-desc">Grupos caóticos, sin templates, sin seguimiento. Miles de electores que no reciben la convocatoria a tiempo.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">🗳️</div><h3 class="pain-title">Veeduría sin sistema</h3><div class="pain-desc">Fiscales de mesa sin herramienta. No sabés en tiempo real cuántos de tus votantes ya ejercieron su voto.</div></div>
+      <div class="pain-card fade-in"><div class="pain-icon">📊</div><h3 class="pain-title">Sin control de resultados</h3><div class="pain-desc">Al cierre de urnas, no sabés qué coordinadores rindieron, qué zonas fallaron ni cómo comparás con el objetivo. Evaluás a ciegas.</div></div>
     </div>
   </div>
 </section>
@@ -735,7 +874,7 @@
 
       <article class="module-card fade-in">
         <div class="module-icon" style="background:rgba(46,132,240,0.12);border:1px solid rgba(46,132,240,0.2)">🗺️</div>
-        <div class="module-title">Centro de Comando</div>
+        <h3 class="module-title">Centro de Comando</h3>
         <div class="module-desc">Panel estratégico para el Jefe de Campaña. Visión 360° en tiempo real de toda la operación.</div>
         <ul class="module-features">
           <li>Estadísticas en vivo: a favor / indeciso / en contra</li>
@@ -748,7 +887,7 @@
 
       <article class="module-card fade-in">
         <div class="module-icon" style="background:rgba(37,200,130,0.1);border:1px solid rgba(37,200,130,0.2)">👥</div>
-        <div class="module-title">App de Coordinador</div>
+        <h3 class="module-title">App de Coordinador</h3>
         <div class="module-desc">Herramienta móvil para coordinadores de campo. Capta y gestiona electores directamente desde el celular.</div>
         <ul class="module-features">
           <li>Búsqueda por cédula con autocompletado</li>
@@ -761,7 +900,7 @@
 
       <article class="module-card fade-in">
         <div class="module-icon" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2)">✅</div>
-        <div class="module-title">Veeduría Digital</div>
+        <h3 class="module-title">Veeduría Digital</h3>
         <div class="module-desc">Para fiscales de mesa. Registra quiénes ya votaron en tiempo real, sincronizado con el comando.</div>
         <ul class="module-features">
           <li>Grilla digital por número de orden</li>
@@ -773,7 +912,7 @@
 
       <article class="module-card fade-in">
         <div class="module-icon" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2)">🚗</div>
-        <div class="module-title">Logística</div>
+        <h3 class="module-title">Logística</h3>
         <div class="module-desc">Gestión de flota y transporte de electores. El día D coordinado, sin improvisación.</div>
         <ul class="module-features">
           <li>Registro de vehículos, conductores y placas</li>
@@ -785,7 +924,7 @@
 
       <article class="module-card fade-in">
         <div class="module-icon" style="background:rgba(37,200,130,0.1);border:1px solid rgba(37,200,130,0.2)">💬</div>
-        <div class="module-title">WhatsApp Hub</div>
+        <h3 class="module-title">WhatsApp Hub</h3>
         <div class="module-desc">Envío masivo de mensajes personalizados a electores vía WhatsApp Business integrado.</div>
         <ul class="module-features">
           <li>Conexión vía QR — sin costo de API</li>
@@ -797,7 +936,7 @@
 
       <article class="module-card fade-in" style="border-color:rgba(37,200,130,0.2);background:rgba(10,26,42,0.8)">
         <div class="module-icon" style="background:rgba(37,200,130,0.12);border:1px solid rgba(37,200,130,0.25)">📊</div>
-        <div class="module-title">Control de Resultados <span style="font-size:0.6rem;background:rgba(37,200,130,0.15);border:1px solid rgba(37,200,130,0.3);color:var(--green);padding:0.15rem 0.5rem;border-radius:6px;font-weight:700;vertical-align:middle;letter-spacing:0.08em">PRÓXIMO</span></div>
+        <h3 class="module-title">Control de Resultados <span style="font-size:0.6rem;background:rgba(37,200,130,0.15);border:1px solid rgba(37,200,130,0.3);color:var(--green);padding:0.15rem 0.5rem;border-radius:6px;font-weight:700;vertical-align:middle;letter-spacing:0.08em">PRÓXIMO</span></h3>
         <div class="module-desc">Seguimiento en tiempo real del avance vs meta, evaluación por coordinador y comparación entre listas.</div>
         <ul class="module-features">
           <li>Dashboard de avance vs objetivo global</li>
@@ -1051,17 +1190,17 @@
     <div class="how-grid">
       <div class="how-step fade-in">
         <div class="how-num">1</div>
-        <div class="how-title">Configuramos tu campaña</div>
+        <h3 class="how-title">Configuramos tu campaña</h3>
         <div class="how-desc">Cargamos tus listas, locales de votación y estructura del equipo. Personalización completa con tu marca y fecha electoral.</div>
       </div>
       <div class="how-step fade-in">
         <div class="how-num">2</div>
-        <div class="how-title">Activamos a tu equipo</div>
+        <h3 class="how-title">Activamos a tu equipo</h3>
         <div class="how-desc">Cada coordinador, veedor y logístico recibe su acceso con rol específico. Onboarding incluido — la app es intuitiva desde el primer uso.</div>
       </div>
       <div class="how-step fade-in">
         <div class="how-num">3</div>
-        <div class="how-title">Ganás el día D</div>
+        <h3 class="how-title">Ganás el día D</h3>
         <div class="how-desc">Vista completa en tiempo real, transporte coordinado, veeduría activa y comunicación masiva. Tu campaña en modo élite.</div>
       </div>
     </div>
@@ -1236,7 +1375,7 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#A855F7" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
             </div>
             <div>
-              <div class="eco-name"><span style="color:#5AACFF;font-weight:800">Sueldo</span><span style="color:#25C882;font-weight:300">OK</span></div>
+              <div class="eco-name"><span style="color:#5AACFF;font-weight:800">Sueld</span><span style="color:#25C882;font-weight:300">OK</span></div>
               <div class="eco-desc">Gestión de recursos humanos y nómina</div>
             </div>
           </div>
@@ -1251,6 +1390,52 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════ FAQ -->
+<section class="faq-section" id="preguntas" aria-labelledby="faq-title">
+  <div class="container">
+    <div class="faq-section-header fade-in">
+      <span class="tag" style="display:inline-flex;margin-bottom:1rem">Preguntas frecuentes</span>
+      <h2 class="section-title" id="faq-title">Todo lo que necesitás saber.</h2>
+      <p class="section-sub" style="margin:0.75rem auto 0;text-align:center">Resolvemos las dudas más comunes antes de agendar una demo.</p>
+    </div>
+    <div class="faq-grid">
+
+      <details class="faq-item fade-in">
+        <summary class="faq-q">¿Qué es Intelecciones?</summary>
+        <p class="faq-a">Plataforma web de gestión integral de campañas electorales, desarrollada por IntelliHouse para Paraguay. Centro de comando, app de campo, veeduría digital, logística de transporte y WhatsApp Hub — todo sincronizado en tiempo real.</p>
+      </details>
+
+      <details class="faq-item fade-in">
+        <summary class="faq-q">¿Cuánto tiempo toma la implementación?</summary>
+        <p class="faq-a">Setup completo en aproximadamente <strong>48 horas</strong>. Cargamos tus listas, locales de votación y estructura del equipo. El onboarding de coordinadores y veedores está incluido — la plataforma es intuitiva desde el primer uso.</p>
+      </details>
+
+      <details class="faq-item fade-in">
+        <summary class="faq-q">¿Hay que instalar alguna aplicación?</summary>
+        <p class="faq-a">No. Funciona <strong>100% en el navegador web</strong> — computadoras y smartphones. Sin descargas, sin actualizaciones manuales. Cada rol accede desde su dispositivo habitual con solo abrir el link.</p>
+      </details>
+
+      <details class="faq-item fade-in">
+        <summary class="faq-q">¿Qué roles de usuario tiene la plataforma?</summary>
+        <p class="faq-a">Cuatro roles: <strong>Jefe de Campaña</strong> (Centro de Comando completo), <strong>Coordinador de Campo</strong> (app móvil de captación), <strong>Miembro de Mesa / Veedor</strong> (veeduría digital) y <strong>Candidato</strong> (vista de solo lectura, sin acceso a estrategia). Cada rol ve solo lo que necesita.</p>
+      </details>
+
+      <details class="faq-item fade-in">
+        <summary class="faq-q">¿Funciona para elecciones municipales y departamentales?</summary>
+        <p class="faq-a">Sí. Diseñado para cualquier elección en Paraguay: municipales (intendente y concejales), departamentales y nacionales. Soporta <strong>múltiples listas simultáneas</strong> con vista unificada o por lista, configurable para cada estructura de campaña.</p>
+      </details>
+
+      <details class="faq-item fade-in">
+        <summary class="faq-q">¿Funciona con conexión limitada en el interior?</summary>
+        <p class="faq-a">Sí. La interfaz está optimizada para conexiones móviles lentas, comunes en el interior de Paraguay. Liviana por diseño y funcional desde cualquier smartphone. El soporte <strong>24/7</strong> está disponible el día D en todo el país.</p>
+      </details>
+
     </div>
   </div>
 </section>
@@ -1298,6 +1483,8 @@
   </div>
 </section>
 
+</main><!-- /main -->
+
 <!-- ══════════════════════════════════════════════ FOOTER -->
 <footer>
   <div class="container">
@@ -1320,10 +1507,15 @@
       </div>
       <div class="footer-links">
         <a href="#modulos" class="footer-link">Módulos</a>
-        <a href="#vistas" class="footer-link">Vistas</a>
         <a href="#comparativa" class="footer-link">Comparativa</a>
+        <a href="#preguntas" class="footer-link">FAQ</a>
+        <a href="#ecosistema" class="footer-link">Ecosistema</a>
         <a href="#contacto" class="footer-link">Contacto</a>
       </div>
+      <address style="font-style:normal;font-size:0.72rem;color:var(--text-3)">
+        <a href="tel:+595994516360" style="color:var(--text-3);text-decoration:none">+595 994 516 360</a> ·
+        <a href="mailto:hola@intelihouse.com.py" style="color:var(--text-3);text-decoration:none">hola@intelihouse.com.py</a> · Asunción, Paraguay
+      </address>
     </div>
   </div>
 </footer>

@@ -78,19 +78,24 @@ export const CountdownCard: React.FC<CountdownCardProps> = ({ targetDate, title,
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      style={{
-        background: 'rgba(4, 20, 40, 0.4)',
-        border: `1px solid ${isFinished ? 'var(--red)' : isDayD ? 'var(--green)' : color}44`,
-        borderRadius: '16px',
-        padding: '1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-        position: 'relative',
-        overflow: 'hidden',
-        minWidth: '280px'
-      }}
-    >
+        style={{
+          background: isFinished 
+            ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(153, 27, 27, 0.25) 100%)' 
+            : isDayD 
+              ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(21, 128, 61, 0.25) 100%)'
+              : 'linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%)',
+          border: `1px solid ${isFinished ? 'var(--red)' : isDayD ? 'var(--green)' : color}44`,
+          borderRadius: '16px',
+          padding: '1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+          position: 'relative',
+          overflow: 'hidden',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+        }}
+      >
       {/* Decorative background element */}
       <div style={{
         position: 'absolute',

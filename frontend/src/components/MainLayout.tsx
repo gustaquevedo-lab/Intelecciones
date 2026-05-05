@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Logo } from './Logo';
-import { LogOut, Shield, Moon, Sun, Monitor, Menu } from 'lucide-react';
+import { LogOut, Shield, Moon, Sun, Monitor, Menu, Clock } from 'lucide-react';
 import { ModuleSwitcher } from './ModuleSwitcher';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -19,6 +19,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const navigate = useNavigate();
   const { user, activeListId, setActiveListId } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
+  const { settings } = useSettings();
   const [lists, setLists] = useState<any[]>([]);
 
   useEffect(() => {
@@ -164,6 +165,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                 </button>
               ))}
             </div>
+            
+            <HeaderCountdown targetDate={settings.election_date} />
 
             <div className="hidden-mobile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{userName}</span>
@@ -247,6 +250,56 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', position: 'relative' }}>
         {children}
       </main>
+    </div>
+  );
+};
+
+const HeaderCountdown = ({ targetDate }: { targetDate: string }) => {
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const target = new Date(targetDate);
+      const isDayD = now.toDateString() === target.toDateString();
+      
+      if (!isDayD) {
+        setTimeLeft(null);
+        return;
+      }
+
+      const closing = new Date(target);
+      closing.setHours(17, 0, 0);
+      const diff = closing.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeLeft('CERRADO');
+      } else {
+        const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        setTimeLeft(`${h}:${m}:${s}`);
+      }
+    };
+
+    update();
+    const t = setInterval(update, 1000);
+    return () => clearInterval(t);
+  }, [targetDate]);
+
+  if (!timeLeft) return null;
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0.5rem',
+      padding: '0.4rem 0.8rem', borderRadius: '10px',
+      background: timeLeft === 'CERRADO' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+      border: `1px solid ${timeLeft === 'CERRADO' ? 'var(--red)' : 'var(--green)'}40`,
+      color: timeLeft === 'CERRADO' ? 'var(--red)' : 'var(--green)',
+      fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.85rem'
+    }}>
+      <Clock size={14} className={timeLeft !== 'CERRADO' ? 'animate-pulse' : ''} />
+      <span>{timeLeft}</span>
     </div>
   );
 };

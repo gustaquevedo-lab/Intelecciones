@@ -93,25 +93,43 @@ const API_BASE = 'http://localhost:5000/api';
 
 const StatCard = ({ label, value, delta, trend, color, bg, border }: any) => (
   <div style={{
-    background: bg, border: `1px solid ${border}`,
-    borderRadius: '12px', padding: '0.9rem 1rem',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    transition: 'border-color 0.2s',
+    background: 'var(--surface)', 
+    border: `1px solid var(--border)`,
+    borderRadius: '16px', 
+    padding: '1.1rem 1.25rem',
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    position: 'relative',
+    overflow: 'hidden'
   }}>
+    <div style={{ 
+      position: 'absolute', left: 0, top: '20%', bottom: '20%', 
+      width: '3px', background: color, borderRadius: '0 4px 4px 0' 
+    }} />
     <div>
-      <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
+      <span style={{ 
+        fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.12em', 
+        textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' 
+      }}>
         {label}
       </span>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.6rem', color: 'var(--text)', lineHeight: 1.1, marginTop: '0.2rem' }}>
+      <div style={{ 
+        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', 
+        color: 'var(--text)', lineHeight: 1, marginTop: '0.35rem' 
+      }}>
         {value}
       </div>
     </div>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
-      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: bg, border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {trend === 'up'   && <TrendingUp  size={18} style={{ color }} />}
-        {trend === 'down' && <TrendingDown size={18} style={{ color }} />}
-        {!trend           && <Activity    size={18} style={{ color: 'var(--text-3)' }} />}
-      </div>
+    <div style={{ 
+      width: '40px', height: '40px', borderRadius: '12px', 
+      background: `${color}15`, border: `1px solid ${color}30`, 
+      display: 'flex', alignItems: 'center', justifyContent: 'center' 
+    }}>
+      {trend === 'up'   && <TrendingUp  size={20} style={{ color }} />}
+      {trend === 'down' && <TrendingDown size={20} style={{ color }} />}
+      {!trend           && <Activity    size={20} style={{ color: 'var(--text-3)' }} />}
     </div>
   </div>
 );
@@ -638,7 +656,7 @@ const CommandCenter = () => {
 
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '280px 1fr' : '0px 1fr'), 
+        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '320px 1fr' : '0px 1fr'), 
         height: isMobile ? 'calc(100vh - 110px)' : 'calc(100vh - 110px)', 
         overflow: 'hidden',
         position: 'relative',
@@ -663,7 +681,8 @@ const CommandCenter = () => {
         <aside style={{ 
           overflowY: 'auto', 
           overflowX: 'hidden',
-          background: 'var(--surface)', 
+          background: isDark ? 'rgba(10, 20, 40, 0.6)' : 'rgba(255, 255, 255, 0.4)',
+          backdropFilter: 'blur(20px)',
           borderRight: '1px solid var(--border)',
           position: isMobile ? 'absolute' : 'relative',
           left: isMobile && !showSidebar ? '-300px' : '0',
@@ -682,7 +701,7 @@ const CommandCenter = () => {
             isReadOnly={authUser?.role === 'COORDINADOR'} 
           />
         </aside>
-        <div style={{ position: 'relative', minWidth: 0, minHeight: 0 }}>
+        <div style={{ position: 'relative', minWidth: 0, minHeight: 0, background: 'var(--surface-light)' }}>
           {activeTab === 'map' ? (
             <div style={{ height: '100%', position: 'relative' }}>
               <div style={{ 

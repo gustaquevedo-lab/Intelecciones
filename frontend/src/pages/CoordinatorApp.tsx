@@ -1099,7 +1099,7 @@ const CoordinatorApp = () => {
               <div className="card-section" style={{ background: 'var(--surface-light)', borderBottom: 'none' }}>
                 <SectionLabel icon={<MapPin size={13} />} text="Ubicación Territorial" color="var(--green)" />
                 <div className="territory-grid">
-                  <DataItem icon={<Home size={18} />} iconColor="green" label="Barrio / Residencia" value={elector.barrio || 'Dato no disponible'} />
+                  <DataItem icon={<Home size={18} />} iconColor="green" label="Dirección / Residencia" value={elector.direccion || elector.barrio || 'Dato no disponible'} />
                   <DataItem icon={<Landmark size={18} />} iconColor="teal" label="Comité / Distrito" value={elector.distrito || elector.ciudad || 'Dato no disponible'} />
                 </div>
               </div>
