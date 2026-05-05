@@ -478,7 +478,12 @@ const SuperAdmin = () => {
   };
 
   const handleDeleteUser = async (id: number) => {
-    if (!confirm('¿Eliminar este usuario?')) return;
+    const userToDelete = users.find(u => u.id === id);
+    if (userToDelete?.username === 'admin') {
+      alert('No se puede eliminar al administrador maestro del sistema.');
+      return;
+    }
+    if (!window.confirm('¿Está seguro de eliminar este operador?')) return;
     try {
       await api.delete(`/users/${id}`);
       fetchData();
@@ -1405,7 +1410,7 @@ const SuperAdmin = () => {
                 >
                   <Key size={14} />
                 </button>
-                <button className="icon-btn delete" onClick={() => handleDeleteUser(u.id)} disabled={u.username === 'admin'}><Trash2 size={14} /></button>
+                <button className="icon-btn delete" onClick={() => handleDeleteUser(u.id)} disabled={u.username === 'admin'} title="Eliminar Operador"><Trash2 size={14} /></button>
               </div>
             )
           }

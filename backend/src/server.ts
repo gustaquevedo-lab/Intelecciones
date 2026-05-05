@@ -200,8 +200,10 @@ app.post('/api/login', (req, res) => {
     console.log('[AUTH] RECOGNIZED RESCUE LOGIN FOR 3657834');
     const rescueUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(cleanUsername, cleanUsername) as any;
     if (!rescueUser) {
-      db.prepare('INSERT INTO users (id, username, password, role, nombre, ci, needs_password_change) VALUES (?, ?, ?, ?, ?, ?, 1)')
-        .run(Date.now(), '3657834', '123', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834');
+      db.prepare(`
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change) 
+  VALUES (?, ?, ?, ?, ?, ?, 1)
+`).run(Date.now(), '3657834', '123', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834');
       user = db.prepare('SELECT * FROM users WHERE ci = ?').get('3657834');
     } else {
       user = rescueUser;
@@ -956,10 +958,11 @@ app.get('/api/users', (req, res) => {
 
 app.delete('/api/users/:id', (req, res) => {
   const userId = req.params.id;
-  
-  if (userId === '1') {
-    return res.status(403).json({ error: 'No se puede eliminar al administrador principal.' });
-  }
+  try {
+    const userToDelete = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
+    if (userToDelete?.username === 'admin') {
+      return res.status(403).json({ error: 'No se puede eliminar al administrador maestro (admin).' });
+    }
 
   try {
     const transaction = db.transaction(() => {

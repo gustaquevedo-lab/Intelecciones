@@ -282,7 +282,7 @@ db.exec(`
 
 /* Ensure default Super Admin exists */
 db.prepare(`
-  INSERT OR REPLACE INTO users (id, username, password, role, nombre) 
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre) 
   VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General')
 `).run();
 
