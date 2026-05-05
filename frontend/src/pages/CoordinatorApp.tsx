@@ -1508,7 +1508,7 @@ const CoordinatorApp = () => {
                 </div>
                 <button 
                   onClick={() => setShowDetailModal(false)}
-                  style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.5rem', color: 'white', cursor: 'pointer' }}
+                  style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.5rem', color: 'var(--text)', cursor: 'pointer' }}
                 >
                   <X size={18} />
                 </button>
@@ -1824,7 +1824,7 @@ const CoordinatorApp = () => {
                   <button 
                     type="button" 
                     onClick={() => setShowCoordModal(false)}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.5rem', color: 'var(--text)', cursor: 'pointer' }}
                   >
                     <X size={20} />
                   </button>

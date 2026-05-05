@@ -259,7 +259,7 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
       overflow: 'hidden'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <Activity size={14} style={{ color: 'var(--plra-300)' }} />
+        <Activity size={14} style={{ color: 'var(--plra-300)', marginRight: '0.25rem' }} />
         <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-200)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
           Análisis Predictivo
         </span>
@@ -306,7 +306,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
 
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-          <Activity size={12} style={{ color: 'var(--plra-300)' }} />
+          <Activity size={12} style={{ color: 'var(--plra-300)', marginRight: '0.25rem' }} />
           <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
             Actividad Reciente
           </span>
@@ -341,7 +341,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
       {topCoordinators.length > 0 && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-            <TrendingUp size={12} style={{ color: 'var(--plra-300)' }} />
+            <TrendingUp size={12} style={{ color: 'var(--plra-300)', marginRight: '0.25rem' }} />
             <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
               Ranking de Coordinadores
             </span>
@@ -365,7 +365,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
 
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
-          <BarChart3 size={12} style={{ color: 'var(--text-3)' }} />
+          <BarChart3 size={12} style={{ color: 'var(--text-3)', marginRight: '0.25rem' }} />
           <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
             Métricas Globales
           </span>
@@ -380,7 +380,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <AlertTriangle size={12} style={{ color: 'var(--text-3)' }} />
+            <AlertTriangle size={12} style={{ color: 'var(--text-3)', marginRight: '0.25rem' }} />
             <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
               Conflictos
             </span>
@@ -638,7 +638,7 @@ const CommandCenter = () => {
 
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '300px 1fr' : '0px 1fr'), 
+        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '260px 1fr' : '0px 1fr'), 
         height: isMobile ? 'calc(100vh - 110px)' : 'calc(100vh - 110px)', 
         overflow: 'hidden',
         position: 'relative',
@@ -667,7 +667,7 @@ const CommandCenter = () => {
           position: isMobile ? 'absolute' : 'relative',
           left: isMobile && !showSidebar ? '-300px' : '0',
           top: 0, bottom: 0,
-          width: isMobile ? '280px' : 'auto',
+          width: isMobile ? '260px' : 'auto',
           zIndex: 1050,
           transition: 'left 0.3s ease',
           boxShadow: isMobile && showSidebar ? '20px 0 50px rgba(0,0,0,0.5)' : 'none'

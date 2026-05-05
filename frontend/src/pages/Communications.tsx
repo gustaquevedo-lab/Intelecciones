@@ -42,7 +42,7 @@ const Communications = () => {
       <div style={{ display: 'flex', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
         
         {/* Sidebar Mini */}
-        <div style={{ width: '280px', background: 'rgba(4, 20, 40, 0.4)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '240px', background: 'rgba(4, 20, 40, 0.4)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '1.5rem' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <MessageSquare size={20} style={{ color: 'var(--green)' }} />
@@ -67,10 +67,11 @@ const Communications = () => {
                     borderColor: activeTab === tab.id ? 'rgba(34,197,94,0.2)' : 'transparent',
                     color: activeTab === tab.id ? 'var(--green)' : 'var(--text-3)',
                     fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s',
-                    textAlign: 'left'
+                    textAlign: 'left',
+                    gap: '0.75rem' // Added gap
                   }}
                 >
-                  <tab.icon size={18} />
+                  <tab.icon size={18} style={{ marginRight: '0.25rem' }} />
                   {tab.label}
                 </button>
               ))}
