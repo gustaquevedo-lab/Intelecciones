@@ -1444,37 +1444,37 @@ const CoordinatorApp = () => {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.75rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
                     <div 
                       onClick={() => fileInputRef.current?.click()}
                       style={{ 
-                        width: '96px', height: '96px', borderRadius: '22px', 
+                        width: '80px', height: '80px', borderRadius: '18px', 
                         background: 'var(--surface-light)', border: '2px dashed var(--border)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
-                        position: 'relative', transition: 'all 0.3s'
+                        position: 'relative'
                       }}
                     >
                       {newCoordPhoto ? (
                         <img src={newCoordPhoto} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <div style={{ textAlign: 'center' }}>
-                          <Camera size={28} style={{ color: 'var(--text-3)' }} />
-                          <span style={{ display: 'block', fontSize: '0.5rem', color: 'var(--text-3)', marginTop: '0.3rem', fontWeight: 900 }}>FOTO</span>
+                          <Camera size={24} style={{ color: 'var(--text-3)' }} />
+                          <span style={{ display: 'block', fontSize: '0.5rem', color: 'var(--text-3)', marginTop: '0.2rem', fontWeight: 900 }}>FOTO</span>
                         </div>
                       )}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', marginBottom: '0.6rem', display: 'block', letterSpacing: '0.05em' }}>Cédula de Identidad</label>
-                      <div style={{ display: 'flex', gap: '0.6rem' }}>
+                      <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Cédula de Identidad</label>
+                      <div className="search-input-wrapper-premium" style={{ height: '44px' }}>
                         <input 
                           className="modern-input-premium-styled" 
-                          style={{ height: '44px', flex: 1, fontSize: '1rem' }}
+                          style={{ height: '44px', flex: 1 }}
                           placeholder="Número CI"
                           value={newCoordCI}
                           onChange={e => setNewCoordCI(e.target.value)}
                         />
-                        <button type="button" onClick={handleLookupCoordCI} className="search-btn-action" style={{ height: '44px', padding: '0 1.25rem', fontSize: '0.7rem', fontWeight: 900 }}>VERIFICAR</button>
+                        <button type="button" onClick={handleLookupCoordCI} className="search-btn-action" style={{ height: '44px' }}>VERIFICAR</button>
                       </div>
                     </div>
                   </div>
