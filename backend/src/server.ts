@@ -1494,6 +1494,7 @@ app.get('/api/admin/requests', (req, res) => {
         r.*, 
         u.nombre as coordinator_name, 
         u.username as coordinator_username,
+        u.telefono as coordinator_phone,
         p.nombre as padrino_name
       FROM field_requests r
       JOIN users u ON r.coordinator_id = u.id

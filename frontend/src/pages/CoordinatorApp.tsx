@@ -16,6 +16,13 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import api from '../services/api';
 
+const formatWhatsApp = (phone: string) => {
+  if (!phone) return '';
+  const clean = phone.replace(/\D/g, ''); // Remove all non-digits
+  const withoutLeadingZero = clean.replace(/^0/, ''); // Remove leading 0 if exists
+  return `595${withoutLeadingZero}`;
+};
+
 /* ─── tiny reusable pieces ─────────────────────────────── */
 
 const Spinner = ({ size = 22 }: { size?: number }) => (
@@ -1413,7 +1420,7 @@ const CoordinatorApp = () => {
                       
                       {cap.telefono && (
                         <a 
-                          href={`https://wa.me/595${cap.telefono.replace(/\D/g, '')}`} 
+                          href={`https://wa.me/${formatWhatsApp(cap.telefono)}`} 
                           target="_blank" 
                           rel="noreferrer"
                           style={{ background: '#25D366', color: 'white', padding: '0.4rem 0.75rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}

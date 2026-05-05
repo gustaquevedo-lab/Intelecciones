@@ -19,6 +19,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CountdownCard } from '../components/CountdownCard';
 import api from '../services/api';
 
+const formatWhatsApp = (phone: string) => {
+  if (!phone) return '';
+  const clean = phone.replace(/\D/g, ''); 
+  const withoutLeadingZero = clean.replace(/^0/, ''); 
+  return `595${withoutLeadingZero}`;
+};
+
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -147,6 +154,22 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
           </div>
         )}
       </div>
+
+      {req.coordinator_phone && (
+        <a 
+          href={`https://wa.me/${formatWhatsApp(req.coordinator_phone)}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{ 
+            display: 'inline-flex', alignItems: 'center', gap: '0.5rem', 
+            background: '#25D366', color: 'white', padding: '0.4rem 0.8rem', 
+            borderRadius: '8px', fontSize: '0.65rem', fontWeight: 800, 
+            textDecoration: 'none', marginBottom: '1rem' 
+          }}
+        >
+          <MessageSquare size={14} /> CONTACTAR COORDINADOR
+        </a>
+      )}
 
       {req.status === 'PENDING' ? (
         !isReadOnly ? (
