@@ -1710,10 +1710,10 @@ const CoordinatorApp = () => {
                       exit={{ opacity: 0, y: 20 }}
                       style={{ 
                         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
-                        background: 'rgba(10,14,23,0.95)', backdropFilter: 'blur(20px)',
+                        background: 'var(--surface)', backdropFilter: 'blur(20px)',
                         padding: '1.5rem', borderTop: '1px solid var(--border)',
                         borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
-                        boxShadow: '0 -10px 40px rgba(0,0,0,0.5)'
+                        boxShadow: '0 -10px 40px rgba(0,0,0,0.2)'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -1721,18 +1721,31 @@ const CoordinatorApp = () => {
                         <X size={18} onClick={() => setShowPhotoSource('NONE')} style={{ color: 'var(--text-3)', cursor: 'pointer' }} />
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-                        <button type="button" onClick={() => { fileInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
-                          <Camera size={24} />
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>TRASERA</span>
-                        </button>
-                        <button type="button" onClick={() => { frontCameraInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
-                          <User size={24} />
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>SELFIE</span>
-                        </button>
-                        <button type="button" onClick={() => { galleryInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
-                          <LayoutList size={24} />
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>GALERÍA</span>
-                        </button>
+                        {[
+                          { id: 'env', icon: <Camera size={24} />, label: 'TRASERA', ref: fileInputRef },
+                          { id: 'user', icon: <User size={24} />, label: 'SELFIE', ref: frontCameraInputRef },
+                          { id: 'gal', icon: <LayoutList size={24} />, label: 'GALERÍA', ref: galleryInputRef }
+                        ].map(opt => (
+                          <button 
+                            key={opt.id}
+                            type="button" 
+                            onClick={() => { opt.ref.current?.click(); setShowPhotoSource('NONE'); }} 
+                            style={{ 
+                              background: 'var(--surface-light)', 
+                              border: '1px solid var(--border)', 
+                              borderRadius: '16px', 
+                              padding: '1rem', 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              alignItems: 'center', 
+                              gap: '0.5rem', 
+                              color: 'var(--text)' 
+                            }}
+                          >
+                            {opt.icon}
+                            <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>{opt.label}</span>
+                          </button>
+                        ))}
                       </div>
                     </motion.div>
                   )}
@@ -1887,10 +1900,10 @@ const CoordinatorApp = () => {
                       exit={{ opacity: 0, y: 20 }}
                       style={{ 
                         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
-                        background: 'rgba(10,14,23,0.95)', backdropFilter: 'blur(20px)',
+                        background: 'var(--surface)', backdropFilter: 'blur(20px)',
                         padding: '1.5rem', borderTop: '1px solid var(--border)',
                         borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
-                        boxShadow: '0 -10px 40px rgba(0,0,0,0.5)'
+                        boxShadow: '0 -10px 40px rgba(0,0,0,0.2)'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -1898,18 +1911,31 @@ const CoordinatorApp = () => {
                         <X size={18} onClick={() => setShowPhotoSource('NONE')} style={{ color: 'var(--text-3)', cursor: 'pointer' }} />
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-                        <button type="button" onClick={() => { padrinoFileInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
-                          <Camera size={24} />
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>TRASERA</span>
-                        </button>
-                        <button type="button" onClick={() => { padrinoFrontCameraInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
-                          <User size={24} />
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>SELFIE</span>
-                        </button>
-                        <button type="button" onClick={() => { padrinoGalleryInputRef.current?.click(); setShowPhotoSource('NONE'); }} style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
-                          <LayoutList size={24} />
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>GALERÍA</span>
-                        </button>
+                        {[
+                          { id: 'env', icon: <Camera size={24} />, label: 'TRASERA', ref: padrinoFileInputRef },
+                          { id: 'user', icon: <User size={24} />, label: 'SELFIE', ref: padrinoFrontCameraInputRef },
+                          { id: 'gal', icon: <LayoutList size={24} />, label: 'GALERÍA', ref: padrinoGalleryInputRef }
+                        ].map(opt => (
+                          <button 
+                            key={opt.id}
+                            type="button" 
+                            onClick={() => { opt.ref.current?.click(); setShowPhotoSource('NONE'); }} 
+                            style={{ 
+                              background: 'var(--surface-light)', 
+                              border: '1px solid var(--border)', 
+                              borderRadius: '16px', 
+                              padding: '1rem', 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              alignItems: 'center', 
+                              gap: '0.5rem', 
+                              color: 'var(--text)' 
+                            }}
+                          >
+                            {opt.icon}
+                            <span style={{ fontSize: '0.6rem', fontWeight: 700 }}>{opt.label}</span>
+                          </button>
+                        ))}
                       </div>
                     </motion.div>
                   )}
