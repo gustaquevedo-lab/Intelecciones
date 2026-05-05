@@ -1392,23 +1392,23 @@ const CoordinatorApp = () => {
                       <ChevronRight size={18} style={{ color: 'var(--text-3)' }} />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem' }}>
                       {[
-                        { count: c.green, color: '#22C55E', label: 'SI' },
-                        { count: c.yellow, color: '#FBBF24', label: 'Duda' },
-                        { count: c.red, color: '#EF4444', label: 'NO' },
-                        { count: c.purple, color: '#A855F7', label: 'Opo' },
-                        { count: c.transport_needed, color: 'var(--plra-300)', label: 'Bus', isTransport: true }
-                      ].map((s, idx) => (
+                        { count: c.green, color: '#22C55E' },
+                        { count: c.yellow, color: '#FBBF24' },
+                        { count: c.red, color: '#EF4444' },
+                        { count: c.purple, color: '#A855F7' },
+                        { count: c.transport_needed || c.needs_transport_count, color: 'var(--plra-300)', icon: <Car size={10} /> }
+                      ].map((stat, idx) => (
                         <div key={idx} style={{ 
-                          background: 'rgba(255,255,255,0.03)', 
+                          background: `${stat.color}15`, 
+                          border: `1px solid ${stat.color}30`, 
                           borderRadius: '10px', 
-                          padding: '0.5rem', 
-                          textAlign: 'center',
-                          border: `1px solid ${s.count > 0 ? s.color + '44' : 'transparent'}`
+                          padding: '0.4rem 0.2rem', 
+                          textAlign: 'center' 
                         }}>
-                          <p style={{ fontSize: '0.5rem', fontWeight: 800, color: 'var(--text-3)', margin: 0, textTransform: 'uppercase' }}>{s.label}</p>
-                          <p style={{ fontSize: '0.9rem', fontWeight: 900, color: s.count > 0 ? s.color : 'var(--text-3)', margin: 0 }}>{s.count}</p>
+                          {stat.icon ? stat.icon : <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.color, margin: '0 auto 0.25rem', boxShadow: `0 0 8px ${stat.color}50` }} />}
+                          <div style={{ fontSize: '0.8rem', fontWeight: 900, color: stat.color }}>{stat.count || 0}</div>
                         </div>
                       ))}
                     </div>
@@ -1463,12 +1463,22 @@ const CoordinatorApp = () => {
                       }} />
                     </div>
                     
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <div style={{ fontSize: '0.6rem', color: 'var(--text-2)' }}>
-                        <p style={{ margin: 0 }}>📍 {cap.local_votacion}</p>
-                        <p style={{ margin: 0 }}>🗳️ Mesa {cap.mesa} • Orden {cap.orden}</p>
-                        {cap.needs_transport === 1 && <span style={{ color: 'var(--plra-300)', fontWeight: 800 }}>🚗 REQUIERE TRANSPORTE</span>}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.6rem', color: 'var(--text-2)' }}>
+                        <MapPin size={10} style={{ color: 'var(--plra-300)' }} />
+                        {cap.local_votacion}
                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.6rem', color: 'var(--text-2)' }}>
+                        <Inbox size={10} style={{ color: 'var(--plra-300)' }} />
+                        Mesa {cap.mesa} • Orden {cap.orden}
+                      </div>
+                      {cap.needs_transport === 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.6rem', color: 'var(--plra-200)', fontWeight: 800 }}>
+                          <Car size={10} />
+                          LOGÍSTICA
+                        </div>
+                      )}
+                    </div>
                       
                       {cap.telefono && (
                         <a 
