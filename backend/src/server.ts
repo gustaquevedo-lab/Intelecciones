@@ -954,11 +954,41 @@ app.get('/api/users', (req, res) => {
 });
 
 app.delete('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  
+  if (userId === '1') {
+    return res.status(403).json({ error: 'No se puede eliminar al administrador principal.' });
+  }
+
   try {
-    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
-    logAction(1, 'DELETE', 'USER', req.params.id, `Deleted user with ID ${req.params.id}`);
+    const transaction = db.transaction(() => {
+      // 1. Nullify references in elector_captures to avoid breaking historical data
+      db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+      
+      // 2. Nullify references in logistics
+      db.prepare('UPDATE logistics SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+      
+      // 3. Nullify references in field_requests
+      db.prepare('UPDATE field_requests SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+      db.prepare('UPDATE field_requests SET resolved_by_id = NULL WHERE resolved_by_id = ?').run(userId);
+
+      // 4. Update children users to have no parent (orphan them instead of deleting)
+      db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(userId);
+
+      // 5. Finally delete the user
+      const result = db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+      
+      if (result.changes === 0) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      logAction(1, 'DELETE', 'USER', userId, `Deleted user with ID ${userId} and cleaned up references`);
+    });
+
+    transaction();
     res.json({ success: true });
   } catch (err: any) {
+    console.error('[DELETE USER ERROR]:', err);
     res.status(500).json({ error: err.message });
   }
 });

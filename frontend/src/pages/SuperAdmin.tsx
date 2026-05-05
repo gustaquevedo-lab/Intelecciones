@@ -159,7 +159,7 @@ const SuperAdmin = () => {
   const [electionEndTime, setElectionEndTime] = useState('17:00');
   const [globalGoal, setGlobalGoal] = useState(10000);
   const [masterKey, setMasterKey] = useState('');
-  const [appName, setAppName] = useState('Intelecciones');
+  const [appPlatformName, setAppPlatformName] = useState('Intelecciones');
   const [appLogoUrl, setAppLogoUrl] = useState('');
   const [shareMessage, setShareMessage] = useState('🔹 *DATOS ELECTORALES* 🔹');
   const [shareMessageFooter, setShareMessageFooter] = useState('#Intelecciones #PLRA #DíaD');
@@ -634,7 +634,7 @@ const SuperAdmin = () => {
         election_end_time: electionEndTime,
         global_goal: globalGoal.toString(),
         master_key: masterKey,
-        app_name: appName,
+        app_name: appPlatformName,
         app_logo_url: appLogoUrl,
         share_message: shareMessage,
         share_message_footer: shareMessageFooter
@@ -763,7 +763,7 @@ const SuperAdmin = () => {
         const goal = parseInt(res.data.global_goal);
         setGlobalGoal(isNaN(goal) ? 10000 : goal);
         if (res.data.master_key) setMasterKey(res.data.master_key);
-        if (res.data.app_name) setAppName(res.data.app_name);
+        if (res.data.app_name) setAppPlatformName(res.data.app_name);
         if (res.data.app_logo_url) setAppLogoUrl(res.data.app_logo_url);
         if (res.data.share_message) setShareMessage(res.data.share_message);
         if (res.data.share_message_footer) setShareMessageFooter(res.data.share_message_footer);
@@ -1216,7 +1216,7 @@ const SuperAdmin = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div className="form-group">
               <label>Nombre de la Plataforma</label>
-              <input className="modern-input-premium-styled" value={appName} onChange={e => setAppName(e.target.value)} />
+              <input className="modern-input-premium-styled" value={appPlatformName} onChange={e => setAppPlatformName(e.target.value)} />
             </div>
             <div className="form-group">
               <label>Logo de la App (URL)</label>
@@ -1365,7 +1365,7 @@ const SuperAdmin = () => {
             header: 'Lista Asignada', 
             accessor: (u: any) => {
               if (!u.assigned_list_id) return <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Sin asignar</span>;
-              const list = lists.find(l => l.id === u.assigned_list_id);
+              const list = lists?.find(l => l.id === u.assigned_list_id);
               if (!list) return <span style={{ color: 'var(--red)' }}>ID: {u.assigned_list_id}</span>;
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1551,13 +1551,13 @@ const SuperAdmin = () => {
               }}
             >
               {showModal === 'campaign' && (
-                <div style={{ width: '500px', maxWidth: '95vw', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '1.25rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-light)' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>Nueva Campaña</h2>
+                <div style={{ width: '500px', maxWidth: '95vw' }}>
+                  <div className="modal-header-premium">
+                    <h2>Nueva Campaña</h2>
                     <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
                   <form onSubmit={handleCreateCampaign}>
-                    <div style={{ padding: '2rem' }}>
+                    <div className="modal-body-premium">
                       <div className="form-group">
                         <label>Nombre de la Campaña</label>
                         <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
@@ -1576,13 +1576,13 @@ const SuperAdmin = () => {
               )}
 
               {showModal === 'edit-campaign' && (
-                <div style={{ width: '500px', maxWidth: '95vw', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '1.25rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-light)' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>Editar Campaña</h2>
+                <div style={{ width: '500px', maxWidth: '95vw' }}>
+                  <div className="modal-header-premium">
+                    <h2>Editar Campaña</h2>
                     <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
                   <form onSubmit={handleUpdateCampaign}>
-                    <div style={{ padding: '2rem' }}>
+                    <div className="modal-body-premium">
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label>Nombre</label>
                         <input className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
@@ -1597,41 +1597,43 @@ const SuperAdmin = () => {
               )}
 
               {showModal === 'user' && (
-                <div style={{ width: '650px', maxWidth: '95vw', display: 'flex', flexDirection: 'column', background: 'var(--surface)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                    <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{editingUser ? 'Editar Operador' : 'Nuevo Operador'}</h2>
-                    <button className="icon-btn" onClick={() => { setShowModal(null); setEditingUser(null); }}><XCircle size={20} /></button>
+                <div style={{ width: '650px', maxWidth: '95vw' }}>
+                  <div className="modal-header-premium">
+                    <h2>{editingUser ? 'Editar Operador' : 'Nuevo Operador'}</h2>
+                    <button className="icon-btn" onClick={() => { setShowModal(null); setEditingUser(null); }}><X size={20} /></button>
                   </div>
                   
-                  <div style={{ padding: '1rem 1.25rem' }}>
+                  <div className="modal-body-premium">
                     <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser}>
                       {/* Cabecera de Perfil Compacta */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', background: 'rgba(0,71,171,0.05)', borderRadius: '12px', marginBottom: '1rem', border: '1px solid var(--border-subtle)' }}>
-                        <div className="premium-avatar-frame-compact" style={{ width: '50px', height: '50px', flexShrink: 0 }} onClick={() => fileInputRef.current?.click()}>
-                          {userProfilePreview?.photo_url ? <img src={userProfilePreview.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="P" /> : <UsersIcon size={20} />}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem', background: 'rgba(0,71,171,0.04)', borderRadius: '16px', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
+                        <div className="premium-avatar-frame-compact" style={{ width: '60px', height: '60px', flexShrink: 0, border: '2px solid white', boxShadow: 'var(--shadow-sm)' }} onClick={() => fileInputRef.current?.click()}>
+                          {userProfilePreview?.photo_url ? <img src={userProfilePreview.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="P" /> : <UsersIcon size={24} style={{ opacity: 0.5 }} />}
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <h3 style={{ margin: 0, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{newUserRealName || 'Identidad no verificada'}</h3>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {newUserCI || '---'}</div>
+                          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{newUserRealName || 'Identidad no verificada'}</h3>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--plra-300)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Shield size={12} /> C.I. {newUserCI || '---'}
+                          </div>
                         </div>
                         <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={e => handleFileUpload(e, 'user')} />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Cédula de Identidad</label>
-                          <div className="search-input-wrapper-premium" style={{ height: '42px' }}>
-                            <input className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserCI} onChange={e => setNewUserCI(e.target.value)} required disabled={!!editingUser} />
-                            {!editingUser && <button type="button" onClick={handleLookupUserCI} className="search-btn-action" style={{ height: '42px' }}>BUSCAR</button>}
+                          <label>Cédula de Identidad</label>
+                          <div className="search-input-wrapper-premium">
+                            <input className="modern-input-premium-styled" value={newUserCI} onChange={e => setNewUserCI(e.target.value)} required disabled={!!editingUser} />
+                            {!editingUser && <button type="button" onClick={handleLookupUserCI} className="search-btn-action">BUSCAR</button>}
                           </div>
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Nombre Completo</label>
-                          <input className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserRealName} onChange={e => setNewUserRealName(e.target.value)} required />
+                          <label>Nombre Completo</label>
+                          <input className="modern-input-premium-styled" value={newUserRealName} onChange={e => setNewUserRealName(e.target.value)} required />
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>WhatsApp (Formato Internacional)</label>
-                          <input className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserTelefono} placeholder="+595" onChange={e => {
+                          <label>WhatsApp</label>
+                          <input className="modern-input-premium-styled" value={newUserTelefono} placeholder="+595" onChange={e => {
                             let v = e.target.value;
                             if (v.length >= 2 && !v.startsWith('+')) {
                               let d = v.replace(/\D/g, '');
@@ -1643,8 +1645,8 @@ const SuperAdmin = () => {
                           }} />
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Rol del Operador</label>
-                          <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
+                          <label>Rol del Operador</label>
+                          <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                             <option value="COORDINADOR">Coordinador de Campo</option>
                             <option value="PADRINO">Padrino</option>
                             <option value="JEFE_CAMPANA">Jefe de Campaña</option>
@@ -1652,35 +1654,22 @@ const SuperAdmin = () => {
                           </select>
                         </div>
 
-                        {/* --- JERARQUÍA OPTIMIZADA --- */}
                         {newUserRole === 'JEFE_CAMPANA' && (
                           <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
-                            <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Campaña que lidera</label>
-                            <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
+                            <label>Campaña que lidera</label>
+                            <select className="modern-input-premium-styled" value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
                               <option value="">Seleccione Campaña...</option>
                               {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                           </div>
                         )}
 
-                        {newUserRole === 'PADRINO' && (
+                        {(newUserRole === 'PADRINO' || newUserRole === 'COORDINADOR') && (
                           <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
-                            <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Superior (Jefe de Campaña)</label>
-                            <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
-                              <option value="">Seleccione Jefe...</option>
-                              {users.filter(u => u.role === 'JEFE_CAMPANA').map(u => (
-                                <option key={u.id} value={u.id}>{u.nombre}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {newUserRole === 'COORDINADOR' && (
-                          <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
-                            <label style={{ fontSize: '0.7rem', marginBottom: '0.25rem' }}>Superior (Padrino)</label>
-                            <select className="modern-input-premium-styled" style={{ height: '42px', padding: '0 0.75rem', fontSize: '0.85rem' }} value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
-                              <option value="">Seleccione Padrino...</option>
-                              {users.filter(u => u.role === 'PADRINO').map(u => (
+                            <label>{newUserRole === 'PADRINO' ? 'Superior (Jefe de Campaña)' : 'Superior (Padrino)'}</label>
+                            <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
+                              <option value="">Seleccione Superior...</option>
+                              {users.filter(u => u.role === (newUserRole === 'PADRINO' ? 'JEFE_CAMPANA' : 'PADRINO')).map(u => (
                                 <option key={u.id} value={u.id}>{u.nombre}</option>
                               ))}
                             </select>
@@ -1688,10 +1677,10 @@ const SuperAdmin = () => {
                         )}
                       </div>
 
-                      <div className="modal-footer-premium-styled" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
-                        <button type="button" onClick={() => { setShowModal(null); setEditingUser(null); }} className="btn-cancel-styled" style={{ padding: '0.5rem 1.5rem' }}>Cancelar</button>
-                        <button type="submit" className="btn-confirm-styled" style={{ padding: '0.5rem 1.5rem' }} disabled={!isUserVerified && !editingUser}>
-                          {editingUser ? 'Guardar Cambios' : 'Crear Operador'} <Search size={16} />
+                      <div className="modal-footer-premium-styled" style={{ marginTop: '1.5rem', marginInline: '-2rem', marginBottom: '-2rem' }}>
+                        <button type="button" onClick={() => { setShowModal(null); setEditingUser(null); }} className="btn-cancel-styled">Cancelar</button>
+                        <button type="submit" className="btn-confirm-styled" disabled={!isUserVerified && !editingUser}>
+                          {editingUser ? 'Guardar Cambios' : 'Crear Operador'} <Save size={18} />
                         </button>
                       </div>
                     </form>
@@ -1700,243 +1689,239 @@ const SuperAdmin = () => {
               )}
 
               {showModal === 'list' && (
-                <form onSubmit={editingList ? handleUpdateList : handleCreateList} style={{ maxWidth: '600px', width: '100%', padding: 0 }}>
-                  <div style={{ 
-                    padding: '1.5rem', 
-                    background: 'linear-gradient(to bottom, rgba(37,99,235,0.1), transparent)',
-                    borderBottom: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', gap: '1.5rem' 
-                  }}>
-                    <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
-                    <div style={{ 
-                      width: '90px', height: '90px', borderRadius: '20px', 
-                      background: 'rgba(255,255,255,0.03)', border: '2px solid var(--border-mid)', 
-                      overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                      position: 'relative', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.3)' 
-                    }} onClick={() => fileInputRef.current?.click()}>
-                      {candidatePreview?.photo_url ? (
-                        <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <Users size={44} style={{ color: 'var(--text-3)' }} />
-                      )}
-                      <div className="avatar-edit-overlay" style={{ background: 'rgba(0,0,0,0.6)' }}>
-                        <Image size={16} />
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                        {editingList ? 'Actualizar Lista' : 'Registro de Lista Electoral'}
-                      </div>
-                      <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Identificación de Candidato'}
-                      </h2>
-                      {isCandidateVerified && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-                          <span className="verified-badge-compact"><Shield size={12} /></span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Ciudadano Verificado (C.I. {newListCandidateCI})</span>
-                        </div>
-                      )}
-                    </div>
+                <div style={{ width: '600px', maxWidth: '95vw' }}>
+                  <div className="modal-header-premium">
+                    <h2>{editingList ? 'Actualizar Lista' : 'Registro de Lista Electoral'}</h2>
+                    <button className="icon-btn" onClick={() => { setShowModal(null); setEditingList(null); }}><X size={20} /></button>
                   </div>
-
-                  <div style={{ padding: '0.75rem 1.25rem' }}>
-                    <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
-
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Campaña Electoral</label>
-                        <select className="modern-input-premium-styled" value={newListCampaign} onChange={e => setNewListCampaign(e.target.value)} required>
-                          <option value="">Seleccione una campaña...</option>
-                          {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      </div>
-
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Candidato (C.I.)</label>
-                        <div className="search-input-wrapper-premium">
-                          <input 
-                            className="modern-input-premium-styled" 
-                            placeholder="Buscar en padrón..."
-                            value={newListCandidateCI} 
-                            onChange={e => setNewListCandidateCI(e.target.value)} 
-                            required 
-                          />
-                          <button type="button" onClick={handleLookupCandidate} className="search-btn-action">BUSCAR</button>
+                  
+                  <div className="modal-body-premium">
+                    <form onSubmit={editingList ? handleUpdateList : handleCreateList}>
+                      <div style={{ 
+                        padding: '1.25rem', 
+                        background: 'rgba(37,99,235,0.04)',
+                        borderRadius: '16px',
+                        border: '1px solid var(--border)',
+                        display: 'flex', alignItems: 'center', gap: '1.5rem',
+                        marginBottom: '1.5rem'
+                      }}>
+                        <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
+                        <div style={{ 
+                          width: '90px', height: '90px', borderRadius: '24px', 
+                          background: 'white', border: '2px solid var(--plra-300)', 
+                          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                          position: 'relative', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' 
+                        }} onClick={() => fileInputRef.current?.click()}>
+                          {candidatePreview?.photo_url ? (
+                            <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <Users size={40} style={{ color: 'var(--text-3)', opacity: 0.5 }} />
+                          )}
+                          <div className="avatar-edit-overlay" style={{ background: 'rgba(0,0,0,0.4)' }}>
+                            <Image size={16} />
+                          </div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {candidatePreview?.nombre ? `${candidatePreview.nombre} ${candidatePreview.apellido || ''}` : 'Identidad del Candidato'}
+                          </h3>
+                          {isCandidateVerified ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem' }}>
+                              <Shield size={12} style={{ color: 'var(--green)' }} />
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600 }}>C.I. {newListCandidateCI}</span>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>Busque al candidato en el padrón</div>
+                          )}
                         </div>
                       </div>
 
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Alias del Candidato</label>
-                        <input 
-                          className="modern-input-premium-styled" 
-                          placeholder="Ej: El Líder"
-                          value={newListAlias} 
-                          onChange={e => setNewListAlias(e.target.value)} 
-                        />
-                      </div>
-
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Tipo de Candidatura</label>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                          {['INTENDENTE', 'CONCEJAL'].map(t => (
-                            <button
-                              key={t}
-                              type="button"
-                              onClick={() => setNewListType(t)}
-                              style={{
-                                flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid',
-                                fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
-                                background: newListType === t ? 'var(--blue-lt)' : 'rgba(255,255,255,0.03)',
-                                borderColor: newListType === t ? 'var(--blue-lt)' : 'var(--border)',
-                                color: newListType === t ? 'white' : 'var(--text-3)',
-                              }}
-                            >
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Número de Lista</label>
-                        {newListType === 'INTENDENTE' ? (
-                          <input 
-                            className="modern-input-premium-styled" 
-                            placeholder="Ej: 2"
-                            value={newListNumber} 
-                            onChange={e => setNewListNumber(e.target.value)} 
-                            required 
-                          />
-                        ) : (
-                          <select 
-                            className="modern-input-premium-styled" 
-                            value={newListNumber} 
-                            onChange={e => setNewListNumber(e.target.value)}
-                            required
-                          >
-                            <option value="">Lista de Intendente...</option>
-                            {lists.filter(l => l.type === 'INTENDENTE' && l.campaign_id?.toString() === newListCampaign.toString()).map(l => (
-                              <option key={l.id} value={l.list_number}>{l.list_number} — {l.candidate_alias || l.candidate_nombre}</option>
-                            ))}
+                      <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Campaña Electoral</label>
+                          <select className="modern-input-premium-styled" value={newListCampaign} onChange={e => setNewListCampaign(e.target.value)} required>
+                            <option value="">Seleccione una campaña...</option>
+                            {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
-                        )}
-                      </div>
-
-                      <div className="form-group">
-                        <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Meta de Votos</label>
-                        <input 
-                          type="number"
-                          className="modern-input-premium-styled" 
-                          value={newListGoal} 
-                          onChange={e => setNewListGoal(parseInt(e.target.value))} 
-                        />
-                      </div>
+                        </div>
 
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                          <label style={{ fontSize: '0.6rem', marginBottom: '0.15rem', display: 'block' }}>Opción (Posición)</label>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '0.15rem' }}>
-                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => {
-                              const isTaken = takenOptions.includes(n);
-                              const isSelected = newListOption === n.toString();
-                              return (
-                                <button
-                                  key={n}
-                                  type="button"
-                                  disabled={isTaken && !isSelected}
-                                  onClick={() => setNewListOption(n.toString())}
-                                  style={{
-                                    height: '22px', borderRadius: '4px', border: '1px solid',
-                                    fontSize: '0.6rem', fontWeight: 800, cursor: isTaken ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.1s',
-                                    background: isSelected ? 'var(--blue-lt)' : isTaken ? 'rgba(255,0,0,0.1)' : 'rgba(255,255,255,0.03)',
-                                    borderColor: isSelected ? 'var(--blue-lt)' : isTaken ? 'rgba(255,0,0,0.2)' : 'var(--border)',
-                                    color: isSelected ? 'white' : isTaken ? 'var(--red)' : 'var(--text-3)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                  }}
-                                >
-                                  {n}
-                                </button>
-                              );
-                            })}
+                          <label>Candidato (C.I.)</label>
+                          <div className="search-input-wrapper-premium">
+                            <input className="modern-input-premium-styled" placeholder="Buscar en padrón..." value={newListCandidateCI} onChange={e => setNewListCandidateCI(e.target.value)} required />
+                            <button type="button" onClick={handleLookupCandidate} className="search-btn-action">BUSCAR</button>
                           </div>
                         </div>
 
-                    </div>
-                  </div>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Alias del Candidato</label>
+                          <input className="modern-input-premium-styled" placeholder="Ej: El Líder" value={newListAlias} onChange={e => setNewListAlias(e.target.value)} />
+                        </div>
 
-                  <div className="modal-footer-premium-styled" style={{ padding: '0.75rem 2rem', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                    <button type="button" onClick={() => { setShowModal(null); setEditingList(null); }} className="btn-cancel-styled">DESCARTAR</button>
-                    <button type="submit" className="btn-confirm-styled" disabled={!isCandidateVerified}>
-                      {editingList ? 'GUARDAR' : 'REGISTRAR'} <Search size={14} />
-                    </button>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Tipo de Candidatura</label>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {['INTENDENTE', 'CONCEJAL'].map(t => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => setNewListType(t)}
+                                style={{
+                                  flex: 1, padding: '0.75rem', borderRadius: '12px', border: '1px solid',
+                                  fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
+                                  background: newListType === t ? 'var(--plra-500)' : 'var(--surface-light)',
+                                  borderColor: newListType === t ? 'var(--plra-500)' : 'var(--border)',
+                                  color: newListType === t ? 'white' : 'var(--text-3)',
+                                }}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Número de Lista</label>
+                          {newListType === 'INTENDENTE' ? (
+                            <input className="modern-input-premium-styled" placeholder="Ej: 2" value={newListNumber} onChange={e => setNewListNumber(e.target.value)} required />
+                          ) : (
+                            <select className="modern-input-premium-styled" value={newListNumber} onChange={e => setNewListNumber(e.target.value)} required>
+                              <option value="">Lista de Intendente...</option>
+                              {lists.filter(l => l.type === 'INTENDENTE' && l.campaign_id?.toString() === newListCampaign.toString()).map(l => (
+                                <option key={l.id} value={l.list_number}>{l.list_number} — {l.candidate_alias || l.candidate_nombre}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+
+                        <div className="form-group">
+                          <label>Meta de Votos</label>
+                          <input type="number" className="modern-input-premium-styled" value={newListGoal} onChange={e => setNewListGoal(parseInt(e.target.value))} />
+                        </div>
+
+                        {newListType === 'CONCEJAL' && (
+                          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                            <label>Opción (Posición)</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '0.25rem' }}>
+                              {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => {
+                                const isTaken = takenOptions.includes(n);
+                                const isSelected = newListOption === n.toString();
+                                return (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    disabled={isTaken && !isSelected}
+                                    onClick={() => setNewListOption(n.toString())}
+                                    style={{
+                                      height: '32px', borderRadius: '8px', border: '1px solid',
+                                      fontSize: '0.7rem', fontWeight: 800, cursor: isTaken ? 'not-allowed' : 'pointer',
+                                      transition: 'all 0.1s',
+                                      background: isSelected ? 'var(--plra-500)' : isTaken ? 'rgba(239,68,68,0.1)' : 'var(--surface-light)',
+                                      borderColor: isSelected ? 'var(--plra-500)' : isTaken ? 'rgba(239,68,68,0.2)' : 'var(--border)',
+                                      color: isSelected ? 'white' : isTaken ? 'var(--red)' : 'var(--text-3)',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}
+                                  >
+                                    {n}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="modal-footer-premium-styled" style={{ marginTop: '1.5rem', marginInline: '-2rem', marginBottom: '-2rem' }}>
+                        <button type="button" onClick={() => { setShowModal(null); setEditingList(null); }} className="btn-cancel-styled">Cancelar</button>
+                        <button type="submit" className="btn-confirm-styled" disabled={!isCandidateVerified}>
+                          {editingList ? 'Guardar Cambios' : 'Registrar Lista'} <Save size={18} />
+                        </button>
+                      </div>
+                    </form>
                   </div>
-                </form>
+                </div>
               )}
 
 
 
 
               {showModal === 'vehicle' && (
-                <form onSubmit={handleCreateVehicle} style={{ maxWidth: '500px', width: '100%', padding: '2rem' }}>
-                  <h3 style={{ marginBottom: '1.5rem', color: 'var(--text)' }}>Registrar Nuevo Vehículo</h3>
-                  <div className="form-group">
-                    <label>Descripción</label>
-                    <input className="modern-input-premium-styled" value={newVehicleDesc} onChange={e => setNewVehicleDesc(e.target.value)} required />
+                <div style={{ width: '500px', maxWidth: '95vw' }}>
+                  <div className="modal-header-premium">
+                    <h2>Registrar Nuevo Vehículo</h2>
+                    <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
-                  <div className="form-group">
-                    <label>C.I. del Chofer</label>
-                    <div className="search-input-wrapper-premium">
-                      <input className="modern-input-premium-styled" value={newVehicleDriverCI} onChange={e => setNewVehicleDriverCI(e.target.value)} required />
-                      <button type="button" onClick={handleLookupDriverCI} className="search-btn-action">VERIFICAR</button>
-                    </div>
-                  </div>
-                  <div className="modal-footer-premium-styled">
-                    <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                    <button type="submit" className="btn-confirm-styled" disabled={!isVehicleDriverVerified}>Guardar Vehículo <Search size={18} /></button>
-                  </div>
-                </form>
-              )}
-
-              {showModal === 'locale' && (
-                <div style={{ maxWidth: '500px', width: '100%' }}>
-                  <div className="modal-header-section">
-                    <h3>{editingLocale ? 'Editar Local' : 'Nuevo Local de Votación'}</h3>
-                  </div>
-                  <form onSubmit={handleCreateLocale} style={{ padding: '1.5rem' }}>
-                    <div className="form-group">
-                      <label>Código de Local</label>
-                      <input className="modern-input-premium-styled" value={newLocaleCod} onChange={e => setNewLocaleCod(e.target.value)} placeholder="Ej: 101" required disabled={!!editingLocale} />
-                    </div>
-                    <div className="form-group">
-                      <label>Nombre de la Institución</label>
-                      <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value)} placeholder="Ej: Escuela Graduada Nro 1" required />
-                    </div>
-                    <div className="form-group">
-                      <label>Dirección</label>
-                      <input className="modern-input-premium-styled" value={newLocaleDireccion} onChange={e => setNewLocaleDireccion(e.target.value)} placeholder="Ej: Calle Principal c/ Ayolas" />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <form onSubmit={handleCreateVehicle}>
+                    <div className="modal-body-premium">
                       <div className="form-group">
-                        <label>Latitud</label>
-                        <input className="modern-input-premium-styled" value={newLocaleLat} onChange={e => setNewLocaleLat(e.target.value)} placeholder="-22.5447" required />
+                        <label>Descripción del Vehículo</label>
+                        <input className="modern-input-premium-styled" placeholder="Ej: Camioneta Toyota Hilux Blanca" value={newVehicleDesc} onChange={e => setNewVehicleDesc(e.target.value)} required />
                       </div>
-                      <div className="form-group">
-                        <label>Longitud</label>
-                        <input className="modern-input-premium-styled" value={newLocaleLng} onChange={e => setNewLocaleLng(e.target.value)} placeholder="-55.7333" required />
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>C.I. del Chofer</label>
+                        <div className="search-input-wrapper-premium">
+                          <input className="modern-input-premium-styled" placeholder="Buscar chofer..." value={newVehicleDriverCI} onChange={e => setNewVehicleDriverCI(e.target.value)} required />
+                          <button type="button" onClick={handleLookupDriverCI} className="search-btn-action">VERIFICAR</button>
+                        </div>
+                        {isVehicleDriverVerified && (
+                          <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--green)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Check size={14} /> Chofer: {newVehicleDriver}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="form-group">
-                      <label>Icono</label>
-                      <select className="modern-input-premium-styled" value={newLocaleIcon} onChange={e => setNewLocaleIcon(e.target.value)}>
-                        <option value="Landmark">Institucional</option>
-                        <option value="School">Escuela</option>
-                        <option value="Building">Edificio</option>
-                        <option value="Home">Casa/Local</option>
-                        <option value="MapPin">Pin</option>
-                      </select>
                     </div>
                     <div className="modal-footer-premium-styled">
                       <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                      <button type="submit" className="btn-confirm-styled">{editingLocale ? 'Guardar Cambios' : 'Crear Local'}</button>
+                      <button type="submit" className="btn-confirm-styled" disabled={!isVehicleDriverVerified}>Registrar Vehículo <Truck size={18} /></button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {showModal === 'locale' && (
+                <div style={{ width: '550px', maxWidth: '95vw' }}>
+                  <div className="modal-header-premium">
+                    <h2>{editingLocale ? 'Editar Local' : 'Nuevo Local de Votación'}</h2>
+                    <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
+                  </div>
+                  <form onSubmit={handleCreateLocale}>
+                    <div className="modal-body-premium">
+                      <div className="form-group">
+                        <label>Código de Local</label>
+                        <input className="modern-input-premium-styled" value={newLocaleCod} onChange={e => setNewLocaleCod(e.target.value)} placeholder="Ej: 101" required disabled={!!editingLocale} />
+                      </div>
+                      <div className="form-group">
+                        <label>Nombre de la Institución</label>
+                        <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value)} placeholder="Ej: Escuela Graduada Nro 1" required />
+                      </div>
+                      <div className="form-group">
+                        <label>Dirección</label>
+                        <input className="modern-input-premium-styled" value={newLocaleDireccion} onChange={e => setNewLocaleDireccion(e.target.value)} placeholder="Ej: Calle Principal c/ Ayolas" />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label>Latitud</label>
+                          <input className="modern-input-premium-styled" value={newLocaleLat} onChange={e => setNewLocaleLat(e.target.value)} placeholder="-22.5447" required />
+                        </div>
+                        <div className="form-group">
+                          <label>Longitud</label>
+                          <input className="modern-input-premium-styled" value={newLocaleLng} onChange={e => setNewLocaleLng(e.target.value)} placeholder="-55.7333" required />
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Icono del Mapa</label>
+                        <select className="modern-input-premium-styled" value={newLocaleIcon} onChange={e => setNewLocaleIcon(e.target.value)}>
+                          <option value="Landmark">Institucional (Gobierno)</option>
+                          <option value="School">Educación (Escuela/Colegio)</option>
+                          <option value="Building">Edificio Público</option>
+                          <option value="Home">Local Privado / Casa</option>
+                          <option value="MapPin">Marcador Estándar</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="modal-footer-premium-styled">
+                      <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
+                      <button type="submit" className="btn-confirm-styled">{editingLocale ? 'Guardar Cambios' : 'Crear Local'} <MapPin size={18} /></button>
                     </div>
                   </form>
                 </div>

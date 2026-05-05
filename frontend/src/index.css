@@ -264,6 +264,20 @@ body::before {
   border-color: var(--border-mid);
 }
 
+.card-premium-styled {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.card-premium-styled:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 71, 171, 0.2);
+}
+
 /* Legacy alias */
 .card-premium, .card-premium-styled {
   background: var(--surface);
@@ -806,23 +820,48 @@ select option:active {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border-mid);
-  border-radius: 24px;
+  border-radius: 28px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: modal-premium-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-premium-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .light-theme .modal-content-premium {
   background: #FFFFFF;
-  border-color: rgba(0, 0, 0, 0.05);
-  box-shadow: 0 25px 70px -10px rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 25px 70px -10px rgba(0, 0, 0, 0.12);
 }
 
-@keyframes modal-premium-in {
-  from { opacity: 0; transform: scale(0.95) translateY(15px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+.modal-header-premium {
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-light);
+}
+
+.light-theme .modal-header-premium {
+  background: rgba(0, 71, 171, 0.03);
+}
+
+.modal-header-premium h2 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.modal-body-premium {
+  padding: 2rem;
+  background: var(--surface);
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .form-group { 
@@ -839,8 +878,29 @@ select option:active {
   letter-spacing: 0.08em;
 }
 
+.modern-input-premium-styled {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.modern-input-premium-styled:focus {
+  outline: none;
+  border-color: var(--plra-500);
+  background: white;
+  box-shadow: 0 0 0 4px rgba(0, 71, 171, 0.08);
+  transform: translateY(-1px);
+}
+
 .modal-footer-premium-styled {
-  padding: 1.25rem 1.75rem;
+  padding: 1.25rem 2rem;
   background: var(--surface-light);
   border-top: 1px solid var(--border);
   display: flex;
