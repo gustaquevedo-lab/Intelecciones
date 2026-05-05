@@ -223,9 +223,10 @@ app.post('/api/login', (req, res) => {
     // ... rest of candidate logic ...
   }
 
-  console.log(`[AUTH] Final check: User Found: ${user ? 'YES' : 'NO'}`);
-  
-  if (user && (user.password === cleanPassword || (cleanUsername === '3657834' && cleanPassword === '123'))) { 
+  const normalizedSavedPassword = user?.password?.toString().replace(/\./g, '');
+  const normalizedInputPassword = cleanPassword.replace(/\./g, '');
+
+  if (user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword || (cleanUsername === '3657834' && cleanPassword === '123'))) { 
     res.json({
       id: user.id,
       username: user.username,

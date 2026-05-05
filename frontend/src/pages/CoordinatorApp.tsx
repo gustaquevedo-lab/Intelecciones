@@ -6,7 +6,7 @@ import {
   ClipboardCheck, ArrowRight, AlertCircle,
   CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare, Fingerprint, Landmark,
   UserPlus, Camera, Settings, LayoutList, CheckCircle, Users, Mic, Square, ChevronRight,
-  Car, Inbox, ArrowLeft
+  Car, Inbox, ArrowLeft, Truck
 } from 'lucide-react';
 import axios from 'axios';
 import MainLayout from '../components/MainLayout';
@@ -334,7 +334,7 @@ const CoordinatorApp = () => {
     try {
       await api.post('/users', {
         username: newCoordName || newCoordCI,
-        password: newCoordCI, 
+        password: newCoordCI.replace(/\./g, ''), 
         nombre: newCoordRealName,
         role: 'COORDINADOR',
         parent_id: user?.id,
@@ -394,7 +394,7 @@ const CoordinatorApp = () => {
     try {
       await api.post('/users', {
         username: newPadrinoCI,
-        password: newPadrinoCI,
+        password: newPadrinoCI.replace(/\./g, ''),
         nombre: newPadrinoRealName,
         role: 'PADRINO',
         parent_id: user?.id,

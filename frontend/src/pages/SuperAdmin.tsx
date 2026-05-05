@@ -416,7 +416,7 @@ const SuperAdmin = () => {
     const finalNombre = newUserRealName.trim();
     const finalRole = newUserRole;
     const finalUsername = (newUserName || newUserCI).trim();
-    const finalPassword = (newUserPass || newUserCI).trim();
+    const finalPassword = (newUserPass || newUserCI).trim().replace(/\./g, '');
 
     if (!finalNombre || !finalRole || !finalUsername) {
       alert('⚠️ Faltan datos obligatorios. Asegúrese de verificar la C.I. para cargar el nombre.');
