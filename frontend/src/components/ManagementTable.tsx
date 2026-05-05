@@ -77,7 +77,7 @@ export function ManagementTable<T extends { id?: number | string }>({
           borderCollapse: 'collapse',
           textAlign: 'left',
           fontSize: '0.85rem',
-          minWidth: '600px'
+          minWidth: window.innerWidth < 640 ? 'auto' : '600px'
         }}>
           <thead>
             <tr style={{

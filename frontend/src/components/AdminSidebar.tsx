@@ -66,7 +66,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
     return true;
   });
 
-  const sidebarWidth = isCollapsed ? '70px' : '200px';
+  const isMobile = window.innerWidth < 640;
+  const sidebarWidth = isMobile ? '240px' : (isCollapsed ? '70px' : '200px');
 
   return (
     <>
@@ -83,7 +84,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               inset: 0,
               background: 'rgba(0,0,0,0.5)',
               backdropFilter: 'blur(4px)',
-              zIndex: 45
+              zIndex: 9990
             }}
           />
         )}
@@ -108,32 +109,34 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
           bottom: window.innerWidth < 640 ? 0 : 'auto',
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease',
           overflow: 'visible',
-          zIndex: 50
+          zIndex: 10000
         }}
       >
       {/* Toggle Button */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        style={{
-          position: 'absolute',
-          right: '-14px',
-          top: '60px',
-          width: '28px',
-          height: '28px',
-          borderRadius: '50%',
-          background: 'var(--plra-500)',
-          border: '1px solid var(--border)',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 999,
-          boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.5)' : 'var(--shadow-md)'
-        }}
-      >
-        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-      </button>
+      {!isMobile && (
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          style={{
+            position: 'absolute',
+            right: '-14px',
+            top: '60px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: 'var(--plra-500)',
+            border: '1px solid var(--border)',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 999,
+            boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.5)' : 'var(--shadow-md)'
+          }}
+        >
+          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+      )}
       <div style={{
         padding: isCollapsed ? '0' : '0 0.5rem 1rem 0.5rem',
         display: 'flex',
@@ -143,7 +146,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
         marginBottom: isCollapsed ? '1rem' : '0'
       }}>
         <ShieldCheck size={20} style={{ color: isDark ? 'var(--plra-300)' : 'var(--plra-500)', minWidth: '20px' }} />
-        {!isCollapsed && (
+        {(!isCollapsed || isMobile) && (
           <motion.span 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -214,7 +217,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               />
             )}
             <item.icon size={18} strokeWidth={isActive ? 2.2 : 1.5} style={{ minWidth: '18px' }} />
-            {!isCollapsed && (
+            {(!isCollapsed || isMobile) && (
               <motion.span 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

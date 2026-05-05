@@ -43,6 +43,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       <header style={{
         position: 'sticky', top: 0, zIndex: 200,
+        position: 'sticky', top: 0, zIndex: 9000,
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--glass-bg)',
@@ -198,7 +199,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           minHeight: '46px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: window.innerWidth < 640 ? 'flex-start' : 'center',
           position: 'relative',
           padding: '0.25rem 1rem',
           background: isDark ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 71, 171, 0.03)',

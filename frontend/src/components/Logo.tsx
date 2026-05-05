@@ -51,18 +51,19 @@ export const Logo = ({
 }) => {
   const { settings } = useSettings();
 
+  const isMobile = window.innerWidth < 640;
   const isLarge = size === 'large';
-  const isotipoSize = isLarge ? 52 : 32;
-  const wordmarkPx = isLarge ? '1.3rem' : '0.92rem';
-  const taglinePx  = isLarge ? '0.58rem' : '0.48rem';
+  const isotipoSize = isMobile ? 24 : (isLarge ? 52 : 32);
+  const wordmarkPx = isMobile ? '0.8rem' : (isLarge ? '1.3rem' : '0.92rem');
+  const taglinePx  = isMobile ? '0.4rem' : (isLarge ? '0.58rem' : '0.48rem');
 
   return (
     <div className={`flex items-center ${className}`} style={{ flexShrink: 0 }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: isLarge ? '0.9rem' : '0.65rem',
-        padding: isLarge ? '0.65rem 1.25rem' : '0.45rem 1.1rem',
+        gap: isMobile ? '0.4rem' : (isLarge ? '0.9rem' : '0.65rem'),
+        padding: isMobile ? '0.3rem 0.6rem' : (isLarge ? '0.65rem 1.25rem' : '0.45rem 1.1rem'),
         background: 'var(--accent-subtle)',
         border: '1px solid var(--border)',
         borderRadius: '16px',
