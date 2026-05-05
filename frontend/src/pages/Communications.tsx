@@ -467,7 +467,7 @@ const Communications = () => {
       {/* MODAL: CREATE TEMPLATE */}
       <AnimatePresence>
         {showTemplateModal && (
-          <div className="modal-overlay-premium" style={{ zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="modal-overlay-premium">
             <motion.div className="premium-card" style={{ width: '500px', padding: '2rem' }}>
                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '1.5rem' }}>Nueva Plantilla</h2>
                <div className="form-group" style={{ marginBottom: '1rem' }}>

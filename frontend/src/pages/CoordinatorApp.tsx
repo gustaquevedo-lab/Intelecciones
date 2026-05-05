@@ -1789,7 +1789,6 @@ const CoordinatorApp = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="modal-overlay-premium"
-            style={{ zIndex: 20000 }}
           >
             <motion.div
               initial={{ scale: 0.9, y: 50, opacity: 0 }}
@@ -1800,9 +1799,7 @@ const CoordinatorApp = () => {
                 width: '100%',
                 maxWidth: '460px',
                 padding: 0,
-                overflow: 'hidden',
-                marginTop: '15vh', /* Force it down */
-                marginBottom: '5vh'
+                overflow: 'hidden'
               }}
             >
               <form onSubmit={handleCreateCoordinator}>
@@ -2006,14 +2003,13 @@ const CoordinatorApp = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="modal-overlay-premium"
-            style={{ zIndex: 9999 }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className="modal-content-premium-styled"
-              style={{ maxWidth: '500px', width: '100%', padding: 0, marginTop: '15vh', marginBottom: '5vh' }}
+              style={{ maxWidth: '500px', width: '100%', padding: 0 }}
             >
               <form onSubmit={handleCreatePadrino}>
                 <div style={{ padding: '1.75rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(0,71,171,0.05), transparent)' }}>

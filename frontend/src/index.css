@@ -763,11 +763,14 @@ select option:active {
 
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(12px) saturate(140%);
-  z-index: 2000;
-  display: flex; align-items: center; justify-content: center;
-  padding: 1rem;
+  z-index: 999999;
+  display: flex; 
+  align-items: flex-start; 
+  justify-content: center;
+  padding: 120px 1rem 2rem;
+  overflow-y: auto;
 }
 
 .modal-content {
@@ -1024,11 +1027,11 @@ select option:active {
   background: rgba(2, 8, 20, 0.95);
   backdrop-filter: blur(12px) saturate(160%);
   -webkit-backdrop-filter: blur(12px) saturate(160%);
-  z-index: 10000;
+  z-index: 999999;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 7.5rem 1rem 2rem; /* Increased to clear 102px header */
+  padding: 120px 1rem 2rem;
   overflow-y: auto;
 }
 

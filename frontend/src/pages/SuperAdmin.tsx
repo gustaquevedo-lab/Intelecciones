@@ -1543,20 +1543,6 @@ const SuperAdmin = () => {
         {showModal && (
           <div 
             className="modal-overlay" 
-            style={{ 
-              zIndex: 99999, 
-              display: 'flex', 
-              alignItems: 'flex-start', 
-              justifyContent: 'center', 
-              padding: '5vh 2rem', // Añade margen superior del 5% de la pantalla
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.85)',
-              backdropFilter: 'blur(8px)'
-            }} 
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(null); }}
           >
             <motion.div 

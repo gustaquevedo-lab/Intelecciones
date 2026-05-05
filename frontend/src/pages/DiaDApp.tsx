@@ -1136,7 +1136,6 @@ const DiaDApp: React.FC = () => {
         {showListModal && (
           <div 
             className="modal-overlay" 
-            style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }} 
             onClick={(e) => { if (e.target === e.currentTarget) setShowListModal(false); }}
           >
             <motion.div 
