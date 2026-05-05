@@ -203,6 +203,14 @@ try {
   db.prepare("ALTER TABLE users ADD COLUMN ci TEXT").run();
 } catch (e) {}
 
+// Field requests migrations
+try {
+  db.prepare("ALTER TABLE field_requests ADD COLUMN photo_url TEXT").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE field_requests ADD COLUMN audio_url TEXT").run();
+} catch (e) {}
+
 // Lists migrations
 try {
   db.prepare("ALTER TABLE lists ADD COLUMN is_adversary INTEGER DEFAULT 0").run();

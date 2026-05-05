@@ -574,105 +574,118 @@ const CoordinatorApp = () => {
       >
         <div style={{
           display: 'flex',
-          background: 'rgba(2,8,20,0.6)',
-          borderRadius: '18px',
-          padding: '0.35rem',
-          gap: '0.35rem',
+          gap: '0.25rem',
           border: '1px solid var(--border)',
           marginBottom: '0.75rem',
-          overflowX: 'auto', // Permitir scroll horizontal en móviles
-          msOverflowStyle: 'none', // Ocultar scrollbar IE/Edge
-          scrollbarWidth: 'none', // Ocultar scrollbar Firefox
-          WebkitOverflowScrolling: 'touch' // Scroll suave en iOS
-        }} className="no-scrollbar">
+          padding: '0.25rem',
+          borderRadius: '16px',
+          background: 'var(--surface-light)',
+          width: '100%',
+        }}>
           <button
             onClick={() => setActiveTab('search')}
             style={{
               flex: 1,
-              flexShrink: 0,
-              minWidth: 'fit-content',
-              padding: '0.65rem 0.85rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.25rem',
+              padding: '0.5rem 0.25rem',
               borderRadius: '12px',
-              fontSize: '0.7rem',
+              fontSize: '0.6rem',
               fontWeight: 800,
-              background: activeTab === 'search' ? 'var(--plra-300)' : 'transparent',
-              color: activeTab === 'search' ? 'white' : 'var(--text-3)',
+              background: activeTab === 'search' ? 'var(--plra-500)' : 'transparent',
+              color: activeTab === 'search' ? 'var(--white)' : 'var(--text-2)',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.2s',
               fontFamily: 'var(--font-display)',
               textTransform: 'uppercase',
-              letterSpacing: '0.1em'
+              letterSpacing: '0.05em'
             }}
           >
-            <Search size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Consulta
+            <Search size={16} />
+            <span>Consulta</span>
           </button>
           <button
             onClick={() => setActiveTab('history')}
             style={{
               flex: 1,
-              flexShrink: 0,
-              minWidth: 'fit-content',
-              padding: '0.65rem 0.85rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.25rem',
+              padding: '0.5rem 0.25rem',
               borderRadius: '12px',
-              fontSize: '0.7rem',
+              fontSize: '0.6rem',
               fontWeight: 800,
-              background: activeTab === 'history' ? 'var(--plra-300)' : 'transparent',
-              color: activeTab === 'history' ? 'white' : 'var(--text-3)',
+              background: activeTab === 'history' ? 'var(--plra-500)' : 'transparent',
+              color: activeTab === 'history' ? 'var(--white)' : 'var(--text-2)',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.2s',
               fontFamily: 'var(--font-display)',
               textTransform: 'uppercase',
-              letterSpacing: '0.1em'
+              letterSpacing: '0.05em'
             }}
           >
-            <History size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Historial
+            <History size={16} />
+            <span>Historial</span>
           </button>
           <button
             onClick={() => setActiveTab('support')}
             style={{
               flex: 1,
-              flexShrink: 0,
-              minWidth: 'fit-content',
-              padding: '0.65rem 0.85rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.25rem',
+              padding: '0.5rem 0.25rem',
               borderRadius: '12px',
-              fontSize: '0.7rem',
+              fontSize: '0.6rem',
               fontWeight: 800,
               background: activeTab === 'support' ? 'var(--red)' : 'transparent',
-              color: activeTab === 'support' ? 'white' : 'var(--text-3)',
+              color: activeTab === 'support' ? 'var(--white)' : 'var(--text-2)',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.2s',
               fontFamily: 'var(--font-display)',
               textTransform: 'uppercase',
-              letterSpacing: '0.1em'
+              letterSpacing: '0.05em'
             }}
           >
-            <HelpCircle size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Soporte
+            <HelpCircle size={16} />
+            <span>Soporte</span>
           </button>
           {user?.role === 'PADRINO' && (
             <button
               onClick={() => setActiveTab('coordinators')}
               style={{
                 flex: 1,
-                flexShrink: 0,
-                minWidth: 'fit-content',
-                padding: '0.65rem 0.85rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.25rem',
+                padding: '0.5rem 0.25rem',
                 borderRadius: '12px',
-                fontSize: '0.7rem',
+                fontSize: '0.6rem',
                 fontWeight: 800,
-                background: activeTab === 'coordinators' ? 'var(--blue-lt)' : 'transparent',
-                color: activeTab === 'coordinators' ? 'white' : 'var(--text-3)',
+                background: activeTab === 'coordinators' ? 'var(--plra-500)' : 'transparent',
+                color: activeTab === 'coordinators' ? 'var(--white)' : 'var(--text-2)',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 fontFamily: 'var(--font-display)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.1em'
+                letterSpacing: '0.05em'
               }}
             >
-              <UserPlus size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Equipos
+              <UserPlus size={16} />
+              <span>Equipos</span>
             </button>
           )}
           {user?.role === 'JEFE_CAMPANA' && (
@@ -680,23 +693,27 @@ const CoordinatorApp = () => {
               onClick={() => setActiveTab('coordinators')}
               style={{
                 flex: 1,
-                flexShrink: 0,
-                minWidth: 'fit-content',
-                padding: '0.65rem 0.85rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.25rem',
+                padding: '0.5rem 0.25rem',
                 borderRadius: '12px',
-                fontSize: '0.7rem',
+                fontSize: '0.6rem',
                 fontWeight: 800,
-                background: activeTab === 'coordinators' ? 'var(--blue-lt)' : 'transparent',
-                color: activeTab === 'coordinators' ? 'white' : 'var(--text-3)',
+                background: activeTab === 'coordinators' ? 'var(--plra-500)' : 'transparent',
+                color: activeTab === 'coordinators' ? 'var(--white)' : 'var(--text-2)',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 fontFamily: 'var(--font-display)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.1em'
+                letterSpacing: '0.05em'
               }}
             >
-              <Users size={13} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} /> Padrinos
+              <Users size={16} />
+              <span>Padrinos</span>
             </button>
           )}
         </div>
