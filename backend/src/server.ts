@@ -1432,6 +1432,47 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
   }
 });
 
+app.get('/api/padrino/team-stats', (req, res) => {
+  const padrino_id = req.query.padrino_id || req.headers['x-user-id'];
+  if (!padrino_id) return res.status(400).json({ error: 'Padrino ID requerido' });
+
+  try {
+    const stats = db.prepare(`
+      SELECT 
+        u.id, u.nombre, u.username, u.photo_url, u.telefono,
+        COUNT(ec.id) as total_captures,
+        SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
+        SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
+        SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+        SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
+        SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as transport_needed
+      FROM users u
+      LEFT JOIN elector_captures ec ON u.id = ec.coordinator_id
+      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+      GROUP BY u.id
+    `).all(padrino_id);
+    res.json(stats);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/coordinator/:id/captures', (req, res) => {
+  const { id } = req.params;
+  try {
+    const captures = db.prepare(`
+      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.coordinator_id = ?
+      ORDER BY ec.timestamp DESC
+    `).all(id);
+    res.json(captures);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/admin/requests', (req, res) => {
   const list_id = getListId(req);
   const role = getRole(req);

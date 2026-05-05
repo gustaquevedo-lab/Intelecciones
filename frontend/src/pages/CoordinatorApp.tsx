@@ -5,7 +5,7 @@ import {
   Map, Building2, Home, Briefcase,
   ClipboardCheck, ArrowRight, AlertCircle,
   CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare,
-  UserPlus, Camera, Settings, LayoutList, CheckCircle, Users
+  UserPlus, Camera, Settings, LayoutList, CheckCircle, Users, Mic, Square, ChevronRight
 } from 'lucide-react';
 import axios from 'axios';
 import MainLayout from '../components/MainLayout';
@@ -140,6 +140,11 @@ const CoordinatorApp = () => {
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [teamStats, setTeamStats] = useState<any[]>([]);
+  const [teamSearchQuery, setTeamSearchQuery] = useState('');
+  const [selectedCoordDetail, setSelectedCoordDetail] = useState<any>(null);
+  const [coordCaptures, setCoordCaptures] = useState<any[]>([]);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   
   // Jefe de Campaña specifics
   const [myPadrinos, setMyPadrinos] = useState<any[]>([]);
@@ -225,13 +230,24 @@ const CoordinatorApp = () => {
   const fetchMyCoordinators = async () => {
     if (!user) return;
     try {
-      const res = await api.get(`/users?parent_id=${user.id}`);
-      // The backend /api/users returns all users, so we filter here if needed, 
-      // but I should ideally have an endpoint for this.
-      // For now, let's assume we can filter or the backend supports the query param.
-      setMyCoordinators(res.data.filter((u: any) => u.parent_id === user.id));
+      const res = await api.get(`/padrino/team-stats?padrino_id=${user.id}`);
+      setTeamStats(res.data);
     } catch (err) {
       console.error("Error fetching my coordinators", err);
+    }
+  };
+
+  const fetchCoordinatorDetail = async (coord: any) => {
+    setSelectedCoordDetail(coord);
+    setIsLoading(true);
+    try {
+      const res = await api.get(`/coordinator/${coord.id}/captures`);
+      setCoordCaptures(res.data);
+      setShowDetailModal(true);
+    } catch (err) {
+      console.error("Error fetching detail", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -356,6 +372,11 @@ const CoordinatorApp = () => {
   };
 
   const isReadOnly = user?.role === 'CANDIDATO' || user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+
+  useEffect(() => {
+    if (activeTab === 'history') fetchHistory();
+    if (activeTab === 'coordinators') fetchMyCoordinators();
+  }, [activeTab]);
 
   useEffect(() => {
     const lookup = async () => {
@@ -1252,67 +1273,155 @@ const CoordinatorApp = () => {
               </button>
             </div>
 
-            {(user?.role === 'JEFE_CAMPANA' ? myPadrinos : myCoordinators).length === 0 && (
+            {/* Search Bar */}
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="text"
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre o cédula..."
+                style={{ width: '100%', padding: '1rem 1rem 1rem 3rem', borderRadius: '16px', background: 'var(--surface-light)', border: '1px solid var(--border)', color: 'white', fontSize: '0.85rem', outline: 'none' }}
+              />
+              <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+            </div>
+
+            {teamStats.length === 0 && (
               <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed var(--border)' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Aún no tienes registros bajo tu cargo.</p>
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
-              {(user?.role === 'JEFE_CAMPANA' ? (myPadrinos || []) : (myCoordinators || [])).map(c => {
-                if (!c) return null;
-                const formattedCI = !isNaN(Number(c.username)) ? Number(c.username).toLocaleString('es-PY') : c.username;
-                
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+              {teamStats.filter(c => 
+                c.nombre.toLowerCase().includes(teamSearchQuery.toLowerCase()) || 
+                c.username.includes(teamSearchQuery)
+              ).map(c => {
                 return (
-                  <div key={c.id} style={{ 
-                    background: 'var(--surface)', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '16px', 
-                    padding: '0.85rem', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.85rem',
-                    width: '100%',
-                    minWidth: 0 // Crucial para que el flex-item pueda encogerse
-                  }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
-                      {c.photo_url ? (
-                        <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Users size={18} style={{ color: 'var(--text-3)' }} />
+                  <motion.div 
+                    key={c.id} 
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => fetchCoordinatorDetail(c)}
+                    style={{ 
+                      background: 'var(--surface)', 
+                      border: '1px solid var(--border)', 
+                      borderRadius: '20px', 
+                      padding: '1.25rem', 
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                      <div style={{ width: '50px', height: '50px', borderRadius: '14px', overflow: 'hidden', border: '2px solid var(--border)', flexShrink: 0 }}>
+                        {c.photo_url ? (
+                          <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Users size={22} style={{ color: 'var(--text-3)' }} />
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h5 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>{c.nombre}</h5>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>CI: {c.username} {c.telefono && `• ${c.telefono}`}</p>
+                      </div>
+                      <ChevronRight size={18} style={{ color: 'var(--text-3)' }} />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                      {[
+                        { count: c.green, color: '#22C55E', label: 'SI' },
+                        { count: c.yellow, color: '#FBBF24', label: 'Duda' },
+                        { count: c.red, color: '#EF4444', label: 'NO' },
+                        { count: c.purple, color: '#A855F7', label: 'Opo' },
+                        { count: c.transport_needed, color: 'var(--plra-300)', label: 'Bus', isTransport: true }
+                      ].map((s, idx) => (
+                        <div key={idx} style={{ 
+                          background: 'rgba(255,255,255,0.03)', 
+                          borderRadius: '10px', 
+                          padding: '0.5rem', 
+                          textAlign: 'center',
+                          border: `1px solid ${s.count > 0 ? s.color + '44' : 'transparent'}`
+                        }}>
+                          <p style={{ fontSize: '0.5rem', fontWeight: 800, color: 'var(--text-3)', margin: 0, textTransform: 'uppercase' }}>{s.label}</p>
+                          <p style={{ fontSize: '0.9rem', fontWeight: 900, color: s.count > 0 ? s.color : 'var(--text-3)', margin: 0 }}>{s.count}</p>
                         </div>
-                      )}
+                      ))}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h5 style={{ 
-                        fontSize: '0.85rem', 
-                        fontWeight: 700, 
-                        margin: 0, 
-                        color: 'var(--text)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis' 
-                      }}>{c.nombre}</h5>
-                      <p style={{ 
-                        fontSize: '0.6rem', 
-                        color: 'var(--text-3)', 
-                        margin: 0,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>CI: {formattedCI} {c.telefono && `• ${c.telefono}`}</p>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <span className="badge badge-green" style={{ fontSize: '0.45rem', padding: '0.2rem 0.5rem' }}>{c.role === 'PADRINO' ? 'Padrino' : 'Activo'}</span>
-                    </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
           </motion.div>
         )}
       </div>
+
+      {/* ══════════════════════════════════════════════════════
+          COORDINADOR DETAIL MODAL
+      ══════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showDetailModal && selectedCoordDetail && (
+          <div className="modal-overlay-premium">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="modal-content-premium-styled"
+              style={{ width: '95%', maxWidth: '500px', padding: '1.5rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white', margin: 0 }}>{selectedCoordDetail.nombre}</h3>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>Capturas realizadas por el coordinador</p>
+                </div>
+                <button 
+                  onClick={() => setShowDetailModal(false)}
+                  style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.5rem', color: 'white', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {coordCaptures.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: 'var(--text-3)', padding: '2rem' }}>No hay capturas registradas.</p>
+                ) : coordCaptures.map(cap => (
+                  <div key={cap.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '14px', padding: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', margin: 0 }}>{cap.nombre} {cap.apellido}</h4>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {Number(cap.elector_ci).toLocaleString('es-PY')}</p>
+                      </div>
+                      <div style={{ 
+                        width: '10px', height: '10px', borderRadius: '50%', 
+                        background: cap.traffic_light === 'GREEN' ? '#22C55E' : cap.traffic_light === 'YELLOW' ? '#FBBF24' : cap.traffic_light === 'RED' ? '#EF4444' : '#A855F7',
+                        boxShadow: `0 0 8px ${cap.traffic_light === 'GREEN' ? '#22C55E' : cap.traffic_light === 'YELLOW' ? '#FBBF24' : cap.traffic_light === 'RED' ? '#EF4444' : '#A855F7'}`
+                      }} />
+                    </div>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <div style={{ fontSize: '0.6rem', color: 'var(--text-2)' }}>
+                        <p style={{ margin: 0 }}>📍 {cap.local_votacion}</p>
+                        <p style={{ margin: 0 }}>🗳️ Mesa {cap.mesa} • Orden {cap.orden}</p>
+                        {cap.needs_transport === 1 && <span style={{ color: 'var(--plra-300)', fontWeight: 800 }}>🚗 REQUIERE TRANSPORTE</span>}
+                      </div>
+                      
+                      {cap.telefono && (
+                        <a 
+                          href={`https://wa.me/595${cap.telefono.replace(/\D/g, '')}`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          style={{ background: '#25D366', color: 'white', padding: '0.4rem 0.75rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                        >
+                          <MessageSquare size={12} /> WHATSAPP
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ══════════════════════════════════════════════════════
           SEMAPHORE MODAL
