@@ -1683,7 +1683,7 @@ const SuperAdmin = () => {
                               <option value="">Seleccione una lista...</option>
                               {lists.map(l => (
                                 <option key={l.id} value={l.id}>
-                                  Lista {l.list_number} - {l.candidate_nombre} ({l.type})
+                                  {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
                                 </option>
                               ))}
                             </select>

@@ -881,7 +881,7 @@ select option:active {
 .modern-input-premium-styled {
   width: 100%;
   padding: 0.85rem 1rem;
-  background: white;
+  background: var(--input-bg);
   border: 1.5px solid var(--border);
   border-radius: 12px;
   color: var(--text);
@@ -894,9 +894,14 @@ select option:active {
 .modern-input-premium-styled:focus {
   outline: none;
   border-color: var(--plra-500);
-  background: white;
+  background: var(--input-bg);
   box-shadow: 0 0 0 4px rgba(0, 71, 171, 0.08);
   transform: translateY(-1px);
+}
+
+.modern-input-premium-styled option {
+  background: var(--surface);
+  color: var(--text);
 }
 
 .modal-footer-premium-styled {
