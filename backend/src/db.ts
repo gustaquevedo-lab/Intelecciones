@@ -87,7 +87,10 @@ db.exec(`
     cod_local TEXT PRIMARY KEY,
     nombre TEXT NOT NULL,
     lat REAL,
-    lng REAL
+    lng REAL,
+    direccion TEXT,
+    icon TEXT DEFAULT 'Landmark',
+    ciudad TEXT DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS electors (

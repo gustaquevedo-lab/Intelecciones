@@ -22,6 +22,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const { theme, setTheme, isDark } = useTheme();
   const { settings } = useSettings();
   const [lists, setLists] = useState<any[]>([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO') {
@@ -65,20 +72,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           position: 'relative'
         }}>
           {/* Mobile Menu Toggle */}
-          <button 
-            className="sm:hidden"
-            onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
-            style={{
-              background: 'var(--accent-subtle)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-              padding: '0.4rem',
-              borderRadius: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            <Menu size={20} />
-          </button>
+          {isMobile && (
+            <button 
+              onClick={() => document.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+              style={{
+                background: 'var(--accent-subtle)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+                padding: '0.4rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Menu size={20} />
+            </button>
+          )}
 
           {/* Logo */}
           <div className="header-logo-container" style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>

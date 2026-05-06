@@ -492,6 +492,8 @@ app.post('/api/campaigns', (req, res) => {
     const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : (enabled_modules || 'COMMAND_CENTER,REGISTRY');
     const result = db.prepare('INSERT INTO campaigns (name, status, slogan, photo_url, enabled_modules) VALUES (?, ?, ?, ?, ?)')
       .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr);
+    
+    logAction(1, 'CREATE', 'CAMPAIGN', Number(result.lastInsertRowid), `Created campaign ${name}`);
     res.json({ id: result.lastInsertRowid });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -505,6 +507,8 @@ app.put('/api/campaigns/:id', (req, res) => {
     const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : enabled_modules;
     db.prepare('UPDATE campaigns SET name = ?, status = ?, slogan = ?, photo_url = ?, enabled_modules = ? WHERE id = ?')
       .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr || 'COMMAND_CENTER,REGISTRY', id);
+    
+    logAction(1, 'UPDATE', 'CAMPAIGN', id, `Updated campaign ${name}`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -534,6 +538,7 @@ app.delete('/api/campaigns/:id', (req, res) => {
     });
     
     transaction();
+    logAction(1, 'DELETE', 'CAMPAIGN', campaign_id, `Deleted campaign ${campaign_id} and purged all associated lists`);
     res.json({ success: true });
   } catch (err: any) {
     console.error("Error deleting campaign:", err);
@@ -651,6 +656,8 @@ app.post('/api/locales', (req, res) => {
       INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion, ciudad)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '', ciudad || '');
+    
+    logAction(1, 'CREATE', 'LOCALE', cod_local, `Created locale ${nombre} (${cod_local})`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -665,6 +672,8 @@ app.put('/api/locales/:cod', (req, res) => {
       SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, ciudad = ?
       WHERE cod_local = ?
     `).run(nombre, lat, lng, icon, direccion || '', ciudad || '', req.params.cod);
+    
+    logAction(1, 'UPDATE', 'LOCALE', req.params.cod, `Updated locale ${nombre}`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -674,6 +683,7 @@ app.put('/api/locales/:cod', (req, res) => {
 app.delete('/api/locales/:cod', (req, res) => {
   try {
     db.prepare('DELETE FROM voting_locations WHERE cod_local = ?').run(req.params.cod);
+    logAction(1, 'DELETE', 'LOCALE', req.params.cod, `Deleted locale ${req.params.cod}`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
