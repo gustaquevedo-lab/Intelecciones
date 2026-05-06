@@ -14,10 +14,11 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow all origins in this development/production setup to avoid CORS blocks
-    callback(null, true);
-  },
+  origin: [
+    'https://intelecciones.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'Accept']

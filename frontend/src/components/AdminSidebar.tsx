@@ -145,7 +145,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
         </button>
       )}
       {/* Toggle Button */}
-      {!isMobile && (
+      {isDesktop && (
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           style={{
