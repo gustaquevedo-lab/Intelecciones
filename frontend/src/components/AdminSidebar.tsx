@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   MapPin,
   Truck,
+  ChevronLeft,
   ChevronRight,
   Menu,
   MessageSquare,
