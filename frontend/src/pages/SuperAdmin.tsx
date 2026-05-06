@@ -37,7 +37,10 @@ import {
   PlusCircle,
   Save,
   Key,
-  Share2
+  Share2,
+  TrendingUp,
+  TrendingDown,
+  User
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
