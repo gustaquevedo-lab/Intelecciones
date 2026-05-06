@@ -141,6 +141,7 @@ const SuperAdmin = () => {
   const navigate = useNavigate();
   console.log("SuperAdmin - authUser:", authUser, "loading:", loading);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
   const [stats, setStats] = useState<any>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [lists, setLists] = useState<List[]>([]);
@@ -720,16 +721,22 @@ const SuperAdmin = () => {
     setIsLoading(true);
     try {
       if (activeTab === 'overview') {
-        const [summary, predictionsRes, allCaptures, allLocales] = await Promise.all([
+        const [summary, predictionsRes, allCaptures, allLocales, allUsers, allLists, allCamps] = await Promise.all([
           api.get('/stats/summary'),
           api.get('/stats/predictions'),
           api.get('/captures'),
-          api.get('/voting-locations')
+          api.get('/voting-locations'),
+          api.get('/users'),
+          api.get('/lists'),
+          api.get('/campaigns')
         ]);
         setStats(summary.data);
         setPredictions(predictionsRes.data);
         setCaptures(allCaptures.data);
         setLocales(allLocales.data);
+        setUsers(allUsers.data);
+        setLists(allLists.data);
+        setCampaigns(allCamps.data);
       } else if (activeTab === 'campaigns') {
         const res = await api.get('/campaigns');
         setCampaigns(res.data);
@@ -784,12 +791,60 @@ const SuperAdmin = () => {
   };
 
   const renderOverview = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div style={{ 
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', 
+        border: '1px solid var(--border)', marginBottom: '2rem' 
+      }}>
+        <div>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>Panel Global SaaS</h2>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0 }}>Administración Central de Multi-Tenancy</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <select 
+              className="mini-input" 
+              style={{ width: '220px', background: 'rgba(255,255,255,0.05)' }}
+              value={selectedCampaignId}
+              onChange={(e) => setSelectedCampaignId(e.target.value)}
+            >
+              <option value="all">Todas las Campañas</option>
+              {campaigns.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <button className="action-btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.75rem' }} onClick={fetchData}>
+            <Activity size={14} /> Sincronizar Datos
+          </button>
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-        <StatCard icon={UsersIcon} label="Usuarios Totales" value={stats?.users || 0} color="var(--plra-300)" />
-        <StatCard icon={ListOrdered} label="Listas Registradas" value={stats?.lists || 0} color="var(--plra-400)" />
-        <StatCard icon={Activity} label="Capturas Totales" value={stats?.captures || 0} color="var(--plra-100)" />
-        <StatCard icon={CheckCircle2} label="Electores Únicos" value={stats?.electors || 0} color="var(--green)" />
+        <StatCard 
+          icon={UsersIcon} 
+          label="Usuarios Activos" 
+          value={selectedCampaignId === 'all' ? (stats?.users || 0) : users.filter(u => u.assigned_campaign_id?.toString() === selectedCampaignId).length} 
+          color="var(--plra-300)" 
+        />
+        <StatCard 
+          icon={ListOrdered} 
+          label="Listas en Campaña" 
+          value={selectedCampaignId === 'all' ? (stats?.lists || 0) : lists.filter(l => l.campaign_id?.toString() === selectedCampaignId).length} 
+          color="var(--plra-400)" 
+        />
+        <StatCard 
+          icon={Activity} 
+          label="Capturas de Campo" 
+          value={selectedCampaignId === 'all' ? (stats?.captures || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId).length} 
+          color="var(--plra-100)" 
+        />
+        <StatCard 
+          icon={CheckCircle2} 
+          label="Electores Únicos" 
+          value={selectedCampaignId === 'all' ? (stats?.electors || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'GREEN').length} 
+          color="var(--green)" 
+        />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
@@ -854,7 +909,9 @@ const SuperAdmin = () => {
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           <ZoomControl position="bottomright" />
           <MarkerClusterGroup>
-            {captures.filter(c => c.lat).map(c => (
+            {captures
+              .filter(c => c.lat && (selectedCampaignId === 'all' || c.campaign_id?.toString() === selectedCampaignId))
+              .map(c => (
               <Marker 
                 key={`cap-${c.id}`} 
                 position={[c.lat, c.lng]} 
@@ -892,6 +949,53 @@ const SuperAdmin = () => {
             </Marker>
           ))}
         </MapContainer>
+      </div>
+
+      <div className="card-premium-styled" style={{ padding: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>Rendimiento Comparativo de Campañas</h3>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>Monitoreo de tracción por cliente SaaS</p>
+          </div>
+          <div style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--plra-300)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800 }}>
+            {campaigns.length} CLIENTES ACTIVOS
+          </div>
+        </div>
+        <ManagementTable 
+          isLoading={isLoading}
+          data={campaigns.map(camp => {
+            const campCaptures = captures.filter(c => c.campaign_id === camp.id).length;
+            const campUsers = users.filter(u => u.assigned_campaign_id === camp.id).length;
+            const progress = camp.goal ? Math.min(100, (campCaptures / camp.goal) * 100) : 0;
+            return { ...camp, campCaptures, campUsers, progress };
+          })}
+          columns={[
+            { header: 'Campaña / Tenant', accessor: 'name' },
+            { header: 'Usuarios', accessor: (row: any) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={14} style={{ color: 'var(--text-3)' }} />
+                <span style={{ fontWeight: 700 }}>{row.campUsers}</span>
+              </div>
+            )},
+            { header: 'Capturas', accessor: (row: any) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Activity size={14} style={{ color: 'var(--plra-300)' }} />
+                <span style={{ fontWeight: 700 }}>{row.campCaptures}</span>
+              </div>
+            )},
+            { header: 'Progreso', accessor: (row: any) => (
+              <div style={{ width: '100%', minWidth: '120px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', marginBottom: '4px', fontWeight: 700 }}>
+                  <span style={{ color: 'var(--text-3)' }}>{row.campCaptures} / {row.goal || '∞'}</span>
+                  <span style={{ color: 'var(--plra-300)' }}>{row.progress.toFixed(1)}%</span>
+                </div>
+                <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${row.progress}%`, background: 'var(--plra-400)', transition: 'width 0.3s ease' }} />
+                </div>
+              </div>
+            )}
+          ]}
+        />
       </div>
     </div>
   );
@@ -1341,21 +1445,26 @@ const SuperAdmin = () => {
       <ManagementTable 
         isLoading={isLoading}
         columns={[
-          { header: 'Nombre', accessor: 'nombre', sortKey: 'nombre' },
-          { header: 'C.I.', accessor: 'ci', sortKey: 'ci' },
-          { header: 'Usuario', accessor: 'username', sortKey: 'username' },
+          { header: 'CI', accessor: 'username', width: '120px' },
+          { header: 'Nombre', accessor: 'nombre' },
+          { header: 'Campaña / Cliente', accessor: (u: any) => {
+            const c = campaigns.find(camp => camp.id === u.assigned_campaign_id);
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c ? 'var(--plra-300)' : 'var(--text-3)' }} />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c ? 'white' : 'var(--text-3)' }}>
+                  {c ? c.name : 'SISTEMA GLOBAL'}
+                </span>
+              </div>
+            );
+          }},
           { 
             header: 'Rol', 
             accessor: (u: any) => (
               <span style={{ 
-                padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
+                padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800,
                 background: u.role === 'SUPERUSUARIO' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                 color: u.role === 'SUPERUSUARIO' ? 'var(--plra-300)' : 'var(--text-2)'
-              }}>
-                {u.role}
-              </span>
-            ),
-            sortKey: 'role'
           },
           {
             header: 'Dependencia (Superior)',
