@@ -791,6 +791,7 @@ const SuperAdmin = () => {
   };
 
   const renderOverview = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div style={{ 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', 
