@@ -789,67 +789,62 @@ const SuperAdmin = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-        <div style={{
-          background: 'var(--accent-subtle)',
-          border: '1px solid rgba(59,130,246,0.15)',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1.25rem'
-        }}>
-          <div style={{ 
-            width: '48px', height: '48px', borderRadius: '12px', 
-            background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--plra-300)'
-          }}>
-            <Activity size={24} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div className="card-premium-styled" style={{ background: 'var(--accent-subtle)', border: '1px solid rgba(59,130,246,0.15)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <Activity size={24} style={{ color: 'var(--plra-300)' }} />
+            <div>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Velocidad de Carga</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <p style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>{predictions?.velocity || 0}</p>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>capturas / hora</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Velocidad de Carga</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-              <p style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{predictions?.velocity || 0}</p>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-3)' }}>capturas / hora</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
-              {predictions?.trend === 'up' ? (
-                <CheckCircle2 size={12} style={{ color: 'var(--green)' }} />
-              ) : (
-                <AlertTriangle size={12} style={{ color: 'var(--red)' }} />
-              )}
-              <span style={{ fontSize: '0.7rem', color: predictions?.trend === 'up' ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
-                {predictions?.trend === 'up' ? 'Ritmo en Aumento' : 'Ritmo en Descenso'}
-              </span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+            {predictions?.trend === 'up' ? <TrendingUp size={14} color="var(--green)" /> : <TrendingDown size={14} color="var(--red)" />}
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: predictions?.trend === 'up' ? 'var(--green)' : 'var(--red)' }}>
+              {predictions?.trend === 'up' ? 'Ritmo en Aumento (+12%)' : 'Ritmo en Descenso'}
+            </span>
           </div>
         </div>
 
-        <div style={{
-          background: 'rgba(34,197,94,0.05)',
-          border: '1px solid rgba(34,197,94,0.15)',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1.25rem'
-        }}>
-          <div style={{ 
-            width: '48px', height: '48px', borderRadius: '12px', 
-            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--green)'
-          }}>
-            <Flag size={24} />
-          </div>
-          <div>
-            <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Proyección Final</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-              <p style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{predictions?.projected_total || 0}</p>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-3)' }}>total proyectado</span>
+        <div className="card-premium-styled" style={{ background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.15)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <Flag size={24} style={{ color: 'var(--green)' }} />
+            <div>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Proyección Final</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <p style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white' }}>{predictions?.projected_total || 0}</p>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>total proyectado</span>
+              </div>
             </div>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>Basado en el ritmo actual de carga</p>
           </div>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Basado en el ritmo de los últimos 60 minutos</p>
+        </div>
+
+        <div className="card-premium-styled" style={{ border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <Shield size={24} style={{ color: 'var(--red)' }} />
+            <div>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Zona de Seguridad</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.2rem' }}>Control Maestro de Datos</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleWipeCaptures}
+            style={{ 
+              width: '100%', padding: '0.75rem', borderRadius: '10px', 
+              background: 'rgba(239,68,68,0.1)', color: 'var(--red)', 
+              border: '1px solid var(--red)', fontSize: '0.7rem', 
+              fontWeight: 800, cursor: 'pointer', transition: '0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--red)'}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.color = 'white'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = 'var(--red)'; }}
+          >
+            PURGAR DATOS DE CAMPO
+          </button>
         </div>
       </div>
 
@@ -1499,7 +1494,7 @@ const SuperAdmin = () => {
       userName={authUser?.nombre || "Usuario"} 
       userPhoto={authUser?.photo_url}
     >
-      <div style={{ display: 'flex', height: 'calc(100vh - 102px)', overflow: 'visible' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'visible', position: 'relative' }}>
         <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         
         <main style={{ 

@@ -118,9 +118,20 @@ const LogisticsApp: React.FC = () => {
     setNewVehiclePlate('');
   };
 
+  const isMobile = window.innerWidth < 1024;
+
   return (
     <MainLayout title="Logística Operativa" userName={user?.nombre || user?.username || ''} userPhoto={user?.photo_url}>
-      <div style={{ padding: '1.5rem', maxWidth: '1600px', margin: '0 auto', width: '100%', height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ 
+        padding: 'clamp(1rem, 3vw, 1.5rem)', 
+        maxWidth: '1600px', 
+        margin: '0 auto', 
+        width: '100%', 
+        minHeight: 'calc(100vh - 80px)', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '1.5rem' 
+      }}>
         
         {/* TOP STATS BAR */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -149,11 +160,25 @@ const LogisticsApp: React.FC = () => {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '1.5rem', flex: 1, minHeight: 0 }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 400px', 
+          gap: '1.5rem', 
+          flex: 1, 
+          minHeight: isMobile ? 'auto' : 0 
+        }}>
           
           {/* LEFT COLUMN: MAP & CLUSTERS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minHeight: 0 }}>
-            <div style={{ flex: 1, position: 'relative' }}>
+            <div style={{ 
+              height: isMobile ? '400px' : 'auto',
+              flex: 1, 
+              position: 'relative',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              border: '1px solid var(--border)',
+              boxShadow: 'var(--shadow-lg)'
+            }}>
               <LogisticsMap pendingRequests={pendingLogistics} vehicles={vehicles} clusters={clusters} />
               <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000 }}>
                 <button className="action-btn-primary" onClick={() => setShowModal('vehicle')}>
@@ -162,14 +187,14 @@ const LogisticsApp: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem', WebkitOverflowScrolling: 'touch' }}>
               {clusters.map((cluster, i) => (
-                <div key={i} className="card-premium-styled" style={{ minWidth: '200px', padding: '1rem', background: 'var(--glass-bg)' }}>
+                <div key={i} className="card-premium-styled" style={{ minWidth: '220px', padding: '1rem', background: 'var(--glass-bg)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--plra-300)' }}>{cluster.barrio || 'GENERAL'}</span>
                     <span className="badge badge-blue">{cluster.count}</span>
                   </div>
-                  <p style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>Zona con alta demanda de transporte</p>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Zona con alta demanda de transporte</p>
                 </div>
               ))}
             </div>

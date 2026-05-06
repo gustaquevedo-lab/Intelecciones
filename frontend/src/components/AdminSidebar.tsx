@@ -104,12 +104,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
           flexDirection: 'column',
           padding: isCollapsed ? '1.25rem 0.5rem' : '1.25rem 0.75rem',
           gap: '0.4rem',
-          position: window.innerWidth < 640 ? 'fixed' : 'relative',
-          top: window.innerWidth < 640 ? 0 : 'auto',
-          bottom: window.innerWidth < 640 ? 0 : 'auto',
+          position: window.innerWidth < 1024 ? 'fixed' : 'sticky',
+          top: window.innerWidth < 1024 ? 0 : '0',
+          bottom: window.innerWidth < 1024 ? 0 : 'auto',
+          height: window.innerWidth < 1024 ? '100vh' : 'calc(100vh - 80px)',
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease',
           overflow: 'visible',
-          zIndex: 10000
+          zIndex: 9990
         }}
       >
       {/* Toggle Button */}

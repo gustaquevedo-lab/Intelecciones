@@ -92,10 +92,10 @@ const API_BASE = 'http://localhost:5000/api';
 
 /* ─── sub-components ─────────────────────────────────── */
 
-const StatCard = ({ label, value, delta, trend, color, bg, border }: any) => (
+const StatCard = ({ label, value, delta, trend, color, bg, border, isTactical }: any) => (
   <div style={{
-    background: 'var(--surface)', 
-    border: `1px solid var(--border)`,
+    background: isTactical ? 'rgba(0,0,0,0.3)' : 'var(--surface)', 
+    border: `1px solid ${isTactical ? 'rgba(255,255,255,0.05)' : 'var(--border)'}`,
     borderRadius: '16px', 
     padding: '1.1rem 1.25rem',
     display: 'flex', 
@@ -103,22 +103,24 @@ const StatCard = ({ label, value, delta, trend, color, bg, border }: any) => (
     justifyContent: 'space-between',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     position: 'relative',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    boxShadow: isTactical ? 'none' : 'var(--shadow-sm)'
   }}>
     <div style={{ 
-      position: 'absolute', left: 0, top: '20%', bottom: '20%', 
-      width: '3px', background: color, borderRadius: '0 4px 4px 0' 
+      position: 'absolute', left: 0, top: '25%', bottom: '25%', 
+      width: '3px', background: color, borderRadius: '0 4px 4px 0',
+      opacity: 0.8
     }} />
-    <div>
+    <div style={{ minWidth: 0 }}>
       <span style={{ 
         fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.12em', 
-        textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' 
+        textTransform: 'uppercase', color: isTactical ? 'var(--text-3)' : 'var(--text-3)', fontFamily: 'var(--font-display)' 
       }}>
         {label}
       </span>
       <div style={{ 
         fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', 
-        color: 'var(--text)', lineHeight: 1, marginTop: '0.35rem' 
+        color: isTactical ? 'white' : 'var(--text)', lineHeight: 1, marginTop: '0.35rem' 
       }}>
         {value}
       </div>
@@ -126,11 +128,12 @@ const StatCard = ({ label, value, delta, trend, color, bg, border }: any) => (
     <div style={{ 
       width: '40px', height: '40px', borderRadius: '12px', 
       background: `${color}15`, border: `1px solid ${color}30`, 
-      display: 'flex', alignItems: 'center', justifyContent: 'center' 
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0
     }}>
       {trend === 'up'   && <TrendingUp  size={20} style={{ color }} />}
       {trend === 'down' && <TrendingDown size={20} style={{ color }} />}
-      {!trend           && <Activity    size={20} style={{ color: 'var(--text-3)' }} />}
+      {!trend           && <Activity    size={20} style={{ color: isTactical ? 'var(--text-3)' : 'var(--text-3)' }} />}
     </div>
   </div>
 );
@@ -142,88 +145,96 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
     NORMAL: 'var(--plra-300)'
   };
   return (
-    <div style={{ padding: '1rem', borderRadius: '12px', background: 'var(--surface-light)', border: '1px solid var(--border)', marginBottom: '0.75rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: priorityColors[req.priority as keyof typeof priorityColors] || 'var(--plra-300)' }}>{req.priority}</span>
-        <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(req.timestamp).toLocaleTimeString()}</span>
+    <div className="tactical-card" style={{ padding: '1.25rem', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: priorityColors[req.priority as keyof typeof priorityColors] || 'var(--plra-300)' }} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: priorityColors[req.priority as keyof typeof priorityColors] || 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{req.priority}</span>
+        </div>
+        <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600 }}>{new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
-      <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.25rem' }}>{req.type}</p>
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1rem', lineHeight: '1.4' }}>{req.description}</p>
+      
+      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>{req.type}</p>
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '1.25rem', lineHeight: '1.5', wordBreak: 'break-word' }}>{req.description}</p>
       
       {/* Multimedia Display (Premium) */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        {req.photo_url && (
-          <div 
-            onClick={() => window.open(req.photo_url, '_blank')}
-            style={{ 
-              width: '100%', maxWidth: '100%', height: '120px', borderRadius: '12px', 
-              overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' 
-            }}
-          >
-            <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-              <Search size={20} color="white" />
+      {(req.photo_url || req.audio_url) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          {req.photo_url && (
+            <div 
+              onClick={() => window.open(req.photo_url, '_blank')}
+              style={{ 
+                width: '100%', height: '140px', borderRadius: '12px', 
+                overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' 
+              }}
+            >
+              <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: '0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                <Search size={20} color="white" />
+              </div>
             </div>
-          </div>
-        )}
-        
-        {req.audio_url && (
-          <div style={{ width: '100%', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <Mic size={12} style={{ color: 'var(--plra-300)' }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Reporte de Audio</span>
+          )}
+          
+          {req.audio_url && (
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <Mic size={12} style={{ color: 'var(--plra-300)' }} />
+                <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>Reporte de Audio</span>
+              </div>
+              <audio controls src={req.audio_url} style={{ width: '100%', height: '32px' }} />
             </div>
-            <audio controls src={req.audio_url} style={{ width: '100%', height: '32px' }} />
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: 'white', fontWeight: 800 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'white', fontWeight: 800 }}>
             {req.coordinator_name?.charAt(0)}
           </div>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text)', fontWeight: 600 }}>{req.coordinator_name}</span>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: '0.75rem', color: 'white', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.coordinator_name}</p>
+            {req.padrino_name && (
+              <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Padrino: <span style={{ fontWeight: 700, color: 'var(--plra-200)' }}>{req.padrino_name}</span></p>
+            )}
+          </div>
         </div>
-        {req.padrino_name && (
-          <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginLeft: '1.75rem' }}>
-            Padrino: <span style={{ fontWeight: 700, color: 'var(--plra-200)' }}>{req.padrino_name}</span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {req.coordinator_phone && (
+          <a 
+            href={`https://wa.me/${formatWhatsApp(req.coordinator_phone)}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', 
+              background: '#25D366', color: 'white', padding: '0.6rem', 
+              borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800, 
+              textDecoration: 'none'
+            }}
+          >
+            <MessageSquare size={14} /> CONTACTAR COORDINADOR
+          </a>
+        )}
+
+        {req.status === 'PENDING' ? (
+          !isReadOnly ? (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => onResolve('APPROVED')} style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', background: 'var(--green)', color: 'white', border: 'none', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}>Aprobar</button>
+              <button onClick={() => onResolve('REJECTED')} style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid var(--red)', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}>Rechazar</button>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '0.6rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', color: 'var(--text-3)', fontSize: '0.7rem', fontStyle: 'italic' }}>
+              Esperando decisión de mando
+            </div>
+          )
+        ) : (
+          <div style={{ textAlign: 'center', padding: '0.6rem', borderRadius: '10px', background: req.status === 'APPROVED' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: req.status === 'APPROVED' ? 'var(--green)' : 'var(--red)', fontSize: '0.75rem', fontWeight: 800 }}>
+            {req.status === 'APPROVED' ? '✓ SOLICITUD APROBADA' : '✕ SOLICITUD RECHAZADA'}
           </div>
         )}
       </div>
-
-      {req.coordinator_phone && (
-        <a 
-          href={`https://wa.me/${formatWhatsApp(req.coordinator_phone)}`}
-          target="_blank"
-          rel="noreferrer"
-          style={{ 
-            display: 'inline-flex', alignItems: 'center', gap: '0.5rem', 
-            background: '#25D366', color: 'white', padding: '0.4rem 0.8rem', 
-            borderRadius: '8px', fontSize: '0.65rem', fontWeight: 800, 
-            textDecoration: 'none', marginBottom: '1rem' 
-          }}
-        >
-          <MessageSquare size={14} /> CONTACTAR COORDINADOR
-        </a>
-      )}
-
-      {req.status === 'PENDING' ? (
-        !isReadOnly ? (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={() => onResolve('APPROVED')} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'var(--green)', color: 'white', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Aprobar</button>
-            <button onClick={() => onResolve('REJECTED')} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'rgba(239,68,68,0.2)', color: 'var(--red)', border: '1px solid var(--red)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>Rechazar</button>
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '0.4rem', borderRadius: '8px', background: 'var(--surface-light)', color: 'var(--text-3)', fontSize: '0.7rem', fontStyle: 'italic' }}>
-            Esperando decisión de mando
-          </div>
-        )
-      ) : (
-        <div style={{ textAlign: 'center', padding: '0.4rem', borderRadius: '8px', background: req.status === 'APPROVED' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: req.status === 'APPROVED' ? 'var(--green)' : 'var(--red)', fontSize: '0.7rem', fontWeight: 700 }}>
-          {req.status === 'APPROVED' ? 'APROBADO' : 'RECHAZADO'}
-        </div>
-      )}
     </div>
   );
 };
@@ -396,8 +407,8 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
           </span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <StatCard label="A Favor" value={stats?.green || 0} trend="up" color="var(--green)" bg="rgba(34,197,94,0.1)" border="rgba(34,197,94,0.2)" />
-          <StatCard label="Pendientes" value={(stats?.total_electors - stats?.total_captures) || 0} trend={null} color="rgba(255,255,255,0.4)" bg="rgba(255,255,255,0.03)" border="rgba(255,255,255,0.1)" />
+          <StatCard label="Captados Favor" value={stats?.green || 0} trend="up" color="var(--green)" isTactical />
+          <StatCard label="Electores Pendientes" value={(stats?.total_electors - stats?.total_captures) || 0} trend={null} color="var(--plra-300)" isTactical />
         </div>
         <ProjectionCard currentCount={stats?.total_captures || 0} />
       </div>
@@ -1081,38 +1092,47 @@ const CommandCenter = () => {
                 </div>
             </div>
           ) : (
-            <div style={{ padding: '1.5rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)' }}>Padrón Electoral Inteligente</h3>
-                <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>
-                  {searchResults.length} registros cargados
+            <div style={{ padding: 'clamp(1rem, 3vw, 2rem)', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.25rem' }}>Padrón Electoral Inteligente</h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Búsqueda y gestión avanzada de electores por local y mesa.</p>
+                </div>
+                <div style={{ 
+                  padding: '0.5rem 1rem', background: 'var(--accent-subtle)', border: '1px solid var(--border)', 
+                  borderRadius: '10px', color: 'var(--plra-300)', fontSize: '0.75rem', fontWeight: 800 
+                }}>
+                  {searchResults.length} Registros Encontrados
                 </div>
               </div>
-              <ManagementTable 
-                isLoading={isSearching}
-                data={searchResults}
-                columns={[
-                  { header: 'CI', accessor: 'ci', width: '120px' },
-                  { header: 'Nombre', accessor: (e: any) => `${e.nombre} ${e.apellido}` },
-                  { header: 'Local', accessor: 'local_votacion' },
-                  { header: 'Mesa', accessor: 'mesa', width: '80px' },
-                  { 
-                    header: 'Estado', 
-                    accessor: (e: any) => (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ 
-                          width: '8px', height: '8px', borderRadius: '50%', 
-                          background: e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : e.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)'
-                        }} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>
-                          {e.traffic_light ? 'CAPTADO' : 'PENDIENTE'}
-                        </span>
-                      </div>
-                    )
-                  },
-                  { header: 'Coordinador', accessor: 'coordinator_name' }
-                ]}
-              />
+              <div style={{ background: 'var(--surface)', borderRadius: '20px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
+                <ManagementTable 
+                  isLoading={isSearching}
+                  data={searchResults}
+                  columns={[
+                    { header: 'CI', accessor: 'ci', width: '120px' },
+                    { header: 'Nombre Completo', accessor: (e: any) => `${e.nombre} ${e.apellido}` },
+                    { header: 'Local de Votación', accessor: 'local_votacion' },
+                    { header: 'Mesa', accessor: 'mesa', width: '80px' },
+                    { 
+                      header: 'Estado', 
+                      accessor: (e: any) => (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <div style={{ 
+                            width: '10px', height: '10px', borderRadius: '50%', 
+                            background: e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : e.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)',
+                            boxShadow: e.traffic_light ? `0 0 8px ${e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : 'var(--red)'}` : 'none'
+                          }} />
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: e.traffic_light ? 'var(--text)' : 'var(--text-3)' }}>
+                            {e.traffic_light ? 'CAPTADO' : 'PENDIENTE'}
+                          </span>
+                        </div>
+                      )
+                    },
+                    { header: 'Responsable', accessor: 'coordinator_name' }
+                  ]}
+                />
+              </div>
             </div>
           )}
         </div>
