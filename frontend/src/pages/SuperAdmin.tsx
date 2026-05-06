@@ -779,6 +779,7 @@ const SuperAdmin = () => {
       setIsLoading(false);
     }
   };
+
   const renderOverview = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
@@ -788,7 +789,6 @@ const SuperAdmin = () => {
         <StatCard icon={CheckCircle2} label="Electores Únicos" value={stats?.electors || 0} color="var(--green)" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
         <div className="card-premium-styled" style={{ background: 'var(--accent-subtle)', border: '1px solid rgba(59,130,246,0.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -833,15 +833,13 @@ const SuperAdmin = () => {
           </div>
           <button 
             onClick={handleWipeCaptures}
+            className="action-btn-danger"
             style={{ 
               width: '100%', padding: '0.75rem', borderRadius: '10px', 
               background: 'rgba(239,68,68,0.1)', color: 'var(--red)', 
               border: '1px solid var(--red)', fontSize: '0.7rem', 
-              fontWeight: 800, cursor: 'pointer', transition: '0.2s'
+              fontWeight: 800, cursor: 'pointer'
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--red)'}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.color = 'white'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = 'var(--red)'; }}
           >
             PURGAR DATOS DE CAMPO
           </button>
@@ -870,7 +868,7 @@ const SuperAdmin = () => {
                     <strong>{c.nombre} {c.apellido}</strong><br/>
                     Status: {c.traffic_light}<br/>
                     {c.needs_transport === 1 ? '🚗 REQUIERE TRASLADO' : '🚶 Sin traslado'}<br/>
-                    <small>Por: {c.coordinator_name}</small>
+                    <small>Por: {c.coordinator_name || 'Sistema'}</small>
                   </div>
                 </Popup>
               </Marker>
