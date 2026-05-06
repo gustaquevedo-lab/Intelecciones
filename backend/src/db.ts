@@ -100,7 +100,8 @@ db.exec(`
     local_votacion TEXT NOT NULL,
     mesa INTEGER NOT NULL,
     orden INTEGER NOT NULL,
-    is_priority BOOLEAN DEFAULT 0
+    is_priority BOOLEAN DEFAULT 0,
+    ciudad TEXT DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS participation_logs (

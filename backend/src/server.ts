@@ -7,6 +7,7 @@ import fs from 'fs';
 import { z } from 'zod';
 import db from './db';
 import { whatsappService } from './whatsappService';
+import * as XLSX from 'xlsx';
 
 dotenv.config();
 
@@ -640,6 +641,7 @@ app.put('/api/captures/:id', (req, res) => {
 
 // Ensure ciudad column exists
 try { db.prepare('ALTER TABLE voting_locations ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
 
 app.get('/api/locales', (req, res) => {
   try {
@@ -1404,16 +1406,96 @@ app.post('/api/admin/conflicts/resolve', (req, res) => {
 
 app.get('/api/admin/electors/search', (req, res) => {
   const { q } = req.query;
+  const user_id = req.headers['x-user-id'];
+  const role = getRole(req);
+
   try {
+    let cityFilter = '';
+    if (role !== 'SUPERUSUARIO' && user_id) {
+      const user = db.prepare('SELECT assigned_local FROM users WHERE id = ?').get(user_id) as any;
+      if (user?.assigned_local) {
+        const local = db.prepare('SELECT ciudad FROM voting_locations WHERE cod_local = ?').get(user.assigned_local) as any;
+        if (local?.ciudad) {
+          cityFilter = `AND e.ciudad = '${local.ciudad}'`;
+        } else {
+          cityFilter = 'AND 1=0'; // Restricted but city not found
+        }
+      } else {
+        cityFilter = 'AND 1=0'; // Restricted but no local assigned
+      }
+    }
+
     const electors = db.prepare(`
       SELECT e.*, ec.traffic_light, u.nombre as coordinator_name
       FROM electors e
       LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
       LEFT JOIN users u ON ec.coordinator_id = u.id
-      WHERE e.ci LIKE ? OR e.nombre LIKE ? OR e.apellido LIKE ?
+      WHERE (e.ci LIKE ? OR e.nombre LIKE ? OR e.apellido LIKE ?) ${cityFilter}
       LIMIT 50
     `).all(`%${q}%`, `%${q}%`, `%${q}%`);
     res.json(electors);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo" });
+  const { ciudad } = req.body;
+  if (!ciudad) return res.status(400).json({ error: "Debe especificar la ciudad para este padrón" });
+
+  try {
+    const workbook = XLSX.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data: any[] = XLSX.utils.sheet_to_json(sheet);
+
+    if (data.length === 0) {
+      return res.status(400).json({ error: "El archivo está vacío o tiene un formato incorrecto" });
+    }
+
+    const insertStmt = db.prepare(`
+      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const transaction = db.transaction((rows) => {
+      for (const row of rows) {
+        // Mapping based on common Excel headers or provided structure
+        const ci = row['CEDULA'] || row['CI'] || row['Cédula'] || row['ci'];
+        const nombre = row['NOMBRE'] || row['Nombre'] || row['nombre'];
+        const apellido = row['APELLIDO'] || row['Apellido'] || row['apellido'];
+        const local = row['LOCAL'] || row['Local'] || row['local_votacion'] || row['local'];
+        const mesa = row['MESA'] || row['Mesa'] || row['mesa'] || 0;
+        const orden = row['ORD.MESA'] || row['ORDEN'] || row['Orden'] || row['orden'] || 0;
+
+        if (ci && nombre) {
+          insertStmt.run(ci.toString(), nombre, apellido || '', local || 'DESCONOCIDO', mesa, orden, ciudad);
+        }
+      }
+    });
+
+    transaction(data);
+    
+    // Cleanup
+    fs.unlinkSync(req.file.path);
+
+    logAction(1, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para la ciudad: ${ciudad}`);
+    res.json({ success: true, count: data.length });
+  } catch (err: any) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/electors/stats', (req, res) => {
+  try {
+    const stats = db.prepare(`
+      SELECT ciudad, COUNT(*) as count 
+      FROM electors 
+      GROUP BY ciudad
+    `).all();
+    res.json(stats);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

@@ -232,6 +232,9 @@ const SuperAdmin = () => {
   const [newLocaleCiudad, setNewLocaleCiudad] = useState('');
   const [mapCenter, setMapCenter] = useState<[number, number]>([-22.545, -55.72]);
   const [mapZoom, setMapZoom] = useState(14);
+  const [padronStats, setPadronStats] = useState<any[]>([]);
+  const [importingPadron, setImportingPadron] = useState(false);
+  const [importCity, setImportCity] = useState('');
 
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -1504,6 +1507,142 @@ const SuperAdmin = () => {
     </div>
   );
 
+  const handleImportPadron = async (file: File) => {
+    if (!importCity) {
+      alert('Por favor, ingresa el nombre de la ciudad para este padrón.');
+      return;
+    }
+    
+    setImportingPadron(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('ciudad', importCity);
+
+    try {
+      const res = await api.post('/admin/import-padron', formData);
+      alert(`¡Éxito! Se han importado ${res.data.count} electores para ${importCity}.`);
+      setImportCity('');
+      loadPadronStats();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Error al importar padrón');
+    } finally {
+      setImportingPadron(false);
+    }
+  };
+
+  const loadPadronStats = async () => {
+    try {
+      const res = await api.get('/admin/electors/stats');
+      setPadronStats(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'padrones') loadPadronStats();
+  }, [activeTab]);
+
+  const renderPadrones = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1000px' }}>
+      <section>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <FileText size={18} /> Importación de Padrones (Excel)
+        </h3>
+        
+        <div className="card-premium-styled" style={{ padding: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div className="form-group">
+              <label>Nombre de la Ciudad</label>
+              <input 
+                className="modern-input-premium-styled" 
+                placeholder="Ej: Pedro Juan Caballero, Asunción..." 
+                value={importCity}
+                onChange={e => setImportCity(e.target.value)}
+              />
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
+                * Este nombre se usará para aislar los datos. Solo usuarios asignados a locales de esta ciudad podrán consultarlos.
+              </p>
+            </div>
+
+            <div 
+              style={{
+                border: '2px dashed var(--border-mid)',
+                borderRadius: '16px',
+                padding: '3rem 2rem',
+                textAlign: 'center',
+                background: 'rgba(59,130,246,0.02)',
+                cursor: importingPadron ? 'wait' : 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => {
+                e.preventDefault();
+                if (importingPadron) return;
+                const file = e.dataTransfer.files[0];
+                if (file) handleImportPadron(file);
+              }}
+              onClick={() => {
+                if (importingPadron) return;
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.xlsx, .xls, .csv';
+                input.onchange = (e: any) => {
+                  const file = e.target.files[0];
+                  if (file) handleImportPadron(file);
+                };
+                input.click();
+              }}
+            >
+              {importingPadron ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                  <div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid var(--plra-300)', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                  <p style={{ fontWeight: 800, color: 'var(--plra-300)' }}>Procesando archivo... por favor espera.</p>
+                </div>
+              ) : (
+                <>
+                  <Download size={40} style={{ color: 'var(--plra-300)', marginBottom: '1rem' }} />
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.5rem' }}>Suelta tu archivo Excel aquí</h4>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>O haz clic para seleccionar desde tu computadora</p>
+                  <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Check size={14} style={{ color: 'var(--green)' }} /> Formato .xlsx / .xls
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Check size={14} style={{ color: 'var(--green)' }} /> Mapeo automático de columnas
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <LayoutList size={18} /> Resumen de Registros por Ciudad
+        </h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+          {padronStats.map(stat => (
+            <div key={stat.ciudad} className="card-premium-styled" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>CIUDAD</p>
+                <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>{stat.ciudad || 'Sin Asignar'}</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>TOTAL ELECTORES</p>
+                <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--plra-200)' }}>{stat.count.toLocaleString()}</p>
+              </div>
+            </div>
+          ))}
+          {padronStats.length === 0 && (
+            <p style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-3)', padding: '2rem' }}>No hay padrones cargados aún.</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+
   const renderUsers = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1715,6 +1854,7 @@ const SuperAdmin = () => {
               {activeTab === 'logistics' && renderLogistics()}
               {activeTab === 'audit' && renderAudit()}
               {activeTab === 'locales' && renderLocales()}
+              {activeTab === 'padrones' && renderPadrones()}
               {activeTab === 'whatsapp' && <Navigate to="/comunicaciones" />}
               {activeTab === 'settings' && renderSettings()}
             </motion.div>

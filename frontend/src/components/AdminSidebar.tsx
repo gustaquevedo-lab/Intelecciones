@@ -9,11 +9,11 @@ import {
   ShieldCheck,
   MapPin,
   Truck,
-  ChevronLeft,
   ChevronRight,
   Menu,
   MessageSquare,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +32,7 @@ const NAV_ITEMS = [
   { id: 'lists',     label: 'Listas',     icon: ListOrdered },
   { id: 'users',     label: 'Usuarios',   icon: Users },
   { id: 'locales',   label: 'Locales',    icon: MapPin },
+  { id: 'padrones',  label: 'Padrones',   icon: FileText },
   { id: 'whatsapp',  label: 'WhatsApp',   icon: MessageSquare },
   { id: 'audit',     label: 'Auditoría',  icon: History },
   { id: 'settings',  label: 'Ajustes',    icon: Settings },
@@ -67,12 +68,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
   
   const filteredItems = NAV_ITEMS.filter(item => {
     if (user?.role === 'JEFE_CAMPANA') {
-      return !['users', 'audit', 'settings'].includes(item.id);
+      return !['users', 'audit', 'settings', 'padrones'].includes(item.id);
     }
     return true;
   });
 
-  const sidebarWidth = !isDesktop ? '260px' : (isCollapsed ? '70px' : '220px');
+  const sidebarWidth = !isDesktop ? '210px' : (isCollapsed ? '70px' : '220px');
 
   return (
     <>
@@ -107,8 +108,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
           borderRight: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
-          padding: isCollapsed && isDesktop ? '1.25rem 0.5rem' : '1.25rem 1rem',
-          gap: '0.4rem',
+          padding: isDesktop ? (isCollapsed ? '1.25rem 0.5rem' : '1.25rem 0.75rem') : '1.25rem 0.6rem',
+          gap: '0.35rem',
           position: !isDesktop ? 'fixed' : 'sticky',
           top: 0,
           left: 0,
@@ -209,8 +210,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-              padding: isCollapsed ? '0.75rem 0' : '0.55rem 0.85rem',
+              justifyContent: isCollapsed && isDesktop ? 'center' : 'flex-start',
+              padding: isCollapsed && isDesktop ? '0.75rem 0' : '0.5rem 0.7rem',
               borderRadius: '10px',
               border: 'none',
               background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(0, 71, 171, 0.08)') : 'transparent',
@@ -223,7 +224,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               textAlign: 'left',
               width: '100%',
               overflow: 'hidden',
-              gap: '0.75rem'
+              gap: '0.6rem'
             }}
             onMouseEnter={e => {
               if (!isActive) {
@@ -257,7 +258,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 style={{
-                  fontSize: '0.8rem',
+                  fontSize: !isDesktop ? '0.75rem' : '0.8rem',
                   fontWeight: isActive ? 800 : 600,
                   fontFamily: 'var(--font-display)',
                   whiteSpace: 'nowrap'
