@@ -1055,8 +1055,14 @@ app.put('/api/users/:id', (req, res) => {
 
 app.post('/api/admin/users/:id/reset-password', (req, res) => {
   try {
-    db.prepare('UPDATE users SET needs_password_change = 1 WHERE id = ?').run(req.params.id);
-    res.json({ success: true });
+    const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.params.id) as any;
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    
+    // Set password to username as default and flag for change
+    db.prepare('UPDATE users SET password = ?, needs_password_change = 1 WHERE id = ?').run(user.username, req.params.id);
+    
+    logAction(1, 'RESET_PASSWORD', 'USER', req.params.id, `Password reset to default (username) for user ${user.username}`);
+    res.json({ success: true, message: `Contraseña reseteada. El usuario debe ingresar con su nombre de usuario (${user.username}) y cambiarla.` });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1574,14 +1580,6 @@ app.get('/api/stats/command', (req, res) => {
   }
 });
 
-app.post('/api/admin/users/:id/reset-password', (req, res) => {
-  try {
-    db.prepare('UPDATE users SET needs_password_change = 1 WHERE id = ?').run(req.params.id);
-    res.json({ success: true, message: 'El usuario deberá cambiar su contraseña al próximo ingreso.' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 app.get('/api/padrino/team-stats', (req, res) => {
   const padrino_id = req.query.padrino_id || req.headers['x-user-id'];
