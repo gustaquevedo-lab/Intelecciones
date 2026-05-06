@@ -995,12 +995,17 @@ app.delete('/api/users/:id', (req, res) => {
       // 1. Nullify references in elector_captures to avoid breaking historical data
       db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
       
-      // 2. Nullify references in logistics
-      db.prepare('UPDATE logistics SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+      // 2. Nullify references in vehicles (formerly logistics)
+      db.prepare('UPDATE vehicles SET assigned_user_id = NULL WHERE assigned_user_id = ?').run(userId);
       
       // 3. Nullify references in field_requests
       db.prepare('UPDATE field_requests SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
       db.prepare('UPDATE field_requests SET resolved_by_id = NULL WHERE resolved_by_id = ?').run(userId);
+
+      // 4. Nullify references in capture_conflicts and audit_logs
+      db.prepare('UPDATE capture_conflicts SET resolved_by_jefe_id = NULL WHERE resolved_by_jefe_id = ?').run(userId);
+      db.prepare('UPDATE capture_conflicts SET resolved_coordinator_id = NULL WHERE resolved_coordinator_id = ?').run(userId);
+      db.prepare('UPDATE audit_logs SET user_id = NULL WHERE user_id = ?').run(userId);
 
       // 4. Nullify references in participation_logs and results
       db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
