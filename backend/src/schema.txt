@@ -1,0 +1,21 @@
+﻿Tables: tenants, sqlite_sequence, users, results, units, incidences, electors, tenant_electors, elector_locations, logistics, campaigns, lists, voting_locations, elector_captures, capture_conflicts, audit_logs, settings, vehicles, field_requests, participation_logs
+Table tenants: id, name, party, candidate_ci, election_type, position, list_number, option_number, city, department, domain, status
+Table sqlite_sequence: name, seq
+Table users: id, tenant_id, username, password, role, nombre, assigned_list_id, photo_url, assigned_local, assigned_mesa, assigned_campaign_id, ci, telefono
+Table results: id, tenant_id, mesa, local_votacion, votos_nuestro, votos_oponente_1, votos_oponente_2, votos_otros, votos_nulos, votos_blancos, foto_acta_url, timestamp
+Table units: id, tenant_id, driver_name, plate, capacity, phone, status
+Table incidences: id, tenant_id, mesa, orden, tipo, descripcion, timestamp
+Table electors: ci, nombre, apellido, fecha_nacimiento, sexo, departamento, distrito, local_votacion, cod_local, direccion, barrio, mesa, orden, partido, tipo, edad, lat, lng, coordinador_asignado, status, is_priority, photo_url
+Table tenant_electors: tenant_id, elector_ci, needs_transport, is_verified_address, status, last_visit
+Table elector_locations: id, tenant_id, elector_ci, lat, lng, timestamp, is_home
+Table logistics: id, tenant_id, elector_ci, unit_id, status, timestamp
+Table campaigns: id, name, status, enabled_modules, slogan, photo_url
+Table lists: id, campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal_captures, goal, candidate_nombre, candidate_alias
+Table voting_locations: cod_local, nombre, lat, lng, icon
+Table elector_captures: id, elector_ci, coordinator_id, lat, lng, traffic_light, is_disputed, timestamp, needs_transport, vehicle_id, assigned_vehicle_id, telefono, list_id
+Table capture_conflicts: id, capture_id, elector_ci, resolved_by_jefe_id, resolved_coordinator_id, status, timestamp, list_id
+Table audit_logs: id, user_id, action, entity, entity_id, details, timestamp, list_id
+Table settings: key, value
+Table vehicles: id, description, driver_name, driver_phone, assigned_list_id, driver_ci, capacity, status, assigned_user_id, type, plate
+Table field_requests: id, coordinator_id, list_id, type, description, status, priority, timestamp, resolved_at, resolved_by_id
+Table participation_logs: id, local_votacion, mesa, orden, veedor_id, timestamp
