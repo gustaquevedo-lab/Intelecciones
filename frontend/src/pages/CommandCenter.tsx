@@ -825,19 +825,26 @@ const CommandCenter = () => {
                         )}
                       >
                         <Popup>
-                          <div style={{ padding: '0.5rem' }}>
-                            <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.25rem' }}>{cap.nombre} {cap.apellido}</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                              <span style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: 'var(--plra-500)', color: 'white' }}>
-                                LISTA {cap.list_number}
+                          <div style={{ padding: '0.4rem', minWidth: '160px' }}>
+                            <p style={{ fontWeight: 800, fontSize: '0.75rem', marginBottom: '0.2rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1 }}>{cap.nombre} {cap.apellido}</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.3rem' }}>
+                              <span style={{ fontSize: '0.5rem', fontWeight: 900, padding: '1px 4px', borderRadius: '3px', background: 'var(--plra-500)', color: 'white' }}>
+                                L-{cap.list_number}
                               </span>
-                              <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>{cap.campaign_name}</span>
+                              <span style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase' }}>{cap.campaign_name?.substring(0, 15)}...</span>
                             </div>
-                            <p style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Captado por: <strong>{cap.coordinator_name}</strong></p>
-                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>Local: {cap.local_votacion}</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-2)', marginBottom: '0.1rem' }}>
+                              Captado por: <span style={{ fontWeight: 800, color: 'var(--plra-300)' }}>{cap.coordinator_name}</span>
+                            </p>
+                            <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.3rem', opacity: 0.8 }}>
+                              Cargo: {cap.coordinator_role}
+                            </p>
+                            <div style={{ fontSize: '0.55rem', color: 'var(--text-3)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                              <MapPin size={10} /> {cap.local_votacion}
+                            </div>
                             {cap.needs_transport === 1 && (
-                              <div style={{ marginTop: '0.5rem', padding: '0.3rem', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', border: '1px solid var(--plra-300)', fontSize: '0.65rem', color: 'var(--plra-200)', fontWeight: 700, textAlign: 'center' }}>
-                                🚗 REQUIERE TRASLADO
+                              <div style={{ marginTop: '0.4rem', padding: '0.25rem', borderRadius: '4px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.55rem', color: 'var(--red)', fontWeight: 900, textAlign: 'center', textTransform: 'uppercase' }}>
+                                🚗 Requiere Logística
                               </div>
                             )}
                           </div>
@@ -943,8 +950,8 @@ const CommandCenter = () => {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <p style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>{elector.nombre} {elector.apellido}</p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {elector.ci}</p>
+                          <p style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{elector.nombre} {elector.apellido}</p>
+                          <p style={{ fontSize: '0.65rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {elector.ci}</p>
                         </div>
                         <div style={{ 
                           padding: '4px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.1)',
@@ -965,10 +972,10 @@ const CommandCenter = () => {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                         <button 
                           className="action-btn-primary" 
-                          style={{ flex: 1, padding: '0.6rem', fontSize: '0.7rem', gap: '0.4rem' }}
+                          style={{ flex: 1, padding: '0.4rem', fontSize: '0.65rem', gap: '0.3rem', borderRadius: '8px' }}
                           onClick={() => {
                             if (elector.lat && elector.lng) {
                               setSelectedLocal(null);
@@ -978,15 +985,22 @@ const CommandCenter = () => {
                             }
                           }}
                         >
-                          <MapPin size={14} /> UBICAR
+                          <MapPin size={12} /> UBICAR
                         </button>
+                        {elector.coordinator_name && (
+                          <div style={{ flex: 1.5, background: 'rgba(255,255,255,0.02)', padding: '0.4rem 0.6rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '1px' }}>Captado por</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--plra-300)', fontWeight: 700, margin: 0 }}>{elector.coordinator_name}</p>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontStyle: 'italic', margin: 0 }}>{elector.coordinator_role}</p>
+                          </div>
+                        )}
                         <button 
                           className="action-btn-secondary" 
-                          style={{ flex: 1, padding: '0.6rem', fontSize: '0.7rem', gap: '0.4rem', background: 'rgba(34,197,94,0.1)', color: '#4ade80', borderColor: 'rgba(34,197,94,0.2)' }}
+                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.65rem', gap: '0.3rem', background: 'rgba(34,197,94,0.1)', color: '#4ade80', borderColor: 'rgba(34,197,94,0.2)', borderRadius: '8px' }}
                           onClick={() => window.open(`https://wa.me/${elector.telefono?.replace(/\D/g, '')}`, '_blank')}
                           disabled={!elector.telefono}
                         >
-                          <MessageSquare size={14} /> WHATSAPP
+                          <MessageSquare size={12} />
                         </button>
                       </div>
                     </motion.div>

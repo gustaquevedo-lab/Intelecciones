@@ -214,6 +214,16 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message', 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message_footer', 'Enviado desde el Comando Central.');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('app_logo_url', '');
+
+  -- Performance Indexes
+  CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captures(elector_ci);
+  CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id);
+  CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id);
+  CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp);
+  CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
+  CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
+  CREATE INDEX IF NOT EXISTS idx_participation_logs_mesa ON participation_logs(mesa);
 `);
 
 try {

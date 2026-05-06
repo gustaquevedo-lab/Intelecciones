@@ -769,7 +769,7 @@ app.get('/api/captures', (req, res) => {
     const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
 
     const captures = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.username as coordinator_name, l.list_number, c.name as campaign_name
+      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.nombre as coordinator_name, u.role as coordinator_role, l.list_number, c.name as campaign_name
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
@@ -1432,7 +1432,7 @@ app.get('/api/admin/electors/search', (req, res) => {
     }
 
     const electors = db.prepare(`
-      SELECT e.*, ec.traffic_light, u.nombre as coordinator_name
+      SELECT e.*, ec.traffic_light, u.nombre as coordinator_name, u.role as coordinator_role
       FROM electors e
       LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
       LEFT JOIN users u ON ec.coordinator_id = u.id
@@ -1551,13 +1551,21 @@ app.get('/api/stats/command', (req, res) => {
       SELECT 
         l.cod_local,
         l.nombre,
-        COUNT(e.ci) as total_electors,
-        SUM(CASE WHEN ec.id IS NOT NULL AND ec.is_disputed = 0 THEN 1 ELSE 0 END) as total_captures,
-        SUM(CASE WHEN ec.traffic_light = 'GREEN' AND ec.is_disputed = 0 THEN 1 ELSE 0 END) as green_captures
+        COALESCE(e_counts.total, 0) as total_electors,
+        COALESCE(ec_counts.total, 0) as total_captures,
+        COALESCE(ec_counts.green, 0) as green_captures
       FROM voting_locations l
-      LEFT JOIN electors e ON l.cod_local = e.cod_local OR l.nombre = e.local_votacion
-      LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci ${isSuper || isNaN(list_id) ? '' : `AND ec.list_id = ${list_id}`}
-      GROUP BY l.cod_local, l.nombre
+      LEFT JOIN (
+        SELECT local_votacion, COUNT(*) as total FROM electors GROUP BY local_votacion
+      ) e_counts ON l.nombre = e_counts.local_votacion
+      LEFT JOIN (
+        SELECT e.local_votacion, COUNT(ec.id) as total, SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
+        FROM elector_captures ec
+        JOIN electors e ON ec.elector_ci = e.ci
+        JOIN users u ON ec.coordinator_id = u.id
+        WHERE ec.is_disputed = 0 ${listFilter} ${hierarchyFilter}
+        GROUP BY e.local_votacion
+      ) ec_counts ON l.nombre = ec_counts.local_votacion
     `;
     
     const locationStats = db.prepare(locationStatsQuery).all() as any[];
@@ -2002,12 +2010,14 @@ app.get('/api/diad/coverage', (req, res) => {
     // 5. Mesas details for the map
     const mesas = db.prepare(`
       SELECT 
-        DISTINCT e.local_votacion as local, e.mesa as numero, 
+        e.local_votacion as local, e.mesa as numero, 
         vl.lat, vl.lng,
-        EXISTS(SELECT 1 FROM results r WHERE r.local_votacion = e.local_votacion AND r.mesa = e.mesa) as reportada,
-        EXISTS(SELECT 1 FROM users u WHERE u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa AND (u.role = 'VEEDOR' OR u.role = 'MIEMBRO_MESA')) as operativa
-      FROM electors e
+        (CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) as reportada,
+        (CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) as operativa
+      FROM (SELECT local_votacion, mesa FROM electors GROUP BY local_votacion, mesa) e
       JOIN voting_locations vl ON e.local_votacion = vl.nombre
+      LEFT JOIN (SELECT id, local_votacion, mesa FROM results GROUP BY local_votacion, mesa) r ON r.local_votacion = e.local_votacion AND r.mesa = e.mesa
+      LEFT JOIN (SELECT id, assigned_local, assigned_mesa FROM users WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') GROUP BY assigned_local, assigned_mesa) u ON u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa
     `).all();
 
     // 6. Active Coordinators

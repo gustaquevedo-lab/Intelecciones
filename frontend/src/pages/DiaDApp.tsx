@@ -101,7 +101,7 @@ const DiaDApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cobertura' | 'resultados' | 'dhondt' | 'actas'>('cobertura');
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
 
   // Data
   const [coverage, setCoverage] = useState({
@@ -314,20 +314,32 @@ const DiaDApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    const isElectionDay = new Date().toLocaleDateString('es-PY') === '7/6/2026';
+    if (isElectionDay) {
+      fetchData();
+    } else {
+      setLoading(false); // No cargamos datos innecesarios ahora
+    }
   }, [fetchData]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(fetchData, 30000);
+    // Solo activamos el polling si es el día de la elección (07/06/2026) o si el usuario lo activa manualmente
+    const isElectionDay = new Date().toLocaleDateString('es-PY') === '7/6/2026';
+    
+    if (!autoRefresh || !isElectionDay) return;
+    
+    // Polling cada 60 segundos para no saturar móviles y ahorrar batería
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchData]);
 
-  // D'Hondt data
+  // D'Hondt data memoized for performance
   const concejales = resultados.filter(r => r.type === 'CONCEJAL');
   const intendentes = resultados.filter(r => r.type === 'INTENDENTE');
-  const dhondtInput = concejales.map(r => ({ id: r.id, nombre: r.candidate_alias || r.list_number, votos: r.votos }));
-  const dhondtResult = calcularDHondt(dhondtInput, bancasConcejal);
+  const dhondtResult = React.useMemo(() => {
+    const dhondtInput = concejales.map(r => ({ id: r.id, nombre: r.candidate_alias || r.list_number, votos: r.votos }));
+    return calcularDHondt(dhondtInput, bancasConcejal);
+  }, [concejales, bancasConcejal]);
   const maxVotos = Math.max(...resultados.map(r => r.votos || 0), 1);
 
   const TABS = [
@@ -340,6 +352,26 @@ const DiaDApp: React.FC = () => {
 
   return (
     <MainLayout title="Día D — Centro de Resultados" userName={user?.nombre || ''} userPhoto={user?.photo_url}>
+      
+      {/* ── Standby Banner ── */}
+      {new Date().toLocaleDateString('es-PY') !== '7/6/2026' && (
+        <div style={{
+          background: 'rgba(245,158,11,0.1)',
+          borderBottom: '1px solid rgba(245,158,11,0.2)',
+          padding: '0.5rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.6rem',
+          color: '#F59E0B'
+        }}>
+          <Clock size={14} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Módulo en modo espera — Activo el 07/06/2026 (Día de la Elección)
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 102px)', overflow: 'hidden' }}>
 
         {/* ── Top control bar ── */}

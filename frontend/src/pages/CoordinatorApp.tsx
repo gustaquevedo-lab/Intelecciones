@@ -167,6 +167,8 @@ const CoordinatorApp = () => {
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [telefono, setTelefono] = useState('');
   const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
+  const [pendingCaptures, setPendingCaptures] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Padrino specifics
   const [myCoordinators, setMyCoordinators] = useState<any[]>([]);
@@ -476,19 +478,47 @@ const CoordinatorApp = () => {
 
   const handleConfirm = () => {
     if (isReadOnly) return;
+    
+    // Si ya tenemos una ubicación reciente (menos de 2 minutos), la usamos directamente para no hacer esperar al usuario
+    if (location) {
+      setShowModal(true);
+      // Pero intentamos actualizarla en segundo plano
+      navigator.geolocation.getCurrentPosition(
+        (position) => setLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
+        null,
+        { enableHighAccuracy: false, timeout: 5000 }
+      );
+      return;
+    }
+
     setIsLoading(true);
     setError('');
+    
+    // Timeout para la geolocalización: si tarda más de 8s, bajamos la precisión para obtener algo rápido
+    const geoOptions = { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 };
+    
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
         setShowModal(true);
         setIsLoading(false);
       },
-      () => {
-        setError('Debes permitir el acceso a tu ubicación GPS para capturar el voto.');
-        setIsLoading(false);
+      (err) => {
+        console.warn("GPS High Accuracy failed, trying low accuracy...", err);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setShowModal(true);
+            setIsLoading(false);
+          },
+          () => {
+            setError('No se pudo obtener la ubicación GPS. Verifique los permisos de su celular.');
+            setIsLoading(false);
+          },
+          { enableHighAccuracy: false, timeout: 5000 }
+        );
       },
-      { enableHighAccuracy: true }
+      geoOptions
     );
   };
 
@@ -498,28 +528,71 @@ const CoordinatorApp = () => {
       setError('El número de teléfono es obligatorio para registrar al elector.');
       return;
     }
+    
+    const captureData = {
+      elector_ci: elector.ci,
+      coordinator_id: user.id,
+      lat: location.lat,
+      lng: location.lng,
+      traffic_light: color,
+      needs_transport: needsTransport,
+      telefono: telefono.replace(/\s/g, ''),
+      timestamp: new Date().toISOString(),
+      elector_nombre: elector.nombre + ' ' + (elector.apellido || '')
+    };
+
     setIsLoading(true);
     try {
-      await api.post('/captures', {
-        elector_ci: elector.ci,
-        coordinator_id: user.id,
-        lat: location.lat,
-        lng: location.lng,
-        traffic_light: color,
-        needs_transport: needsTransport,
-        telefono: telefono.replace(/\s/g, '')
-      });
+      await api.post('/captures', captureData);
       setSuccessMsg('¡Captura guardada correctamente!');
       setShowModal(false);
+      
+      // Cleanup
       setTimeout(() => {
         setCi(''); setElector(null); setSuccessMsg(''); setLocation(null); setNeedsTransport(false); setTelefono('');
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al guardar la captura');
+      console.error("Error saving capture, saving to offline queue...", err);
+      // Offline fallback
+      const queue = JSON.parse(localStorage.getItem('pending_captures') || '[]');
+      queue.push(captureData);
+      localStorage.setItem('pending_captures', JSON.stringify(queue));
+      setPendingCaptures(queue);
+      
+      setSuccessMsg('⚠️ Sin conexión. El registro se guardó localmente y se sincronizará pronto.');
+      setShowModal(false);
+      setTimeout(() => {
+        setCi(''); setElector(null); setSuccessMsg(''); setLocation(null); setNeedsTransport(false); setTelefono('');
+      }, 3000);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Sync effect
+  useEffect(() => {
+    const queue = JSON.parse(localStorage.getItem('pending_captures') || '[]');
+    setPendingCaptures(queue);
+
+    const syncOffline = async () => {
+      if (queue.length === 0 || isSyncing) return;
+      setIsSyncing(true);
+      const remaining = [];
+      for (const cap of queue) {
+        try {
+          await api.post('/captures', cap);
+        } catch (e) {
+          remaining.push(cap);
+        }
+      }
+      localStorage.setItem('pending_captures', JSON.stringify(remaining));
+      setPendingCaptures(remaining);
+      setIsSyncing(false);
+    };
+
+    const interval = setInterval(syncOffline, 30000);
+    return () => clearInterval(interval);
+  }, [isSyncing]);
 
   const fetchHistory = async () => {
     if (!user) return;
