@@ -47,7 +47,7 @@ import { AdminSidebar } from '../components/AdminSidebar';
 import { ManagementTable } from '../components/ManagementTable';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageCropperModal } from '../components/ImageCropperModal';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -126,6 +126,45 @@ interface List {
 
 import { useSettings } from '../context/SettingsContext';
 
+// Helper component for dynamic map repositioning
+const MapRecenter = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, zoom, { duration: 1.5 });
+  }, [center, zoom, map]);
+  return null;
+};
+
+// Paraguayan cities with coordinates for map auto-centering
+const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
+  'Pedro Juan Caballero': { lat: -22.545, lng: -55.72, zoom: 14 },
+  'Asunción': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+  'Ciudad del Este': { lat: -25.5097, lng: -54.6111, zoom: 13 },
+  'Encarnación': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+  'Luque': { lat: -25.2708, lng: -57.4872, zoom: 14 },
+  'San Lorenzo': { lat: -25.3400, lng: -57.5094, zoom: 14 },
+  'Lambaré': { lat: -25.3469, lng: -57.6064, zoom: 14 },
+  'Fernando de la Mora': { lat: -25.3390, lng: -57.5230, zoom: 14 },
+  'Capiatá': { lat: -25.3556, lng: -57.4437, zoom: 14 },
+  'Itauguá': { lat: -25.3889, lng: -57.3536, zoom: 14 },
+  'Caaguazú': { lat: -25.4722, lng: -56.0178, zoom: 14 },
+  'Coronel Oviedo': { lat: -25.4492, lng: -56.4419, zoom: 14 },
+  'Villarrica': { lat: -25.7500, lng: -56.4333, zoom: 14 },
+  'Concepción': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+  'Mariano Roque Alonso': { lat: -25.2017, lng: -57.5275, zoom: 14 },
+  'Ñemby': { lat: -25.3964, lng: -57.5383, zoom: 14 },
+  'Villa Elisa': { lat: -25.3750, lng: -57.5917, zoom: 14 },
+  'Limpio': { lat: -25.1667, lng: -57.4833, zoom: 14 },
+  'Areguá': { lat: -25.3130, lng: -57.3900, zoom: 14 },
+  'Pilar': { lat: -26.8625, lng: -58.3125, zoom: 14 },
+  'Salto del Guairá': { lat: -24.0611, lng: -54.3067, zoom: 14 },
+  'Hernandarias': { lat: -25.3971, lng: -54.6430, zoom: 14 },
+  'Presidente Franco': { lat: -25.5500, lng: -54.6167, zoom: 14 },
+  'Minga Guazú': { lat: -25.4833, lng: -54.7667, zoom: 14 },
+  'San Estanislao': { lat: -24.0000, lng: -56.4333, zoom: 14 },
+  'San Pedro de Ycuamandiyú': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+};
+
 interface User {
   id: number;
   username: string;
@@ -190,6 +229,9 @@ const SuperAdmin = () => {
   const [newLocaleLat, setNewLocaleLat] = useState<string>('');
   const [newLocaleLng, setNewLocaleLng] = useState<string>('');
   const [newLocaleIcon, setNewLocaleIcon] = useState('Landmark');
+  const [newLocaleCiudad, setNewLocaleCiudad] = useState('');
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-22.545, -55.72]);
+  const [mapZoom, setMapZoom] = useState(14);
 
   const formatPhone = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -246,7 +288,13 @@ const SuperAdmin = () => {
   const [newCampaignName, setNewCampaignName] = useState('');
   const [newCampaignSlogan, setNewCampaignSlogan] = useState('');
   const [newCampaignPhotoUrl, setNewCampaignPhotoUrl] = useState('');
-  const [newCampaignModules, setNewCampaignModules] = useState<string[]>(['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP']);
+  const [newCampaignModules, setNewCampaignModules] = useState<string[]>([
+    'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
+    'REGISTRY', 'REG_CAPTURE', 'REG_LOOKUP', 'REG_SHARE',
+    'LOGISTICS', 'LOG_VEHICLES', 'LOG_ROUTES', 'LOG_ZONES', 'LOG_TRANSPORT',
+    'WHATSAPP', 'WA_BROADCAST', 'WA_CONTACTS', 'WA_TEMPLATES',
+    'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
+  ]);
   const [newUserName, setNewUserName] = useState('');
   const [takenOptions, setTakenOptions] = useState<number[]>([]);
   const [hasIntendente, setHasIntendente] = useState(false);
@@ -326,7 +374,13 @@ const SuperAdmin = () => {
       setNewCampaignName('');
       setNewCampaignSlogan('');
       setNewCampaignPhotoUrl('');
-      setNewCampaignModules(['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP']);
+      setNewCampaignModules([
+        'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
+        'REGISTRY', 'REG_CAPTURE', 'REG_LOOKUP', 'REG_SHARE',
+        'LOGISTICS', 'LOG_VEHICLES', 'LOG_ROUTES', 'LOG_ZONES', 'LOG_TRANSPORT',
+        'WHATSAPP', 'WA_BROADCAST', 'WA_CONTACTS', 'WA_TEMPLATES',
+        'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
+      ]);
       fetchData();
     } catch (err) { console.error(err); }
   };
@@ -346,7 +400,13 @@ const SuperAdmin = () => {
       setNewCampaignName('');
       setNewCampaignSlogan('');
       setNewCampaignPhotoUrl('');
-      setNewCampaignModules(['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP']);
+      setNewCampaignModules([
+        'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
+        'REGISTRY', 'REG_CAPTURE', 'REG_LOOKUP', 'REG_SHARE',
+        'LOGISTICS', 'LOG_VEHICLES', 'LOG_ROUTES', 'LOG_ZONES', 'LOG_TRANSPORT',
+        'WHATSAPP', 'WA_BROADCAST', 'WA_CONTACTS', 'WA_TEMPLATES',
+        'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
+      ]);
       fetchData();
     } catch (err) { console.error(err); }
   };
@@ -662,7 +722,8 @@ const SuperAdmin = () => {
         direccion: newLocaleDireccion, 
         lat: parseFloat(newLocaleLat), 
         lng: parseFloat(newLocaleLng), 
-        icon: newLocaleIcon 
+        icon: newLocaleIcon,
+        ciudad: newLocaleCiudad
       };
       if (editingLocale) {
         await api.put(`/locales/${newLocaleCod}`, payload);
@@ -1005,7 +1066,20 @@ const SuperAdmin = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Gestión de Campañas</h2>
-        <button className="action-btn-primary" onClick={() => setShowModal('campaign')}>
+        <button className="action-btn-primary" onClick={() => {
+          setEditingCampaign(null);
+          setNewCampaignName('');
+          setNewCampaignSlogan('');
+          setNewCampaignPhotoUrl('');
+          setNewCampaignModules([
+            'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
+            'REGISTRY', 'REG_CAPTURE', 'REG_LOOKUP', 'REG_SHARE',
+            'LOGISTICS', 'LOG_VEHICLES', 'LOG_ROUTES', 'LOG_ZONES', 'LOG_TRANSPORT',
+            'WHATSAPP', 'WA_BROADCAST', 'WA_CONTACTS', 'WA_TEMPLATES',
+            'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
+          ]);
+          setShowModal('campaign');
+        }}>
           <Plus size={18} /> Nueva Campaña
         </button>
       </div>
@@ -1054,7 +1128,8 @@ const SuperAdmin = () => {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button className="icon-btn" onClick={() => { 
                   setEditingCampaign(c); 
-                  setNewCampaignName(c.name); 
+                  setNewCampaignName(c.name);
+                  setNewCampaignSlogan((c as any).slogan || '');
                   setNewCampaignModules((c as any).enabled_modules ? (c as any).enabled_modules.split(',') : []);
                   setShowModal('edit-campaign'); 
                 }}><Edit2 size={14} /></button>
@@ -1236,6 +1311,7 @@ const SuperAdmin = () => {
           setNewLocaleLat('');
           setNewLocaleLng('');
           setNewLocaleIcon('Landmark');
+          setNewLocaleCiudad('');
           setShowModal('locale');
         }}>
           <Plus size={18} /> Registrar Local
@@ -1246,6 +1322,7 @@ const SuperAdmin = () => {
         isLoading={isLoading}
         columns={[
           { header: 'Código', accessor: 'cod_local', width: '80px' },
+          { header: 'Ciudad', accessor: 'ciudad', sortKey: 'ciudad' },
           { header: 'Nombre', accessor: 'nombre' },
           { header: 'Dirección', accessor: 'direccion' },
           { 
@@ -1282,6 +1359,11 @@ const SuperAdmin = () => {
                   setNewLocaleLat(l.lat?.toString() || '');
                   setNewLocaleLng(l.lng?.toString() || '');
                   setNewLocaleIcon(l.icon || 'Landmark');
+                  setNewLocaleCiudad(l.ciudad || '');
+                  if (l.ciudad && CIUDADES_PARAGUAY[l.ciudad]) {
+                    setMapCenter([CIUDADES_PARAGUAY[l.ciudad].lat, CIUDADES_PARAGUAY[l.ciudad].lng]);
+                    setMapZoom(CIUDADES_PARAGUAY[l.ciudad].zoom);
+                  }
                   setShowModal('locale'); 
                 }}><Edit2 size={14} /></button>
                 <button className="icon-btn delete" onClick={() => handleDeleteLocale(l.cod_local)}><Trash2 size={14} /></button>
@@ -1293,9 +1375,10 @@ const SuperAdmin = () => {
       />
 
       <div style={{ height: '400px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-        <MapContainer center={[-22.545, -55.72]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+        <MapContainer center={mapCenter} zoom={mapZoom} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           <ZoomControl position="bottomright" />
+          <MapRecenter center={mapCenter} zoom={mapZoom} />
           {locales.filter(l => l.lat).map(l => (
             <Marker key={l.cod_local} position={[parseFloat(l.lat), parseFloat(l.lng)]} icon={createCustomIcon('var(--plra-500)', l.icon, 28)}>
               <Popup>
@@ -1664,20 +1747,128 @@ const SuperAdmin = () => {
               }}
             >
               {showModal === 'campaign' && (
-                <div style={{ width: '500px', maxWidth: '95vw' }}>
+                <div style={{ width: '680px', maxWidth: '95vw' }}>
                   <div className="modal-header-premium">
                     <h2>Nueva Campaña</h2>
                     <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
                   <form onSubmit={handleCreateCampaign}>
                     <div className="modal-body-premium">
-                      <div className="form-group">
-                        <label>Nombre de la Campaña</label>
-                        <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label>Nombre de la Campaña</label>
+                          <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                        </div>
+                        <div className="form-group">
+                          <label>Eslogan</label>
+                          <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+                        </div>
                       </div>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Eslogan</label>
-                        <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+
+                      <div style={{ marginTop: '1.5rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                          <Layout size={14} /> Módulos y Submódulos del Tenant
+                        </label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {[
+                            { key: 'COMMAND_CENTER', label: 'Centro de Mando', icon: '🎯', desc: 'Panel de comando operativo y KPIs en tiempo real', subs: [
+                              { key: 'CC_FIELD_REQUESTS', label: 'Solicitudes de Campo' },
+                              { key: 'CC_ELECTOR_REGISTRY', label: 'Registro de Electores' },
+                              { key: 'CC_RANKINGS', label: 'Rankings de Coordinadores' },
+                              { key: 'CC_HEATMAP', label: 'Mapa de Calor' }
+                            ]},
+                            { key: 'REGISTRY', label: 'Registro Electoral', icon: '📋', desc: 'Captura y verificación de adherentes en campo', subs: [
+                              { key: 'REG_CAPTURE', label: 'Captura de Adherentes' },
+                              { key: 'REG_LOOKUP', label: 'Consulta por Cédula' },
+                              { key: 'REG_SHARE', label: 'Compartir Constancias' }
+                            ]},
+                            { key: 'LOGISTICS', label: 'Logística', icon: '🚛', desc: 'Gestión de vehículos, rutas y traslados del Día D', subs: [
+                              { key: 'LOG_VEHICLES', label: 'Gestión de Vehículos' },
+                              { key: 'LOG_ROUTES', label: 'Planificación de Rutas' },
+                              { key: 'LOG_ZONES', label: 'Cobertura de Zonas' },
+                              { key: 'LOG_TRANSPORT', label: 'Traslado de Electores' }
+                            ]},
+                            { key: 'WHATSAPP', label: 'Comunicaciones', icon: '💬', desc: 'Mensajería masiva y gestión de contactos', subs: [
+                              { key: 'WA_BROADCAST', label: 'Mensajes Masivos' },
+                              { key: 'WA_CONTACTS', label: 'Gestión de Contactos' },
+                              { key: 'WA_TEMPLATES', label: 'Plantillas de Mensaje' }
+                            ]},
+                            { key: 'DIAD', label: 'Día D', icon: '🗳️', desc: 'Operación electoral del día de la votación', subs: [
+                              { key: 'DD_COUNTDOWN', label: 'Cuenta Regresiva' },
+                              { key: 'DD_VEEDORES', label: 'Gestión de Veedores' },
+                              { key: 'DD_ACTAS', label: 'Carga de Actas' },
+                              { key: 'DD_RESULTS', label: 'Resultados en Vivo' }
+                            ]}
+                          ].map(mod => {
+                            const isModActive = newCampaignModules.includes(mod.key);
+                            return (
+                              <div key={mod.key} style={{
+                                background: isModActive ? 'rgba(59,130,246,0.06)' : 'rgba(255,255,255,0.02)',
+                                border: `1px solid ${isModActive ? 'rgba(59,130,246,0.25)' : 'var(--border)'}`,
+                                borderRadius: '14px', padding: '1rem', transition: 'all 0.2s ease'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                                  onClick={() => {
+                                    if (isModActive) {
+                                      setNewCampaignModules(prev => prev.filter(m => m !== mod.key && !mod.subs.some(s => s.key === m)));
+                                    } else {
+                                      setNewCampaignModules(prev => [...prev, mod.key, ...mod.subs.map(s => s.key)]);
+                                    }
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <span style={{ fontSize: '1.3rem' }}>{mod.icon}</span>
+                                    <div>
+                                      <p style={{ fontSize: '0.85rem', fontWeight: 800, color: isModActive ? 'white' : 'var(--text-2)', margin: 0 }}>{mod.label}</p>
+                                      <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>{mod.desc}</p>
+                                    </div>
+                                  </div>
+                                  <div style={{
+                                    width: '40px', height: '22px', borderRadius: '11px', position: 'relative',
+                                    background: isModActive ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)',
+                                    transition: 'background 0.2s ease', cursor: 'pointer', flexShrink: 0
+                                  }}>
+                                    <div style={{
+                                      width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                      position: 'absolute', top: '2px', left: isModActive ? '20px' : '2px',
+                                      transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                                    }} />
+                                  </div>
+                                </div>
+                                {isModActive && mod.subs.length > 0 && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                    {mod.subs.map(sub => {
+                                      const isSubActive = newCampaignModules.includes(sub.key);
+                                      return (
+                                        <div
+                                          key={sub.key}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setNewCampaignModules(prev =>
+                                              isSubActive ? prev.filter(m => m !== sub.key) : [...prev, sub.key]
+                                            );
+                                          }}
+                                          style={{
+                                            padding: '4px 10px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700,
+                                            cursor: 'pointer', transition: 'all 0.15s ease', userSelect: 'none',
+                                            background: isSubActive ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.04)',
+                                            color: isSubActive ? 'var(--plra-300)' : 'var(--text-3)',
+                                            border: `1px solid ${isSubActive ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.08)'}`
+                                          }}
+                                        >
+                                          {isSubActive ? '✓ ' : ''}{sub.label}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.75rem', textAlign: 'right' }}>
+                          {newCampaignModules.length} permisos activos
+                        </p>
                       </div>
                     </div>
                     <div className="modal-footer-premium-styled">
@@ -1689,16 +1880,128 @@ const SuperAdmin = () => {
               )}
 
               {showModal === 'edit-campaign' && (
-                <div style={{ width: '500px', maxWidth: '95vw' }}>
+                <div style={{ width: '680px', maxWidth: '95vw' }}>
                   <div className="modal-header-premium">
                     <h2>Editar Campaña</h2>
                     <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
                   <form onSubmit={handleUpdateCampaign}>
                     <div className="modal-body-premium">
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Nombre</label>
-                        <input className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label>Nombre</label>
+                          <input className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                        </div>
+                        <div className="form-group">
+                          <label>Eslogan</label>
+                          <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '1.5rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                          <Layout size={14} /> Módulos y Submódulos del Tenant
+                        </label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {[
+                            { key: 'COMMAND_CENTER', label: 'Centro de Mando', icon: '🎯', desc: 'Panel de comando operativo y KPIs en tiempo real', subs: [
+                              { key: 'CC_FIELD_REQUESTS', label: 'Solicitudes de Campo' },
+                              { key: 'CC_ELECTOR_REGISTRY', label: 'Registro de Electores' },
+                              { key: 'CC_RANKINGS', label: 'Rankings de Coordinadores' },
+                              { key: 'CC_HEATMAP', label: 'Mapa de Calor' }
+                            ]},
+                            { key: 'REGISTRY', label: 'Registro Electoral', icon: '📋', desc: 'Captura y verificación de adherentes en campo', subs: [
+                              { key: 'REG_CAPTURE', label: 'Captura de Adherentes' },
+                              { key: 'REG_LOOKUP', label: 'Consulta por Cédula' },
+                              { key: 'REG_SHARE', label: 'Compartir Constancias' }
+                            ]},
+                            { key: 'LOGISTICS', label: 'Logística', icon: '🚛', desc: 'Gestión de vehículos, rutas y traslados del Día D', subs: [
+                              { key: 'LOG_VEHICLES', label: 'Gestión de Vehículos' },
+                              { key: 'LOG_ROUTES', label: 'Planificación de Rutas' },
+                              { key: 'LOG_ZONES', label: 'Cobertura de Zonas' },
+                              { key: 'LOG_TRANSPORT', label: 'Traslado de Electores' }
+                            ]},
+                            { key: 'WHATSAPP', label: 'Comunicaciones', icon: '💬', desc: 'Mensajería masiva y gestión de contactos', subs: [
+                              { key: 'WA_BROADCAST', label: 'Mensajes Masivos' },
+                              { key: 'WA_CONTACTS', label: 'Gestión de Contactos' },
+                              { key: 'WA_TEMPLATES', label: 'Plantillas de Mensaje' }
+                            ]},
+                            { key: 'DIAD', label: 'Día D', icon: '🗳️', desc: 'Operación electoral del día de la votación', subs: [
+                              { key: 'DD_COUNTDOWN', label: 'Cuenta Regresiva' },
+                              { key: 'DD_VEEDORES', label: 'Gestión de Veedores' },
+                              { key: 'DD_ACTAS', label: 'Carga de Actas' },
+                              { key: 'DD_RESULTS', label: 'Resultados en Vivo' }
+                            ]}
+                          ].map(mod => {
+                            const isModActive = newCampaignModules.includes(mod.key);
+                            return (
+                              <div key={mod.key} style={{
+                                background: isModActive ? 'rgba(59,130,246,0.06)' : 'rgba(255,255,255,0.02)',
+                                border: `1px solid ${isModActive ? 'rgba(59,130,246,0.25)' : 'var(--border)'}`,
+                                borderRadius: '14px', padding: '1rem', transition: 'all 0.2s ease'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                                  onClick={() => {
+                                    if (isModActive) {
+                                      setNewCampaignModules(prev => prev.filter(m => m !== mod.key && !mod.subs.some(s => s.key === m)));
+                                    } else {
+                                      setNewCampaignModules(prev => [...prev, mod.key, ...mod.subs.map(s => s.key)]);
+                                    }
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <span style={{ fontSize: '1.3rem' }}>{mod.icon}</span>
+                                    <div>
+                                      <p style={{ fontSize: '0.85rem', fontWeight: 800, color: isModActive ? 'white' : 'var(--text-2)', margin: 0 }}>{mod.label}</p>
+                                      <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>{mod.desc}</p>
+                                    </div>
+                                  </div>
+                                  <div style={{
+                                    width: '40px', height: '22px', borderRadius: '11px', position: 'relative',
+                                    background: isModActive ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)',
+                                    transition: 'background 0.2s ease', cursor: 'pointer', flexShrink: 0
+                                  }}>
+                                    <div style={{
+                                      width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                      position: 'absolute', top: '2px', left: isModActive ? '20px' : '2px',
+                                      transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                                    }} />
+                                  </div>
+                                </div>
+                                {isModActive && mod.subs.length > 0 && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                    {mod.subs.map(sub => {
+                                      const isSubActive = newCampaignModules.includes(sub.key);
+                                      return (
+                                        <div
+                                          key={sub.key}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setNewCampaignModules(prev =>
+                                              isSubActive ? prev.filter(m => m !== sub.key) : [...prev, sub.key]
+                                            );
+                                          }}
+                                          style={{
+                                            padding: '4px 10px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700,
+                                            cursor: 'pointer', transition: 'all 0.15s ease', userSelect: 'none',
+                                            background: isSubActive ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.04)',
+                                            color: isSubActive ? 'var(--plra-300)' : 'var(--text-3)',
+                                            border: `1px solid ${isSubActive ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.08)'}`
+                                          }}
+                                        >
+                                          {isSubActive ? '✓ ' : ''}{sub.label}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.75rem', textAlign: 'right' }}>
+                          {newCampaignModules.length} permisos activos
+                        </p>
                       </div>
                     </div>
                     <div className="modal-footer-premium-styled">
@@ -2019,6 +2322,27 @@ const SuperAdmin = () => {
                       <div className="form-group">
                         <label>Código de Local</label>
                         <input className="modern-input-premium-styled" value={newLocaleCod} onChange={e => setNewLocaleCod(e.target.value)} placeholder="Ej: 101" required disabled={!!editingLocale} />
+                      </div>
+                      <div className="form-group">
+                        <label>Ciudad</label>
+                        <select 
+                          className="modern-input-premium-styled" 
+                          value={newLocaleCiudad} 
+                          onChange={e => {
+                            const city = e.target.value;
+                            setNewLocaleCiudad(city);
+                            if (CIUDADES_PARAGUAY[city]) {
+                              setMapCenter([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng]);
+                              setMapZoom(CIUDADES_PARAGUAY[city].zoom);
+                            }
+                          }}
+                          required
+                        >
+                          <option value="">Seleccione una ciudad...</option>
+                          {Object.keys(CIUDADES_PARAGUAY).sort().map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </div>
                       <div className="form-group">
                         <label>Nombre de la Institución</label>

@@ -489,8 +489,9 @@ app.get('/api/campaigns', (req, res) => {
 app.post('/api/campaigns', (req, res) => {
   const { name, status, slogan, photo_url, enabled_modules } = req.body;
   try {
+    const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : (enabled_modules || 'COMMAND_CENTER,REGISTRY');
     const result = db.prepare('INSERT INTO campaigns (name, status, slogan, photo_url, enabled_modules) VALUES (?, ?, ?, ?, ?)')
-      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, enabled_modules || 'COMMAND_CENTER,REGISTRY');
+      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr);
     res.json({ id: result.lastInsertRowid });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -631,6 +632,9 @@ app.put('/api/captures/:id', (req, res) => {
   }
 });
 
+// Ensure ciudad column exists
+try { db.prepare('ALTER TABLE voting_locations ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
+
 app.get('/api/locales', (req, res) => {
   try {
     const locales = db.prepare('SELECT * FROM voting_locations').all();
@@ -641,12 +645,12 @@ app.get('/api/locales', (req, res) => {
 });
 
 app.post('/api/locales', (req, res) => {
-  const { cod_local, nombre, lat, lng, icon, direccion } = req.body;
+  const { cod_local, nombre, lat, lng, icon, direccion, ciudad } = req.body;
   try {
     db.prepare(`
-      INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '');
+      INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion, ciudad)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '', ciudad || '');
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -654,13 +658,13 @@ app.post('/api/locales', (req, res) => {
 });
 
 app.put('/api/locales/:cod', (req, res) => {
-  const { nombre, lat, lng, icon, direccion } = req.body;
+  const { nombre, lat, lng, icon, direccion, ciudad } = req.body;
   try {
     db.prepare(`
       UPDATE voting_locations 
-      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?
+      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, ciudad = ?
       WHERE cod_local = ?
-    `).run(nombre, lat, lng, icon, direccion || '', req.params.cod);
+    `).run(nombre, lat, lng, icon, direccion || '', ciudad || '', req.params.cod);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
