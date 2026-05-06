@@ -1466,6 +1466,8 @@ const SuperAdmin = () => {
                 padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800,
                 background: u.role === 'SUPERUSUARIO' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                 color: u.role === 'SUPERUSUARIO' ? 'var(--plra-300)' : 'var(--text-2)'
+              }}>{u.role}</span>
+            )
           },
           {
             header: 'Dependencia (Superior)',
