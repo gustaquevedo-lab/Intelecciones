@@ -103,7 +103,7 @@ const DataItem = ({
   large?: boolean;
 }) => (
   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
-    <div className={`icon-box icon-box-md icon-box-${iconColor}`} style={{ borderRadius: '10px', marginTop: '2px' }}>
+    <div className={`icon-box icon-box-md icon-box-${iconColor}`} style={{ borderRadius: '10px', marginTop: '2px', flexShrink: 0 }}>
       {icon}
     </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
@@ -1099,8 +1099,18 @@ const CoordinatorApp = () => {
               <div className="card-section" style={{ background: 'var(--surface-light)', borderBottom: 'none' }}>
                 <SectionLabel icon={<MapPin size={13} />} text="Ubicación Territorial" color="var(--green)" />
                 <div className="territory-grid">
-                  <DataItem icon={<Home size={18} />} iconColor="green" label="Dirección / Residencia" value={elector.direccion || elector.barrio || 'Dato no disponible'} />
-                  <DataItem icon={<Landmark size={18} />} iconColor="teal" label="Comité / Distrito" value={elector.distrito || elector.ciudad || 'Dato no disponible'} />
+                  <DataItem 
+                    icon={<Home size={18} />} 
+                    iconColor="green" 
+                    label="Dirección / Residencia" 
+                    value={elector.direccion || elector.barrio || elector.residencia || 'Dirección no registrada'} 
+                  />
+                  <DataItem 
+                    icon={<Landmark size={18} />} 
+                    iconColor="teal" 
+                    label="Comité / Distrito" 
+                    value={elector.distrito || elector.ciudad || elector.departamento || 'Datos no disponibles'} 
+                  />
                 </div>
               </div>
 

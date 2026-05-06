@@ -79,33 +79,45 @@
   --accent-subtle: rgba(59, 130, 246, 0.1);
 }
 
-/* LIGHT MODE */
+/* LIGHT MODE — Enhanced with more depth for Premium DNA */
 .light-theme {
   --bg:        #F8FAFC;
   --surface:   #FFFFFF;
-  --surface-light: #F1F5F9;
+  --surface-2: #F1F5F9;
+  --surface-light: #F8FAFC;
   --surface-3: #E2E8F0;
   --primary:   #0047AB;
   --primary-h: #003D94;
   --primary-g: #1D4ED8;
 
-  --border:       rgba(0, 0, 0, 0.08);
-  --border-mid:   rgba(0, 0, 0, 0.15);
-  --border-hi:    rgba(0, 0, 0, 0.30);
+  --border:       rgba(0, 0, 0, 0.06);
+  --border-mid:   rgba(0, 0, 0, 0.12);
+  --border-hi:    rgba(0, 0, 0, 0.25);
 
-  --text:         #0F172A;
+  --text:         #020617;
   --text-2:       #334155;
   --text-3:       #64748B;
 
-  --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md:  0 10px 30px -5px rgba(0,0,0,0.1), 0 4px 12px -5px rgba(0,0,0,0.05);
-  --shadow-lg:  0 25px 50px -12px rgba(0,0,0,0.15);
-  --shadow-blue: 0 10px 30px rgba(0, 71, 171, 0.1);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md:  0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05);
+  --shadow-lg:  0 20px 50px -12px rgba(0,0,0,0.1);
+  --shadow-blue: 0 10px 30px rgba(0, 71, 171, 0.08);
 
-  --glass-bg: rgba(255, 255, 255, 0.98);
+  --glass-bg: rgba(255, 255, 255, 0.95);
   --glass-border: rgba(0, 0, 0, 0.05);
-  --input-bg: #F8FAFC;
+  --input-bg: #F1F5F9;
   --accent-subtle: rgba(0, 71, 171, 0.04);
+}
+
+/* Specific component depth fixes */
+.light-theme .premium-card {
+  background: var(--surface);
+  border: 1px solid var(--border-mid);
+}
+
+.light-theme .side-nav-dark {
+  background: #020C1E;
+  color: white;
 }
 
 /* ============================================================
@@ -127,10 +139,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Layered PLRA blue atmosphere — subtle & elegant */
-  background-image:
-    radial-gradient(ellipse 100% 60% at 50% -10%, var(--accent-subtle) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(0,71,171,0.05) 0%, transparent 60%);
+  /* Layered PLRA blue atmosphere — Premium DNA */
+  background-image: 
+    radial-gradient(circle at 0% 0%, rgba(0, 71, 171, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(0, 71, 171, 0.02) 0%, transparent 50%),
+    linear-gradient(to bottom, var(--bg), var(--bg));
   background-attachment: fixed;
   transition: var(--theme-transition);
 }
@@ -449,6 +462,32 @@ select option:focus,
 select option:active {
   background: var(--plra-500) !important;
   color: white !important;
+}
+
+/* Custom Tactical Sidebar & Component Overrides */
+.tactical-sidebar {
+  background: #020C1E !important;
+  color: white !important;
+}
+
+.tactical-sidebar * {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.tactical-sidebar .text-muted {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.tactical-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.light-theme .tactical-card {
+  background: white;
+  border: 1px solid var(--border-mid);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ============================================================

@@ -44,8 +44,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       <header style={{
-        position: 'sticky', top: 0, zIndex: 200,
-        position: 'sticky', top: 0, zIndex: 9000,
+        position: 'sticky', top: 0, zIndex: 10000,
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--glass-bg)',

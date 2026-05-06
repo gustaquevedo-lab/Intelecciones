@@ -303,54 +303,57 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
   const topCoordinators = stats?.top_coordinators || [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1.25rem' }}>
+    <div className="tactical-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.25rem', minHeight: '100%' }}>
       <CountdownCard 
         targetDate={settings.election_date} 
-        title="Elecciones Internas PLRA" 
+        title="OPERATIVO DÍA D" 
+        isSidebar={true}
       />
 
-      <div style={{ position: 'relative' }}>
-        <Search size={14} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+      <div style={{ position: 'relative', marginTop: '0.5rem' }}>
+        <Search size={14} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
         <input 
           type="text" 
-          placeholder="Buscar elector (Nombre o C.I.)..."
+          placeholder="Rastreo de Elector..."
           onKeyDown={(e) => e.key === 'Enter' && (window as any).handleStrategicSearch((e.target as HTMLInputElement).value)}
           style={{
-            width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem',
-            background: 'var(--surface-light)', border: '1px solid var(--border)',
-            borderRadius: '12px', color: 'var(--text)', fontSize: '0.8rem',
-            outline: 'none', transition: 'border-color 0.2s'
+            width: '100%', padding: '0.85rem 1rem 0.85rem 2.5rem',
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '14px', color: 'white', fontSize: '0.85rem',
+            outline: 'none', transition: 'all 0.2s'
           }}
         />
       </div>
 
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-          <Activity size={12} style={{ color: 'var(--plra-300)', marginRight: '0.25rem' }} />
-          <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
-            Actividad Reciente
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <Activity size={14} style={{ color: 'var(--plra-300)' }} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
+            INTELIGENCIA EN VIVO
           </span>
         </div>
-        <ActivityFeed activities={activities} />
+        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <ActivityFeed activities={activities} />
+        </div>
       </div>
 
       {criticalLocs.length > 0 && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
-            <AlertCircle size={12} style={{ color: 'var(--red)' }} />
-            <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--red)', fontFamily: 'var(--font-display)' }}>
-              Puntos Críticos
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <AlertCircle size={14} style={{ color: 'var(--red)' }} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--red)', fontFamily: 'var(--font-display)' }}>
+              ALERTAS TÁCTICAS
             </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {criticalLocs.map((l: any) => (
-              <div key={l.cod_local} style={{ padding: '0.6rem', borderRadius: '8px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                  <span style={{ color: 'var(--text)', fontWeight: 700 }}>{l.nombre}</span>
-                  <span style={{ color: 'var(--red)', fontWeight: 800 }}>{l.percentage}%</span>
+              <div key={l.cod_local} style={{ padding: '0.85rem', borderRadius: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'white', fontWeight: 800 }}>{l.nombre}</span>
+                  <span style={{ color: 'var(--red)', fontWeight: 900 }}>{l.percentage}%</span>
                 </div>
-                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '5px' }}>
-                  <div style={{ width: `${l.percentage}%`, height: '100%', background: 'var(--red)' }} />
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+                  <div style={{ width: `${l.percentage}%`, height: '100%', background: 'var(--red)', boxShadow: '0 0 10px var(--red)' }} />
                 </div>
               </div>
             ))}
@@ -360,23 +363,25 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
 
       {topCoordinators.length > 0 && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-            <TrendingUp size={12} style={{ color: 'var(--plra-300)', marginRight: '0.25rem' }} />
-            <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
-              Ranking de Coordinadores
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <TrendingUp size={14} style={{ color: 'var(--yellow)' }} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
+              TOP RENDIMIENTO
             </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {topCoordinators.map((c: any, i: number) => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '20px', fontSize: '0.65rem', fontWeight: 900, color: i === 0 ? 'var(--yellow)' : 'var(--text-3)' }}>#{i + 1}</div>
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: i === 0 ? 'var(--yellow)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 900, color: i === 0 ? 'black' : 'white' }}>
+                  {i + 1}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</div>
-                  <div style={{ width: '100%', height: '2px', background: 'var(--surface-light)', marginTop: '3px' }}>
-                    <div style={{ width: `${(c.capture_count / (topCoordinators[0].capture_count || 1)) * 100}%`, height: '100%', background: i === 0 ? 'var(--plra-300)' : 'var(--border)' }} />
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</div>
+                  <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.05)', marginTop: '4px', borderRadius: '2px' }}>
+                    <div style={{ width: `${(c.capture_count / (topCoordinators[0].capture_count || 1)) * 100}%`, height: '100%', background: i === 0 ? 'var(--yellow)' : 'var(--plra-400)', boxShadow: i === 0 ? '0 0 10px var(--yellow)' : 'none' }} />
                   </div>
                 </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--plra-200)' }}>{c.capture_count}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--plra-200)' }}>{c.capture_count}</div>
               </div>
             ))}
           </div>
@@ -384,36 +389,36 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
       )}
 
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
-          <BarChart3 size={12} style={{ color: 'var(--text-3)', marginRight: '0.25rem' }} />
-          <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
-            Métricas Globales
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <BarChart3 size={14} style={{ color: 'var(--plra-300)' }} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
+            MÉTRICAS DE CAMPAÑA
           </span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <StatCard label="A Favor" value={stats?.green || 0} trend="up" color="var(--green)" bg="rgba(34,197,94,0.08)" border="rgba(34,197,94,0.2)" />
-          <StatCard label="Pendientes" value={(stats?.total_electors - stats?.total_captures) || 0} trend={null} color="var(--text-2)" bg="rgba(59,130,246,0.04)" border="var(--border)" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <StatCard label="A Favor" value={stats?.green || 0} trend="up" color="var(--green)" bg="rgba(34,197,94,0.1)" border="rgba(34,197,94,0.2)" />
+          <StatCard label="Pendientes" value={(stats?.total_electors - stats?.total_captures) || 0} trend={null} color="rgba(255,255,255,0.4)" bg="rgba(255,255,255,0.03)" border="rgba(255,255,255,0.1)" />
         </div>
         <ProjectionCard currentCount={stats?.total_captures || 0} />
       </div>
 
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <AlertTriangle size={12} style={{ color: 'var(--text-3)', marginRight: '0.25rem' }} />
-            <span style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
-              Conflictos
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={14} style={{ color: 'var(--red)' }} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
+              INCIDENCIAS
             </span>
           </div>
-          <span style={{ background: conflicts.length > 0 ? 'var(--red)' : 'var(--green)', color: '#fff', fontSize: '0.6rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '999px' }}>
+          <span style={{ background: conflicts.length > 0 ? 'var(--red)' : 'var(--green)', color: '#fff', fontSize: '0.65rem', fontWeight: 900, padding: '0.2rem 0.6rem', borderRadius: '8px' }}>
             {conflicts.length}
           </span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {conflicts.slice(0, 3).map(c => (
-            <div key={c.conflict_id} onClick={() => onResolve(c)} style={{ padding: '0.75rem', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer' }}>
-              <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white' }}>{c.elector_nombre}</p>
-              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>Doble captura detectada</p>
+            <div key={c.conflict_id} onClick={() => onResolve(c)} style={{ padding: '1rem', borderRadius: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>{c.elector_nombre}</p>
+              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Doble captura detectada • Acción requerida</p>
             </div>
           ))}
         </div>
