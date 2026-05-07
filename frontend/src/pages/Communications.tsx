@@ -811,7 +811,7 @@ const Communications = () => {
                            </div>
                         </motion.div>
                       )}
-                   </AnimatePresence>
+                    </AnimatePresence>
                 </div>
               )}
             </div>
@@ -909,15 +909,13 @@ const Communications = () => {
                              <div style={{ fontSize: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid var(--border)', color: 'var(--text-2)' }}>• Lanzamiento Regional (24/04)</div>
                              <div style={{ fontSize: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid var(--border)', color: 'var(--text-2)' }}>• Invitación Comité (02/05)</div>
                           </div>
-                       </div>
-                    </div>
-                   </div>
+                        </div>
+                     </div>
                  </motion.div>
                )}
             </AnimatePresence>
             </div>
           </div>
-            </div>
         </div>
 
       {/* MODAL: CREATE TEMPLATE */}
