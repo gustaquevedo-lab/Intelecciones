@@ -1454,6 +1454,42 @@ app.get('/api/admin/electors/search', (req, res) => {
   }
 });
 
+app.get('/api/admin/verify-phone/:phone', (req, res) => {
+  try {
+    const phone = req.params.phone.replace(/\D/g, '');
+    const phoneWithCountry = phone.startsWith('595') ? phone : `595${phone.replace(/^0/, '')}`;
+    const phoneShort = phone.replace(/^595/, '0');
+
+    const elector = db.prepare(`
+      SELECT e.*, ec.traffic_light, u.nombre as coordinator_name, u.role as coordinator_role
+      FROM electors e
+      JOIN elector_captures ec ON e.ci = ec.elector_ci
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      WHERE ec.telefono LIKE ? OR ec.telefono LIKE ?
+      LIMIT 1
+    `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+
+    if (elector) {
+      return res.json({ type: 'ELECTOR', data: elector });
+    }
+
+    const user = db.prepare(`
+      SELECT id, username, role, nombre, ci, telefono 
+      FROM users 
+      WHERE telefono LIKE ? OR telefono LIKE ?
+      LIMIT 1
+    `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+
+    if (user) {
+      return res.json({ type: 'USER', data: user });
+    }
+
+    res.status(404).json({ error: 'Contacto no identificado' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo" });
   const { ciudad } = req.body;
@@ -1839,9 +1875,9 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
       }
       targets = db.prepare(query).all(...params);
     } else if (traffic_light) {
-      // Targets are electors from captures - JOIN with electors to get names
+      // Targets are electors from captures - JOIN with electors to get names and voting data
       let query = `
-        SELECT ec.telefono, e.nombre, ec.elector_ci 
+        SELECT ec.telefono, e.nombre, ec.elector_ci, e.local_votacion, e.mesa, e.orden
         FROM elector_captures ec
         JOIN electors e ON ec.elector_ci = e.ci
         WHERE ec.telefono IS NOT NULL AND ec.telefono != ""
@@ -1877,8 +1913,16 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           // Anti-ban delay: 2-5 seconds
           await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
           
-          // Personalized content
-          const personalizedContent = template.content ? template.content.replace(/{{nombre}}/g, target.nombre || 'Amigo/a') : '';
+          // Advanced Personalized content
+          let personalizedContent = template.content || '';
+          if (personalizedContent) {
+            personalizedContent = personalizedContent
+              .replace(/{{nombre}}/g, target.nombre || 'Amigo/a')
+              .replace(/{{ci}}/g, target.elector_ci || '')
+              .replace(/{{local}}/g, target.local_votacion || 'No especificado')
+              .replace(/{{mesa}}/g, target.mesa?.toString() || '-')
+              .replace(/{{orden}}/g, target.orden?.toString() || '-');
+          }
 
           if (template.media_type === 'VOICE') {
             await whatsappService.sendVoice(target.telefono, template.media_url);

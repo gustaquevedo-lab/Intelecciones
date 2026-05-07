@@ -30,6 +30,7 @@ const Communications = () => {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [composerMessage, setComposerMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [contactIntel, setContactIntel] = useState<any>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
   
@@ -76,6 +77,23 @@ const Communications = () => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, selectedChat]);
+
+  useEffect(() => {
+    const fetchIntel = async () => {
+      if (!selectedChat) {
+        setContactIntel(null);
+        return;
+      }
+      try {
+        const cleanPhone = selectedChat.split('@')[0];
+        const res = await api.get(`/admin/verify-phone/${cleanPhone}`);
+        setContactIntel(res.data);
+      } catch (err) { 
+        setContactIntel(null); 
+      }
+    };
+    fetchIntel();
+  }, [selectedChat]);
 
   const handleConnect = async () => {
     setWsStatus('CONNECTING');
@@ -392,6 +410,12 @@ const Communications = () => {
                                 <div style={{ marginBottom: '0.6rem', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                                   {msg.type === 'image' && <img src={msg.media_url} style={{ width: '100%', maxHeight: '350px', objectFit: 'cover' }} />}
                                   {(msg.type === 'video') && <div style={{ background: '#000', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Video size={48} color="white" /></div>}
+                                  {(msg.type === 'audio' || msg.type === 'ptt') && (
+                                    <div style={{ padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                      <Mic size={24} color={msg.is_incoming ? 'var(--plra-500)' : 'white'} />
+                                      <audio controls src={msg.media_url} style={{ height: '32px', width: '200px' }} />
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: '1.5', fontWeight: 500 }}>{msg.body}</p>
@@ -833,20 +857,38 @@ const Communications = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                        <div>
                           <h4 style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>Inteligencia de Campo</h4>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'var(--accent-subtle)' }}>
-                                <MapPin size={16} color="var(--plra-500)" />
-                                <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Barrio San Roque, Asunción</span>
-                             </div>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.05)' }}>
-                                <Flag size={16} color="var(--green)" />
-                                <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Intención de Voto: ALTA</span>
-                             </div>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.05)' }}>
-                                <Car size={16} color="var(--yellow)" />
-                                <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Requiere Transporte</span>
-                             </div>
-                          </div>
+                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              {contactIntel ? (
+                                <>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'var(--accent-subtle)' }}>
+                                     <MapPin size={16} color="var(--plra-500)" />
+                                     <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{contactIntel.data.local_votacion || 'S/D'}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.05)' }}>
+                                     <Hash size={16} color="var(--green)" />
+                                     <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>CI: {contactIntel.data.ci || contactIntel.data.username}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'var(--surface-light)' }}>
+                                     <Activity size={16} color="var(--plra-300)" />
+                                     <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Mesa {contactIntel.data.mesa || '-'} / Orden {contactIntel.data.orden || '-'}</span>
+                                  </div>
+                                  {contactIntel.data.coordinator_name && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.05)' }}>
+                                      <User size={16} color="var(--plra-500)" />
+                                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>{contactIntel.data.coordinator_name}</span>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>{contactIntel.data.coordinator_role}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div style={{ padding: '1rem', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '12px' }}>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontStyle: 'italic' }}>Contacto no identificado en el padrón</span>
+                                </div>
+                              )}
+                           </div>
+                        </div>
                        </div>
 
                        <div>
@@ -922,7 +964,7 @@ const Communications = () => {
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>Cuerpo del Mensaje (Soporta {"{{nombre}}"})</label>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', display: 'block', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>Cuerpo del Mensaje (Soporta {"{{nombre}}, {{ci}}, {{local}}, {{mesa}}, {{orden}}"})</label>
                     <textarea 
                       style={{ width: '100%', height: '150px', padding: '1rem', borderRadius: '12px', background: 'var(--surface-2)', border: '1.5px solid var(--border)', color: 'var(--text)', resize: 'none', fontSize: '0.95rem', fontWeight: 600, lineHeight: '1.6' }}
                       placeholder="Hola {{nombre}}, te invitamos a ser parte del cambio..."
@@ -958,3 +1000,4 @@ const Communications = () => {
 };
 
 export default Communications;
+

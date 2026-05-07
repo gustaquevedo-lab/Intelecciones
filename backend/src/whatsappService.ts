@@ -48,10 +48,28 @@ class WhatsAppService {
     this.client.on('message', async (msg) => {
       try {
         const contact = await msg.getContact();
+        let mediaUrl = null;
+        
+        // Handle incoming media (Photos, Audio, etc)
+        if (msg.hasMedia) {
+          try {
+            const media = await msg.downloadMedia();
+            if (media) {
+              const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${media.mimetype.split('/')[1]}`;
+              const filePath = path.join(__dirname, '../uploads', filename);
+              fs.writeFileSync(filePath, Buffer.from(media.data, 'base64'));
+              
+              const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+              const host = process.env.APP_URL || 'http://localhost:5000';
+              mediaUrl = `${host}/uploads/${filename}`;
+            }
+          } catch (mErr) { console.error('Media download failed:', mErr); }
+        }
+
         db.prepare(`
-          INSERT INTO whatsapp_messages (contact_number, contact_name, body, type, is_incoming)
-          VALUES (?, ?, ?, ?, 1)
-        `).run(msg.from, contact.pushname || contact.name || msg.from, msg.body, msg.type);
+          INSERT INTO whatsapp_messages (contact_number, contact_name, body, type, media_url, is_incoming)
+          VALUES (?, ?, ?, ?, ?, 1)
+        `).run(msg.from, contact.pushname || contact.name || msg.from, msg.body || '', msg.type, mediaUrl);
       } catch (err) { console.error('Error saving message:', err); }
     });
   }
