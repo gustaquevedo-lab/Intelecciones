@@ -373,6 +373,7 @@ const CoordinatorApp = () => {
         parent_id: user?.id,
         photo_url: newCoordPhoto,
         telefono: newCoordTelefono,
+        ci: newCoordCI,
         assigned_list_id: user?.assigned_list_id,
         assigned_campaign_id: user?.assigned_campaign_id
       });
@@ -433,6 +434,7 @@ const CoordinatorApp = () => {
         parent_id: user?.id,
         photo_url: newPadrinoPhoto,
         telefono: newPadrinoTelefono,
+        ci: newPadrinoCI,
         assigned_campaign_id: user?.assigned_campaign_id
       });
       setSuccessMsg('Padrino creado correctamente.');
@@ -2104,7 +2106,7 @@ const CoordinatorApp = () => {
                           style={{ height: '44px', flex: 1 }}
                           placeholder="Número CI"
                           value={newCoordCI}
-                          onChange={e => setNewCoordCI(e.target.value)}
+                          onChange={e => { setNewCoordCI(e.target.value); setIsCoordVerified(false); }}
                         />
                         <button type="button" onClick={handleLookupCoordCI} className="search-btn-action" style={{ height: '44px' }}>VERIFICAR</button>
                       </div>
@@ -2259,6 +2261,11 @@ const CoordinatorApp = () => {
                 </AnimatePresence>
 
                 <div style={{ padding: '2rem' }}>
+                  {error && (
+                    <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '0.85rem', borderRadius: '14px', color: 'var(--red)', fontSize: '0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <AlertCircle size={18} /> {error}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div 
                       onClick={() => setShowPhotoSource('PADRINO')}
@@ -2281,7 +2288,7 @@ const CoordinatorApp = () => {
                         <input 
                           className="modern-input-premium-styled" 
                           value={newPadrinoCI}
-                          onChange={e => setNewPadrinoCI(e.target.value)}
+                          onChange={e => { setNewPadrinoCI(e.target.value); setIsPadrinoVerified(false); }}
                           placeholder="Buscar CI..."
                         />
                         <button type="button" onClick={handleLookupPadrinoCI} className="search-btn-action">BUSCAR</button>

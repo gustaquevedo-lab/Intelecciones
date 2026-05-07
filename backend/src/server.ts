@@ -210,9 +210,7 @@ app.post('/api/login', (req, res) => {
   const cleanUsername = username.toString().trim().replace(/\./g, '');
   const cleanPassword = password.toString().trim();
   
-  console.log(`[AUTH] Intento: ${username} (Limpio: ${cleanUsername})`);
-
-  console.log(`[AUTH] Intento: ${username} (Limpio: ${cleanUsername})`);
+  console.log(`[AUTH] Intento de login: "${username}" (Limpio: "${cleanUsername}")`);
   
   let user: any = null;
 
@@ -238,12 +236,19 @@ app.post('/api/login', (req, res) => {
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
       WHERE u.username = ? OR u.ci = ? OR u.username = ? OR u.ci = ?
-    `).get(username.trim(), username.trim(), cleanUsername, cleanUsername) as any;
+         OR REPLACE(u.username, '.', '') = ? OR REPLACE(u.ci, '.', '') = ?
+    `).get(username.trim(), username.trim(), cleanUsername, cleanUsername, cleanUsername, cleanUsername) as any;
   }
   
   // 2. If not found, check if it's a Candidate from the lists table
   if (!user) {
     // ... rest of candidate logic ...
+  }
+
+  if (user) {
+    console.log(`[AUTH] Usuario encontrado: ${user.username} (Role: ${user.role})`);
+  } else {
+    console.log(`[AUTH] Usuario NO encontrado para identifier: ${username}`);
   }
 
   const normalizedSavedPassword = user?.password?.toString().replace(/\./g, '');
@@ -290,7 +295,7 @@ app.get('/api/electors/:ci', (req, res) => {
   const role = getRole(req);
 
   let distritoFilter = '';
-  if (role !== 'SUPERUSUARIO' && user_id) {
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA' && user_id) {
     const user = db.prepare(`
       SELECT c.distrito 
       FROM users u 
@@ -670,10 +675,22 @@ app.put('/api/captures/:id', (req, res) => {
   }
 });
 
-// Ensure distrito column exists
+// Ensure distrito and ci columns exist
 try { db.prepare('ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE users ADD COLUMN ci TEXT').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 1').run(); } catch(e) {}
+
+// One-time migration: Assign existing electors to Pedro Juan Caballero if distrito is empty
+try {
+  const result = db.prepare("UPDATE electors SET distrito = 'Pedro Juan Caballero' WHERE distrito IS NULL OR distrito = ''").run();
+  if (result.changes > 0) {
+    console.log(`MIGRATION: Asignados ${result.changes} electores a Pedro Juan Caballero.`);
+  }
+} catch(e) {
+  console.error("Migration error:", e);
+}
 
 app.get('/api/locales', (req, res) => {
   try {
@@ -941,7 +958,8 @@ app.post('/api/users', (req, res) => {
     return res.status(400).json({ error: 'Faltan campos obligatorios: Usuario, Contraseña, Rol y Nombre son requeridos.' });
   }
 
-  const cleanCI = ci ? ci.toString().replace(/\./g, '') : null;
+  const rawCI = ci || username; // Fallback to username if CI is not provided explicitly
+  const cleanCI = rawCI ? rawCI.toString().replace(/\./g, '') : null;
   const finalUsername = username.toString().trim();
   const finalPassword = password.toString().trim();
 
@@ -1545,8 +1563,10 @@ app.get('/api/admin/verify-phone/:phone', (req, res) => {
 
 app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo" });
-  const { distrito } = req.body;
-  if (!distrito) return res.status(400).json({ error: "Debe especificar el distrito para este padrón" });
+  const { distrito, ciudad } = req.body;
+  const finalDistrito = distrito || ciudad;
+  if (!finalDistrito) return res.status(400).json({ error: "Debe especificar el distrito para este padrón" });
+  const distritoVal = finalDistrito; // Alias for use in mapping
 
   try {
     const workbook = XLSX.readFile(req.file.path);
@@ -1574,7 +1594,7 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
         const orden = row['ORD.MESA'] || row['ORDEN'] || row['Orden'] || row['orden'] || 0;
 
         if (ci && nombre) {
-          insertStmt.run(ci.toString(), nombre, apellido || '', local || 'DESCONOCIDO', mesa, orden, distrito);
+          insertStmt.run(ci.toString(), nombre, apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito);
         }
       }
     });
@@ -1584,7 +1604,7 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     // Cleanup
     fs.unlinkSync(req.file.path);
 
-    logAction(1, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para el distrito: ${distrito}`);
+    logAction(1, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para el distrito: ${finalDistrito}`);
     res.json({ success: true, count: data.length });
   } catch (err: any) {
     if (req.file) fs.unlinkSync(req.file.path);

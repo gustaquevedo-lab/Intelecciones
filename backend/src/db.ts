@@ -6,11 +6,21 @@ import fs from 'fs';
 const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
 let dbPath = path.join(dbDir, 'intellecciones.db');
 
-// Development safety: check if DB exists in backend/ if not in root
-if (process.env.NODE_ENV !== 'production' && !fs.existsSync(dbPath)) {
-  const altPath = path.join(dbDir, 'backend', 'intellecciones.db');
-  if (fs.existsSync(altPath)) {
-    dbPath = altPath;
+// Development safety: Prioritize backend/intellecciones.db if it exists and is not empty
+if (process.env.NODE_ENV !== 'production') {
+  const backendPath = path.join(dbDir, 'backend', 'intellecciones.db');
+  const rootPath = path.join(dbDir, 'intellecciones.db');
+  
+  const backendExists = fs.existsSync(backendPath) && fs.statSync(backendPath).size > 1024;
+  const rootExists = fs.existsSync(rootPath) && fs.statSync(rootPath).size > 1024;
+
+  if (backendExists) {
+    dbPath = backendPath;
+  } else if (rootExists) {
+    dbPath = rootPath;
+  } else {
+    // Fallback to backend if both are empty or missing
+    dbPath = backendPath;
   }
 }
 
