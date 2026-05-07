@@ -193,7 +193,7 @@ const CoordinatorApp = () => {
     setIsDownloading(true);
     setDownloadProgress(10);
     try {
-      const res = await api.get('/offline/padron');
+      const res = await api.get('/offline/padron', { timeout: 60000 });
       setDownloadProgress(50);
       await savePadronOffline(res.data);
       setDownloadProgress(100);

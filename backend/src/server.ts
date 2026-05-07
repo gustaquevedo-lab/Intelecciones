@@ -47,10 +47,31 @@ const upload = multer({
 
 // 📱 OFFLINE SYNC ENDPOINT
 app.get('/api/offline/padron', (req, res) => {
+  const user_id = req.headers['x-user-id'];
+  const role = getRole(req);
+
   try {
-    console.log('[OFFLINE] Solicitud de descarga de padrón completo (FORMATO COMPACTO)...');
-    // Using VALUES to get an array of arrays directly if possible, or mapping it
-    const electors = db.prepare('SELECT ci, nombre, apellido, local_votacion, mesa, orden FROM electors').all();
+    let query = 'SELECT ci, nombre, apellido, local_votacion, mesa, orden FROM electors';
+    let params: any[] = [];
+
+    // Filter by district if not superuser/jefe
+    if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA' && user_id) {
+      const user = db.prepare(`
+        SELECT c.distrito 
+        FROM users u 
+        JOIN lists l ON u.assigned_list_id = l.id 
+        JOIN campaigns c ON l.campaign_id = c.id 
+        WHERE u.id = ?
+      `).get(user_id) as any;
+      
+      if (user?.distrito) {
+        query += " WHERE distrito = ? OR ciudad = ?";
+        params = [user.distrito, user.distrito];
+        console.log(`[OFFLINE] Filtrando padrón para distrito: ${user.distrito}`);
+      }
+    }
+
+    const electors = db.prepare(query).all(...params);
     
     // Compact mapping: [ci, nombre, apellido, local, mesa, orden]
     const compact = (electors as any[]).map(e => [e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden]);
