@@ -539,11 +539,20 @@ const CoordinatorApp = () => {
     if (location) {
       setShowModal(true);
       // Pero intentamos actualizarla en segundo plano
-      navigator.geolocation.getCurrentPosition(
-        (position) => setLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
-        null,
-        { enableHighAccuracy: false, timeout: 5000 }
-      );
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => setLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
+          null,
+          { enableHighAccuracy: false, timeout: 5000 }
+        );
+      }
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setError('La geolocalización no está disponible. Se registrará sin coordenadas.');
+      setLocation({ lat: 0, lng: 0 });
+      setShowModal(true);
       return;
     }
 
@@ -579,7 +588,10 @@ const CoordinatorApp = () => {
   };
 
   const handleCapture = async (color: 'GREEN' | 'YELLOW' | 'RED' | 'PURPLE') => {
-    if (!elector || !location || isReadOnly || !user) return;
+    if (!elector || isReadOnly || !user) return;
+    
+    // Ensure location is at least a dummy object to prevent crashes
+    const activeLocation = location || { lat: 0, lng: 0 };
     if (!telefono || telefono.length < 10) {
       setError('El número de teléfono es obligatorio para registrar al elector.');
       return;
@@ -588,8 +600,8 @@ const CoordinatorApp = () => {
     const captureData = {
       elector_ci: elector.ci,
       coordinator_id: user.id,
-      lat: location.lat,
-      lng: location.lng,
+      lat: activeLocation.lat,
+      lng: activeLocation.lng,
       traffic_light: color,
       needs_transport: needsTransport,
       telefono: telefono.replace(/\s/g, ''),
@@ -697,16 +709,17 @@ const CoordinatorApp = () => {
   };
 
   const handleUpdateCapture = async (color: string) => {
-    if (!editingCapture || !location) return;
+    if (!editingCapture) return;
     if (!telefono || telefono.length < 10) {
       setError('El número de teléfono es obligatorio.');
       return;
     }
+    const activeLocation = location || { lat: editingCapture.lat || 0, lng: editingCapture.lng || 0 };
     try {
       setIsLoading(true);
       await api.put(`/captures/${editingCapture.id}`, {
-        lat: location.lat,
-        lng: location.lng,
+        lat: activeLocation.lat,
+        lng: activeLocation.lng,
         traffic_light: color,
         needs_transport: needsTransport,
         telefono: telefono.replace(/\s/g, '')
@@ -762,22 +775,7 @@ const CoordinatorApp = () => {
     }
   };
 
-  const formatWhatsApp = (val: string) => {
-    let cleaned = val.replace(/\D/g, '');
-    if (cleaned.startsWith('09')) {
-      cleaned = '5959' + cleaned.substring(2);
-    } else if (cleaned.startsWith('9')) {
-      cleaned = '595' + cleaned;
-    } else if (cleaned.startsWith('595')) {
-      // ok
-    } 
-    
-    if (cleaned.length > 0) {
-      setTelefono('+' + cleaned);
-    } else {
-      setTelefono('');
-    }
-  };
+
 
   if (loading) return null;
 

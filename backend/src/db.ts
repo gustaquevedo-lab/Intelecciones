@@ -48,7 +48,8 @@ db.exec(`
     enabled_modules TEXT DEFAULT 'COMMAND_CENTER,REGISTRY',
     status TEXT DEFAULT 'active',
     slogan TEXT,
-    photo_url TEXT
+    photo_url TEXT,
+    distrito TEXT
   );
 
   CREATE TABLE IF NOT EXISTS lists (
@@ -91,7 +92,7 @@ db.exec(`
     lng REAL,
     direccion TEXT,
     icon TEXT DEFAULT 'Landmark',
-    ciudad TEXT DEFAULT ''
+    distrito TEXT DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS electors (
@@ -234,6 +235,10 @@ try {
 } catch (e) {}
 try {
   db.prepare("ALTER TABLE campaigns ADD COLUMN photo_url TEXT").run();
+} catch (e) {}
+
+try {
+  db.prepare("ALTER TABLE campaigns ADD COLUMN distrito TEXT").run();
 } catch (e) {}
 
 // Migration: Add new columns if they don't exist

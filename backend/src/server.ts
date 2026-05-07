@@ -233,7 +233,7 @@ app.post('/api/login', (req, res) => {
 
   if (!user) {
     user = db.prepare(`
-      SELECT u.*, c.enabled_modules, l.campaign_id
+      SELECT u.*, c.enabled_modules, c.distrito, l.campaign_id
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
@@ -259,6 +259,7 @@ app.post('/api/login', (req, res) => {
       nombre: user.nombre,
       photo_url: user.photo_url,
       ci: user.ci,
+      distrito: user.distrito,
       enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY'],
       needs_password_change: !!user.needs_password_change,
       v: "1.0.4"
@@ -285,12 +286,28 @@ app.post('/api/dia-d/vote', (req, res) => {
 app.get('/api/electors/:ci', (req, res) => {
   const { ci } = req.params;
   const list_id = getListId(req);
+  const user_id = req.headers['x-user-id'];
+  const role = getRole(req);
+
+  let distritoFilter = '';
+  if (role !== 'SUPERUSUARIO' && user_id) {
+    const user = db.prepare(`
+      SELECT c.distrito 
+      FROM users u 
+      JOIN lists l ON u.assigned_list_id = l.id 
+      JOIN campaigns c ON l.campaign_id = c.id 
+      WHERE u.id = ?
+    `).get(user_id) as any;
+    if (user?.distrito) {
+      distritoFilter = `AND (e.distrito = '${user.distrito}' OR e.ciudad = '${user.distrito}')`;
+    }
+  }
   
   const elector = db.prepare(`
     SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, c.telefono
     FROM electors e
     LEFT JOIN elector_captures c ON e.ci = c.elector_ci AND (c.list_id = ? OR ? IS NULL)
-    WHERE e.ci = ?
+    WHERE e.ci = ? ${distritoFilter}
   `).get(list_id, list_id, ci);
   
   if (elector) {
@@ -653,8 +670,9 @@ app.put('/api/captures/:id', (req, res) => {
   }
 });
 
-// Ensure ciudad column exists
-try { db.prepare('ALTER TABLE voting_locations ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
+// Ensure distrito column exists
+try { db.prepare('ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE electors ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
 
 app.get('/api/locales', (req, res) => {
@@ -667,12 +685,12 @@ app.get('/api/locales', (req, res) => {
 });
 
 app.post('/api/locales', (req, res) => {
-  const { cod_local, nombre, lat, lng, icon, direccion, ciudad } = req.body;
+  const { cod_local, nombre, lat, lng, icon, direccion, distrito } = req.body;
   try {
     db.prepare(`
-      INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion, ciudad)
+      INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion, distrito)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '', ciudad || '');
+    `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '', distrito || '');
     
     logAction(1, 'CREATE', 'LOCALE', cod_local, `Created locale ${nombre} (${cod_local})`);
     res.json({ success: true });
@@ -682,13 +700,13 @@ app.post('/api/locales', (req, res) => {
 });
 
 app.put('/api/locales/:cod', (req, res) => {
-  const { nombre, lat, lng, icon, direccion, ciudad } = req.body;
+  const { nombre, lat, lng, icon, direccion, distrito } = req.body;
   try {
     db.prepare(`
       UPDATE voting_locations 
-      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, ciudad = ?
+      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, distrito = ?
       WHERE cod_local = ?
-    `).run(nombre, lat, lng, icon, direccion || '', ciudad || '', req.params.cod);
+    `).run(nombre, lat, lng, icon, direccion || '', distrito || '', req.params.cod);
     
     logAction(1, 'UPDATE', 'LOCALE', req.params.cod, `Updated locale ${nombre}`);
     res.json({ success: true });
@@ -1096,11 +1114,29 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
 
 app.get('/api/lists', (req, res) => {
   try {
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+    
+    let filter = '';
+    if (role !== 'SUPERUSUARIO' && user_id) {
+      const user = db.prepare(`
+        SELECT c.distrito 
+        FROM users u 
+        JOIN lists l2 ON u.assigned_list_id = l2.id 
+        JOIN campaigns c ON l2.campaign_id = c.id 
+        WHERE u.id = ?
+      `).get(user_id) as any;
+      if (user?.distrito) {
+        filter = `WHERE c.distrito = '${user.distrito}'`;
+      }
+    }
+
     const lists = db.prepare(`
       SELECT l.*, c.name as campaign_name, e.nombre as candidate_nombre, e.apellido as candidate_apellido
       FROM lists l
       LEFT JOIN campaigns c ON l.campaign_id = c.id
       LEFT JOIN electors e ON l.candidate_ci = e.ci
+      ${filter}
     `).all();
     res.json(lists);
   } catch (err: any) {
@@ -1444,16 +1480,16 @@ app.get('/api/admin/electors/search', (req, res) => {
   try {
     let cityFilter = '';
     if (role !== 'SUPERUSUARIO' && user_id) {
-      const user = db.prepare('SELECT assigned_local FROM users WHERE id = ?').get(user_id) as any;
-      if (user?.assigned_local) {
-        const local = db.prepare('SELECT ciudad FROM voting_locations WHERE cod_local = ?').get(user.assigned_local) as any;
-        if (local?.ciudad) {
-          cityFilter = `AND e.ciudad = '${local.ciudad}'`;
-        } else {
-          cityFilter = 'AND 1=0'; // Restricted but city not found
-        }
-      } else {
-        cityFilter = 'AND 1=0'; // Restricted but no local assigned
+      const user = db.prepare(`
+        SELECT c.distrito 
+        FROM users u 
+        JOIN lists l ON u.assigned_list_id = l.id 
+        JOIN campaigns c ON l.campaign_id = c.id 
+        WHERE u.id = ?
+      `).get(user_id) as any;
+      
+      if (user?.distrito) {
+        cityFilter = `AND (e.distrito = '${user.distrito}' OR e.ciudad = '${user.distrito}')`;
       }
     }
 
@@ -1509,8 +1545,8 @@ app.get('/api/admin/verify-phone/:phone', (req, res) => {
 
 app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo" });
-  const { ciudad } = req.body;
-  if (!ciudad) return res.status(400).json({ error: "Debe especificar la ciudad para este padrón" });
+  const { distrito } = req.body;
+  if (!distrito) return res.status(400).json({ error: "Debe especificar el distrito para este padrón" });
 
   try {
     const workbook = XLSX.readFile(req.file.path);
@@ -1523,7 +1559,7 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     }
 
     const insertStmt = db.prepare(`
-      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad)
+      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, distrito)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -1538,7 +1574,7 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
         const orden = row['ORD.MESA'] || row['ORDEN'] || row['Orden'] || row['orden'] || 0;
 
         if (ci && nombre) {
-          insertStmt.run(ci.toString(), nombre, apellido || '', local || 'DESCONOCIDO', mesa, orden, ciudad);
+          insertStmt.run(ci.toString(), nombre, apellido || '', local || 'DESCONOCIDO', mesa, orden, distrito);
         }
       }
     });
@@ -1548,7 +1584,7 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     // Cleanup
     fs.unlinkSync(req.file.path);
 
-    logAction(1, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para la ciudad: ${ciudad}`);
+    logAction(1, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para el distrito: ${distrito}`);
     res.json({ success: true, count: data.length });
   } catch (err: any) {
     if (req.file) fs.unlinkSync(req.file.path);
@@ -1559,9 +1595,9 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
 app.get('/api/admin/electors/stats', (req, res) => {
   try {
     const stats = db.prepare(`
-      SELECT ciudad, COUNT(*) as count 
+      SELECT distrito, COUNT(*) as count 
       FROM electors 
-      GROUP BY ciudad
+      GROUP BY distrito
     `).all();
     res.json(stats);
   } catch (err: any) {
@@ -2047,9 +2083,26 @@ app.get('/api/admin/disputes/global', (req, res) => {
 
 app.get('/api/diad/coverage', (req, res) => {
   const list_id = getListId(req);
+  const role = getRole(req);
+  const user_id = req.headers['x-user-id'];
+  
+  let distritoFilter = '';
+  if (role !== 'SUPERUSUARIO' && user_id) {
+    const user = db.prepare(`
+      SELECT c.distrito 
+      FROM users u 
+      JOIN lists l2 ON u.assigned_list_id = l2.id 
+      JOIN campaigns c ON l2.campaign_id = c.id 
+      WHERE u.id = ?
+    `).get(user_id) as any;
+    if (user?.distrito) {
+      distritoFilter = `WHERE distrito = '${user.distrito}' OR ciudad = '${user.distrito}'`;
+    }
+  }
+
   try {
     // 1. Total Mesas from electors
-    const { total_mesas } = db.prepare('SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as total_mesas FROM electors').get() as any;
+    const { total_mesas } = db.prepare(`SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as total_mesas FROM electors ${distritoFilter}`).get() as any;
     
     // 2. Operational Coverage: Mesas with at least 1 member assigned (VEEDOR or MIEMBRO_MESA)
     // We check users assigned to local and mesa
