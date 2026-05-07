@@ -519,9 +519,9 @@ const CommandCenter = () => {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 5000);
+    const interval = setInterval(loadData, 15000); // 15 seconds is enough for real-time monitoring without overload
     return () => clearInterval(interval);
-  }, [activeListId]);
+  }, [activeListId, selectedLocal]);
 
   const handleResolveRequest = async (requestId: number, status: string) => {
     try {
@@ -532,12 +532,6 @@ const CommandCenter = () => {
       loadData();
     } catch (err) { console.error(err); }
   };
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleResolve = async (winnerCaptureId: number) => {
     try {

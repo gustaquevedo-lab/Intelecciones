@@ -26,11 +26,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.use((req, res, next) => {
-  console.log(`[REQUEST] ${req.method} ${req.url}`);
-  next();
-});
-
 // 📸 Multer Setup for Photos
 const uploadDir = process.env.NODE_ENV === 'production'
   ? '/app/data/uploads'
@@ -45,9 +40,28 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
-app.use('/uploads', express.static(uploadDir));
+// 📱 OFFLINE SYNC ENDPOINT
+app.get('/api/offline/padron', (req, res) => {
+  try {
+    console.log('[OFFLINE] Solicitud de descarga de padrón completo (FORMATO COMPACTO)...');
+    // Using VALUES to get an array of arrays directly if possible, or mapping it
+    const electors = db.prepare('SELECT ci, nombre, apellido, local_votacion, mesa, orden FROM electors').all();
+    
+    // Compact mapping: [ci, nombre, apellido, local, mesa, orden]
+    const compact = (electors as any[]).map(e => [e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden]);
+    
+    console.log(`[OFFLINE] Enviando ${compact.length} registros compactos...`);
+    res.json(compact);
+  } catch (err: any) {
+    console.error('[OFFLINE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- Audit Utility ---
 const logAction = (user_id: number | null, action: string, entity: string, entity_id: string | number | null, details: string) => {

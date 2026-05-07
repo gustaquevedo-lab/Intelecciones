@@ -2,6 +2,8 @@ import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import axios from 'axios';
 import db from './db';
+import fs from 'fs';
+import path from 'path';
 
 class WhatsAppService {
   private client: Client;
@@ -31,17 +33,24 @@ class WhatsAppService {
     });
 
     this.client.on('qr', async (qr) => {
+      console.log('[WHATSAPP] QR Code received. Status: CONNECTING');
       this.status = 'CONNECTING';
       this.qrCode = await qrcode.toDataURL(qr);
     });
-
+ 
     this.client.on('ready', () => {
       this.status = 'CONNECTED';
       this.qrCode = null;
-      console.log('WhatsApp client is ready!');
+      console.log('[WHATSAPP] Client is READY and CONNECTED!');
     });
-
-    this.client.on('disconnected', () => {
+ 
+    this.client.on('disconnected', (reason) => {
+      console.log('[WHATSAPP] Client DISCONNECTED:', reason);
+      this.status = 'DISCONNECTED';
+    });
+ 
+    this.client.on('auth_failure', (msg) => {
+      console.error('[WHATSAPP] AUTH FAILURE:', msg);
       this.status = 'DISCONNECTED';
     });
 

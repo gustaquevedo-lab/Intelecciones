@@ -16,6 +16,7 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import api from '../services/api';
+import { savePadronOffline, searchElectorOffline, getOfflineStats } from '../services/offlineDb';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
@@ -177,6 +178,36 @@ const CoordinatorApp = () => {
   const [newCoordName, setNewCoordName] = useState('');
   const [newCoordRealName, setNewCoordRealName] = useState('');
   const [newCoordPhoto, setNewCoordPhoto] = useState<string | null>(null);
+  
+  // Offline Padron States
+  const [offlineCount, setOfflineCount] = useState<number>(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
+  useEffect(() => {
+    getOfflineStats().then(setOfflineCount);
+  }, []);
+
+  const handleDownloadPadron = async () => {
+    if (!window.confirm('¿Desea descargar el padrón completo para uso offline? Esto puede tardar unos minutos.')) return;
+    setIsDownloading(true);
+    setDownloadProgress(10);
+    try {
+      const res = await api.get('/offline/padron');
+      setDownloadProgress(50);
+      await savePadronOffline(res.data);
+      setDownloadProgress(100);
+      const count = await getOfflineStats();
+      setOfflineCount(count);
+      alert(`Padrón descargado con éxito: ${count} electores disponibles offline.`);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert('Error al descargar el padrón. Verifique su conexión.');
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(0);
+    }
+  };
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -467,10 +498,35 @@ const CoordinatorApp = () => {
     setElector(null);
     setSuccessMsg('');
     try {
-      const res = await api.get(`/electors/${ci}`);
-      setElector(res.data);
+      let electorData = null;
+      
+      // Try local first if query is simple CI
+      // Try local search first (IndexedDB)
+      const localResults = await searchElectorOffline(ci);
+      if (localResults.length > 0) {
+        electorData = localResults[0];
+      } else {
+        // If not found locally, try online
+        const res = await api.get(`/electors/${ci}`);
+        electorData = res.data;
+      }
+      
+      if (electorData) {
+        setElector(electorData);
+        if (electorData.traffic_light) {
+          setError(`Este elector ya fue captado (Semáforo: ${electorData.traffic_light})`);
+        }
+      } else {
+        setError('Elector no encontrado en el padrón.');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Cédula no encontrada en el padrón.');
+      // Fallback to local search if server fails/offline
+      const localResults = await searchElectorOffline(ci);
+      if (localResults.length > 0) {
+        setElector(localResults[0]);
+      } else {
+        setError('Error al buscar elector. Verifique su conexión.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -910,6 +966,60 @@ const CoordinatorApp = () => {
 
         {activeTab === 'search' ? (
           <>
+
+        {/* ══════════════════════════════════════
+            OFFLINE MANAGEMENT CARD
+        ══════════════════════════════════════ */}
+        <div style={{
+          background: 'rgba(59, 130, 246, 0.05)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+          borderRadius: '16px',
+          padding: '1rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Download size={16} style={{ color: 'var(--plra-300)' }} />
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase' }}>Padrón Offline</span>
+            </div>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: offlineCount > 0 ? 'var(--green)' : 'var(--text-3)' }}>
+              {offlineCount > 0 ? `${offlineCount.toLocaleString()} Registros` : 'Sin datos locales'}
+            </span>
+          </div>
+          
+          {isDownloading ? (
+            <div style={{ width: '100%' }}>
+              <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: `${downloadProgress}%`, height: '100%', background: 'var(--plra-300)', transition: 'width 0.3s ease' }} />
+              </div>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginTop: '0.4rem', textAlign: 'center' }}>Descargando base de datos... {downloadProgress}%</p>
+            </div>
+          ) : (
+            <button 
+              onClick={handleDownloadPadron}
+              style={{
+                width: '100%',
+                padding: '0.6rem',
+                borderRadius: '8px',
+                background: 'var(--plra-500)',
+                color: 'white',
+                border: 'none',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Activity size={14} /> {offlineCount > 0 ? 'ACTUALIZAR PADRÓN LOCAL' : 'DESCARGAR PADRÓN PARA USO OFFLINE'}
+            </button>
+          )}
+        </div>
 
         {/* ══════════════════════════════════════
             SEARCH PANEL

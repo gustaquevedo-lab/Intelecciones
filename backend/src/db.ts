@@ -38,6 +38,7 @@ if (!fs.existsSync(dbDir)) {
 
 console.log("Initializing database at:", dbPath);
 const db = new Database(dbPath);
+db.pragma('journal_mode = WAL'); // Enable WAL mode for better performance
 
 // Initialize Tables
 db.exec(`
@@ -293,6 +294,11 @@ db.exec(`
   );
 `);
 
+
+/* Optimization Indexes */
+db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_captures_ci_list ON elector_captures (elector_ci, list_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").run();
 
 /* Ensure default Super Admin exists */
 db.prepare(`
