@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 
 interface User {
     id: number;
@@ -65,18 +66,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user]);
 
     const login = async (credentials: any) => {
-        let apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        if (!apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
-        apiBase = apiBase.replace(/\/$/, '');
-        const res = await fetch(`${apiBase}/api/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(credentials)
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        const { data } = await api.post('/login', credentials);
         setUser(data);
-        localStorage.setItem('auth_user', JSON.stringify(data)); // Force immediate update
+        localStorage.setItem('auth_user', JSON.stringify(data));
         return data;
     };
 

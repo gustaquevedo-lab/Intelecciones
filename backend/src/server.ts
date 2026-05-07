@@ -1028,10 +1028,13 @@ app.delete('/api/users/:id', (req, res) => {
       // 6. Nullify references in electors
       db.prepare('UPDATE electors SET coordinador_asignado = NULL WHERE coordinador_asignado = ?').run(userId);
 
-      // 7. Update children users to have no parent (orphan them instead of deleting)
+      // 7. Nullify references in results (Veedores)
+      db.prepare('UPDATE results SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
+
+      // 8. Update children users to have no parent (orphan them instead of deleting)
       db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(userId);
 
-      // 8. Finally delete the user
+      // 9. Finally delete the user
       db.prepare('DELETE FROM users WHERE id = ?').run(userId);
       db.prepare('PRAGMA foreign_keys = ON').run();
 

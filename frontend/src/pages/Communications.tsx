@@ -911,13 +911,14 @@ const Communications = () => {
                           </div>
                        </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                   </div>
+                 </motion.div>
+               )}
             </AnimatePresence>
+            </div>
           </div>
+            </div>
         </div>
-      </div>
 
       {/* MODAL: CREATE TEMPLATE */}
       <AnimatePresence>

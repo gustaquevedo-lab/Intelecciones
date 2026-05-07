@@ -146,6 +146,8 @@ db.exec(`
     elector_ci TEXT,
     list_id INTEGER,
     status TEXT DEFAULT 'PENDING',
+    resolved_by_jefe_id INTEGER,
+    resolved_coordinator_id INTEGER,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -262,6 +264,13 @@ try {
   db.prepare('ALTER TABLE field_requests ADD COLUMN photo_url TEXT').run();
   db.prepare('ALTER TABLE field_requests ADD COLUMN audio_url TEXT').run();
   console.log('Migration: Added multimedia columns to field_requests');
+} catch (e) {}
+
+// Capture conflicts migrations
+try {
+  db.prepare('ALTER TABLE capture_conflicts ADD COLUMN resolved_by_jefe_id INTEGER').run();
+  db.prepare('ALTER TABLE capture_conflicts ADD COLUMN resolved_coordinator_id INTEGER').run();
+  console.log('Migration: Added resolution columns to capture_conflicts');
 } catch (e) {}
 
 // Lists migrations
