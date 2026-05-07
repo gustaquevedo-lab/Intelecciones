@@ -554,7 +554,10 @@ const SuperAdmin = () => {
     try {
       await api.delete(`/users/${id}`);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err: any) { 
+      console.error(err); 
+      alert('No se pudo eliminar el usuario: ' + (err.response?.data?.error || 'Error interno del servidor'));
+    }
   };
 
   const handleResetPassword = async (id: number) => {

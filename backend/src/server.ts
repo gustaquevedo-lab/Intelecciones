@@ -992,6 +992,7 @@ app.delete('/api/users/:id', (req, res) => {
     }
 
     const transaction = db.transaction(() => {
+      db.prepare('PRAGMA foreign_keys = OFF').run();
       // 1. Nullify references in elector_captures to avoid breaking historical data
       db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
       
@@ -1007,9 +1008,8 @@ app.delete('/api/users/:id', (req, res) => {
       db.prepare('UPDATE capture_conflicts SET resolved_coordinator_id = NULL WHERE resolved_coordinator_id = ?').run(userId);
       db.prepare('UPDATE audit_logs SET user_id = NULL WHERE user_id = ?').run(userId);
 
-      // 5. Nullify references in participation_logs and results
+      // 5. Nullify references in participation_logs
       db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
-      db.prepare('UPDATE results SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
 
       // 6. Nullify references in electors
       db.prepare('UPDATE electors SET coordinador_asignado = NULL WHERE coordinador_asignado = ?').run(userId);
@@ -1019,6 +1019,7 @@ app.delete('/api/users/:id', (req, res) => {
 
       // 8. Finally delete the user
       db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+      db.prepare('PRAGMA foreign_keys = ON').run();
 
       logAction(1, 'DELETE', 'USER', userId, `Deleted user with ID ${userId} and cleaned up all references`);
     });
