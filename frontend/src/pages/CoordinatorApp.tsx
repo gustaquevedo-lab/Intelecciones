@@ -6,7 +6,7 @@ import {
   ClipboardCheck, ArrowRight, AlertCircle,
   CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare, Fingerprint, Landmark,
   UserPlus, Camera, Settings, LayoutList, CheckCircle, Users, Mic, Square, ChevronRight,
-  Car, Inbox, ArrowLeft, Truck
+  Car, Inbox, ArrowLeft, Truck, Download, Activity
 } from 'lucide-react';
 import axios from 'axios';
 import MainLayout from '../components/MainLayout';
