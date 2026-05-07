@@ -385,6 +385,7 @@ const CoordinatorApp = () => {
       setNewCoordTelefono('');
       setIsCoordVerified(false);
       fetchMyCoordinators();
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al crear coordinador');
     } finally {
@@ -444,6 +445,7 @@ const CoordinatorApp = () => {
       setNewPadrinoTelefono('');
       setIsPadrinoVerified(false);
       fetchMyPadrinos();
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al crear padrino');
     } finally {
@@ -1620,9 +1622,9 @@ const CoordinatorApp = () => {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-              {teamStats.filter(c => 
-                c.nombre.toLowerCase().includes(teamSearchQuery.toLowerCase()) || 
-                c.username.includes(teamSearchQuery)
+              {(user?.role === 'JEFE_CAMPANA' ? myPadrinos : teamStats).filter(c => 
+                (c?.nombre?.toLowerCase() || '').includes(teamSearchQuery.toLowerCase()) || 
+                (c?.username?.toString() || '').includes(teamSearchQuery)
               ).map(c => {
                 return (
                   <motion.div 
