@@ -220,16 +220,19 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   const user_id = req.headers['x-user-id'];
   const activeDistrict = getDistrict(req);
 
+  // Column name mapping: most use 'distrito', but 'lists' (l) and 'electors' (e) use 'ciudad'
+  const column = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
+
   // SuperUser can see everything, or filter by activeDistrict if provided
   if (role === 'SUPERUSUARIO') {
-    return activeDistrict ? { sql: `AND ${tableAlias}.distrito = ?`, param: activeDistrict } : { sql: '', param: null };
+    return activeDistrict ? { sql: `AND ${tableAlias}.${column} = ?`, param: activeDistrict } : { sql: '', param: null };
   }
 
   // Non-SuperUsers are locked to their district
   if (!user_id) return { sql: 'AND 1=0', param: null };
 
   const user = db.prepare(`
-    SELECT c.distrito 
+    SELECT COALESCE(l.ciudad, c.distrito) as distrito 
     FROM users u 
     LEFT JOIN lists l ON u.assigned_list_id = l.id 
     LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
@@ -238,7 +241,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
   if (!user?.distrito) return { sql: 'AND 1=0', param: null };
   
-  return { sql: `AND ${tableAlias}.distrito = ?`, param: user.distrito };
+  return { sql: `AND ${tableAlias}.${column} = ?`, param: user.distrito };
 };
 
 const getTenant = (req: any) => {
@@ -876,7 +879,7 @@ app.get('/api/captures', (req, res) => {
   const list_id = getListId(req);
   const local_id = req.query.localId;
   const role = getRole(req);
-  const sec = getSecurityFilter(req, 'c');
+  const sec = getSecurityFilter(req, 'l');
 
   try {
     const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
@@ -1199,7 +1202,7 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
 });
 
 app.get('/api/lists', (req, res) => {
-  const sec = getSecurityFilter(req, 'c');
+  const sec = getSecurityFilter(req, 'l');
   const params: any[] = [];
   if (sec.param) params.push(sec.param);
 
@@ -1705,7 +1708,7 @@ app.get('/api/stats/command', (req, res) => {
   const local_id = req.query.localId as string;
   const role = getRole(req);
   const isPadrino = role === 'PADRINO';
-  const sec = getSecurityFilter(req, 'c');
+  const sec = getSecurityFilter(req, 'l');
 
   try {
     const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
@@ -1749,7 +1752,7 @@ app.get('/api/stats/command', (req, res) => {
     const totalElectorsQuery = `
       SELECT COUNT(*) as count FROM electors e 
       WHERE 1=1 ${local_id ? `AND e.cod_local = '${local_id}'` : ''} 
-      ${secElectors.sql.replace('e.distrito', '(e.distrito OR e.ciudad)')}
+      ${secElectors.sql}
     `;
     const totalElectors = db.prepare(totalElectorsQuery).get(...electorParams) as any;
 

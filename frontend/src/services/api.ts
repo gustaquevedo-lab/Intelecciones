@@ -16,11 +16,13 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const userStr = localStorage.getItem('auth_user');
   const activeListId = localStorage.getItem('active_list_id');
+  const activeDistrict = localStorage.getItem('active_district');
   if (userStr) {
     const user = JSON.parse(userStr);
     config.headers['x-list-id'] = activeListId === 'null' ? '' : (activeListId || user.assigned_list_id || '');
     config.headers['x-user-role'] = user.role || '';
     config.headers['x-user-id'] = user.id || '';
+    config.headers['x-district'] = activeDistrict === 'null' ? '' : (activeDistrict || '');
   }
   return config;
 });
