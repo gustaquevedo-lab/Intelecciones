@@ -195,7 +195,7 @@ class WhatsAppManager {
     const cleanNumber = number.replace(/\D/g, '');
     const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
     
-    const location = new Location(lat, lng, message || 'Ubicación');
+    const location = new Location(lat, lng, { name: message || 'Ubicación' } as any);
     const res = await client.sendMessage(chatId, location);
     
     db.prepare(`
