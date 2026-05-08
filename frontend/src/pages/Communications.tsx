@@ -1087,8 +1087,11 @@ const Communications = () => {
             </div>
           )}
         </div>
-    </MainLayout>
-  );
+      </div>
+    </div>
+  </div>
+</MainLayout>
+);
 };
 
 export default Communications;
