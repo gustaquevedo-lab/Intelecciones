@@ -1,4 +1,4 @@
-import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
+import { Client, LocalAuth, MessageMedia, Location } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import axios from 'axios';
 import db from './db';
@@ -168,6 +168,75 @@ class WhatsAppManager {
       INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
       VALUES (?, ?, ?, 'chat', 0)
     `).run(terminalId, chatId, message);
+    return res;
+  }
+
+  async sendVoice(terminalId: string, number: string, mediaUrl: string) {
+    const client = this.clients.get(terminalId);
+    if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
+    
+    const cleanNumber = number.replace(/\D/g, '');
+    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    
+    const media = await MessageMedia.fromUrl(mediaUrl);
+    const res = await client.sendMessage(chatId, media, { sendAudioAsVoice: true });
+    
+    db.prepare(`
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, media_url, is_incoming)
+      VALUES (?, ?, 'Nota de voz', 'ptt', ?, 0)
+    `).run(terminalId, chatId, mediaUrl);
+    return res;
+  }
+
+  async sendLocation(terminalId: string, number: string, lat: number, lng: number, message?: string) {
+    const client = this.clients.get(terminalId);
+    if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
+    
+    const cleanNumber = number.replace(/\D/g, '');
+    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    
+    const location = new Location(lat, lng, message || 'Ubicación');
+    const res = await client.sendMessage(chatId, location);
+    
+    db.prepare(`
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
+      VALUES (?, ?, ?, 'location', 0)
+    `).run(terminalId, chatId, message || 'Ubicación');
+    return res;
+  }
+
+  async sendContact(terminalId: string, number: string, contactName: string, contactPhone: string) {
+    const client = this.clients.get(terminalId);
+    if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
+    
+    const cleanNumber = number.replace(/\D/g, '');
+    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    
+    // This is a bit complex in whatsapp-web.js, usually involves vcard
+    const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${contactName}\nTEL;type=CELL;type=VOICE;waid=${contactPhone.replace(/\D/g,'')}:+${contactPhone.replace(/\D/g,'')}\nEND:VCARD`;
+    const res = await client.sendMessage(chatId, vcard);
+    
+    db.prepare(`
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
+      VALUES (?, ?, ?, 'contact', 0)
+    `).run(terminalId, chatId, `Contacto: ${contactName}`);
+    return res;
+  }
+
+  async sendMedia(terminalId: string, number: string, mediaUrl: string, message?: string) {
+    const client = this.clients.get(terminalId);
+    if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
+    
+    const cleanNumber = number.replace(/\D/g, '');
+    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    
+    const media = await MessageMedia.fromUrl(mediaUrl);
+    const res = await client.sendMessage(chatId, media, { caption: message });
+    
+    db.prepare(`
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, media_url, is_incoming)
+      VALUES (?, ?, ?, 'media', ?, 0)
+    `).run(terminalId, chatId, message || 'Archivo', mediaUrl);
     return res;
   }
 }

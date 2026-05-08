@@ -2027,7 +2027,8 @@ app.get('/api/whatsapp/broadcast/logs', (req, res) => {
 });
 
 app.post('/api/whatsapp/broadcast', async (req, res) => {
-  const { template_id, target_list_id, target_role, traffic_light } = req.body;
+  const { template_id, target_list_id, target_role, traffic_light, terminalId: reqTerminalId } = req.body;
+  const terminalId = reqTerminalId || 'default';
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
 
@@ -2101,15 +2102,15 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           }
 
           if (template.media_type === 'VOICE') {
-            await whatsappService.sendVoice(target.telefono, template.media_url);
+            await whatsappService.sendVoice(terminalId, target.telefono, template.media_url);
           } else if (template.media_type === 'LOCATION') {
-            await whatsappService.sendLocation(target.telefono, template.lat, template.lng, personalizedContent);
+            await whatsappService.sendLocation(terminalId, target.telefono, template.lat, template.lng, personalizedContent);
           } else if (template.media_type === 'CONTACT') {
-            await whatsappService.sendContact(target.telefono, template.contact_name, template.contact_phone);
+            await whatsappService.sendContact(terminalId, target.telefono, template.contact_name, template.contact_phone);
           } else if (template.media_url) {
-            await whatsappService.sendMedia(target.telefono, template.media_url, personalizedContent);
+            await whatsappService.sendMedia(terminalId, target.telefono, template.media_url, personalizedContent);
           } else {
-            await whatsappService.sendMessage(target.telefono, personalizedContent);
+            await whatsappService.sendMessage(terminalId, target.telefono, personalizedContent);
           }
           successCount++;
         } catch (err) {
@@ -2137,16 +2138,17 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
 });
 
 app.post('/api/whatsapp/direct-message', async (req, res) => {
-  const { number, message, media_url, media_type, lat, lng } = req.body;
+  const { number, message, media_url, media_type, lat, lng, terminalId: reqTerminalId } = req.body;
+  const terminalId = reqTerminalId || 'default';
   try {
     if (media_type === 'VOICE') {
-      await whatsappService.sendVoice(number, media_url);
+      await whatsappService.sendVoice(terminalId, number, media_url);
     } else if (media_type === 'LOCATION') {
-      await whatsappService.sendLocation(number, lat, lng, message);
+      await whatsappService.sendLocation(terminalId, number, lat, lng, message);
     } else if (media_url) {
-      await whatsappService.sendMedia(number, media_url, message);
+      await whatsappService.sendMedia(terminalId, number, media_url, message);
     } else {
-      await whatsappService.sendMessage(number, message);
+      await whatsappService.sendMessage(terminalId, number, message);
     }
     res.json({ success: true });
   } catch (err: any) {
