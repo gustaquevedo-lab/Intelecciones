@@ -15,6 +15,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
+  console.log('Rendering App component');
   return (
     <ErrorBoundary>
       <SettingsProvider>
