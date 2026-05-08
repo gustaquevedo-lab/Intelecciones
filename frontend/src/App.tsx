@@ -15,11 +15,40 @@ import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
-  console.log('App Rendering Minimal');
   return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020C1E', color: 'white' }}>
-      <h1>INTELECCIONES 2026 - MODO DEBUG</h1>
-    </div>
+    <ErrorBoundary>
+      <SettingsProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
+            <React.Suspense fallback={
+              <div style={{ 
+                height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--plra-900)', color: 'white', fontFamily: 'sans-serif'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div className="spinner" style={{ width: '40px', height: '40px', margin: '0 auto 1rem' }}></div>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.1em', opacity: 0.8 }}>CARGANDO SISTEMA...</p>
+                </div>
+              </div>
+            }>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/coordinador" element={<CoordinatorApp />} />
+                <Route path="/comando" element={<CommandCenter />} />
+                <Route path="/veedor" element={<VeedorApp />} />
+                <Route path="/admin" element={<SuperAdmin />} />
+                <Route path="/logistica" element={<LogisticsApp />} />
+                <Route path="/comunicaciones" element={<Communications />} />
+                <Route path="/diad" element={<DiaDApp />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </React.Suspense>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+      </SettingsProvider>
+    </ErrorBoundary>
   );
 }
 
