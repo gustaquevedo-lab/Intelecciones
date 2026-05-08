@@ -15,6 +15,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
+  console.log('App Rendering Real V2');
   return (
     <ErrorBoundary>
       <SettingsProvider>
