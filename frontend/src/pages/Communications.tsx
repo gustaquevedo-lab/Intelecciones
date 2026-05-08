@@ -1036,8 +1036,8 @@ const Communications = () => {
           </div>
         )}
       </AnimatePresence>
-     </div>
-
+      </div>
+    )}
           {/* NEW TERMINAL MODAL */}
           {showNewTerminalModal && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem' }}>
