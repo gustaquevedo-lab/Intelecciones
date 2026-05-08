@@ -497,6 +497,11 @@ const CommandCenter = () => {
   const [showVehicles, setShowVehicles] = useState(true);
   const [showResolveModal, setShowResolveModal] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('map');
+  const [selectedPadrino, setSelectedPadrino] = useState<any>(null);
+  const [selectedCoordDetails, setSelectedCoordDetails] = useState<any>(null);
+  const [structureData, setStructureData] = useState<any[]>([]);
+  const [subStructureData, setSubStructureData] = useState<any[]>([]);
+  const [electorDetails, setElectorDetails] = useState<any[]>([]);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
@@ -504,6 +509,11 @@ const CommandCenter = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isClusteringEnabled, setIsClusteringEnabled] = useState(true);
   const [trafficLightFilter, setTrafficLightFilter] = useState<string | null>(null);
+  const [coordinators, setCoordinators] = useState<any[]>([]);
+  const [selectedCoords, setSelectedCoords] = useState<number[]>([]);
+  const [showCoordSelector, setShowCoordSelector] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [disputeHistory, setDisputeHistory] = useState<any[]>([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -521,14 +531,15 @@ const CommandCenter = () => {
       if (activeListId) params.append('listId', activeListId.toString());
       if (selectedLocal) params.append('localId', selectedLocal);
 
-      const [locRes, statRes, capRes, confRes, reqRes, actRes, vehRes] = await Promise.all([
+      const [locRes, statRes, capRes, confRes, reqRes, actRes, vehRes, coordRes] = await Promise.all([
         api.get('/voting-locations'),
         api.get(`/stats/command?${params.toString()}`),
         api.get(`/captures?${params.toString()}`),
         api.get('/admin/conflicts'),
         api.get('/admin/requests'),
         api.get('/admin/activity'),
-        api.get('/vehicles')
+        api.get('/vehicles'),
+        api.get('/users') // To get coordinators for the layer filter
       ]);
       setLocales(locRes.data);
       setCommandStats(statRes.data);
@@ -537,6 +548,7 @@ const CommandCenter = () => {
       setRequests(reqRes.data);
       setActivities(actRes.data);
       setVehicles(vehRes.data);
+      setCoordinators(coordRes.data.filter((u: any) => u.role === 'COORDINADOR'));
 
       if (authUser?.role === 'SUPERUSUARIO' && activeListId === null) {
         const dispRes = await api.get('/admin/disputes/global');
@@ -549,9 +561,24 @@ const CommandCenter = () => {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 15000); // 15 seconds is enough for real-time monitoring without overload
+    if (activeTab === 'hierarchy') {
+       api.get('/structure/padrinos').then(res => setStructureData(res.data));
+    }
+    const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
-  }, [activeListId, selectedLocal]);
+  }, [activeListId, selectedLocal, activeTab]);
+
+  useEffect(() => {
+    if (selectedPadrino) {
+      api.get(`/structure/padrinos/${selectedPadrino.id}/coordinators`).then(res => setSubStructureData(res.data));
+    }
+  }, [selectedPadrino]);
+
+  useEffect(() => {
+    if (selectedCoordDetails) {
+      api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data));
+    }
+  }, [selectedCoordDetails]);
 
   const handleResolveRequest = async (requestId: number, status: string) => {
     try {
@@ -695,6 +722,17 @@ const CommandCenter = () => {
         >
           <Users size={16} /> <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Registro de Electores</span>
         </div>
+        <div 
+          onClick={() => setActiveTab('hierarchy')}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
+            color: activeTab === 'hierarchy' ? 'var(--plra-300)' : 'var(--text-3)',
+            borderBottom: activeTab === 'hierarchy' ? '2px solid var(--plra-300)' : 'none',
+            paddingBottom: '0.25rem'
+          }}
+        >
+          <Shield size={16} /> <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Jerarquía de Mando</span>
+        </div>
       </div>
 
       <div style={{ 
@@ -781,6 +819,53 @@ const CommandCenter = () => {
                 >
                   <Target size={14} /> Agrupar: {isClusteringEnabled ? 'SI' : 'NO'}
                 </button>
+                
+                <div style={{ position: 'relative' }}>
+                  <button 
+                    onClick={() => setShowCoordSelector(!showCoordSelector)}
+                    style={{ 
+                      padding: '0.6rem 1rem', borderRadius: '10px', 
+                      background: selectedCoords.length > 0 ? 'var(--plra-400)' : 'rgba(255,255,255,0.05)', 
+                      color: 'white',
+                      border: '1px solid var(--border)', fontSize: '0.7rem', fontWeight: 800,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      backdropFilter: 'blur(8px)',
+                      width: '100%'
+                    }}
+                  >
+                    <Users size={14} /> Capas: {selectedCoords.length === 0 ? 'Global' : `${selectedCoords.length} Coords.`}
+                  </button>
+                  {showCoordSelector && (
+                    <div style={{
+                      position: 'absolute', top: '0', right: '110%', width: '220px', maxHeight: '300px',
+                      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 2000, overflowY: 'auto',
+                      padding: '0.5rem'
+                    }}>
+                      <div style={{ padding: '0.4rem', borderBottom: '1px solid var(--border)', marginBottom: '0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)' }}>COORDINADORES</span>
+                        <button onClick={() => setSelectedCoords([])} style={{ fontSize: '0.55rem', color: 'var(--plra-300)', background: 'none', border: 'none', cursor: 'pointer' }}>Limpiar</button>
+                      </div>
+                      {coordinators.map(c => (
+                        <div 
+                          key={c.id} 
+                          onClick={() => setSelectedCoords(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}
+                          style={{
+                            padding: '0.5rem', borderRadius: '8px', cursor: 'pointer',
+                            background: selectedCoords.includes(c.id) ? 'var(--accent-subtle)' : 'transparent',
+                            display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2px'
+                          }}
+                        >
+                          <div style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1px solid var(--border)', background: selectedCoords.includes(c.id) ? 'var(--plra-300)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {selectedCoords.includes(c.id) && <div style={{ width: '6px', height: '6px', background: 'white', borderRadius: '1px' }} />}
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: selectedCoords.includes(c.id) ? 'var(--text)' : 'var(--text-2)', fontWeight: 600 }}>{c.nombre}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {selectedLocal && (
                   <motion.div 
@@ -850,6 +935,7 @@ const CommandCenter = () => {
                     {captures
                       .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
                       .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
+                      .filter(cap => selectedCoords.length === 0 || selectedCoords.includes(cap.coordinator_id))
                       .map((cap, idx) => {
                       const jitter = 0.00003 * Math.sqrt(idx);
                       const angle = idx * 137.5;
@@ -869,23 +955,28 @@ const CommandCenter = () => {
                           )}
                         >
                           <Popup>
-                            <div style={{ padding: '0.4rem', minWidth: '160px' }}>
-                              <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1 }}>{cap.nombre} {cap.apellido}</p>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.4rem' }}>
-                                <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 4px', borderRadius: '3px', background: 'var(--plra-500)', color: 'white' }}>
-                                  L-{cap.list_number}
-                                </span>
-                                <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700 }}>{cap.campaign_name?.substring(0, 15)}</span>
-                              </div>
-                              <div style={{ marginBottom: '0.4rem', padding: '0.3rem 0.4rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <p style={{ fontSize: '0.6rem', color: 'var(--text-2)', margin: 0 }}>
-                                  <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Captado:</span> {cap.coordinator_name} 
-                                </p>
-                              </div>
-                              <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                                <MapPin size={10} /> {cap.local_votacion}
-                              </div>
-                            </div>
+                            <div style={{ padding: '0.6rem', minWidth: '190px' }}>
+                               <p style={{ fontWeight: 900, fontSize: '1.05rem', marginBottom: '0.3rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1, borderBottom: '1px solid var(--border)', paddingBottom: '0.3rem' }}>{cap.nombre} {cap.apellido}</p>
+                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                                 <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 5px', borderRadius: '4px', background: 'var(--plra-500)', color: 'white' }}>
+                                   L-{cap.list_number}
+                                 </span>
+                                 <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800 }}>{cap.campaign_name?.substring(0, 15)}</span>
+                               </div>
+                               <div style={{ marginBottom: '0.5rem', padding: '0.4rem 0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                 <p style={{ fontSize: '0.65rem', color: 'var(--text)', margin: 0, fontWeight: 700 }}>
+                                   <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Captado:</span> {cap.coordinator_name} 
+                                 </p>
+                                 {(cap.padrino_name || cap.parent_name) && (
+                                   <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', margin: '2px 0 0 0', fontWeight: 500, fontStyle: 'italic' }}>
+                                     Superior: {cap.padrino_name || cap.parent_name}
+                                   </p>
+                                 )}
+                               </div>
+                               <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: 0.8 }}>
+                                 <MapPin size={10} /> {cap.local_votacion}
+                               </div>
+                             </div>
                           </Popup>
                         </Marker>
                       );
@@ -1008,7 +1099,7 @@ const CommandCenter = () => {
                       }}
                     >
                       LIMPIAR FILTRO
-                    </button>
+                  </button>
                   )}
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.6rem' }}>
@@ -1019,216 +1110,172 @@ const CommandCenter = () => {
               </MapContainer>
             </div>
           ) : activeTab === 'registry' ? (
-            <div style={{ 
-              height: '100%', 
-              overflowY: 'auto', 
-              padding: isMobile ? '1rem' : '2rem', 
-              background: 'var(--surface-dark)',
-              zIndex: 1200, // Ensure it covers the map on mobile if needed
-              position: 'relative'
-            }}>
+            <div style={{ height: '100%', overflowY: 'auto', padding: isMobile ? '1rem' : '2rem', background: 'var(--bg)' }}>
               <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                 <header style={{ marginBottom: '2rem' }}>
                   <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.75rem', fontWeight: 900, color: 'white', marginBottom: '0.5rem' }}>
                     Consulta de <span style={{ color: 'var(--plra-300)' }}>Padrón</span>
                   </h2>
-                  <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Localice electores, verifique locales de votación y coordine acciones tácticas.</p>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Localice electores y verifique locales de votación.</p>
                 </header>
 
-                <div className="card-premium-styled" style={{ 
-                  padding: '1.5rem', 
-                  marginBottom: '2rem',
-                  border: '1px solid var(--plra-500)',
-                  background: 'rgba(59,130,246,0.05)'
-                }}>
+                <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--plra-500)', background: 'rgba(59,130,246,0.05)' }}>
                   <div className="search-input-wrapper-premium">
                     <Search size={20} style={{ marginLeft: '1rem', color: 'var(--plra-300)' }} />
                     <input 
                       type="text" 
                       className="modern-input-premium-styled" 
-                      placeholder="Nombre, Apellido o Número de Cédula..."
+                      placeholder="Nombre, Apellido o CI..."
                       style={{ paddingLeft: '3rem', fontSize: '1rem' }}
                       onChange={(e) => handleSearch(e.target.value)}
-                      autoFocus
                     />
-                    {isSearching && (
-                      <div className="loading-spinner-small" style={{ marginRight: '1rem' }} />
-                    )}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                   {searchResults.map((elector: any) => (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      key={elector.ci} 
-                      className="card-premium-styled" 
-                      style={{ 
-                        padding: '1.25rem',
-                        background: 'rgba(255,255,255,0.03)',
-                        border: '1px solid var(--border)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '1rem'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <p style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)', marginBottom: '0.1rem' }}>{elector.nombre} {elector.apellido}</p>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {elector.ci}</p>
-                        </div>
-                        <div style={{ 
-                          padding: '4px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.1)',
-                          fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', border: '1px solid rgba(59,130,246,0.2)'
-                        }}>
-                          {elector.partido || 'PLRA'}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px' }}>
-                        <div>
-                          <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Local</p>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--text)', fontWeight: 600 }}>{elector.local_votacion}</p>
-                        </div>
-                        <div>
-                          <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Mesa / Orden</p>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--text)', fontWeight: 600 }}>Mesa {elector.mesa} — # {elector.orden}</p>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        <button 
-                          className="action-btn-primary" 
-                          style={{ flex: 1, padding: '0.4rem', fontSize: '0.65rem', gap: '0.3rem', borderRadius: '8px' }}
-                          onClick={() => {
-                            if (elector.lat && elector.lng) {
-                              setSelectedLocal(null);
-                              setActiveTab('map');
-                            } else {
-                              alert('Ubicación de contacto no disponible.');
-                            }
-                          }}
-                        >
-                          <MapPin size={12} /> UBICAR
-                        </button>
-                        {elector.coordinator_name && (
-                          <div style={{ flex: 1.5, background: 'rgba(255,255,255,0.02)', padding: '0.35rem 0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                            <p style={{ fontSize: '0.65rem', color: 'var(--plra-300)', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{elector.coordinator_name}</p>
-                            <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, margin: 0 }}>{elector.coordinator_role}</p>
-                          </div>
-                        )}
-                        <button 
-                          className="action-btn-secondary" 
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.65rem', gap: '0.3rem', background: 'rgba(34,197,94,0.1)', color: '#4ade80', borderColor: 'rgba(34,197,94,0.2)', borderRadius: '8px' }}
-                          onClick={() => window.open(`https://wa.me/${elector.telefono?.replace(/\D/g, '')}`, '_blank')}
-                          disabled={!elector.telefono}
-                        >
-                          <MessageSquare size={12} />
-                        </button>
-                      </div>
+                    <motion.div layout key={elector.ci} className="card-premium-styled" style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+                      <p style={{ fontWeight: 800, fontSize: '1rem', color: 'white' }}>{elector.nombre} {elector.apellido}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {elector.ci}</p>
                     </motion.div>
                   ))}
-                  
-                  {!isSearching && searchResults.length === 0 && (
-                    <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '5rem 2rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', border: '1px dashed var(--border)' }}>
-                      <Search size={48} style={{ opacity: 0.1, marginBottom: '1.5rem' }} />
-                      <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>No hay electores que coincidan con la búsqueda</p>
-                      <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Intente buscar por el número de Cédula para mayor precisión.</p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
-          ) : activeTab === 'requests' ? (
+          ) : activeTab === 'hierarchy' ? (
             <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)' }}>Centro de Decisiones Estratégicas</h3>
-                  <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Aprueba o rechaza las solicitudes de los coordinadores en campo.</p>
-                </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', textAlign: 'center', minWidth: '100px' }}>
-                    <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--yellow)' }}>{requests.filter(r => r.status === 'PENDING').length}</p>
-                    <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Pendientes</p>
+              <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', marginBottom: '0.5rem' }}>Estructura de <span style={{ color: 'var(--plra-300)' }}>Mando</span></h2>
+                    <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Navegación jerárquica de la Lista 3.</p>
                   </div>
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {authUser?.role === 'SUPERUSUARIO' && globalDisputes.length > 0 && (
-                    <div style={{ padding: '1.5rem', borderRadius: '16px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)' }}>
-                          <AlertTriangle size={20} />
-                        </div>
-                        <div>
-                          <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>Disputas Globales Detectadas</h3>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Electores captados por más de una lista simultáneamente.</p>
-                        </div>
-                      </div>
-                      
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                        {globalDisputes.map((d, i) => (
-                          <div key={i} style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(239,68,68,0.1)' }}>
-                            <div style={{ marginBottom: '0.75rem' }}>
-                              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>{d.nombre} {d.apellido}</p>
-                              <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>CI: {d.ci} | {d.local_votacion}</p>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                              <p style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase' }}>Listas en conflicto:</p>
-                              <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', lineHeight: '1.4' }}>
-                                {d.details.split(',').map((detail: string, idx: number) => (
-                                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--red)' }} />
-                                    {detail}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  {(selectedPadrino || selectedCoordDetails) && (
+                    <button 
+                      onClick={() => {
+                        if (selectedCoordDetails) setSelectedCoordDetails(null);
+                        else setSelectedPadrino(null);
+                      }}
+                      style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'white', padding: '0.6rem 1.2rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 800 }}
+                    >
+                      ← VOLVER ATRÁS
+                    </button>
                   )}
+                </header>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-300)' }}>
-                          <Radio size={20} />
+                {!selectedPadrino ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                    {structureData.map(p => (
+                      <motion.div 
+                        whileHover={{ y: -5 }}
+                        key={p.id}
+                        onClick={() => setSelectedPadrino(p)}
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.75rem', cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                          <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 900, color: 'white' }}>{p.nombre?.charAt(0)}</div>
+                          <div>
+                            <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>{p.nombre}</p>
+                            <span style={{ fontSize: '0.6rem', color: 'var(--plra-300)', fontWeight: 900 }}>PADRINO L-{p.list_number}</span>
+                          </div>
                         </div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>Solicitudes de Campo</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '14px' }}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)' }}>COORDINADORES</span>
+                          <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{p.coordinator_count}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : !selectedCoordDetails ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                    {subStructureData.map(c => (
+                      <motion.div 
+                        whileHover={{ y: -5 }}
+                        key={c.id}
+                        onClick={() => setSelectedCoordDetails(c)}
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.5rem', cursor: 'pointer' }}
+                      >
+                        <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', marginBottom: '1.25rem' }}>{c.nombre}</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '1.25rem' }}>
+                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(34,197,94,0.08)', borderRadius: '14px' }}>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--green)', fontWeight: 900 }}>FAVOR</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>{c.green || 0}</p>
+                          </div>
+                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(234,179,8,0.08)', borderRadius: '14px' }}>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--yellow)', fontWeight: 900 }}>DUDOSO</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>{c.yellow || 0}</p>
+                          </div>
+                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(239,68,68,0.08)', borderRadius: '14px' }}>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 900 }}>CONTRA</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>{c.red || 0}</p>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.08)', padding: '0.75rem 1rem', borderRadius: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                            <Truck size={16} color="var(--plra-300)" />
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--plra-200)' }}>TRANSPORTE</span>
+                          </div>
+                          <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>{c.needs_transport || 0}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '28px', overflow: 'hidden' }}>
+                    <div style={{ padding: '1.75rem', background: 'rgba(59,130,246,0.1)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                        <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'var(--plra-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, color: 'white' }}>{selectedCoordDetails.nombre.charAt(0)}</div>
+                        <div>
+                          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', margin: 0 }}>{selectedCoordDetails.nombre}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0 }}>{electorDetails.length} electores bajo gestión operativa</p>
+                        </div>
                       </div>
-                      {requests.map(req => (
-                        <RequestItem key={req.id} req={req} isReadOnly={authUser?.role === 'CANDIDATO'} onResolve={(status) => handleResolveRequest(req.id, status)} />
-                      ))}
+                      <a href={`https://wa.me/${selectedCoordDetails.telefono?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ background: '#22C55E', color: 'white', padding: '0.6rem 1.25rem', borderRadius: '14px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <MessageSquare size={18} /> CONTACTAR
+                      </a>
                     </div>
-                    
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)' }}>
-                          <AlertTriangle size={20} />
-                        </div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>Disputas Internas (Misma Lista)</h3>
-                      </div>
-                      {conflicts.map(conf => (
-                        <div key={conf.id} style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', marginBottom: '0.75rem' }}>
-                          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.25rem' }}>{conf.nombre} {conf.apellido}</p>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '1rem' }}>Elector captado por múltiples coordinadores de tu lista.</p>
-                          {authUser?.role !== 'CANDIDATO' ? (
-                            <button onClick={() => setShowResolveModal(conf)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                              Resolver Conflicto Interno
-                            </button>
-                          ) : (
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontStyle: 'italic' }}>En revisión por comando...</div>
-                          )}
-                        </div>
-                      ))}
+                    <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ padding: '1.25rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Elector</th>
+                            <th style={{ padding: '1.25rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Cédula</th>
+                            <th style={{ padding: '1.25rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Local / Mesa</th>
+                            <th style={{ padding: '1.25rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Fidelidad</th>
+                            <th style={{ padding: '1.25rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {electorDetails.map(e => (
+                            <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                              <td style={{ padding: '1.25rem' }}>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', margin: 0 }}>{e.nombre} {e.apellido}</p>
+                                {e.needs_transport === 1 && <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900 }}>REQUIERE TRANSPORTE</span>}
+                              </td>
+                              <td style={{ padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 700 }}>{e.elector_ci}</td>
+                              <td style={{ padding: '1.25rem' }}>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', margin: 0, fontWeight: 700 }}>{e.local_votacion}</p>
+                                <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Mesa {e.mesa} — Orden {e.orden}</p>
+                              </td>
+                              <td style={{ padding: '1.25rem' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: e.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', padding: '4px 10px', borderRadius: '8px' }}>
+                                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: e.traffic_light === 'GREEN' ? 'var(--green)' : 'var(--red)' }} />
+                                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'white' }}>{e.traffic_light}</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: '1.25rem' }}>
+                                <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'white', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer' }}>
+                                  <MessageSquare size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                </div>
+                )}
+              </div>
             </div>
           ) : (
             <div style={{ padding: 'clamp(1rem, 3vw, 2rem)', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>

@@ -903,14 +903,19 @@ app.get('/api/captures', (req, res) => {
     const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
 
     const params = sec.params || [];
-
     const captures = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.nombre as coordinator_name, u.role as coordinator_role, l.list_number, c.name as campaign_name
+      SELECT 
+        ec.*, 
+        e.nombre, e.apellido, e.local_votacion, 
+        u.nombre as coordinator_name, u.role as coordinator_role, 
+        p.nombre as padrino_name,
+        l.list_number, c.name as campaign_name
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
-      LEFT JOIN lists l ON ec.list_id = l.id
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      JOIN lists l ON ec.list_id = l.id
+      JOIN campaigns c ON l.campaign_id = c.id
       WHERE 1=1 ${sec.sql} ${listFilter} ${localFilter}
       ORDER BY ec.timestamp DESC
     `).all(...params);
