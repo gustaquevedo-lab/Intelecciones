@@ -11,6 +11,7 @@ const DiaDApp = React.lazy(() => import('./pages/DiaDApp'));
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
