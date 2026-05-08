@@ -54,9 +54,11 @@ class WhatsAppManager {
   private initClient(terminalId: string) {
     if (this.clients.has(terminalId)) return this.clients.get(terminalId)!;
 
-    const sessionPath = process.env.NODE_ENV === 'production'
-      ? `/app/data/whatsapp_session_${terminalId}`
-      : path.join(__dirname, `../sessions/session_${terminalId}`);
+    const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+      ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, `whatsapp_session_${terminalId}`)
+      : (process.env.NODE_ENV === 'production'
+        ? `/app/data/whatsapp_session_${terminalId}`
+        : path.join(__dirname, `../sessions/session_${terminalId}`));
 
     if (!fs.existsSync(sessionPath)) {
       fs.mkdirSync(sessionPath, { recursive: true });
@@ -65,10 +67,17 @@ class WhatsAppManager {
     const client = new Client({
       authStrategy: new LocalAuth({ dataPath: sessionPath }),
       puppeteer: {
+        handleSIGINT: false,
         args: [
-          '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote',
-          '--single-process', '--disable-gpu'
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+          '--disable-extensions',
+          '--disable-software-rasterizer'
         ],
         headless: true
       }
@@ -85,13 +94,27 @@ class WhatsAppManager {
     client.on('ready', () => {
       terminal.status = 'CONNECTED';
       terminal.qr = null;
+      terminal.lastError = null;
       console.log(`[WHATSAPP][${terminalId}] Client is READY!`);
     });
 
-    client.on('disconnected', (reason) => {
+    client.on('auth_failure', (msg) => {
+      terminal.status = 'DISCONNECTED';
+      terminal.lastError = `Fallo de autenticación: ${msg}`;
+      console.error(`[WHATSAPP][${terminalId}] Auth failure:`, msg);
+    });
+
+    client.on('disconnected', async (reason) => {
       terminal.status = 'DISCONNECTED';
       terminal.lastError = `Desconectado: ${reason}`;
+      console.log(`[WHATSAPP][${terminalId}] Disconnected:`, reason);
       this.clients.delete(terminalId);
+      
+      // Intentar reconexión automática tras 5 segundos si fue una desconexión accidental
+      if (reason !== 'NAVIGATION') {
+        console.log(`[WHATSAPP][${terminalId}] Intentando reconexión automática en 5s...`);
+        setTimeout(() => this.connect(terminalId), 5000);
+      }
     });
 
     client.on('message', async (msg) => {

@@ -2589,4 +2589,9 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+  // Auto-connect default WhatsApp terminal on boot
+  setTimeout(() => {
+    console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');
+    whatsappService.connect('default').catch(err => console.error('Error in auto-connect:', err));
+  }, 5000);
 });
