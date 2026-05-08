@@ -1323,7 +1323,6 @@ const CommandCenter = () => {
                       </button>
                     </div>
                   </div>
-                </div>
 
                 <div className="modal-footer-premium-styled">
                   <button onClick={() => setShowResolveModal(null)} className="btn-cancel-styled" style={{ width: '100%' }}>Cerrar sin cambios</button>

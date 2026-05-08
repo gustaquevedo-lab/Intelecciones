@@ -1036,6 +1036,7 @@ const Communications = () => {
           </div>
         )}
       </AnimatePresence>
+     </div>
 
           {/* NEW TERMINAL MODAL */}
           {showNewTerminalModal && (
