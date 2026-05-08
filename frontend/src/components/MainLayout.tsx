@@ -138,7 +138,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                   }}
                 >
                   <option value="null" style={{ background: 'var(--surface)' }}>🌎 TODOS</option>
-                  {[...new Set(lists.map(l => l.campaign_distrito).filter(Boolean))].sort().map((d: any) => (
+                  {[...new Set([...lists.map(l => l.campaign_distrito).filter(Boolean), 'PEDRO JUAN CABALLERO'])].sort().map((d: any) => (
                     <option key={d} value={d} style={{ background: 'var(--surface)' }}>{d}</option>
                   ))}
                 </select>
