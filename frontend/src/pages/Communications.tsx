@@ -1036,11 +1036,9 @@ const Communications = () => {
           </div>
         )}
       </AnimatePresence>
-     </div>
-    )}
-           </div>
-        </div>
-      </div>
+
+
+
 
           {/* NEW TERMINAL MODAL */}
           {showNewTerminalModal && (
@@ -1090,7 +1088,6 @@ const Communications = () => {
               </motion.div>
             </div>
           )}
-        </div>
       </MainLayout>
     );
 };
