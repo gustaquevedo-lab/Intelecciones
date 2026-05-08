@@ -110,8 +110,8 @@ class WhatsAppManager {
       console.log(`[WHATSAPP][${terminalId}] Disconnected:`, reason);
       this.clients.delete(terminalId);
       
-      // Intentar reconexión automática tras 5 segundos si fue una desconexión accidental
-      if (reason !== 'NAVIGATION') {
+      // Intentar reconexión automática si no fue un cierre de sesión explícito
+      if (reason !== 'LOGOUT') {
         console.log(`[WHATSAPP][${terminalId}] Intentando reconexión automática en 5s...`);
         setTimeout(() => this.connect(terminalId), 5000);
       }
