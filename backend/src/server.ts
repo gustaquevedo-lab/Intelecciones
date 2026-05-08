@@ -221,27 +221,47 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   const activeDistrict = getDistrict(req);
 
   // Column name mapping: most use 'distrito', but 'lists' (l) and 'electors' (e) use 'ciudad'
-  const column = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
+  const distColumn = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
 
   // SuperUser can see everything, or filter by activeDistrict if provided
   if (role === 'SUPERUSUARIO') {
-    return activeDistrict ? { sql: `AND ${tableAlias}.${column} = ?`, param: activeDistrict } : { sql: '', param: null };
+    return activeDistrict ? { sql: `AND ${tableAlias}.${distColumn} = ?`, param: activeDistrict } : { sql: '', param: null };
   }
 
-  // Non-SuperUsers are locked to their district
+  // Non-SuperUsers are locked to their assignment
   if (!user_id) return { sql: 'AND 1=0', param: null };
 
   const user = db.prepare(`
-    SELECT COALESCE(l.ciudad, c.distrito) as distrito 
+    SELECT u.assigned_list_id, u.assigned_campaign_id, COALESCE(l.ciudad, c.distrito) as distrito 
     FROM users u 
     LEFT JOIN lists l ON u.assigned_list_id = l.id 
     LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
     WHERE u.id = ?
   `).get(user_id) as any;
 
-  if (!user?.distrito) return { sql: 'AND 1=0', param: null };
+  if (!user) return { sql: 'AND 1=0', param: null };
+
+  let sql = `AND ${tableAlias}.${distColumn} = ?`;
+  let params = [user.distrito || ''];
+
+  // Add strict list/campaign isolation if assigned
+  if (user.assigned_list_id) {
+    if (tableAlias === 'l') {
+      sql += ` AND ${tableAlias}.id = ?`;
+    } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages') {
+      sql += ` AND ${tableAlias}.list_id = ?`;
+    }
+    params.push(user.assigned_list_id);
+  } else if (user.assigned_campaign_id) {
+    if (tableAlias === 'c') {
+      sql += ` AND ${tableAlias}.id = ?`;
+    } else if (tableAlias === 'l') {
+      sql += ` AND ${tableAlias}.campaign_id = ?`;
+    }
+    params.push(user.assigned_campaign_id);
+  }
   
-  return { sql: `AND ${tableAlias}.${column} = ?`, param: user.distrito };
+  return { sql, params };
 };
 
 const getTenant = (req: any) => {
@@ -587,8 +607,15 @@ app.post('/api/voting-locations/:cod/icon', (req, res) => {
 
 // Campaign Management
 app.get('/api/campaigns', (req, res) => {
-  const campaigns = db.prepare('SELECT * FROM campaigns').all();
-  res.json(campaigns);
+  const sec = getSecurityFilter(req, 'c');
+  const params = sec.params || [];
+  
+  try {
+    const campaigns = db.prepare(`SELECT * FROM campaigns c WHERE 1=1 ${sec.sql}`).all(...params);
+    res.json(campaigns);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/campaigns', (req, res) => {
@@ -810,48 +837,23 @@ app.delete('/api/locales/:cod', (req, res) => {
   }
 });
 
-app.get('/api/stats/command', (req, res) => {
-  const list_id = getListId(req);
-  try {
-    const listFilter = list_id ? `WHERE list_id = ${list_id}` : '';
-    const stats = db.prepare(`
-      SELECT 
-        SUM(CASE WHEN traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
-        SUM(CASE WHEN traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
-        SUM(CASE WHEN traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
-        SUM(CASE WHEN traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
-        COUNT(*) as total
-      FROM elector_captures
-      ${listFilter}
-    `).get() as any;
-
-    const locations = db.prepare(`
-      SELECT e.local_votacion as name, e.cod_local, COUNT(ec.id) as total_captures
-      FROM electors e
-      LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
-      GROUP BY e.local_votacion
-    `).all();
-
-    res.json({
-      ...stats,
-      percentage: stats.total > 0 ? Math.round((stats.green / stats.total) * 100) : 0,
-      locations
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Duplicated endpoint removed
 
 app.get('/api/conflicts', (req, res) => {
+  const sec = getSecurityFilter(req, 'l');
+  const params = sec.params || [];
+  
   try {
     const conflicts = db.prepare(`
-      SELECT ec.*, e.nombre as elector_nombre
+      SELECT ec.*, e.nombre as elector_nombre, l.list_number
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
+      JOIN lists l ON ec.list_id = l.id
+      JOIN campaigns c ON l.campaign_id = c.id
       WHERE ec.elector_ci IN (
         SELECT elector_ci FROM elector_captures GROUP BY elector_ci HAVING COUNT(*) > 1
-      )
-    `).all();
+      ) ${sec.sql}
+    `).all(...params);
     res.json(conflicts);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -859,14 +861,20 @@ app.get('/api/conflicts', (req, res) => {
 });
 
 app.get('/api/activities', (req, res) => {
+  const sec = getSecurityFilter(req, 'l');
+  const params = sec.params || [];
+
   try {
     const activities = db.prepare(`
-      SELECT ec.*, e.nombre as elector_nombre, u.username as coordinator_name
+      SELECT ec.*, e.nombre as elector_nombre, u.username as coordinator_name, l.list_number
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
+      JOIN lists l ON ec.list_id = l.id
+      JOIN campaigns c ON l.campaign_id = c.id
+      WHERE 1=1 ${sec.sql}
       ORDER BY ec.timestamp DESC LIMIT 20
-    `).all();
+    `).all(...params);
     res.json(activities);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -885,8 +893,7 @@ app.get('/api/captures', (req, res) => {
     const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
     const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
 
-    const params: any[] = [];
-    if (sec.param) params.push(sec.param);
+    const params = sec.params || [];
 
     const captures = db.prepare(`
       SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.nombre as coordinator_name, u.role as coordinator_role, l.list_number, c.name as campaign_name
@@ -1069,8 +1076,10 @@ app.post('/api/users', (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
+  const sec = getSecurityFilter(req, 'l'); // Filter based on the list assigned to the user
+  const params = sec.params || [];
+  
   try {
-    // Simplified query to avoid losing users if relations are missing
     let query = `
       SELECT 
         u.*, 
@@ -1080,15 +1089,16 @@ app.get('/api/users', (req, res) => {
         p.nombre as parent_name
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
       LEFT JOIN users p ON u.parent_id = p.id
+      WHERE 1=1 ${sec.sql}
     `;
     
     let users;
     if (req.query.parent_id) {
-      users = db.prepare(query + ' WHERE u.parent_id = ?').all(req.query.parent_id);
+      users = db.prepare(query + ' AND u.parent_id = ?').all(...params, req.query.parent_id);
     } else {
-      users = db.prepare(query).all();
+      users = db.prepare(query).all(...params);
     }
     
     console.log(`[ADMIN] Sirviendo ${users.length} usuarios.`);
@@ -1203,8 +1213,7 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
 
 app.get('/api/lists', (req, res) => {
   const sec = getSecurityFilter(req, 'l');
-  const params: any[] = [];
-  if (sec.param) params.push(sec.param);
+  const params = sec.params || [];
 
   try {
     const lists = db.prepare(`
@@ -1715,8 +1724,7 @@ app.get('/api/stats/command', (req, res) => {
     const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
     const hierarchyFilter = isPadrino ? `AND (u.parent_id = ${req.headers['x-user-id']} OR u.id = ${req.headers['x-user-id']})` : '';
 
-    const params: any[] = [];
-    if (sec.param) params.push(sec.param);
+    const params = sec.params || [];
 
     const statsQuery = `
       SELECT traffic_light, COUNT(*) as count 
@@ -1745,8 +1753,7 @@ app.get('/api/stats/command', (req, res) => {
     
     // For total electors, we need a separate security filter targeting electors table
     const secElectors = getSecurityFilter(req, 'e'); // Assuming ciudad/distrito in electors
-    const electorParams: any[] = [];
-    if (secElectors.param) electorParams.push(secElectors.param);
+    const electorParams = secElectors.params || [];
 
     // Note: electors table uses 'ciudad' or 'distrito'. We use the same filter logic.
     const totalElectorsQuery = `
@@ -1766,7 +1773,7 @@ app.get('/api/stats/command', (req, res) => {
       FROM voting_locations loc
       LEFT JOIN (
         SELECT local_votacion, COUNT(*) as total FROM electors e 
-        WHERE 1=1 ${secElectors.sql.replace('e.distrito', '(e.distrito OR e.ciudad)')}
+        WHERE 1=1 ${secElectors.sql}
         GROUP BY local_votacion
       ) e_counts ON loc.nombre = e_counts.local_votacion
       LEFT JOIN (
@@ -1779,13 +1786,10 @@ app.get('/api/stats/command', (req, res) => {
         WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${hierarchyFilter}
         GROUP BY e.local_votacion
       ) ec_counts ON loc.nombre = ec_counts.local_votacion
-      WHERE 1=1 ${sec.sql.replace('c.distrito', 'loc.distrito')}
+      WHERE 1=1 ${sec.sql.replace('c.distrito', 'loc.distrito').replace('l.ciudad', 'loc.distrito')}
     `;
     
-    const locParams: any[] = [];
-    if (secElectors.param) locParams.push(secElectors.param); // for e_counts
-    if (sec.param) locParams.push(sec.param); // for ec_counts
-    if (sec.param) locParams.push(sec.param); // for loc filter
+    const locParams = [...electorParams, ...params, ...(sec.params || [])];
     
     const locationStats = db.prepare(locationStatsQuery).all(...locParams) as any[];
 
