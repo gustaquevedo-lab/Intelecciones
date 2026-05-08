@@ -92,20 +92,25 @@ const API_BASE = 'http://localhost:5000/api';
 
 /* ─── sub-components ─────────────────────────────────── */
 
-const StatCard = ({ label, value, delta, trend, color, bg, border, isTactical }: any) => (
-  <div style={{
-    background: isTactical ? 'rgba(0,0,0,0.3)' : 'var(--surface)', 
-    border: `1px solid ${isTactical ? 'rgba(255,255,255,0.05)' : 'var(--border)'}`,
-    borderRadius: '16px', 
-    padding: '1.1rem 1.25rem',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    position: 'relative',
-    overflow: 'hidden',
-    boxShadow: isTactical ? 'none' : 'var(--shadow-sm)'
-  }}>
+const StatCard = ({ label, value, delta, trend, color, bg, border, isTactical, onClick, active }: any) => (
+  <div 
+    onClick={onClick}
+    style={{
+      background: active ? `${color}20` : (isTactical ? 'rgba(0,0,0,0.3)' : 'var(--surface)'), 
+      border: `1px solid ${active ? color : (isTactical ? 'rgba(255,255,255,0.05)' : 'var(--border)')}`,
+      borderRadius: '16px', 
+      padding: '1.1rem 1.25rem',
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'space-between',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      position: 'relative',
+      overflow: 'hidden',
+      boxShadow: isTactical ? 'none' : 'var(--shadow-sm)',
+      cursor: onClick ? 'pointer' : 'default',
+      opacity: active || !onClick ? 1 : 0.5
+    }}
+  >
     <div style={{ 
       position: 'absolute', left: 0, top: '25%', bottom: '25%', 
       width: '3px', background: color, borderRadius: '0 4px 4px 0',
@@ -308,7 +313,7 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
   );
 };
 
-const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isReadOnly }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, isReadOnly: boolean }) => {
+const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isReadOnly, onFilter, currentFilter }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, isReadOnly: boolean, onFilter: (f: string | null) => void, currentFilter: string | null }) => {
   const { isDark } = useTheme();
   const criticalLocs = stats?.locations?.filter((l: any) => parseFloat(l.percentage) < 30).sort((a: any, b: any) => parseFloat(a.percentage) - parseFloat(b.percentage)).slice(0, 3) || [];
   const topCoordinators = stats?.top_coordinators || [];
@@ -407,8 +412,31 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
           </span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <StatCard label="Captados Favor" value={stats?.green || 0} trend="up" color="var(--green)" isTactical />
-          <StatCard label="Electores Pendientes" value={(stats?.total_electors - stats?.total_captures) || 0} trend={null} color="var(--plra-300)" isTactical />
+          <StatCard 
+            label="Captados Favor" 
+            value={stats?.green || 0} 
+            trend="up" 
+            color="var(--green)" 
+            isTactical 
+            onClick={() => onFilter(currentFilter === 'GREEN' ? null : 'GREEN')}
+            active={currentFilter === 'GREEN'}
+          />
+          <StatCard 
+            label="Captados Contra" 
+            value={stats?.red || 0} 
+            trend="down" 
+            color="var(--red)" 
+            isTactical 
+            onClick={() => onFilter(currentFilter === 'RED' ? null : 'RED')}
+            active={currentFilter === 'RED'}
+          />
+          <StatCard 
+            label="Electores Pendientes" 
+            value={(stats?.total_electors - stats?.total_captures) || 0} 
+            trend={null} 
+            color="var(--plra-300)" 
+            isTactical 
+          />
         </div>
         <ProjectionCard currentCount={stats?.total_captures || 0} />
       </div>
@@ -475,6 +503,7 @@ const CommandCenter = () => {
   const [showSidebar, setShowSidebar] = useState(window.innerWidth > 768);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isClusteringEnabled, setIsClusteringEnabled] = useState(true);
+  const [trafficLightFilter, setTrafficLightFilter] = useState<string | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -713,6 +742,8 @@ const CommandCenter = () => {
             onResolve={setShowResolveModal} 
             settings={settings} 
             isReadOnly={authUser?.role === 'COORDINADOR'} 
+            onFilter={setTrafficLightFilter}
+            currentFilter={trafficLightFilter}
           />
         </aside>
         <div style={{ position: 'relative', minWidth: 0, minHeight: 0, background: 'var(--surface-light)' }}>
@@ -816,7 +847,10 @@ const CommandCenter = () => {
                 })}
                 {isClusteringEnabled ? (
                   <MarkerClusterGroup disableClusteringAtZoom={15} maxClusterRadius={40}>
-                    {captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap, idx) => {
+                    {captures
+                      .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
+                      .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
+                      .map((cap, idx) => {
                       const jitter = 0.00003 * Math.sqrt(idx);
                       const angle = idx * 137.5;
                       const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
@@ -858,7 +892,10 @@ const CommandCenter = () => {
                     })}
                   </MarkerClusterGroup>
                 ) : (
-                  captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap, idx) => {
+                  captures
+                    .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
+                    .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
+                    .map((cap, idx) => {
                     const jitter = 0.00003 * Math.sqrt(idx);
                     const angle = idx * 137.5;
                     const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
@@ -908,7 +945,10 @@ const CommandCenter = () => {
                     display: 'flex', justifyContent: 'space-around', alignItems: 'center',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
                   }}>
-                    <div style={{ textAlign: 'center' }}>
+                    <div 
+                      onClick={() => setTrafficLightFilter(trafficLightFilter === 'GREEN' ? null : 'GREEN')}
+                      style={{ textAlign: 'center', cursor: 'pointer', opacity: !trafficLightFilter || trafficLightFilter === 'GREEN' ? 1 : 0.4 }}
+                    >
                       <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>A Favor</p>
                       <p style={{ fontSize: '1.1rem', color: 'var(--green)', fontWeight: 900 }}>{commandStats?.green || 0}</p>
                     </div>
@@ -918,9 +958,12 @@ const CommandCenter = () => {
                       <p style={{ fontSize: '1.1rem', color: 'white', fontWeight: 900 }}>{commandStats?.percentage || 0}%</p>
                     </div>
                     <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Conflictos</p>
-                      <p style={{ fontSize: '1.1rem', color: conflicts.length > 0 ? 'var(--red)' : 'var(--green)', fontWeight: 900 }}>{conflicts.length}</p>
+                    <div 
+                      onClick={() => setTrafficLightFilter(trafficLightFilter === 'RED' ? null : 'RED')}
+                      style={{ textAlign: 'center', cursor: 'pointer', opacity: !trafficLightFilter || trafficLightFilter === 'RED' ? 1 : 0.4 }}
+                    >
+                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>En Contra</p>
+                      <p style={{ fontSize: '1.1rem', color: 'var(--red)', fontWeight: 900 }}>{conflicts.length > 0 ? conflicts.length : (commandStats?.red || 0)}</p>
                     </div>
                   </div>
                 )}
@@ -928,24 +971,48 @@ const CommandCenter = () => {
                 {/* Map Legend */}
                 <div style={{
                   position: 'absolute', bottom: isMobile ? '7rem' : '2rem', left: '1rem', zIndex: 1000,
-                  background: 'rgba(10, 14, 23, 0.8)', backdropFilter: 'blur(8px)',
-                  padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)',
-                  display: 'flex', flexDirection: 'column', gap: '0.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+                  background: 'rgba(10, 14, 23, 0.85)', backdropFilter: 'blur(12px)',
+                  padding: '0.85rem', borderRadius: '14px', border: '1px solid var(--border)',
+                  display: 'flex', flexDirection: 'column', gap: '0.65rem', boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '10px', height: '100%', borderRadius: '2px', background: 'var(--green)', minHeight: '12px' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'white', fontWeight: 700 }}>A FAVOR</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '10px', height: '100%', borderRadius: '2px', background: 'var(--yellow)', minHeight: '12px' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'white', fontWeight: 700 }}>DUDOSO</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '10px', height: '100%', borderRadius: '2px', background: 'var(--red)', minHeight: '12px' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'white', fontWeight: 700 }}>EN CONTRA</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.25rem' }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', border: '2px solid var(--plra-300)' }} />
+                  <div style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--text-3)', marginBottom: '0.2rem', letterSpacing: '0.05em' }}>FILTRAR POR ESTADO:</div>
+                  {[
+                    { id: 'GREEN', label: 'A FAVOR', color: 'var(--green)' },
+                    { id: 'YELLOW', label: 'DUDOSO', color: 'var(--yellow)' },
+                    { id: 'RED', label: 'EN CONTRA', color: 'var(--red)' }
+                  ].map(item => (
+                    <div 
+                      key={item.id}
+                      onClick={() => setTrafficLightFilter(trafficLightFilter === item.id ? null : item.id)}
+                      style={{ 
+                        display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
+                        opacity: !trafficLightFilter || trafficLightFilter === item.id ? 1 : 0.3,
+                        transition: '0.2s',
+                        background: trafficLightFilter === item.id ? 'rgba(255,255,255,0.05)' : 'transparent',
+                        padding: '0.3rem 0.5rem', borderRadius: '6px',
+                        margin: '0 -0.3rem'
+                      }}
+                    >
+                      <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: item.color, boxShadow: trafficLightFilter === item.id ? `0 0 10px ${item.color}` : 'none' }} />
+                      <span style={{ fontSize: '0.65rem', color: 'white', fontWeight: 800 }}>{item.label}</span>
+                    </div>
+                  ))}
+                  
+                  {trafficLightFilter && (
+                    <button 
+                      onClick={() => setTrafficLightFilter(null)}
+                      style={{ 
+                        marginTop: '0.2rem', padding: '0.3rem', borderRadius: '6px', 
+                        background: 'var(--accent-subtle)', border: '1px solid var(--border)',
+                        color: 'var(--plra-300)', fontSize: '0.55rem', fontWeight: 800, cursor: 'pointer'
+                      }}
+                    >
+                      LIMPIAR FILTRO
+                    </button>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.6rem' }}>
+                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid var(--plra-300)' }} />
                     <span style={{ fontSize: '0.6rem', color: 'var(--plra-200)', fontWeight: 800 }}>REQUIERE TRANSPORTE</span>
                   </div>
                 </div>
