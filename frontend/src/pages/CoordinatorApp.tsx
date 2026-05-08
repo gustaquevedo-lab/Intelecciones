@@ -193,9 +193,19 @@ const CoordinatorApp = () => {
     setIsDownloading(true);
     setDownloadProgress(10);
     try {
-      const res = await api.get('/offline/padron', { timeout: 60000 });
-      setDownloadProgress(50);
-      await savePadronOffline(res.data);
+      const res = await api.get('/offline/padron', { timeout: 300000 });
+      setDownloadProgress(60);
+      if (!res.data || res.data.length === 0) {
+        alert('No se encontraron electores para tu zona.');
+        setIsDownloading(false);
+        setDownloadProgress(0);
+        return;
+      }
+      setDownloadProgress(75);
+      await savePadronOffline(res.data, (pct) => {
+        // Map 0-100% of saving to 75-100% of the progress bar
+        setDownloadProgress(75 + Math.floor(pct * 0.25));
+      });
       setDownloadProgress(100);
       const count = await getOfflineStats();
       setOfflineCount(count);

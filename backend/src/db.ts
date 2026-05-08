@@ -205,6 +205,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS whatsapp_broadcast_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     template_id INTEGER,
+    terminal_id TEXT DEFAULT 'default',
     target_count INTEGER,
     success_count INTEGER DEFAULT 0,
     fail_count INTEGER DEFAULT 0,
@@ -212,8 +213,17 @@ db.exec(`
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS whatsapp_terminals (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    status TEXT DEFAULT 'DISCONNECTED',
+    last_qr TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS whatsapp_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    terminal_id TEXT DEFAULT 'default',
     contact_number TEXT NOT NULL,
     contact_name TEXT,
     body TEXT,

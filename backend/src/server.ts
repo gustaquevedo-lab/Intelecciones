@@ -24,14 +24,15 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'Accept']
 }));
-app.use(express.json());
-
 // 📸 Multer Setup for Photos
 const uploadDir = process.env.NODE_ENV === 'production'
   ? '/app/data/uploads'
   : path.join(__dirname, '../uploads');
   
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+app.use(express.json());
+app.use('/uploads', express.static(uploadDir));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
@@ -48,25 +49,38 @@ const upload = multer({
 // 📱 OFFLINE SYNC ENDPOINT
 app.get('/api/offline/padron', (req, res) => {
   const user_id = req.headers['x-user-id'];
-  const role = getRole(req);
+  const role = req.headers['x-user-role'];
 
   try {
     let query = 'SELECT ci, nombre, apellido, local_votacion, mesa, orden FROM electors';
     let params: any[] = [];
 
-    // Filter by district if not superuser/jefe
-    if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA' && user_id) {
+    // Filter by district for everyone except SuperUser
+    if (role !== 'SUPERUSUARIO' && user_id) {
       const user = db.prepare(`
         SELECT c.distrito 
         FROM users u 
-        JOIN lists l ON u.assigned_list_id = l.id 
-        JOIN campaigns c ON l.campaign_id = c.id 
+        LEFT JOIN lists l ON u.assigned_list_id = l.id 
+        LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
         WHERE u.id = ?
       `).get(user_id) as any;
       
       if (user?.distrito) {
-        query += " WHERE distrito = ? OR ciudad = ?";
-        params = [user.distrito, user.distrito];
+        // Safe check for columns
+        const columns = db.prepare('PRAGMA table_info(electors)').all() as any[];
+        const hasCiudad = columns.some(c => c.name === 'ciudad');
+        const hasDistrito = columns.some(c => c.name === 'distrito');
+
+        if (hasDistrito && hasCiudad) {
+          query += " WHERE distrito = ? OR ciudad = ?";
+          params = [user.distrito, user.distrito];
+        } else if (hasDistrito) {
+          query += " WHERE distrito = ?";
+          params = [user.distrito];
+        } else if (hasCiudad) {
+          query += " WHERE ciudad = ?";
+          params = [user.distrito];
+        }
         console.log(`[OFFLINE] Filtrando padrón para distrito: ${user.distrito}`);
       }
     }
@@ -76,7 +90,7 @@ app.get('/api/offline/padron', (req, res) => {
     // Compact mapping: [ci, nombre, apellido, local, mesa, orden]
     const compact = (electors as any[]).map(e => [e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden]);
     
-    console.log(`[OFFLINE] Enviando ${compact.length} registros compactos...`);
+    console.log(`[OFFLINE] Enviando ${compact.length} registros compactos.`);
     res.json(compact);
   } catch (err: any) {
     console.error('[OFFLINE ERROR]', err);
@@ -190,12 +204,41 @@ app.post('/api/ingest', (req, res) => {
 
 // --- Multi-tenancy Helpers ---
 const getListId = (req: express.Request) => {
-  const id = parseInt(req.headers['x-list-id'] as string) || parseInt(req.query.listId as string);
-  return isNaN(id) ? null : id;
+  const h = req.headers['x-list-id'];
+  return (h && h !== 'null' && h !== 'undefined') ? parseInt(h as string) : null;
 };
 
-const getRole = (req: express.Request) => {
-  return req.headers['x-user-role'] as string || 'COORDINADOR';
+const getDistrict = (req: express.Request) => {
+  const d = req.headers['x-district'];
+  return (d && d !== 'null' && d !== 'undefined') ? d as string : null;
+};
+
+const getRole = (req: express.Request) => (req.headers['x-user-role'] as string) || 'GUEST';
+
+const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
+  const role = getRole(req);
+  const user_id = req.headers['x-user-id'];
+  const activeDistrict = getDistrict(req);
+
+  // SuperUser can see everything, or filter by activeDistrict if provided
+  if (role === 'SUPERUSUARIO') {
+    return activeDistrict ? { sql: `AND ${tableAlias}.distrito = ?`, param: activeDistrict } : { sql: '', param: null };
+  }
+
+  // Non-SuperUsers are locked to their district
+  if (!user_id) return { sql: 'AND 1=0', param: null };
+
+  const user = db.prepare(`
+    SELECT c.distrito 
+    FROM users u 
+    LEFT JOIN lists l ON u.assigned_list_id = l.id 
+    LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+    WHERE u.id = ?
+  `).get(user_id) as any;
+
+  if (!user?.distrito) return { sql: 'AND 1=0', param: null };
+  
+  return { sql: `AND ${tableAlias}.distrito = ?`, param: user.distrito };
 };
 
 const getTenant = (req: any) => {
@@ -832,11 +875,14 @@ app.get('/api/captures', (req, res) => {
   const list_id = getListId(req);
   const local_id = req.query.localId;
   const role = getRole(req);
-  const isSuper = role === 'SUPERUSUARIO';
+  const sec = getSecurityFilter(req, 'c');
 
   try {
-    const listFilter = isSuper || !list_id || isNaN(list_id) ? '' : `AND ec.list_id = ${list_id}`;
+    const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
     const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
+
+    const params: any[] = [];
+    if (sec.param) params.push(sec.param);
 
     const captures = db.prepare(`
       SELECT ec.*, e.nombre, e.apellido, e.local_votacion, u.nombre as coordinator_name, u.role as coordinator_role, l.list_number, c.name as campaign_name
@@ -845,9 +891,9 @@ app.get('/api/captures', (req, res) => {
       JOIN users u ON ec.coordinator_id = u.id
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
-      WHERE 1=1 ${listFilter} ${localFilter}
+      WHERE 1=1 ${sec.sql} ${listFilter} ${localFilter}
       ORDER BY ec.timestamp DESC
-    `).all();
+    `).all(...params);
     res.json(captures);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1152,31 +1198,17 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
 });
 
 app.get('/api/lists', (req, res) => {
-  try {
-    const role = getRole(req);
-    const user_id = req.headers['x-user-id'];
-    
-    let filter = '';
-    if (role !== 'SUPERUSUARIO' && user_id) {
-      const user = db.prepare(`
-        SELECT c.distrito 
-        FROM users u 
-        JOIN lists l2 ON u.assigned_list_id = l2.id 
-        JOIN campaigns c ON l2.campaign_id = c.id 
-        WHERE u.id = ?
-      `).get(user_id) as any;
-      if (user?.distrito) {
-        filter = `WHERE c.distrito = '${user.distrito}'`;
-      }
-    }
+  const sec = getSecurityFilter(req, 'c');
+  const params: any[] = [];
+  if (sec.param) params.push(sec.param);
 
+  try {
     const lists = db.prepare(`
-      SELECT l.*, c.name as campaign_name, e.nombre as candidate_nombre, e.apellido as candidate_apellido
-      FROM lists l
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
-      LEFT JOIN electors e ON l.candidate_ci = e.ci
-      ${filter}
-    `).all();
+      SELECT l.*, c.name as campaign_name, c.distrito as campaign_distrito
+      FROM lists l 
+      JOIN campaigns c ON l.campaign_id = c.id
+      WHERE 1=1 ${sec.sql}
+    `).all(...params);
     res.json(lists);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1283,28 +1315,7 @@ app.get('/api/audit/stats', (req, res) => {
   }
 });
 
-// System Maintenance
-app.post('/api/admin/system/wipe-captures', (req, res) => {
-  const { key } = req.body;
-  try {
-    const storedKey = db.prepare("SELECT value FROM settings WHERE key = 'master_key'").get() as any;
-    
-    if (!storedKey || key !== storedKey.value) {
-      return res.status(403).json({ error: 'Llave Maestra inválida. Acción denegada.' });
-    }
-
-    db.transaction(() => {
-      db.prepare('DELETE FROM elector_captures').run();
-      db.prepare('DELETE FROM logistics').run();
-      db.prepare('DELETE FROM elector_locations').run();
-      db.prepare("UPDATE electors SET status = 'Pendiente', coordinador_asignado = NULL, is_priority = 0").run();
-      logAction(1, 'SYSTEM_WIPE', 'GLOBAL', null, 'Performed a master wipe of all capture data');
-    })();
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// System Maintenance endpoints moved to the end of the file for better organization.
 
 // Settings Management
 app.get('/api/settings', (req, res) => {
@@ -1465,15 +1476,50 @@ app.get('/api/admin/conflicts', (req, res) => {
         e.ci as elector_ci,
         e.nombre as elector_nombre,
         e.apellido as elector_apellido,
+        
+        -- New Capture (The one that triggered the conflict)
         ec.id as capture_id,
         ec.traffic_light,
         ec.timestamp as capture_time,
+        ec.lat as capture_lat,
+        ec.lng as capture_lng,
         u.nombre as coordinator_name,
-        u.id as coordinator_id
+        u.id as coordinator_id,
+        p.nombre as parent_name,
+        
+        -- Original Capture (The one already in the system)
+        (SELECT ec2.id FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_id,
+         
+        (SELECT ec2.timestamp FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_time,
+
+        (SELECT ec2.lat FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_lat,
+
+        (SELECT ec2.lng FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_lng,
+         
+        (SELECT u2.nombre FROM elector_captures ec2 
+         JOIN users u2 ON ec2.coordinator_id = u2.id
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_coordinator_name,
+
+        (SELECT p2.nombre FROM elector_captures ec2 
+         JOIN users u2 ON ec2.coordinator_id = u2.id
+         LEFT JOIN users p2 ON u2.parent_id = p2.id
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_parent_name
+
       FROM capture_conflicts cc
       JOIN elector_captures ec ON cc.capture_id = ec.id
       JOIN electors e ON cc.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
       WHERE cc.status = 'PENDING'
       ${isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : ''}
     `;
@@ -1650,64 +1696,87 @@ app.get('/api/stats/command', (req, res) => {
   const list_id = getListId(req);
   const local_id = req.query.localId as string;
   const role = getRole(req);
-  const user_id = req.headers['x-user-id'];
-  const isSuper = role === 'SUPERUSUARIO';
   const isPadrino = role === 'PADRINO';
+  const sec = getSecurityFilter(req, 'c');
 
   try {
-    const listFilter = isSuper || !list_id || isNaN(list_id) ? '' : `AND ec.list_id = ${list_id}`;
+    const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
     const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
-    const hierarchyFilter = isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : '';
+    const hierarchyFilter = isPadrino ? `AND (u.parent_id = ${req.headers['x-user-id']} OR u.id = ${req.headers['x-user-id']})` : '';
+
+    const params: any[] = [];
+    if (sec.param) params.push(sec.param);
 
     const statsQuery = `
       SELECT traffic_light, COUNT(*) as count 
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
-      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter} ${hierarchyFilter}
+      JOIN lists l ON ec.list_id = l.id
+      JOIN campaigns c ON l.campaign_id = c.id
+      WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${localFilter} ${hierarchyFilter}
       GROUP BY traffic_light
     `;
     
-    const stats = db.prepare(statsQuery).all() as any[];
+    const stats = db.prepare(statsQuery).all(...params) as any[];
 
     const totalCapturesQuery = `
       SELECT COUNT(*) as count 
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
-      WHERE ec.is_disputed = 0 ${listFilter} ${localFilter} ${hierarchyFilter}
+      JOIN lists l ON ec.list_id = l.id
+      JOIN campaigns c ON l.campaign_id = c.id
+      WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${localFilter} ${hierarchyFilter}
     `;
     
-    const totalCaptures = db.prepare(totalCapturesQuery).get() as any;
+    const totalCaptures = db.prepare(totalCapturesQuery).get(...params) as any;
     
+    // For total electors, we need a separate security filter targeting electors table
+    const secElectors = getSecurityFilter(req, 'e'); // Assuming ciudad/distrito in electors
+    const electorParams: any[] = [];
+    if (secElectors.param) electorParams.push(secElectors.param);
+
+    // Note: electors table uses 'ciudad' or 'distrito'. We use the same filter logic.
     const totalElectorsQuery = `
       SELECT COUNT(*) as count FROM electors e 
-      WHERE 1=1 ${local_id ? `AND e.cod_local = '${local_id}'` : ''}
+      WHERE 1=1 ${local_id ? `AND e.cod_local = '${local_id}'` : ''} 
+      ${secElectors.sql.replace('e.distrito', '(e.distrito OR e.ciudad)')}
     `;
-    const totalElectors = db.prepare(totalElectorsQuery).get() as any;
+    const totalElectors = db.prepare(totalElectorsQuery).get(...electorParams) as any;
 
     const locationStatsQuery = `
       SELECT 
-        l.cod_local,
-        l.nombre,
+        loc.cod_local,
+        loc.nombre,
         COALESCE(e_counts.total, 0) as total_electors,
         COALESCE(ec_counts.total, 0) as total_captures,
         COALESCE(ec_counts.green, 0) as green_captures
-      FROM voting_locations l
+      FROM voting_locations loc
       LEFT JOIN (
-        SELECT local_votacion, COUNT(*) as total FROM electors GROUP BY local_votacion
-      ) e_counts ON l.nombre = e_counts.local_votacion
+        SELECT local_votacion, COUNT(*) as total FROM electors e 
+        WHERE 1=1 ${secElectors.sql.replace('e.distrito', '(e.distrito OR e.ciudad)')}
+        GROUP BY local_votacion
+      ) e_counts ON loc.nombre = e_counts.local_votacion
       LEFT JOIN (
         SELECT e.local_votacion, COUNT(ec.id) as total, SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
         FROM elector_captures ec
         JOIN electors e ON ec.elector_ci = e.ci
         JOIN users u ON ec.coordinator_id = u.id
-        WHERE ec.is_disputed = 0 ${listFilter} ${hierarchyFilter}
+        JOIN lists l ON ec.list_id = l.id
+        JOIN campaigns c ON l.campaign_id = c.id
+        WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${hierarchyFilter}
         GROUP BY e.local_votacion
-      ) ec_counts ON l.nombre = ec_counts.local_votacion
+      ) ec_counts ON loc.nombre = ec_counts.local_votacion
+      WHERE 1=1 ${sec.sql.replace('c.distrito', 'loc.distrito')}
     `;
     
-    const locationStats = db.prepare(locationStatsQuery).all() as any[];
+    const locParams: any[] = [];
+    if (secElectors.param) locParams.push(secElectors.param); // for e_counts
+    if (sec.param) locParams.push(sec.param); // for ec_counts
+    if (sec.param) locParams.push(sec.param); // for loc filter
+    
+    const locationStats = db.prepare(locationStatsQuery).all(...locParams) as any[];
 
     res.json({
       green: stats.find(s => s.traffic_light === 'GREEN')?.count || 0,
@@ -1893,17 +1962,30 @@ app.get('/api/admin/activity', (req, res) => {
 });
 
 // WhatsApp Endpoints
+app.get('/api/whatsapp/terminals', async (req, res) => {
+  res.json(await whatsappService.getTerminals());
+});
+
+app.post('/api/whatsapp/terminals', async (req, res) => {
+  const { id, name } = req.body;
+  await whatsappService.addTerminal(id, name);
+  res.json({ success: true });
+});
+
 app.get('/api/whatsapp/status', (req, res) => {
-  res.json(whatsappService.getStatus());
+  const terminalId = (req.query.terminalId as string) || 'default';
+  res.json(whatsappService.getStatus(terminalId));
 });
 
 app.post('/api/whatsapp/connect', (req, res) => {
-  whatsappService.connect();
+  const terminalId = (req.body.terminalId as string) || 'default';
+  whatsappService.connect(terminalId);
   res.json({ success: true });
 });
 
 app.post('/api/whatsapp/disconnect', (req, res) => {
-  whatsappService.disconnect();
+  const terminalId = (req.body.terminalId as string) || 'default';
+  whatsappService.disconnect(terminalId);
   res.json({ success: true });
 });
 
@@ -2443,7 +2525,7 @@ app.post('/api/veedor/mark-vote', (req, res) => {
 });
 
 app.post('/api/admin/system/wipe-captures', (req, res) => {
-  const { key } = req.body;
+  const { key, distrito } = req.body;
   const masterKeyFromDb = db.prepare("SELECT value FROM settings WHERE key = 'master_key'").get() as any;
   
   if (key !== masterKeyFromDb?.value) {
@@ -2452,21 +2534,42 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
 
   try {
     db.transaction(() => {
-      // 1. Wipe dynamics
-      db.prepare('DELETE FROM elector_captures').run();
-      db.prepare('DELETE FROM capture_conflicts').run();
-      db.prepare('DELETE FROM field_requests').run();
-      db.prepare('DELETE FROM audit_logs').run();
-      db.prepare('DELETE FROM participation_logs').run();
-      db.prepare('DELETE FROM acta_results').run();
-      db.prepare('DELETE FROM results').run();
+      if (!distrito || distrito === 'ALL') {
+        // GLOBAL WIPE
+        db.prepare('DELETE FROM elector_captures').run();
+        db.prepare('DELETE FROM capture_conflicts').run();
+        db.prepare('DELETE FROM field_requests').run();
+        db.prepare('DELETE FROM participation_logs').run();
+        db.prepare('DELETE FROM acta_results').run();
+        db.prepare('DELETE FROM results').run();
+        logAction(1, 'SYSTEM_WIPE', 'GLOBAL', null, 'Performed a master wipe of all system data');
+      } else {
+        // DISTRICT SPECIFIC WIPE
+        const electorsInDistrito = db.prepare('SELECT ci FROM electors WHERE ciudad = ? OR distrito = ?').all(distrito, distrito) as any[];
+        const ciList = electorsInDistrito.map(e => `'${e.ci}'`).join(',');
+        
+        if (ciList) {
+          db.prepare(`DELETE FROM elector_captures WHERE elector_ci IN (${ciList})`).run();
+          db.prepare(`DELETE FROM capture_conflicts WHERE elector_ci IN (${ciList})`).run();
+        }
 
-      // 2. Note: We keep users, campaigns, lists, voting_locations, and electors
-      // We also keep vehicles and settings
+        const locationsInDistrito = db.prepare('SELECT nombre FROM voting_locations WHERE distrito = ?').all(distrito) as any[];
+        const locList = locationsInDistrito.map(l => `'${l.nombre}'`).join(',');
+
+        if (locList) {
+          db.prepare(`DELETE FROM participation_logs WHERE local_votacion IN (${locList})`).run();
+          db.prepare(`DELETE FROM results WHERE local_votacion IN (${locList})`).run();
+          // acta_results are linked to results via acta_id, but better-sqlite3 doesn't have cascades by default if not enabled
+          db.prepare(`DELETE FROM acta_results WHERE acta_id NOT IN (SELECT id FROM results)`).run();
+        }
+
+        logAction(1, 'SYSTEM_WIPE', 'DISTRICT', null, `Performed a wipe for district: ${distrito}`);
+      }
     })();
 
-    res.json({ success: true, message: 'Sistema purgado exitosamente' });
+    res.json({ success: true, message: distrito && distrito !== 'ALL' ? `Datos del distrito ${distrito} purgados` : 'Sistema purgado globalmente' });
   } catch (err: any) {
+    console.error('[WIPE ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });

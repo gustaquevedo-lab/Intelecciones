@@ -57,6 +57,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CountdownCard } from '../components/CountdownCard';
 import api, { API_BASE } from '../services/api';
+const getImageUrl = (url?: string) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  const base = API_BASE.replace('/api', '');
+  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -110,6 +116,7 @@ interface Campaign {
   id: number;
   name: string;
   status: string;
+  distrito?: string;
 }
 
 interface List {
@@ -265,19 +272,36 @@ const SuperAdmin = () => {
     const key = prompt('NIVEL DE SEGURIDAD 2: Ingrese la LLAVE MAESTRA para autorizar la purga:');
     if (!key) return;
     
-    const finalCheck = prompt('CONFIRMACIÓN FINAL: Escriba "LIMPIAR SISTEMA" para ejecutar la acción irreversible:');
-    if (finalCheck !== "LIMPIAR SISTEMA") {
-      alert("Operación cancelada.");
+    const distritos = Array.from(new Set(campaigns.map(c => c.distrito).filter(Boolean)));
+    const distMsg = distritos.length > 0 
+      ? `Distritos detectados: ${distritos.join(', ')}.\n\n` 
+      : '';
+    
+    const distritoInput = prompt(
+      `NIVEL DE SEGURIDAD 3: ¿Qué datos desea purgar?\n\n` +
+      `${distMsg}` +
+      `Escriba el nombre EXACTO del distrito (ej. "PEDRO JUAN CABALLERO") o escriba "TODOS" para una limpieza global.`
+    );
+
+    if (!distritoInput) return;
+    const targetDistrito = distritoInput.trim();
+
+    const finalCheck = prompt(`CONFIRMACIÓN FINAL: Escriba "LIMPIAR ${targetDistrito.toUpperCase()}" para ejecutar la acción:`);
+    if (finalCheck?.toUpperCase() !== `LIMPIAR ${targetDistrito.toUpperCase()}`) {
+      alert("Operación cancelada. El texto de confirmación no coincide.");
       return;
     }
 
     try {
       setIsLoading(true);
-      await api.post('/admin/system/wipe-captures', { key });
-      alert('✅ SISTEMA LIMPIO: Todas las capturas de prueba han sido eliminadas.');
+      const res = await api.post('/admin/system/wipe-captures', { 
+        key, 
+        distrito: targetDistrito.toUpperCase() === 'TODOS' ? 'ALL' : targetDistrito 
+      });
+      alert(`✅ PROCESO FINALIZADO: ${res.data.message || 'Purga completada.'}`);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Llave Maestra incorrecta');
+      alert(err.response?.data?.error || 'Error en la autorización o proceso');
     } finally {
       setIsLoading(false);
     }
@@ -1191,7 +1215,7 @@ const SuperAdmin = () => {
             accessor: (l: any) => (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-light)', border: '1px solid var(--border)', flexShrink: 0 }}>
-                  {l.photo_url ? <img src={l.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <User size={16} style={{ margin: '8px', color: 'var(--text-3)' }} />}
+                  {l.photo_url ? <img src={getImageUrl(l.photo_url) || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <User size={16} style={{ margin: '8px', color: 'var(--text-3)' }} />}
                 </div>
                 <div>
                   <div style={{ fontWeight: 800, color: 'white', fontSize: '0.85rem' }}>{l.candidate_alias || l.candidate_nombre}</div>
@@ -2167,7 +2191,7 @@ const SuperAdmin = () => {
                       {/* Cabecera de Perfil Compacta */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem', background: 'rgba(0,71,171,0.04)', borderRadius: '16px', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
                         <div className="premium-avatar-frame-compact" style={{ width: '60px', height: '60px', flexShrink: 0, border: '2px solid white', boxShadow: 'var(--shadow-sm)' }} onClick={() => fileInputRef.current?.click()}>
-                          {userProfilePreview?.photo_url ? <img src={userProfilePreview.photo_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="P" /> : <UsersIcon size={24} style={{ opacity: 0.5 }} />}
+                          {userProfilePreview?.photo_url ? <img src={getImageUrl(userProfilePreview.photo_url) || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="P" /> : <UsersIcon size={24} style={{ opacity: 0.5 }} />}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{newUserRealName || 'Identidad no verificada'}</h3>
@@ -2289,7 +2313,7 @@ const SuperAdmin = () => {
                           position: 'relative', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' 
                         }} onClick={() => fileInputRef.current?.click()}>
                           {candidatePreview?.photo_url ? (
-                            <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={getImageUrl(candidatePreview.photo_url) || ''} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             <Users size={40} style={{ color: 'var(--text-3)', opacity: 0.5 }} />
                           )}

@@ -18,7 +18,7 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, userPhoto }) => {
   const navigate = useNavigate();
-  const { user, activeListId, setActiveListId } = useAuth();
+  const { user, activeListId, setActiveListId, activeDistrict, setActiveDistrict } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
   const { settings } = useSettings();
   const [lists, setLists] = useState<any[]>([]);
@@ -96,7 +96,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
             <Logo />
           </div>
 
-          {/* List Selector */}
+          {/* Global Multi-District Selector (Blindaje) */}
           {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO') && (
             <div 
               className="hidden-mobile"
@@ -106,38 +106,73 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                 transform: 'translateX(-50%)',
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: '0.4rem', 
+                gap: '0.75rem', 
                 background: 'var(--surface-light)', 
-                padding: '0.3rem 0.75rem', 
-                borderRadius: '10px', 
+                padding: '0.4rem 1rem', 
+                borderRadius: '12px', 
                 border: '1px solid var(--border)',
                 whiteSpace: 'nowrap',
-                boxShadow: 'var(--shadow-sm)',
+                boxShadow: 'var(--shadow-md)',
                 zIndex: 10
               }}
             >
-              <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--plra-400)', textTransform: 'uppercase' }}>VISTA:</span>
-              <select 
-                value={activeListId === null ? 'null' : activeListId}
-                onChange={(e) => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-display)'
-                }}
-              >
-                <option value="null" style={{ background: 'var(--surface)' }}>🌎 GLOBAL</option>
-                {lists.map((l: any) => (
-                  <option key={l.id} value={l.id} style={{ background: 'var(--surface)' }}>
-                    {l.list_number} {l.type === 'CONCEJAL' ? `Op${l.option_number}` : '(Int.)'} — {l.candidate_alias || l.candidate_nombre}
-                  </option>
-                ))}
-              </select>
+              {/* DISTRICT SELECTOR */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--plra-400)', textTransform: 'uppercase' }}>DISTRITO:</span>
+                <select 
+                  value={activeDistrict || 'null'}
+                  onChange={(e) => {
+                    setActiveDistrict(e.target.value === 'null' ? null : e.target.value);
+                    setActiveListId(null); // Reset list when district changes
+                  }}
+                  disabled={user.role !== 'SUPERUSUARIO'}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text)',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    outline: 'none',
+                    cursor: user.role === 'SUPERUSUARIO' ? 'pointer' : 'default',
+                    fontFamily: 'var(--font-display)'
+                  }}
+                >
+                  <option value="null" style={{ background: 'var(--surface)' }}>🌎 TODOS</option>
+                  {[...new Set(lists.map(l => l.campaign_distrito).filter(Boolean))].sort().map((d: any) => (
+                    <option key={d} value={d} style={{ background: 'var(--surface)' }}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ width: '1px', height: '16px', background: 'var(--border)' }} />
+
+              {/* LIST SELECTOR (Filtered by District) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--plra-400)', textTransform: 'uppercase' }}>LISTA:</span>
+                <select 
+                  value={activeListId === null ? 'null' : activeListId}
+                  onChange={(e) => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-display)'
+                  }}
+                >
+                  <option value="null" style={{ background: 'var(--surface)' }}>📋 TODAS</option>
+                  {lists
+                    .filter(l => !activeDistrict || l.campaign_distrito === activeDistrict)
+                    .map((l: any) => (
+                      <option key={l.id} value={l.id} style={{ background: 'var(--surface)' }}>
+                        L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
           )}
 

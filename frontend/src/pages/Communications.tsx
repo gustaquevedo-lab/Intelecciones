@@ -33,6 +33,10 @@ const Communications = () => {
   const [contactIntel, setContactIntel] = useState<any>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  const [terminals, setTerminals] = useState<any[]>([]);
+  const [activeTerminalId, setActiveTerminalId] = useState('default');
+  const [showNewTerminalModal, setShowNewTerminalModal] = useState(false);
+  const [newTerminalData, setNewTerminalData] = useState({ id: '', name: '' });
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,26 +55,33 @@ const Communications = () => {
 
   const fetchData = async () => {
     try {
-      const [statusRes, tempRes, logRes, chatRes, msgRes] = await Promise.all([
-        api.get('/whatsapp/status'),
+      const [statusRes, tempRes, logRes, chatRes, msgRes, termRes] = await Promise.all([
+        api.get(`/whatsapp/status?terminalId=${activeTerminalId}`),
         api.get('/whatsapp/templates'),
         api.get('/whatsapp/broadcast/logs'),
         api.get('/whatsapp/chats'),
-        api.get('/whatsapp/messages')
+        api.get('/whatsapp/messages'),
+        api.get('/whatsapp/terminals')
       ]);
       
       setWsStatus(statusRes.data.status);
       if (statusRes.data.qr) setQrCode(statusRes.data.qr);
+      else setQrCode(null);
       setTemplates(tempRes.data);
       setBroadcastLogs(logRes.data);
       setChats(chatRes.data);
       setMessages(msgRes.data);
+      setTerminals(termRes.data);
     } catch (err) { console.error(err); }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 4000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -97,7 +108,7 @@ const Communications = () => {
 
   const handleConnect = async () => {
     setWsStatus('CONNECTING');
-    try { await api.post('/whatsapp/connect'); } catch (err) { console.error(err); }
+    try { await api.post('/whatsapp/connect', { terminalId: activeTerminalId }); } catch (err) { console.error(err); }
   };
 
   const handleSendMessage = async () => {
@@ -216,9 +227,23 @@ const Communications = () => {
                 <div style={{ padding: '4px 8px', borderRadius: '6px', background: 'var(--accent-subtle)', color: 'var(--plra-500)', fontSize: '0.65rem', fontWeight: 800 }}>
                   V 2.0
                 </div>
-             </div>
-             <div style={{ position: 'relative' }}>
-                <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+             </div>              <div style={{ position: 'relative' }}>
+                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                   <select 
+                      value={activeTerminalId} 
+                      onChange={(e) => setActiveTerminalId(e.target.value)}
+                      style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700 }}
+                   >
+                      {terminals.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                   </select>
+                   <button 
+                      onClick={() => setShowNewTerminalModal(true)}
+                      style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--plra-500)', border: 'none', color: 'white', cursor: 'pointer' }}
+                   >
+                      <Plus size={16} />
+                   </button>
+                </div>
+                <Search size={14} style={{ position: 'absolute', left: '12px', bottom: '1rem', color: 'var(--text-3)' }} />
                 <input 
                   placeholder="Buscar conversaciones..." 
                   style={{ 
@@ -227,10 +252,8 @@ const Communications = () => {
                     borderRadius: '12px', color: 'var(--text)', fontSize: '0.8rem', outline: 'none',
                     transition: 'all 0.2s'
                   }}
-                  onFocus={e => e.currentTarget.style.borderColor = 'var(--plra-300)'}
-                  onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
                 />
-             </div>
+              </div>
           </div>
 
           <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
@@ -578,27 +601,47 @@ const Communications = () => {
                              </div>
 
                              {wsStatus === 'CONNECTED' ? (
-                               <button 
-                                  onClick={() => api.post('/whatsapp/disconnect')} 
-                                  style={{ 
-                                    marginTop: '3.5rem', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)',
-                                    color: 'var(--red)', padding: '1rem 3rem', borderRadius: '16px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' 
-                                  }}
-                                >
-                                  DESCONECTAR NODO
-                                </button>
-                             ) : (
-                               <button 
-                                  onClick={handleConnect} 
-                                  style={{ 
-                                    marginTop: '3.5rem', background: 'var(--plra-500)', border: 'none',
-                                    color: 'white', padding: '1.25rem 3.5rem', borderRadius: '16px', fontWeight: 900, cursor: 'pointer',
-                                    boxShadow: '0 15px 35px rgba(0, 71, 171, 0.3)', fontSize: '1rem', letterSpacing: '0.02em'
-                                  }}
-                                >
-                                  GENERAR QR DE ACCESO
-                                </button>
-                             )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+                                   <div style={{ background: 'rgba(34, 197, 94, 0.05)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                                      <p style={{ color: 'var(--green)', fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>
+                                         ✓ Nodo Operativo. Todos los mensajes se están procesando desde esta terminal vinculada.
+                                      </p>
+                                   </div>
+                                   <button 
+                                      onClick={() => api.post('/whatsapp/disconnect')} 
+                                      style={{ 
+                                        background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)',
+                                        color: 'var(--red)', padding: '1rem 3rem', borderRadius: '16px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem' 
+                                      }}
+                                    >
+                                      DESCONECTAR NODO
+                                    </button>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+                                   <div style={{ textAlign: 'left', background: 'var(--surface-2)', padding: '1.5rem', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                                      <h4 style={{ fontSize: '0.8rem', fontWeight: 900, marginBottom: '0.75rem', color: 'var(--text)' }}>Guía de Conexión:</h4>
+                                      <ol style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.8rem', color: 'var(--text-3)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                         <li>Haz clic en <strong>Generar QR</strong>.</li>
+                                         <li>Abre WhatsApp en tu celular.</li>
+                                         <li>Ve a <strong>Dispositivos vinculados</strong>.</li>
+                                         <li>Escanea el código que aparecerá arriba.</li>
+                                      </ol>
+                                   </div>
+                                   <button 
+                                      onClick={handleConnect} 
+                                      disabled={wsStatus === 'CONNECTING' && !qrCode}
+                                      style={{ 
+                                        width: '100%', background: 'var(--plra-500)', border: 'none',
+                                        color: 'white', padding: '1.25rem', borderRadius: '16px', fontWeight: 900, cursor: 'pointer',
+                                        boxShadow: '0 15px 35px rgba(0, 71, 171, 0.3)', fontSize: '1rem', letterSpacing: '0.02em',
+                                        opacity: (wsStatus === 'CONNECTING' && !qrCode) ? 0.6 : 1
+                                      }}
+                                    >
+                                      {wsStatus === 'CONNECTING' ? 'INICIALIZANDO...' : 'GENERAR QR DE ACCESO'}
+                                    </button>
+                                </div>
+                              )}
                           </div>
                         </motion.div>
                       )}
@@ -994,9 +1037,57 @@ const Communications = () => {
         )}
       </AnimatePresence>
 
+          {/* NEW TERMINAL MODAL */}
+          {showNewTerminalModal && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem' }}>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ width: '100%', maxWidth: '400px', background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900 }}>Nueva Terminal de WhatsApp</h3>
+                  <button onClick={() => setShowNewTerminalModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={20} /></button>
+                </div>
+                <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>ID Unico (ej: prensa, logística)</label>
+                    <input 
+                      type="text" 
+                      value={newTerminalData.id} 
+                      onChange={e => setNewTerminalData(p => ({ ...p, id: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
+                      placeholder="id_de_la_linea"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'white' }} 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Nombre de la Terminal</label>
+                    <input 
+                      type="text" 
+                      value={newTerminalData.name} 
+                      onChange={e => setNewTerminalData(p => ({ ...p, name: e.target.value }))}
+                      placeholder="Ej: Terminal de Prensa"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'white' }} 
+                    />
+                  </div>
+                </div>
+                <div style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', display: 'flex', gap: '1rem' }}>
+                  <button onClick={() => setShowNewTerminalModal(false)} style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-3)', fontWeight: 800 }}>Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (!newTerminalData.id || !newTerminalData.name) return;
+                      await api.post('/whatsapp/terminals', newTerminalData);
+                      fetchData();
+                      setShowNewTerminalModal(false);
+                      setNewTerminalData({ id: '', name: '' });
+                    }} 
+                    style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', background: 'var(--plra-500)', border: 'none', color: 'white', fontWeight: 900 }}
+                  >
+                    CREAR TERMINAL
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </div>
     </MainLayout>
   );
 };
 
 export default Communications;
-

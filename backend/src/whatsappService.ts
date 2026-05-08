@@ -5,189 +5,171 @@ import db from './db';
 import fs from 'fs';
 import path from 'path';
 
-class WhatsAppService {
-  private client: Client;
-  private qrCode: string | null = null;
-  private status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' = 'DISCONNECTED';
+interface TerminalInfo {
+  id: string;
+  name: string;
+  status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED';
+  qr: string | null;
+  lastError: string | null;
+}
+
+class WhatsAppManager {
+  private clients: Map<string, Client> = new Map();
+  private terminals: Map<string, TerminalInfo> = new Map();
 
   constructor() {
-    const sessionPath = process.env.NODE_ENV === 'production'
-      ? '/app/data/whatsapp_session'
-      : './sessions';
+    this.loadTerminalsFromDb();
+  }
 
-    this.client = new Client({
+  private loadTerminalsFromDb() {
+    try {
+      const rows = db.prepare('SELECT * FROM whatsapp_terminals').all() as any[];
+      rows.forEach(row => {
+        this.terminals.set(row.id, {
+          id: row.id,
+          name: row.name,
+          status: 'DISCONNECTED',
+          qr: null,
+          lastError: null
+        });
+      });
+      // Always ensure a default terminal exists
+      if (!this.terminals.has('default')) {
+        this.addTerminal('default', 'Terminal Principal');
+      }
+    } catch (err) {
+      console.error('Error loading terminals:', err);
+    }
+  }
+
+  async addTerminal(id: string, name: string) {
+    db.prepare('INSERT OR IGNORE INTO whatsapp_terminals (id, name) VALUES (?, ?)').run(id, name);
+    this.terminals.set(id, { id, name, status: 'DISCONNECTED', qr: null, lastError: null });
+  }
+
+  async getTerminals() {
+    return Array.from(this.terminals.values());
+  }
+
+  private initClient(terminalId: string) {
+    if (this.clients.has(terminalId)) return this.clients.get(terminalId)!;
+
+    const sessionPath = process.env.NODE_ENV === 'production'
+      ? `/app/data/whatsapp_session_${terminalId}`
+      : path.join(__dirname, `../sessions/session_${terminalId}`);
+
+    if (!fs.existsSync(sessionPath)) {
+      fs.mkdirSync(sessionPath, { recursive: true });
+    }
+
+    const client = new Client({
       authStrategy: new LocalAuth({ dataPath: sessionPath }),
       puppeteer: {
         args: [
-          '--no-sandbox', 
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu'
+          '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote',
+          '--single-process', '--disable-gpu'
         ],
         headless: true
       }
     });
 
-    this.client.on('qr', async (qr) => {
-      console.log('[WHATSAPP] QR Code received. Status: CONNECTING');
-      this.status = 'CONNECTING';
-      this.qrCode = await qrcode.toDataURL(qr);
-    });
- 
-    this.client.on('ready', () => {
-      this.status = 'CONNECTED';
-      this.qrCode = null;
-      console.log('[WHATSAPP] Client is READY and CONNECTED!');
-    });
- 
-    this.client.on('disconnected', (reason) => {
-      console.log('[WHATSAPP] Client DISCONNECTED:', reason);
-      this.status = 'DISCONNECTED';
-    });
- 
-    this.client.on('auth_failure', (msg) => {
-      console.error('[WHATSAPP] AUTH FAILURE:', msg);
-      this.status = 'DISCONNECTED';
+    const terminal = this.terminals.get(terminalId)!;
+
+    client.on('qr', async (qr) => {
+      console.log(`[WHATSAPP][${terminalId}] QR Code received`);
+      terminal.status = 'CONNECTING';
+      terminal.qr = await qrcode.toDataURL(qr);
     });
 
-    this.client.on('message', async (msg) => {
+    client.on('ready', () => {
+      terminal.status = 'CONNECTED';
+      terminal.qr = null;
+      console.log(`[WHATSAPP][${terminalId}] Client is READY!`);
+    });
+
+    client.on('disconnected', (reason) => {
+      terminal.status = 'DISCONNECTED';
+      terminal.lastError = `Desconectado: ${reason}`;
+      this.clients.delete(terminalId);
+    });
+
+    client.on('message', async (msg) => {
       try {
         const contact = await msg.getContact();
         let mediaUrl = null;
-        
-        // Handle incoming media (Photos, Audio, etc)
         if (msg.hasMedia) {
-          try {
-            const media = await msg.downloadMedia();
-            if (media) {
-              const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${media.mimetype.split('/')[1]}`;
-              const filePath = path.join(__dirname, '../uploads', filename);
-              fs.writeFileSync(filePath, Buffer.from(media.data, 'base64'));
-              
-              const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-              const host = process.env.APP_URL || 'http://localhost:5000';
-              mediaUrl = `${host}/uploads/${filename}`;
-            }
-          } catch (mErr) { console.error('Media download failed:', mErr); }
+          const media = await msg.downloadMedia();
+          if (media) {
+            const filename = `${Date.now()}-${terminalId}.${media.mimetype.split('/')[1]}`;
+            const filePath = path.join(__dirname, '../uploads', filename);
+            fs.writeFileSync(filePath, Buffer.from(media.data, 'base64'));
+            const host = process.env.APP_URL || 'http://localhost:5000';
+            mediaUrl = `${host}/uploads/${filename}`;
+          }
         }
 
         db.prepare(`
-          INSERT INTO whatsapp_messages (contact_number, contact_name, body, type, media_url, is_incoming)
-          VALUES (?, ?, ?, ?, ?, 1)
-        `).run(msg.from, contact.pushname || contact.name || msg.from, msg.body || '', msg.type, mediaUrl);
+          INSERT INTO whatsapp_messages (terminal_id, contact_number, contact_name, body, type, media_url, is_incoming)
+          VALUES (?, ?, ?, ?, ?, ?, 1)
+        `).run(terminalId, msg.from, contact.pushname || contact.name || msg.from, msg.body || '', msg.type, mediaUrl);
       } catch (err) { console.error('Error saving message:', err); }
     });
+
+    this.clients.set(terminalId, client);
+    return client;
   }
 
-  async connect() {
-    if (this.status === 'CONNECTED' || this.status === 'CONNECTING') return;
-    this.status = 'CONNECTING';
+  async connect(terminalId: string = 'default') {
+    const terminal = this.terminals.get(terminalId);
+    if (!terminal || terminal.status === 'CONNECTED' || terminal.status === 'CONNECTING') return;
+
+    terminal.status = 'CONNECTING';
+    const client = this.initClient(terminalId);
     try {
-      await this.client.initialize();
-    } catch (err) {
-      this.status = 'DISCONNECTED';
-      console.error('Failed to initialize WhatsApp client', err);
+      await client.initialize();
+    } catch (err: any) {
+      terminal.status = 'DISCONNECTED';
+      terminal.qr = null;
+      terminal.lastError = err.message;
+      this.clients.delete(terminalId);
     }
   }
 
-  async disconnect() {
-    try {
-      await this.client.logout();
-      await this.client.destroy();
-      this.status = 'DISCONNECTED';
-      this.qrCode = null;
-    } catch (err) { console.error(err); }
-  }
-
-  getStatus() {
-    return { status: this.status, qr: this.qrCode };
-  }
-
-  private async getChatId(number: string) {
-    let cleanNumber = number.replace(/\D/g, '');
-    if (!cleanNumber.startsWith('595')) {
-      cleanNumber = `595${cleanNumber.replace(/^0/, '')}`;
+  async disconnect(terminalId: string = 'default') {
+    const client = this.clients.get(terminalId);
+    if (client) {
+      try {
+        await client.logout();
+        await client.destroy();
+      } catch (e) {}
+      this.clients.delete(terminalId);
     }
-    return `${cleanNumber}@c.us`;
+    const terminal = this.terminals.get(terminalId);
+    if (terminal) {
+      terminal.status = 'DISCONNECTED';
+      terminal.qr = null;
+    }
   }
 
-  async sendMessage(number: string, message: string) {
-    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
-    const chatId = await this.getChatId(number);
-    const res = await this.client.sendMessage(chatId, message);
+  getStatus(terminalId: string = 'default') {
+    return this.terminals.get(terminalId) || null;
+  }
+
+  async sendMessage(terminalId: string, number: string, message: string) {
+    const client = this.clients.get(terminalId);
+    if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
-    // Log outgoing message
+    const cleanNumber = number.replace(/\D/g, '');
+    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    
+    const res = await client.sendMessage(chatId, message);
     db.prepare(`
-      INSERT INTO whatsapp_messages (contact_number, body, type, is_incoming)
-      VALUES (?, ?, 'chat', 0)
-    `).run(chatId, message);
-    
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
+      VALUES (?, ?, ?, 'chat', 0)
+    `).run(terminalId, chatId, message);
     return res;
-  }
-
-  async sendMedia(number: string, mediaUrl: string, caption?: string) {
-    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
-    const chatId = await this.getChatId(number);
-    
-    const response = await axios.get(mediaUrl, { responseType: 'arraybuffer' });
-    const mimetype = response.headers['content-type'] as string || 'application/octet-stream';
-    const media = new MessageMedia(
-      mimetype,
-      Buffer.from(response.data).toString('base64'),
-      mediaUrl.split('/').pop()
-    );
-
-    const res = await this.client.sendMessage(chatId, media, { caption });
-    
-    // Log outgoing message
-    db.prepare(`
-      INSERT INTO whatsapp_messages (contact_number, body, type, media_url, is_incoming)
-      VALUES (?, ?, ?, ?, 0)
-    `).run(chatId, caption || '', (mimetype as string).split('/')[0], mediaUrl);
-    
-    return res;
-  }
-
-  async sendVoice(number: string, audioUrl: string) {
-    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
-    const chatId = await this.getChatId(number);
-    
-    const response = await axios.get(audioUrl, { responseType: 'arraybuffer' });
-    const mimetype = response.headers['content-type'] as string || 'audio/ogg';
-    const media = new MessageMedia(
-      mimetype,
-      Buffer.from(response.data).toString('base64')
-    );
-
-    // sendAudio with sendAudioAsVoice: true makes it appear as a voice note (PTT)
-    return await this.client.sendMessage(chatId, media, { sendAudioAsVoice: true });
-  }
-
-  async sendLocation(number: string, lat: number, lng: number, description?: string) {
-    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
-    const chatId = await this.getChatId(number);
-    return await this.client.sendMessage(chatId, {
-      location: {
-        latitude: lat,
-        longitude: lng,
-        description: description || 'Ubicación compartida'
-      }
-    } as any);
-  }
-
-  async sendContact(targetNumber: string, contactName: string, contactNumber: string) {
-    if (this.status !== 'CONNECTED') throw new Error('WhatsApp no conectado');
-    const chatId = await this.getChatId(targetNumber);
-    
-    // Generate simple VCard
-    const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${contactName}\nTEL;type=CELL;type=VOICE;waid=${contactNumber.replace(/\D/g, '')}:${contactNumber}\nEND:VCARD`;
-    
-    return await this.client.sendMessage(chatId, vcard);
   }
 }
 
-export const whatsappService = new WhatsAppService();
+export const whatsappService = new WhatsAppManager();

@@ -16,7 +16,9 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     activeListId: number | null; // NULL means "GLOBAL VIEW" for SuperAdmin
+    activeDistrict: string | null;
     setActiveListId: (id: number | null) => void;
+    setActiveDistrict: (district: string | null) => void;
     login: (credentials: any) => Promise<User>;
     logout: () => void;
     updateUser: (newData: Partial<User>) => void;
@@ -28,10 +30,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeListId, setActiveListId] = useState<number | null>(null);
+    const [activeDistrict, setActiveDistrict] = useState<string | null>(null);
 
     useEffect(() => {
         const savedUser = localStorage.getItem('auth_user');
         const savedListId = localStorage.getItem('active_list_id');
+        const savedDistrict = localStorage.getItem('active_district');
         if (savedUser) {
             let parsed = JSON.parse(savedUser);
             // Legacy mapping
@@ -44,8 +48,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // For non-superadmins, force their assigned_list_id
             if (parsed.role !== 'SUPERUSUARIO') {
                 setActiveListId(parsed.assigned_list_id);
-            } else if (savedListId) {
-                setActiveListId(savedListId === 'null' ? null : parseInt(savedListId));
+            } else {
+                if (savedListId) setActiveListId(savedListId === 'null' ? null : parseInt(savedListId));
+                if (savedDistrict) setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);
             }
         }
         setLoading(false);
@@ -56,6 +61,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('active_list_id', activeListId === null ? 'null' : activeListId.toString());
         }
     }, [activeListId]);
+
+    useEffect(() => {
+        if (activeDistrict !== undefined) {
+            localStorage.setItem('active_district', activeDistrict === null ? 'null' : activeDistrict);
+        }
+    }, [activeDistrict]);
 
     useEffect(() => {
         if (user) {
@@ -87,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, activeListId, setActiveListId, login, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, loading, activeListId, setActiveListId, activeDistrict, setActiveDistrict, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );
@@ -103,13 +114,15 @@ export const useAuth = () => {
 export const apiFetch = (url: string, options: any = {}) => {
     const userStr = localStorage.getItem('auth_user');
     const activeListId = localStorage.getItem('active_list_id');
+    const activeDistrict = localStorage.getItem('active_district');
     const user = userStr ? JSON.parse(userStr) : null;
     
     const headers = {
         ...options.headers,
         'Content-Type': 'application/json',
         'x-list-id': activeListId === 'null' ? '' : (activeListId || user?.assigned_list_id?.toString() || ''),
-        'x-user-role': user?.role || ''
+        'x-user-role': user?.role || '',
+        'x-district': activeDistrict === 'null' ? '' : (activeDistrict || '')
     };
 
     return fetch(url, { ...options, headers });

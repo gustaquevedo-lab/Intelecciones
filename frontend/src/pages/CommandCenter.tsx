@@ -9,7 +9,7 @@ import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
   TrendingUp, TrendingDown, ChevronUp, ChevronDown,
   Download, MapPin, Activity, Bell, X, Search,
-  AlertCircle, ChevronRight, Truck, Target, Phone, MessageSquare, Mic
+  AlertCircle, ChevronRight, Truck, Target, Phone, MessageSquare, Mic, Clock
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { ManagementTable } from '../components/ManagementTable';
@@ -474,6 +474,7 @@ const CommandCenter = () => {
   const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(window.innerWidth > 768);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isClusteringEnabled, setIsClusteringEnabled] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
@@ -735,6 +736,21 @@ const CommandCenter = () => {
                   <Radio size={14} /> Logística: {showVehicles ? 'ON' : 'OFF'}
                 </button>
 
+                <button 
+                  onClick={() => setIsClusteringEnabled(!isClusteringEnabled)}
+                  style={{ 
+                    padding: '0.6rem 1rem', borderRadius: '10px', 
+                    background: isClusteringEnabled ? 'var(--plra-300)' : 'rgba(255,255,255,0.05)', 
+                    color: 'white',
+                    border: '1px solid var(--border)', fontSize: '0.7rem', fontWeight: 800,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    backdropFilter: 'blur(8px)'
+                  }}
+                >
+                  <Target size={14} /> Agrupar: {isClusteringEnabled ? 'SI' : 'NO'}
+                </button>
+
                 {selectedLocal && (
                   <motion.div 
                     initial={{ opacity: 0, x: 20 }}
@@ -798,17 +814,59 @@ const CommandCenter = () => {
                     </Marker>
                   );
                 })}
-                <MarkerClusterGroup>
-                  {captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap, idx) => {
-                    // Apply a small jitter if multiple people are at the same exact location
+                {isClusteringEnabled ? (
+                  <MarkerClusterGroup disableClusteringAtZoom={15} maxClusterRadius={40}>
+                    {captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap, idx) => {
+                      const jitter = 0.00003 * Math.sqrt(idx);
+                      const angle = idx * 137.5;
+                      const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
+                      const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
+                      
+                      return (
+                        <Marker 
+                          key={`cap-${cap.id}`} 
+                          position={[lat, lng]} 
+                          icon={createCustomIcon(
+                            cap.traffic_light === 'GREEN' ? 'var(--green)' : 
+                            cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : 
+                            cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', 
+                            'MapPin', 
+                            cap.needs_transport === 1
+                          )}
+                        >
+                          <Popup>
+                            <div style={{ padding: '0.4rem', minWidth: '160px' }}>
+                              <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1 }}>{cap.nombre} {cap.apellido}</p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.4rem' }}>
+                                <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 4px', borderRadius: '3px', background: 'var(--plra-500)', color: 'white' }}>
+                                  L-{cap.list_number}
+                                </span>
+                                <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700 }}>{cap.campaign_name?.substring(0, 15)}</span>
+                              </div>
+                              <div style={{ marginBottom: '0.4rem', padding: '0.3rem 0.4rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <p style={{ fontSize: '0.6rem', color: 'var(--text-2)', margin: 0 }}>
+                                  <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Captado:</span> {cap.coordinator_name} 
+                                </p>
+                              </div>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                <MapPin size={10} /> {cap.local_votacion}
+                              </div>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      );
+                    })}
+                  </MarkerClusterGroup>
+                ) : (
+                  captures.filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre).map((cap, idx) => {
                     const jitter = 0.00003 * Math.sqrt(idx);
-                    const angle = idx * 137.5; // Golden angle
+                    const angle = idx * 137.5;
                     const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
                     const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
                     
                     return (
                       <Marker 
-                        key={`cap-${cap.id}`} 
+                        key={`cap-raw-${cap.id}`} 
                         position={[lat, lng]} 
                         icon={createCustomIcon(
                           cap.traffic_light === 'GREEN' ? 'var(--green)' : 
@@ -819,36 +877,16 @@ const CommandCenter = () => {
                         )}
                       >
                         <Popup>
-                          <div style={{ padding: '0.4rem', minWidth: '160px' }}>
-                            <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1 }}>{cap.nombre} {cap.apellido}</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.4rem' }}>
-                              <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 4px', borderRadius: '3px', background: 'var(--plra-500)', color: 'white' }}>
-                                L-{cap.list_number}
-                              </span>
-                              <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700 }}>{cap.campaign_name?.substring(0, 15)}</span>
-                            </div>
-                            
-                            <div style={{ marginBottom: '0.4rem', padding: '0.3rem 0.4rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                              <p style={{ fontSize: '0.6rem', color: 'var(--text-2)', margin: 0 }}>
-                                <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Captado:</span> {cap.coordinator_name} 
-                                <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', marginLeft: '4px', fontWeight: 700 }}>({cap.coordinator_role})</span>
-                              </p>
-                            </div>
-
-                            <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                              <MapPin size={10} /> {cap.local_votacion}
-                            </div>
-                            {cap.needs_transport === 1 && (
-                              <div style={{ marginTop: '0.4rem', padding: '0.25rem', borderRadius: '4px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.55rem', color: 'var(--red)', fontWeight: 900, textAlign: 'center', textTransform: 'uppercase' }}>
-                                🚗 Requiere Logística
-                              </div>
-                            )}
-                          </div>
+                           <div style={{ padding: '0.4rem', minWidth: '160px' }}>
+                              <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1 }}>{cap.nombre} {cap.apellido}</p>
+                              <div style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 4px', borderRadius: '3px', background: 'var(--plra-500)', color: 'white', display: 'inline-block' }}>L-{cap.list_number}</div>
+                              <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginTop: '0.4rem' }}><MapPin size={10} /> {cap.local_votacion}</div>
+                           </div>
                         </Popup>
                       </Marker>
                     );
-                  })}
-                </MarkerClusterGroup>
+                  })
+                )}
                 {showVehicles && vehicles.map((v) => (
                   <Marker key={`veh-${v.id}`} position={[v.lat, v.lng]} icon={createCustomIcon('var(--plra-300)', 'Car')}>
                     <Popup>
@@ -886,6 +924,31 @@ const CommandCenter = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Map Legend */}
+                <div style={{
+                  position: 'absolute', bottom: isMobile ? '7rem' : '2rem', left: '1rem', zIndex: 1000,
+                  background: 'rgba(10, 14, 23, 0.8)', backdropFilter: 'blur(8px)',
+                  padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)',
+                  display: 'flex', flexDirection: 'column', gap: '0.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '10px', height: '100%', borderRadius: '2px', background: 'var(--green)', minHeight: '12px' }} />
+                    <span style={{ fontSize: '0.6rem', color: 'white', fontWeight: 700 }}>A FAVOR</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '10px', height: '100%', borderRadius: '2px', background: 'var(--yellow)', minHeight: '12px' }} />
+                    <span style={{ fontSize: '0.6rem', color: 'white', fontWeight: 700 }}>DUDOSO</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '10px', height: '100%', borderRadius: '2px', background: 'var(--red)', minHeight: '12px' }} />
+                    <span style={{ fontSize: '0.6rem', color: 'white', fontWeight: 700 }}>EN CONTRA</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.25rem' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', border: '2px solid var(--plra-300)' }} />
+                    <span style={{ fontSize: '0.6rem', color: 'var(--plra-200)', fontWeight: 800 }}>REQUIERE TRANSPORTE</span>
+                  </div>
+                </div>
               </MapContainer>
             </div>
           ) : activeTab === 'registry' ? (
@@ -1165,27 +1228,105 @@ const CommandCenter = () => {
                 </div>
                 
                 <div style={{ padding: '2rem' }}>
-                  <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-                    El elector <strong>{showResolveModal.elector_nombre} {showResolveModal.elector_apellido}</strong> ha sido captado por coordinadores de distintas listas.
-                    <br/><br/>
-                    Como Administrador, debes adjudicar oficialmente este elector a una de las campañas en disputa.
+                  <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '0.9rem' }}>
+                    Se ha detectado una disputa por <strong>{showResolveModal.elector_nombre} {showResolveModal.elector_apellido}</strong>. 
+                    Compara los detalles para decidir a quién adjudicar el elector:
                   </p>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(59,130,246,0.05)', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
-                      Captura actual: <strong>{showResolveModal.coordinator_name}</strong>
+                    {/* Party 1: Original */}
+                    <div style={{ 
+                      padding: '1.25rem', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', 
+                      border: '1px solid var(--border)', position: 'relative', overflow: 'hidden' 
+                    }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--plra-500)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>CAPTURA ORIGINAL</div>
+                      
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', marginBottom: '0.2rem' }}>{showResolveModal.original_coordinator_name}</p>
+                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-200)' }}>{showResolveModal.original_parent_name || 'Mando Directo'}</span></p>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
+                            <Clock size={12} />
+                            {new Date(showResolveModal.original_capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+
+                        {/* Mini Map Thumbnail */}
+                        <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                          <MapContainer 
+                            center={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} 
+                            zoom={15} 
+                            style={{ height: '100%', width: '100%' }}
+                            zoomControl={false}
+                            dragging={false}
+                            scrollWheelZoom={false}
+                            doubleClickZoom={false}
+                            attributionControl={false}
+                          >
+                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                            <Marker position={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} icon={createCustomIcon('var(--plra-500)', 'MapPin')} />
+                          </MapContainer>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => handleResolve(showResolveModal.original_capture_id)}
+                        className="btn-confirm-styled" 
+                        style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--plra-600)' }}
+                      >
+                        ADJUDICAR A ORIGINAL
+                      </button>
+                    </div>
+
+                    {/* Party 2: New Conflict */}
+                    <div style={{ 
+                      padding: '1.25rem', borderRadius: '16px', background: 'rgba(239,68,68,0.03)', 
+                      border: '1px solid rgba(239,68,68,0.2)', position: 'relative', overflow: 'hidden' 
+                    }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>NUEVA DISPUTA</div>
+                      
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', marginBottom: '0.2rem' }}>{showResolveModal.coordinator_name}</p>
+                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-200)' }}>{showResolveModal.parent_name || 'Mando Directo'}</span></p>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
+                            <Clock size={12} />
+                            {new Date(showResolveModal.capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+
+                        {/* Mini Map Thumbnail */}
+                        <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                          <MapContainer 
+                            center={[showResolveModal.capture_lat, showResolveModal.capture_lng]} 
+                            zoom={15} 
+                            style={{ height: '100%', width: '100%' }}
+                            zoomControl={false}
+                            dragging={false}
+                            scrollWheelZoom={false}
+                            doubleClickZoom={false}
+                            attributionControl={false}
+                          >
+                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                            <Marker position={[showResolveModal.capture_lat, showResolveModal.capture_lng]} icon={createCustomIcon('var(--red)', 'MapPin')} />
+                          </MapContainer>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => handleResolve(showResolveModal.capture_id)}
+                        className="btn-confirm-styled" 
+                        style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--red)' }}
+                      >
+                        ADJUDICAR A NUEVO
+                      </button>
                     </div>
                   </div>
                 </div>
 
                 <div className="modal-footer-premium-styled">
-                  <button onClick={() => setShowResolveModal(null)} className="btn-cancel-styled">Descartar</button>
-                  <button 
-                    onClick={() => handleResolve(showResolveModal.capture_id)} 
-                    className="btn-confirm-styled"
-                  >
-                    Confirmar Adjudicación <ChevronRight size={18} />
-                  </button>
+                  <button onClick={() => setShowResolveModal(null)} className="btn-cancel-styled" style={{ width: '100%' }}>Cerrar sin cambios</button>
                 </div>
               </motion.div>
             </div>
