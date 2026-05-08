@@ -490,6 +490,16 @@ const CoordinatorApp = () => {
       if (ci.length >= 5 && activeTab === 'search') {
         try {
           setIsLoading(true);
+          // 1. Buscar en la memoria del celular primero (Offline/IndexedDB)
+          const localResults = await searchElectorOffline(ci);
+          if (localResults.length > 0) {
+             setElector(localResults[0]);
+             setError('');
+             setIsLoading(false);
+             return;
+          }
+          
+          // 2. Si no está en el celular, buscar en el servidor
           const res = await api.get(`/electors/${ci}`);
           setElector(res.data);
           setError('');
