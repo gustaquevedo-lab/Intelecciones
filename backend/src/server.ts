@@ -225,7 +225,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
   // SuperUser can see everything, or filter by activeDistrict if provided
   if (role === 'SUPERUSUARIO') {
-    return activeDistrict ? { sql: `AND ${tableAlias}.${distColumn} = ?`, param: activeDistrict } : { sql: '', param: null };
+    return activeDistrict ? { sql: `AND ${tableAlias}.${distColumn} = ?`, params: [activeDistrict] } : { sql: '', params: [] };
   }
 
   // Non-SuperUsers are locked to their assignment
