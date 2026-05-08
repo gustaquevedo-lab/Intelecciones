@@ -1036,11 +1036,15 @@ const Communications = () => {
           </div>
         )}
       </AnimatePresence>
-      </div>
+     </div>
     )}
+           </div>
+        </div>
+      </div>
+
           {/* NEW TERMINAL MODAL */}
           {showNewTerminalModal && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem' }}>
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '2rem' }}>
               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ width: '100%', maxWidth: '400px', background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                 <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 900 }}>Nueva Terminal de WhatsApp</h3>
@@ -1087,11 +1091,8 @@ const Communications = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  </div>
-</MainLayout>
-);
+      </MainLayout>
+    );
 };
 
 export default Communications;
