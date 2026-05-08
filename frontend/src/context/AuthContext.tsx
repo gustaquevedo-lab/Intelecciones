@@ -27,6 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    console.log('Rendering AuthProvider');
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeListId, setActiveListId] = useState<number | null>(null);

@@ -24,6 +24,7 @@ const API_BASE = 'http://localhost:5000/api';
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('Rendering SettingsProvider');
   const [settings, setSettings] = useState<Settings>({
     election_date: '2026-06-07T07:00:00',
     election_end_time: '17:00',
