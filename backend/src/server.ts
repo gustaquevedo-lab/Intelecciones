@@ -650,24 +650,24 @@ app.delete('/api/campaigns/:id', (req, res) => {
 
 // Lists Management
 app.post('/api/lists', (req, res) => {
-  const { campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias } = req.body;
+  const { campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad } = req.body;
   
-  if (!campaign_id || !type || !list_number || !candidate_ci) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios para registrar la lista.' });
+  if (!campaign_id || !type || !list_number || !candidate_ci || !ciudad) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios para registrar la lista (incluyendo ciudad).' });
   }
 
   try {
     db.transaction(() => {
       const result = db.prepare(`
-        INSERT INTO lists (campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, candidate_nombre, candidate_alias);
+        INSERT INTO lists (campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, candidate_nombre, candidate_alias, ciudad);
 
       if (photo_url) {
         db.prepare('UPDATE electors SET photo_url = ? WHERE ci = ?').run(photo_url, candidate_ci);
       }
       
-      logAction(1, 'CREATE', 'LIST', list_number, `Created list ${list_number} for campaign ${campaign_id}`);
+      logAction(1, 'CREATE', 'LIST', list_number, `Created list ${list_number} for campaign ${campaign_id} in ${ciudad}`);
     })();
     res.json({ success: true });
   } catch (err: any) {
@@ -678,11 +678,11 @@ app.post('/api/lists', (req, res) => {
 
 app.put('/api/lists/:id', (req, res) => {
   const { id } = req.params;
-  const { goal, photo_url, type, list_number, option_number, campaign_id, candidate_alias, candidate_nombre } = req.body;
+  const { goal, photo_url, type, list_number, option_number, campaign_id, candidate_alias, candidate_nombre, ciudad } = req.body;
   try {
     db.prepare(`
       UPDATE lists 
-      SET goal = ?, photo_url = ?, type = ?, list_number = ?, option_number = ?, campaign_id = ?, candidate_alias = ?, candidate_nombre = ?
+      SET goal = ?, photo_url = ?, type = ?, list_number = ?, option_number = ?, campaign_id = ?, candidate_alias = ?, candidate_nombre = ?, ciudad = ?
       WHERE id = ?
     `).run(
       goal || 1000, 
@@ -693,6 +693,7 @@ app.put('/api/lists/:id', (req, res) => {
       campaign_id || null, 
       candidate_alias || null, 
       candidate_nombre || null, 
+      ciudad || '',
       id
     );
     
@@ -1652,16 +1653,23 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
 
     const transaction = db.transaction((rows) => {
       for (const row of rows) {
-        // Mapping based on common Excel headers or provided structure
-        const ci = row['CEDULA'] || row['CI'] || row['Cédula'] || row['ci'];
-        const nombre = row['NOMBRE'] || row['Nombre'] || row['nombre'];
-        const apellido = row['APELLIDO'] || row['Apellido'] || row['apellido'];
-        const local = row['LOCAL'] || row['Local'] || row['local_votacion'] || row['local'];
-        const mesa = row['MESA'] || row['Mesa'] || row['mesa'] || 0;
-        const orden = row['ORD.MESA'] || row['ORDEN'] || row['Orden'] || row['orden'] || 0;
+        // Normalizar los encabezados para evitar problemas con espacios, tildes o mayúsculas
+        const normalizedRow: any = {};
+        for (const key in row) {
+          const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, "_").replace(/\./g, "");
+          normalizedRow[cleanKey] = row[key];
+        }
 
-        if (ci && nombre) {
-          insertStmt.run(ci.toString(), nombre, apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito);
+        // Mapeo Inteligente basado en claves normalizadas
+        const ci = normalizedRow['CEDULA'] || normalizedRow['CI'] || normalizedRow['DOCUMENTO'] || normalizedRow['NRO_CEDULA'] || normalizedRow['CEDULA_DE_IDENTIDAD'];
+        const nombre = normalizedRow['NOMBRE'] || normalizedRow['NOMBRES'];
+        const apellido = normalizedRow['APELLIDO'] || normalizedRow['APELLIDOS'];
+        const local = normalizedRow['LOCAL'] || normalizedRow['LOCAL_VOTACION'] || normalizedRow['LOCAL_DE_VOTACION'] || normalizedRow['RECINTO'] || normalizedRow['COLEGIO'];
+        const mesa = normalizedRow['MESA'] || normalizedRow['NRO_MESA'] || normalizedRow['NUMERO_MESA'] || 0;
+        const orden = normalizedRow['ORD_MESA'] || normalizedRow['ORDEN'] || normalizedRow['ORDEN_MESA'] || normalizedRow['NRO_ORDEN'] || 0;
+
+        if (ci && (nombre || apellido)) {
+          insertStmt.run(ci.toString().trim(), nombre || '', apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito);
         }
       }
     });

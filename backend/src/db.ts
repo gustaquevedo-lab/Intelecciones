@@ -73,8 +73,16 @@ db.exec(`
     candidate_alias TEXT,
     goal INTEGER DEFAULT 1000,
     photo_url TEXT,
+    ciudad TEXT DEFAULT '',
     FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
   );
+
+  -- Migration for 'ciudad' in lists
+  PRAGMA foreign_keys=off;
+  BEGIN TRANSACTION;
+  -- Doing it programmatically below
+  COMMIT;
+  PRAGMA foreign_keys=on;
 
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -249,6 +257,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
   CREATE INDEX IF NOT EXISTS idx_participation_logs_mesa ON participation_logs(mesa);
 `);
+
+const listColumns = db.prepare('PRAGMA table_info(lists)').all() as any[];
+if (!listColumns.some(c => c.name === 'ciudad')) {
+  console.log("Migrating lists table to add 'ciudad' column...");
+  db.prepare("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''").run();
+  db.prepare("UPDATE lists SET ciudad = 'PEDRO JUAN CABALLERO'").run();
+  console.log("Migration complete.");
+}
 
 try {
   db.prepare("ALTER TABLE campaigns ADD COLUMN slogan TEXT").run();

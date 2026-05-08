@@ -338,6 +338,7 @@ const SuperAdmin = () => {
   const [newUserParent, setNewUserParent] = useState('');
   const [newUserTelefono, setNewUserTelefono] = useState('');
   // List Form
+  const [newListCiudad, setNewListCiudad] = useState('');
   const [newListCampaign, setNewListCampaign] = useState('');
   const [newListType, setNewListType] = useState('INTENDENTE');
   const [newListNumber, setNewListNumber] = useState('');
@@ -450,6 +451,7 @@ const SuperAdmin = () => {
     e.preventDefault();
     try {
       await api.post('/lists', {
+        ciudad: newListCiudad,
         campaign_id: newListCampaign,
         type: newListType,
         list_number: newListNumber,
@@ -470,6 +472,7 @@ const SuperAdmin = () => {
     if (!editingList) return;
     try {
       const res = await api.put(`/lists/${editingList.id}`, {
+        ciudad: newListCiudad,
         goal: newListGoal,
         photo_url: candidatePreview?.photo_url || listPhotoUrl,
         type: newListType,
@@ -1179,6 +1182,7 @@ const SuperAdmin = () => {
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Listas Electorales</h2>
         <button className="action-btn-primary" onClick={() => {
           setEditingList(null);
+          setNewListCiudad('');
           setNewListNumber('');
           setNewListCandidateCI('');
           setCandidatePreview(null);
@@ -1226,6 +1230,7 @@ const SuperAdmin = () => {
             sortKey: 'candidate_alias'
           },
           { header: 'Campaña', accessor: 'campaign_name', sortKey: 'campaign_name' },
+          { header: 'Ciudad', accessor: 'ciudad', sortKey: 'ciudad' },
           { 
             header: 'Tipo', 
             accessor: (l: any) => (
@@ -1252,6 +1257,7 @@ const SuperAdmin = () => {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button className="icon-btn" onClick={() => { 
                   setEditingList(l); 
+                  setNewListCiudad(l.ciudad || '');
                   setNewListGoal(l.goal || 1000); 
                   setNewListCandidateCI(l.candidate_ci || '');
                   setNewListAlias(l.candidate_alias || '');
@@ -2337,6 +2343,11 @@ const SuperAdmin = () => {
                       </div>
 
                       <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Ciudad / Distrito</label>
+                          <input className="modern-input-premium-styled" placeholder="Ej: Pedro Juan Caballero" value={newListCiudad} onChange={e => setNewListCiudad(e.target.value.toUpperCase())} required />
+                        </div>
+
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Campaña Electoral</label>
                           <select className="modern-input-premium-styled" value={newListCampaign} onChange={e => setNewListCampaign(e.target.value)} required>
