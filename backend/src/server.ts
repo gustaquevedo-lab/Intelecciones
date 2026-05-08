@@ -244,21 +244,30 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   let sql = `AND ${tableAlias}.${distColumn} = ?`;
   let params = [user.distrito || ''];
 
-  // Add strict list/campaign isolation if assigned
-  if (user.assigned_list_id) {
-    if (tableAlias === 'l') {
-      sql += ` AND ${tableAlias}.id = ?`;
-    } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages') {
+  // STRICT isolation for users/management
+  if (tableAlias === 'u' || tableAlias === 'l') {
+    if (user.assigned_list_id) {
+       if (tableAlias === 'l') sql += ` AND ${tableAlias}.id = ?`;
+       else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_list_id = ?`;
+       params.push(user.assigned_list_id);
+    } else if (user.assigned_campaign_id) {
+       if (tableAlias === 'l') sql += ` AND ${tableAlias}.campaign_id = ?`;
+       else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_campaign_id = ?`;
+       params.push(user.assigned_campaign_id);
+    }
+  } 
+  // PERMISSIVE isolation for Map/Stats for Jefes (they see the whole district battle)
+  else if (role === 'JEFE_CAMPANA') {
+     // By default, Jefes see EVERYTHING in their district for intelligence tables
+     // We only filter by list if they are managing users/lists (handled above)
+     // or if we are in a specific list-only view (optional)
+  }
+  // STRICT isolation for other roles (Coordinators only see their list)
+  else if (user.assigned_list_id) {
+    if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages') {
       sql += ` AND ${tableAlias}.list_id = ?`;
     }
     params.push(user.assigned_list_id);
-  } else if (user.assigned_campaign_id) {
-    if (tableAlias === 'c') {
-      sql += ` AND ${tableAlias}.id = ?`;
-    } else if (tableAlias === 'l') {
-      sql += ` AND ${tableAlias}.campaign_id = ?`;
-    }
-    params.push(user.assigned_campaign_id);
   }
   
   return { sql, params };
@@ -1076,7 +1085,7 @@ app.post('/api/users', (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
-  const sec = getSecurityFilter(req, 'l'); // Filter based on the list assigned to the user
+  const sec = getSecurityFilter(req, 'u'); // Use 'u' for users table filter
   const params = sec.params || [];
   
   try {

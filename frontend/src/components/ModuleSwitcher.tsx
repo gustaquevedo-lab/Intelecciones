@@ -26,7 +26,9 @@ export const ModuleSwitcher: React.FC = () => {
 
   const availableModules = modules.filter(m => {
     if (user.role === 'SUPERUSUARIO') return true;
+    if (user.role === 'JEFE_CAMPANA') return m.id !== 'admin';
     if (user.role === 'MIEMBRO_DE_MESA' && m.id === 'veedor') return true;
+    
     const hasRole = m.roles.includes(user.role);
     const isEnabled = user.enabled_modules?.includes(m.moduleKey);
     return hasRole && isEnabled;

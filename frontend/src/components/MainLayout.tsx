@@ -97,7 +97,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
 
           {/* Global Multi-District Selector (Blindaje) */}
-          {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO') && (
+          {(user?.role === 'SUPERUSUARIO') && (
             <div 
               className="hidden-mobile"
               style={{ 
