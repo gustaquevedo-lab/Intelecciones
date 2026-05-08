@@ -58,7 +58,7 @@ app.get('/api/offline/padron', (req, res) => {
     // Filter by district for everyone except SuperUser
     if (role !== 'SUPERUSUARIO' && user_id) {
       const user = db.prepare(`
-        SELECT c.distrito 
+        SELECT COALESCE(l.ciudad, c.distrito) as distrito 
         FROM users u 
         LEFT JOIN lists l ON u.assigned_list_id = l.id 
         LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
