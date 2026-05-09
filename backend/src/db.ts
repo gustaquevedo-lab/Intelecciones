@@ -285,7 +285,7 @@ runMigration("ALTER TABLE users ADD COLUMN enabled_modules TEXT");
 runMigration("ALTER TABLE users ADD COLUMN parent_id INTEGER");
 runMigration("ALTER TABLE users ADD COLUMN telefono TEXT");
 runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
-runMigration("UPDATE users SET assigned_list_id = 1, assigned_campaign_id = 3 WHERE username NOT IN ('admin', '3657834', '4500001')");
+runMigration("UPDATE users SET assigned_campaign_id = 3 WHERE username NOT IN ('admin', '3657834', '4500001') AND assigned_campaign_id IS NULL");
 
 try {
   console.log('MIGRATION: Normalizando distritos a MAYÚSCULAS...');
