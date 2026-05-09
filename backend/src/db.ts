@@ -359,12 +359,17 @@ db.exec(`
   INSERT OR IGNORE INTO campaigns (id, name, distrito) VALUES (1, 'Elecciones 2026', 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO lists (id, campaign_id, type, list_number, ciudad) VALUES (1, 1, 'INTERNA', '3', 'PEDRO JUAN CABALLERO');
 
-  -- Ensure some default voting locations exist
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', 'CENTRO REGIONAL DE EDUCACION', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L2', 'COLEGIO NACIONAL ASUNCION ESCALADA', -22.535, -55.715, 'PEDRO JUAN CABALLERO');
+  -- Ensure REAL voting locations from padron exist
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', "COL. NAC. CERRO CORA EX JUAN E O'LEARY", -22.545, -55.725, 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L2', 'ESC. BAS. CARLOS ANTONIO LOPEZ', -22.535, -55.715, 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L3', 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', -22.555, -55.735, 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L4', 'FACULTAD DE CIENCIAS AGRARIAS', -22.525, -55.705, 'PEDRO JUAN CABALLERO');
 
   -- Ensure a sample Padrino exists to activate hierarchy view
-  INSERT OR IGNORE INTO users (username, password, role, nombre, assigned_list_id) VALUES ('padrino1', '123', 'PADRINO', 'Padrino de Prueba', 1);
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre, assigned_list_id) VALUES (10, 'padrino1', '123', 'PADRINO', 'Padrino de Prueba', 1);
+  
+  -- Ensure a sample Coordinator exists linked to the Padrino
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre, parent_id, assigned_list_id) VALUES (20, 'coord1', '123', 'COORDINADOR', 'Coordinador de Prueba', 10, 1);
 `);
 
 export default db;
