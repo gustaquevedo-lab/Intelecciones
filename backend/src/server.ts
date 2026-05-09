@@ -352,16 +352,15 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   } 
   // PERMISSIVE isolation for Map/Stats for Jefes (they see the whole district battle)
   else if (role === 'JEFE_CAMPANA') {
-     // By default, Jefes see EVERYTHING in their district for intelligence tables
-     // We only filter by list if they are managing users/lists (handled above)
-     // or if we are in a specific list-only view (optional)
+     // Jefes see EVERYTHING in their district for intelligence tables
+     // This allows them to see the map, clusters, and overall stats
   }
   // STRICT isolation for other roles (Coordinators only see their list)
   else if (user.assigned_list_id) {
     if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages') {
       sql += ` AND ${tableAlias}.list_id = ?`;
+      params.push(user.assigned_list_id);
     }
-    params.push(user.assigned_list_id);
   }
   
   return { sql, params };
@@ -736,11 +735,11 @@ app.get('/api/campaigns', (req, res) => {
 });
 
 app.post('/api/campaigns', (req, res) => {
-  const { name, status, slogan, photo_url, enabled_modules } = req.body;
+  const { name, status, slogan, photo_url, enabled_modules, goal, distrito } = req.body;
   try {
     const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : (enabled_modules || 'COMMAND_CENTER,REGISTRY');
-    const result = db.prepare('INSERT INTO campaigns (name, status, slogan, photo_url, enabled_modules) VALUES (?, ?, ?, ?, ?)')
-      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr);
+    const result = db.prepare('INSERT INTO campaigns (name, status, slogan, photo_url, enabled_modules, goal, distrito) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr, goal || 1000, distrito || null);
     
     logAction(1, 'CREATE', 'CAMPAIGN', Number(result.lastInsertRowid), `Created campaign ${name}`);
     res.json({ id: result.lastInsertRowid });
@@ -751,11 +750,11 @@ app.post('/api/campaigns', (req, res) => {
 
 app.put('/api/campaigns/:id', (req, res) => {
   const { id } = req.params;
-  const { name, status, slogan, photo_url, enabled_modules } = req.body;
+  const { name, status, slogan, photo_url, enabled_modules, goal, distrito } = req.body;
   try {
     const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : enabled_modules;
-    db.prepare('UPDATE campaigns SET name = ?, status = ?, slogan = ?, photo_url = ?, enabled_modules = ? WHERE id = ?')
-      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr || 'COMMAND_CENTER,REGISTRY', id);
+    db.prepare('UPDATE campaigns SET name = ?, status = ?, slogan = ?, photo_url = ?, enabled_modules = ?, goal = ?, distrito = ? WHERE id = ?')
+      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr || 'COMMAND_CENTER,REGISTRY', goal || 1000, distrito || null, id);
     
     logAction(1, 'UPDATE', 'CAMPAIGN', id, `Updated campaign ${name}`);
     res.json({ success: true });
@@ -904,22 +903,14 @@ app.put('/api/captures/:id', (req, res) => {
   }
 });
 
-// Ensure distrito and ci columns exist
+// Migrations for missing columns
 try { db.prepare('ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE users ADD COLUMN ci TEXT').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 1').run(); } catch(e) {}
 
-// One-time migration: Assign existing electors to Pedro Juan Caballero if distrito is empty
-try {
-  db.prepare("UPDATE electors SET distrito = 'PEDRO JUAN CABALLERO' WHERE distrito IS NULL OR distrito = '' OR UPPER(distrito) = 'PEDRO JUAN CABALLERO'").run();
-  db.prepare("UPDATE electors SET ciudad = 'PEDRO JUAN CABALLERO' WHERE ciudad IS NULL OR ciudad = '' OR UPPER(ciudad) = 'PEDRO JUAN CABALLERO'").run();
-  db.prepare("UPDATE lists SET ciudad = 'PEDRO JUAN CABALLERO'").run();
-  console.log("MIGRATION: Datos de distrito normalizados a MAYÚSCULAS.");
-} catch(e) {
-  console.error("Migration error:", e);
-}
+console.log("DATABASE: Esquema verificado y columnas de distrito preparadas.");
 
 app.get('/api/locales', (req, res) => {
   try {

@@ -327,6 +327,8 @@ const SuperAdmin = () => {
   const [userCampaignFilter, setUserCampaignFilter] = useState('');
   const [newCampaignName, setNewCampaignName] = useState('');
   const [newCampaignSlogan, setNewCampaignSlogan] = useState('');
+  const [newCampaignGoal, setNewCampaignGoal] = useState<number>(1000);
+  const [newCampaignDistrito, setNewCampaignDistrito] = useState('');
   const [newCampaignPhotoUrl, setNewCampaignPhotoUrl] = useState('');
   const [newCampaignModules, setNewCampaignModules] = useState<string[]>([
     'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
@@ -408,12 +410,16 @@ const SuperAdmin = () => {
       await api.post('/campaigns', { 
         name: newCampaignName,
         slogan: newCampaignSlogan,
+        goal: newCampaignGoal,
+        distrito: newCampaignDistrito,
         photo_url: newCampaignPhotoUrl,
         enabled_modules: newCampaignModules 
       });
       setShowModal(null);
       setNewCampaignName('');
       setNewCampaignSlogan('');
+      setNewCampaignGoal(1000);
+      setNewCampaignDistrito('');
       setNewCampaignPhotoUrl('');
       setNewCampaignModules([
         'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
@@ -433,6 +439,8 @@ const SuperAdmin = () => {
       await api.put(`/campaigns/${editingCampaign.id}`, { 
         name: newCampaignName,
         slogan: newCampaignSlogan,
+        goal: newCampaignGoal,
+        distrito: newCampaignDistrito,
         photo_url: newCampaignPhotoUrl,
         enabled_modules: newCampaignModules
       });
@@ -440,6 +448,8 @@ const SuperAdmin = () => {
       setEditingCampaign(null);
       setNewCampaignName('');
       setNewCampaignSlogan('');
+      setNewCampaignGoal(1000);
+      setNewCampaignDistrito('');
       setNewCampaignPhotoUrl('');
       setNewCampaignModules([
         'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
@@ -1161,6 +1171,8 @@ const SuperAdmin = () => {
           setNewCampaignName('');
           setNewCampaignSlogan('');
           setNewCampaignPhotoUrl('');
+          setNewCampaignGoal(1000);
+          setNewCampaignDistrito('');
           setNewCampaignModules([
             'COMMAND_CENTER', 'CC_FIELD_REQUESTS', 'CC_ELECTOR_REGISTRY', 'CC_RANKINGS', 'CC_HEATMAP',
             'REGISTRY', 'REG_CAPTURE', 'REG_LOOKUP', 'REG_SHARE',
@@ -1220,6 +1232,8 @@ const SuperAdmin = () => {
                   setEditingCampaign(c); 
                   setNewCampaignName(c.name);
                   setNewCampaignSlogan((c as any).slogan || '');
+                  setNewCampaignGoal((c as any).goal || 1000);
+                  setNewCampaignDistrito((c as any).distrito || '');
                   setNewCampaignModules((c as any).enabled_modules ? (c as any).enabled_modules.split(',') : []);
                   setShowModal('edit-campaign'); 
                 }}><Edit2 size={14} /></button>
@@ -2112,6 +2126,17 @@ const SuperAdmin = () => {
                         </div>
                       </div>
 
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                        <div className="form-group">
+                          <label>Meta de Capturas (Goal)</label>
+                          <input type="number" className="modern-input-premium-styled" value={newCampaignGoal} onChange={e => setNewCampaignGoal(parseInt(e.target.value))} required />
+                        </div>
+                        <div className="form-group">
+                          <label>Distrito</label>
+                          <input className="modern-input-premium-styled" value={newCampaignDistrito} onChange={e => setNewCampaignDistrito(e.target.value.toUpperCase())} placeholder="Ej: ASUNCION" />
+                        </div>
+                      </div>
+
                       <div style={{ marginTop: '1.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                           <Layout size={14} /> Módulos y Submódulos del Tenant
@@ -2242,6 +2267,17 @@ const SuperAdmin = () => {
                         <div className="form-group">
                           <label>Eslogan</label>
                           <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                        <div className="form-group">
+                          <label>Meta de Capturas (Goal)</label>
+                          <input type="number" className="modern-input-premium-styled" value={newCampaignGoal} onChange={e => setNewCampaignGoal(parseInt(e.target.value))} required />
+                        </div>
+                        <div className="form-group">
+                          <label>Distrito</label>
+                          <input className="modern-input-premium-styled" value={newCampaignDistrito} onChange={e => setNewCampaignDistrito(e.target.value.toUpperCase())} placeholder="Ej: ASUNCION" />
                         </div>
                       </div>
 

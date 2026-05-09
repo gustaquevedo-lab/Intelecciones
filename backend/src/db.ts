@@ -48,7 +48,8 @@ db.exec(`
     status TEXT DEFAULT 'active',
     slogan TEXT,
     photo_url TEXT,
-    distrito TEXT
+    distrito TEXT,
+    goal INTEGER DEFAULT 1000
   );
 
   CREATE TABLE IF NOT EXISTS lists (
@@ -266,6 +267,7 @@ db.exec(`
 
 // 🛠️ MIGRATIONS & NORMALIZATION
 const runMigration = (sql: string) => { try { db.prepare(sql).run(); } catch (e) {} };
+runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
 runMigration("ALTER TABLE campaigns ADD COLUMN distrito TEXT");
 runMigration("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''");
 runMigration("ALTER TABLE users ADD COLUMN distrito TEXT");
@@ -282,15 +284,17 @@ runMigration("ALTER TABLE campaigns ADD COLUMN enabled_modules TEXT DEFAULT 'COM
 runMigration("ALTER TABLE users ADD COLUMN enabled_modules TEXT");
 runMigration("ALTER TABLE users ADD COLUMN parent_id INTEGER");
 runMigration("ALTER TABLE users ADD COLUMN telefono TEXT");
+runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
+runMigration("UPDATE users SET assigned_list_id = 1, assigned_campaign_id = 3 WHERE username NOT IN ('admin', '3657834', '4500001')");
 
 try {
   console.log('MIGRATION: Normalizando distritos a MAYÚSCULAS...');
   db.exec(`
-    UPDATE electors SET ciudad = UPPER(COALESCE(NULLIF(TRIM(ciudad), ''), 'PEDRO JUAN CABALLERO')) WHERE ciudad IS NULL OR ciudad = '' OR ciudad != UPPER(ciudad);
-    UPDATE voting_locations SET distrito = UPPER(COALESCE(NULLIF(TRIM(distrito), ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
-    UPDATE lists SET ciudad = UPPER(COALESCE(NULLIF(TRIM(ciudad), ''), 'PEDRO JUAN CABALLERO')) WHERE ciudad IS NULL OR ciudad = '' OR ciudad != UPPER(ciudad);
-    UPDATE campaigns SET distrito = UPPER(COALESCE(NULLIF(TRIM(distrito), ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
-    UPDATE users SET distrito = UPPER(COALESCE(NULLIF(distrito, ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
+    UPDATE electors SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
+    UPDATE voting_locations SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+    UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
+    UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+    UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
   `);
 } catch (e) {}
 
@@ -313,7 +317,8 @@ db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_cap
 db.prepare("CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number)").run();
 
-/* INITIAL SEEDS */
+/* INITIAL SEEDS - DISABLED TO PREVENT AUTOMATIC DATA RECREATION */
+/*
 db.exec(`
   -- Settings
   INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
@@ -322,23 +327,7 @@ db.exec(`
 
   -- Users
   INSERT OR IGNORE INTO users (id, username, password, role, nombre) VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito) VALUES (2, '5888408', '123', 'SUPERUSUARIO', 'Gustavo Quevedo', '5888408', 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito) VALUES (3, '4931831', '123', 'COORDINADOR', 'Coordinador Gustavo', '4931831', 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito, assigned_list_id) VALUES (4, '111', '111', 'COORDINADOR', 'Coord Lista 3', '111', 'PEDRO JUAN CABALLERO', 1);
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito, assigned_list_id) VALUES (5, '222', '222', 'PADRINO', 'Padrino Lista 3', '222', 'PEDRO JUAN CABALLERO', 1);
-  UPDATE users SET parent_id = 5 WHERE id = 4;
-
-  -- Campaigns & Lists
-  INSERT OR IGNORE INTO campaigns (id, name, distrito) VALUES (1, 'Elecciones 2026', 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO lists (id, campaign_id, type, list_number, ciudad) VALUES (1, 1, 'INTERNA', '3', 'PEDRO JUAN CABALLERO');
-
-  -- Voting Locations
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', 'COL. NAC. CERRO CORA EX JUAN E O''LEARY', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L2', 'ESC. BAS. CARLOS ANTONIO LOPEZ', -22.535, -55.715, 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L3', 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', -22.555, -55.735, 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L4', 'FACULTAD DE CIENCIAS AGRARIAS', -22.525, -55.705, 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L5', 'COL. NAC. ASUNCION ESCALADA', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L6', 'CENTRO REGIONAL DE EDUCACION', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
 `);
+*/
 
 export default db;

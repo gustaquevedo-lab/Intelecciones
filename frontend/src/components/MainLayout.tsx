@@ -97,7 +97,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
 
           {/* Global Multi-District Selector (Blindaje) */}
-          {(user?.role === 'SUPERUSUARIO') && (
+          {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && (
             <div 
               className="hidden-mobile"
               style={{ 
@@ -125,7 +125,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                     setActiveDistrict(e.target.value === 'null' ? null : e.target.value);
                     setActiveListId(null); // Reset list when district changes
                   }}
-                  disabled={user.role !== 'SUPERUSUARIO'}
+                  disabled={user.role !== 'SUPERUSUARIO' && user.role !== 'JEFE_CAMPANA'}
                   style={{
                     background: 'transparent',
                     border: 'none',
