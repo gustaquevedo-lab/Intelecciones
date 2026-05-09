@@ -285,14 +285,8 @@ runMigration("ALTER TABLE users ADD COLUMN enabled_modules TEXT");
 runMigration("ALTER TABLE users ADD COLUMN parent_id INTEGER");
 runMigration("ALTER TABLE users ADD COLUMN telefono TEXT");
 runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
-runMigration(`
-  UPDATE users 
-  SET assigned_list_id = (SELECT id FROM lists WHERE list_number = '3' AND (option_number = '3' OR candidate_alias LIKE '%Lourdes%') LIMIT 1),
-      assigned_campaign_id = 3
-  WHERE (assigned_list_id = 1 OR assigned_list_id IS NULL)
-    AND role != 'SUPERUSUARIO' 
-    AND username NOT IN ('4500001', 'admin', '3657834')
-`);
+runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
+
 
 try {
   console.log('MIGRATION: Normalizando distritos a MAYÚSCULAS...');
