@@ -465,7 +465,10 @@ app.post('/api/login', (req, res) => {
       photo_url: user.photo_url,
       ci: user.ci,
       distrito: user.distrito,
-      enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY'],
+      enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : 
+        (['SUPERUSUARIO', 'JEFE_CAMPANA'].includes(user.role) 
+          ? ['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP'] 
+          : ['REGISTRY']),
       needs_password_change: !!user.needs_password_change,
       v: "1.0.5"
     });
