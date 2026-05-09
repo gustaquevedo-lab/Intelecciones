@@ -504,6 +504,7 @@ const CommandCenter = () => {
   const [electorDetails, setElectorDetails] = useState<any[]>([]);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(window.innerWidth > 768);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -603,10 +604,12 @@ const CommandCenter = () => {
   };
 
   const handleSearch = async (query: string) => {
+    setSearchQuery(query);
     if (!query) {
       setSearchResults([]);
       return;
     }
+    setSearchResults([]);
     setIsSearching(true);
     setActiveTab('registry');
     try {

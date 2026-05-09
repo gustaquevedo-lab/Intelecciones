@@ -351,7 +351,7 @@ db.prepare("CREATE INDEX IF NOT EXISTS idx_captures_ci_list ON elector_captures 
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").run();
 
 /* Ensure default Super Admin exists */
-db.prepare(`
+db.exec(`
   INSERT OR IGNORE INTO users (id, username, password, role, nombre) 
   VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
 
@@ -365,6 +365,6 @@ db.prepare(`
 
   -- Ensure a sample Padrino exists to activate hierarchy view
   INSERT OR IGNORE INTO users (username, password, role, nombre, assigned_list_id) VALUES ('padrino1', '123', 'PADRINO', 'Padrino de Prueba', 1);
-`).run();
+`);
 
 export default db;
