@@ -182,7 +182,15 @@ interface User {
 }
 
 const SuperAdmin = () => {
-  const { user: authUser, loading, updateUser } = useAuth();
+  const { 
+    user: authUser, 
+    loading, 
+    updateUser, 
+    activeListId, 
+    setActiveListId, 
+    activeDistrict, 
+    setActiveDistrict 
+  } = useAuth();
   const { settings: globalSettings, updateSettings, refreshSettings } = useSettings();
   const navigate = useNavigate();
   console.log("SuperAdmin - authUser:", authUser, "loading:", loading);

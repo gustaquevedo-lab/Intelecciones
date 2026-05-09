@@ -41,6 +41,23 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
+// 📊 Storage Diagnosis
+if (process.env.NODE_ENV === 'production') {
+  try {
+    const dataDir = '/app/data';
+    if (fs.existsSync(dataDir)) {
+      const stats = fs.readdirSync(dataDir).map(f => {
+        const fullPath = path.join(dataDir, f);
+        const s = fs.statSync(fullPath);
+        return { name: f, size: (s.size / 1024 / 1024).toFixed(2) + ' MB' };
+      });
+      console.log('--- STORAGE DIAGNOSIS ---');
+      console.table(stats);
+      console.log('-------------------------');
+    }
+  } catch (e) { console.error('Error diagnosing storage:', e); }
+}
+
 const upload = multer({ 
   storage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
