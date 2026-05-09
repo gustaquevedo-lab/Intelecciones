@@ -81,6 +81,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data } = await api.post('/login', credentials);
         setUser(data);
         localStorage.setItem('auth_user', JSON.stringify(data));
+        
+        // Clear global filters on SuperAdmin login to ensure visibility
+        if (data.role === 'SUPERUSUARIO') {
+            setActiveListId(null);
+            setActiveDistrict(null);
+            localStorage.setItem('active_list_id', 'null');
+            localStorage.setItem('active_district', 'null');
+        }
+        
         return data;
     };
 

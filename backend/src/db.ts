@@ -15,7 +15,6 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
-
 // Migration: If we are in production and the volume DB is an empty placeholder (< 100KB)
 if (process.env.NODE_ENV === 'production') {
   const seedDbPath = path.join(process.cwd(), 'intellecciones.db');
@@ -25,7 +24,7 @@ if (process.env.NODE_ENV === 'production') {
   if (size < 100000 && fs.existsSync(seedDbPath)) {
     console.log(`MIGRATION: Volume DB size is ${size}. Seed size is ${fs.statSync(seedDbPath).size}. Overwriting...`);
     try {
-      if (exists) fs.unlinkSync(dbPath); // Delete the small one first
+      if (exists) fs.unlinkSync(dbPath);
       fs.copyFileSync(seedDbPath, dbPath);
       console.log("MIGRATION SUCCESSFUL.");
     } catch (err) {
@@ -34,15 +33,13 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 console.log("Initializing database at:", dbPath);
 const db = new Database(dbPath);
-db.pragma('journal_mode = WAL'); // Enable WAL mode for better performance
+db.pragma('journal_mode = WAL');
 
-// Initialize Tables
+// 🏗️ Initialize/Consolidate Tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS campaigns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,15 +63,9 @@ db.exec(`
     goal INTEGER DEFAULT 1000,
     photo_url TEXT,
     ciudad TEXT DEFAULT '',
+    is_adversary INTEGER DEFAULT 0,
     FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
   );
-
-  -- Migration for 'ciudad' in lists
-  PRAGMA foreign_keys=off;
-  BEGIN TRANSACTION;
-  -- Doing it programmatically below
-  COMMIT;
-  PRAGMA foreign_keys=on;
 
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,6 +82,8 @@ db.exec(`
     parent_id INTEGER,
     telefono TEXT,
     distrito TEXT,
+    ci TEXT,
+    status TEXT DEFAULT 'ACTIVE',
     FOREIGN KEY(assigned_list_id) REFERENCES lists(id),
     FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id),
     FOREIGN KEY(parent_id) REFERENCES users(id)
@@ -143,12 +136,14 @@ db.exec(`
     elector_ci TEXT,
     coordinator_id INTEGER,
     list_id INTEGER,
+    campaign_id INTEGER,
     lat REAL NOT NULL,
     lng REAL NOT NULL,
     traffic_light TEXT NOT NULL,
     is_disputed BOOLEAN DEFAULT 0,
     needs_transport BOOLEAN DEFAULT 0,
     telefono TEXT,
+    original_capture_id INTEGER,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -168,155 +163,18 @@ db.exec(`
     value TEXT
   );
 
-  CREATE TABLE IF NOT EXISTS vehicles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    description TEXT NOT NULL,
-    driver_name TEXT,
-    driver_ci TEXT,
-    driver_phone TEXT,
-    capacity INTEGER DEFAULT 4,
-    status TEXT DEFAULT 'AVAILABLE',
-    assigned_list_id INTEGER,
-    list_id INTEGER
-  );
-
   CREATE TABLE IF NOT EXISTS field_requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     coordinator_id INTEGER,
     list_id INTEGER,
     type TEXT NOT NULL,
     description TEXT,
+    photo_url TEXT,
+    audio_url TEXT,
     status TEXT DEFAULT 'PENDING',
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE TABLE IF NOT EXISTS whatsapp_templates (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    content TEXT,
-    media_url TEXT,
-    media_type TEXT, -- 'IMAGE', 'VIDEO', 'AUDIO', 'VOICE', 'LOCATION'
-    lat REAL,
-    lng REAL,
-    contact_name TEXT,
-    contact_phone TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS whatsapp_broadcast_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    template_id INTEGER,
-    terminal_id TEXT DEFAULT 'default',
-    target_count INTEGER,
-    success_count INTEGER DEFAULT 0,
-    fail_count INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'RUNNING', -- 'RUNNING', 'COMPLETED', 'FAILED'
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS whatsapp_terminals (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    status TEXT DEFAULT 'DISCONNECTED',
-    last_qr TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS whatsapp_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    terminal_id TEXT DEFAULT 'default',
-    contact_number TEXT NOT NULL,
-    contact_name TEXT,
-    body TEXT,
-    type TEXT DEFAULT 'chat', -- 'chat', 'image', 'video', 'ptt', 'location', 'vcard'
-    media_url TEXT,
-    is_incoming INTEGER DEFAULT 0, -- 1 for true, 0 for false
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message', 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message_footer', 'Enviado desde el Comando Central.');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('app_logo_url', '');
-
-  -- Performance Indexes
-  CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captures(elector_ci);
-  CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id);
-  CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id);
-  CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp);
-  CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
-  CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
-  CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
-  CREATE INDEX IF NOT EXISTS idx_participation_logs_mesa ON participation_logs(mesa);
-`);
-
-const listColumns = db.prepare('PRAGMA table_info(lists)').all() as any[];
-if (!listColumns.some(c => c.name === 'ciudad')) {
-  console.log("Migrating lists table to add 'ciudad' column...");
-  db.prepare("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''").run();
-  db.prepare("UPDATE lists SET ciudad = 'PEDRO JUAN CABALLERO'").run();
-  console.log("Migration complete.");
-}
-
-try {
-  db.prepare("ALTER TABLE campaigns ADD COLUMN slogan TEXT").run();
-} catch (e) {}
-try {
-  db.prepare("ALTER TABLE campaigns ADD COLUMN photo_url TEXT").run();
-} catch (e) {}
-
-try {
-  db.prepare("ALTER TABLE campaigns ADD COLUMN distrito TEXT").run();
-} catch (e) {}
-
-// Migration: Add new columns if they don't exist
-try {
-  db.prepare("ALTER TABLE lists ADD COLUMN candidate_nombre TEXT").run();
-} catch (e) {}
-try {
-  db.prepare("ALTER TABLE lists ADD COLUMN candidate_alias TEXT").run();
-} catch (e) {}
-
-// User migrations
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN parent_id INTEGER").run();
-} catch (e) {}
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN telefono TEXT").run();
-} catch (e) {}
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN ci TEXT").run();
-} catch (e) {}
-try {
-  db.prepare("ALTER TABLE users ADD COLUMN distrito TEXT").run();
-} catch (e) {}
-try {
-  db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 0').run();
-  console.log('Migration: Added needs_password_change to users');
-} catch (e) {}
-
-// Field requests migrations
-try {
-  db.prepare('ALTER TABLE field_requests ADD COLUMN photo_url TEXT').run();
-  db.prepare('ALTER TABLE field_requests ADD COLUMN audio_url TEXT').run();
-  console.log('Migration: Added multimedia columns to field_requests');
-} catch (e) {}
-
-// Capture conflicts migrations
-try {
-  db.prepare('ALTER TABLE capture_conflicts ADD COLUMN resolved_by_jefe_id INTEGER').run();
-  db.prepare('ALTER TABLE capture_conflicts ADD COLUMN resolved_coordinator_id INTEGER').run();
-  console.log('Migration: Added resolution columns to capture_conflicts');
-} catch (e) {}
-
-// Lists migrations
-try {
-  db.prepare("ALTER TABLE lists ADD COLUMN is_adversary INTEGER DEFAULT 0").run();
-} catch (e) {}
-
-// Results refactor table
-db.exec(`
   CREATE TABLE IF NOT EXISTS results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tenant_id INTEGER,
@@ -338,33 +196,76 @@ db.exec(`
     FOREIGN KEY(acta_id) REFERENCES results(id),
     FOREIGN KEY(lista_id) REFERENCES lists(id)
   );
+
+  CREATE TABLE IF NOT EXISTS whatsapp_terminals (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    status TEXT DEFAULT 'DISCONNECTED',
+    last_qr TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS whatsapp_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    terminal_id TEXT DEFAULT 'default',
+    contact_number TEXT NOT NULL,
+    contact_name TEXT,
+    body TEXT,
+    type TEXT DEFAULT 'chat',
+    media_url TEXT,
+    is_incoming INTEGER DEFAULT 0,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
+// 🛠️ Schema Migrations
+const runMigration = (sql: string) => { try { db.prepare(sql).run(); } catch (e) {} };
+runMigration("ALTER TABLE campaigns ADD COLUMN slogan TEXT");
+runMigration("ALTER TABLE campaigns ADD COLUMN photo_url TEXT");
+runMigration("ALTER TABLE campaigns ADD COLUMN distrito TEXT");
+runMigration("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''");
+runMigration("ALTER TABLE lists ADD COLUMN candidate_nombre TEXT");
+runMigration("ALTER TABLE lists ADD COLUMN candidate_alias TEXT");
+runMigration("ALTER TABLE lists ADD COLUMN is_adversary INTEGER DEFAULT 0");
+runMigration("ALTER TABLE users ADD COLUMN photo_url TEXT");
+runMigration("ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 0");
+runMigration("ALTER TABLE users ADD COLUMN parent_id INTEGER");
+runMigration("ALTER TABLE users ADD COLUMN telefono TEXT");
+runMigration("ALTER TABLE users ADD COLUMN distrito TEXT");
+runMigration("ALTER TABLE users ADD COLUMN ci TEXT");
+runMigration("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'ACTIVE'");
+runMigration("ALTER TABLE elector_captures ADD COLUMN is_disputed INTEGER DEFAULT 0");
+runMigration("ALTER TABLE elector_captures ADD COLUMN original_capture_id INTEGER");
+runMigration("ALTER TABLE elector_captures ADD COLUMN campaign_id INTEGER");
+runMigration("ALTER TABLE elector_captures ADD COLUMN list_id INTEGER");
+runMigration("ALTER TABLE field_requests ADD COLUMN photo_url TEXT");
+runMigration("ALTER TABLE field_requests ADD COLUMN audio_url TEXT");
+runMigration("ALTER TABLE capture_conflicts ADD COLUMN resolved_by_jefe_id INTEGER");
+runMigration("ALTER TABLE capture_conflicts ADD COLUMN resolved_coordinator_id INTEGER");
+
+// 🧹 Maintenance
+try {
+  console.log("Running DB maintenance...");
+  db.pragma('wal_checkpoint(TRUNCATE)');
+  db.prepare('VACUUM').run();
+  console.log("DB maintenance complete.");
+} catch (e) { console.error("Maintenance failed:", e); }
 
 /* Optimization Indexes */
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_captures_ci_list ON elector_captures (elector_ci, list_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").run();
 
-/* Ensure default Super Admin exists */
+/* Initial Seeds */
 db.exec(`
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre) 
-  VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
-
-  -- Ensure at least one campaign and one list exist
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre) VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
   INSERT OR IGNORE INTO campaigns (id, name, distrito) VALUES (1, 'Elecciones 2026', 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO lists (id, campaign_id, type, list_number, ciudad) VALUES (1, 1, 'INTERNA', '3', 'PEDRO JUAN CABALLERO');
-
-  -- Ensure REAL voting locations from padron exist
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', 'COL. NAC. CERRO CORA EX JUAN E O''LEARY', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L2', 'ESC. BAS. CARLOS ANTONIO LOPEZ', -22.535, -55.715, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L3', 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', -22.555, -55.735, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L4', 'FACULTAD DE CIENCIAS AGRARIAS', -22.525, -55.705, 'PEDRO JUAN CABALLERO');
-
-  -- Ensure a sample Padrino exists to activate hierarchy view
   INSERT OR IGNORE INTO users (id, username, password, role, nombre, assigned_list_id) VALUES (10, 'padrino1', '123', 'PADRINO', 'Padrino de Prueba', 1);
-  
-  -- Ensure a sample Coordinator exists linked to the Padrino
   INSERT OR IGNORE INTO users (id, username, password, role, nombre, parent_id, assigned_list_id) VALUES (20, 'coord1', '123', 'COORDINADOR', 'Coordinador de Prueba', 10, 1);
 `);
 
