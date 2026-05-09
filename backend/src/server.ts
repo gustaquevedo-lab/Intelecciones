@@ -914,6 +914,8 @@ app.get('/api/activities', (req, res) => {
 // Vehicles route is defined later in the file
 
 app.get('/api/captures', (req, res) => {
+  const role = getRole(req);
+  const local_id = req.query.localId;
   const sec = getSecurityFilter(req, 'ec');
 
   try {
