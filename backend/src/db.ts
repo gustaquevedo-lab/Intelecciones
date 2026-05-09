@@ -360,7 +360,7 @@ db.exec(`
   INSERT OR IGNORE INTO lists (id, campaign_id, type, list_number, ciudad) VALUES (1, 1, 'INTERNA', '3', 'PEDRO JUAN CABALLERO');
 
   -- Ensure REAL voting locations from padron exist
-  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', "COL. NAC. CERRO CORA EX JUAN E O'LEARY", -22.545, -55.725, 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', 'COL. NAC. CERRO CORA EX JUAN E O''LEARY', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L2', 'ESC. BAS. CARLOS ANTONIO LOPEZ', -22.535, -55.715, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L3', 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', -22.555, -55.735, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L4', 'FACULTAD DE CIENCIAS AGRARIAS', -22.525, -55.705, 'PEDRO JUAN CABALLERO');
