@@ -14,13 +14,17 @@ interface ManagementTableProps<T> {
   data: T[];
   onRowClick?: (item: T) => void;
   isLoading?: boolean;
+  maxHeight?: string;
+  stickyHeader?: boolean;
 }
 
 export function ManagementTable<T extends { id?: number | string }>({ 
   columns, 
   data, 
   onRowClick,
-  isLoading 
+  isLoading,
+  maxHeight,
+  stickyHeader = true // Default to true as per user request
 }: ManagementTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
@@ -71,7 +75,12 @@ export function ManagementTable<T extends { id?: number | string }>({
       borderRadius: '12px',
       overflow: 'hidden',
     }}>
-      <div style={{ width: '100%', overflowX: 'auto' }}>
+      <div style={{ 
+        width: '100%', 
+        overflowX: 'auto', 
+        maxHeight: maxHeight || 'none',
+        overflowY: maxHeight ? 'auto' : 'visible'
+      }}>
         <table style={{
           width: '100%',
           borderCollapse: 'collapse',
@@ -103,7 +112,11 @@ export function ManagementTable<T extends { id?: number | string }>({
                       width: col.width,
                       cursor: isSortable ? 'pointer' : 'default',
                       userSelect: 'none',
-                      position: 'relative',
+                      position: stickyHeader ? 'sticky' : 'relative',
+                      top: 0,
+                      background: 'var(--surface-light)', // Solid background for sticky header
+                      zIndex: 10,
+                      boxShadow: 'inset 0 -1px 0 var(--border)' // Bottom border for sticky
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

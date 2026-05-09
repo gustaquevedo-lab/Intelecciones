@@ -320,6 +320,9 @@ const SuperAdmin = () => {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [editingList, setEditingList] = useState<List | null>(null);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('');
+  const [userCampaignFilter, setUserCampaignFilter] = useState('');
   const [newCampaignName, setNewCampaignName] = useState('');
   const [newCampaignSlogan, setNewCampaignSlogan] = useState('');
   const [newCampaignPhotoUrl, setNewCampaignPhotoUrl] = useState('');
@@ -1709,112 +1712,165 @@ const SuperAdmin = () => {
     </div>
   );
 
-  const renderUsers = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Usuarios y Accesos</h2>
-        <button className="action-btn-primary" onClick={() => {
-          setEditingUser(null);
-          setNewUserCI('');
-          setNewUserRealName('');
-          setNewUserName('');
-          setNewUserPass('');
-          setNewUserRole('COORDINADOR');
-          setNewUserList('');
-          setNewUserCampaign('');
-          setNewUserParent('');
-          setNewUserTelefono('');
-          setUserProfilePreview(null);
-          setIsUserVerified(false);
-          setShowModal('user');
+  const renderUsers = () => {
+    const filteredUsers = users.filter(u => {
+      const matchesSearch = !userSearchTerm || 
+        u.username?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        u.nombre?.toLowerCase().includes(userSearchTerm.toLowerCase());
+      const matchesRole = !userRoleFilter || u.role === userRoleFilter;
+      const matchesCampaign = !userCampaignFilter || u.assigned_campaign_id?.toString() === userCampaignFilter;
+      return matchesSearch && matchesRole && matchesCampaign;
+    });
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Usuarios y Accesos</h2>
+          <button className="action-btn-primary" onClick={() => {
+            setEditingUser(null);
+            setNewUserCI('');
+            setNewUserRealName('');
+            setNewUserName('');
+            setNewUserPass('');
+            setNewUserRole('COORDINADOR');
+            setNewUserList('');
+            setNewUserCampaign('');
+            setNewUserParent('');
+            setNewUserTelefono('');
+            setUserProfilePreview(null);
+            setIsUserVerified(false);
+            setShowModal('user');
+          }}>
+            <UserPlus size={18} /> Crear Usuario
+          </button>
+        </div>
+
+        {/* FILTERS BAR */}
+        <div style={{ 
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: '1rem', padding: '1.25rem', background: 'rgba(255,255,255,0.02)', 
+          borderRadius: '12px', border: '1px solid var(--border)' 
         }}>
-          <UserPlus size={18} /> Crear Usuario
-        </button>
-      </div>
-      <ManagementTable 
-        isLoading={isLoading}
-        columns={[
-          { header: 'CI', accessor: 'username', width: '120px' },
-          { header: 'Nombre', accessor: 'nombre' },
-          { header: 'Campaña / Cliente', accessor: (u: any) => {
-            const c = campaigns.find(camp => camp.id === u.assigned_campaign_id);
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c ? 'var(--plra-300)' : 'var(--text-3)' }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c ? 'white' : 'var(--text-3)' }}>
-                  {c ? c.name : 'SISTEMA GLOBAL'}
-                </span>
-              </div>
-            );
-          }},
-          { 
-            header: 'Rol', 
-            accessor: (u: any) => (
-              <span style={{ 
-                padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800,
-                background: u.role === 'SUPERUSUARIO' ? 'var(--accent-subtle)' : 'var(--surface-light)',
-                color: u.role === 'SUPERUSUARIO' ? 'var(--plra-300)' : 'var(--text-2)'
-              }}>{u.role}</span>
-            )
-          },
-          {
-            header: 'Dependencia (Superior)',
-            accessor: (u: any) => u.parent_name || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>N/A</span>,
-            sortKey: 'parent_name'
-          },
-          { 
-            header: 'Lista Asignada', 
-            accessor: (u: any) => {
-              if (!u.assigned_list_id) return <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Sin asignar</span>;
-              const list = lists?.find(l => l.id === u.assigned_list_id);
-              if (!list) return <span style={{ color: 'var(--red)' }}>ID: {u.assigned_list_id}</span>;
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: '0.4rem' }}>Buscador (Nombre / CI)</label>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+              <input 
+                className="mini-input" 
+                style={{ paddingLeft: '30px', width: '100%' }}
+                placeholder="Buscar usuario..." 
+                value={userSearchTerm} 
+                onChange={e => setUserSearchTerm(e.target.value)} 
+              />
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: '0.4rem' }}>Filtrar por Rol</label>
+            <select className="mini-input" value={userRoleFilter} onChange={e => setUserRoleFilter(e.target.value)}>
+              <option value="">Todos los Roles</option>
+              <option value="SUPERUSUARIO">SuperUsuario</option>
+              <option value="JEFE_CAMPANA">Jefe Campaña</option>
+              <option value="PADRINO">Padrino</option>
+              <option value="COORDINADOR">Coordinador</option>
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: '0.4rem' }}>Filtrar por Campaña</label>
+            <select className="mini-input" value={userCampaignFilter} onChange={e => setUserCampaignFilter(e.target.value)}>
+              <option value="">Todas las Campañas</option>
+              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <ManagementTable 
+          isLoading={isLoading}
+          maxHeight="calc(100vh - 350px)"
+          stickyHeader={true}
+          columns={[
+            { header: 'CI', accessor: 'username', width: '120px' },
+            { header: 'Nombre', accessor: 'nombre' },
+            { header: 'Campaña / Cliente', accessor: (u: any) => {
+              const c = campaigns.find(camp => camp.id === u.assigned_campaign_id);
               return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ fontWeight: 800, color: 'var(--plra-300)' }}>L{list.list_number}</span>
-                  {list.type === 'CONCEJAL' && <span style={{ color: 'var(--yellow)', fontSize: '0.7rem' }}>Op{list.option_number}</span>}
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-2)' }}>— {list.candidate_alias || list.candidate_nombre}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c ? 'var(--plra-300)' : 'var(--text-3)' }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c ? 'white' : 'var(--text-3)' }}>
+                    {c ? c.name : 'SISTEMA GLOBAL'}
+                  </span>
                 </div>
               );
+            }},
+            { 
+              header: 'Rol', 
+              accessor: (u: any) => (
+                <span style={{ 
+                  padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800,
+                  background: u.role === 'SUPERUSUARIO' ? 'var(--accent-subtle)' : 'var(--surface-light)',
+                  color: u.role === 'SUPERUSUARIO' ? 'var(--plra-300)' : 'var(--text-2)'
+                }}>{u.role}</span>
+              )
             },
-            sortKey: 'list_number'
-          },
-          {
-            header: 'Acciones',
-            accessor: (u: any) => (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="icon-btn" onClick={() => { 
-                  setEditingUser(u); 
-                  setNewUserCI(u.ci || ''); 
-                  setNewUserRealName(u.nombre || ''); 
-                  setNewUserName(u.username || ''); 
-                  setNewUserRole(u.role);
-                  setNewUserList(u.assigned_list_id?.toString() || '');
-                  setNewUserCampaign(u.assigned_campaign_id?.toString() || '');
-                  setNewUserLocal(u.assigned_local || '');
-                  setNewUserMesa(u.assigned_mesa || null);
-                  setNewUserParent(u.parent_id?.toString() || '');
-                  setNewUserTelefono(u.telefono || '');
-                  setUserProfilePreview({ photo_url: u.photo_url, nombre: u.nombre });
-                  setIsUserVerified(!!u.ci);
-                  setShowModal('user'); 
-                }}><Edit2 size={14} /></button>
-                <button 
-                  className="icon-btn" 
-                  style={{ color: 'var(--yellow)' }} 
-                  onClick={() => handleResetPassword(u.id)}
-                  title="Resetear Contraseña (Forzar Cambio)"
-                >
-                  <Key size={14} />
-                </button>
-                <button className="icon-btn delete" onClick={() => handleDeleteUser(u.id)} disabled={u.username === 'admin'} title="Eliminar Operador"><Trash2 size={14} /></button>
-              </div>
-            )
-          }
-        ]}
-        data={users}
-      />
-    </div>
-  );
+            {
+              header: 'Dependencia (Superior)',
+              accessor: (u: any) => u.parent_name || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>N/A</span>,
+              sortKey: 'parent_name'
+            },
+            { 
+              header: 'Lista Asignada', 
+              accessor: (u: any) => {
+                if (!u.assigned_list_id) return <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Sin asignar</span>;
+                const list = lists?.find(l => l.id === u.assigned_list_id);
+                if (!list) return <span style={{ color: 'var(--red)' }}>ID: {u.assigned_list_id}</span>;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontWeight: 800, color: 'var(--plra-300)' }}>L{list.list_number}</span>
+                    {list.type === 'CONCEJAL' && <span style={{ color: 'var(--yellow)', fontSize: '0.7rem' }}>Op{list.option_number}</span>}
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-2)' }}>— {list.candidate_alias || list.candidate_nombre}</span>
+                  </div>
+                );
+              },
+              sortKey: 'list_number'
+            },
+            {
+              header: 'Acciones',
+              accessor: (u: any) => (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="icon-btn" onClick={() => { 
+                    setEditingUser(u); 
+                    setNewUserCI(u.ci || ''); 
+                    setNewUserRealName(u.nombre || ''); 
+                    setNewUserName(u.username || ''); 
+                    setNewUserRole(u.role);
+                    setNewUserList(u.assigned_list_id?.toString() || '');
+                    setNewUserCampaign(u.assigned_campaign_id?.toString() || '');
+                    setNewUserLocal(u.assigned_local || '');
+                    setNewUserMesa(u.assigned_mesa || null);
+                    setNewUserParent(u.parent_id?.toString() || '');
+                    setNewUserTelefono(u.telefono || '');
+                    setUserProfilePreview({ photo_url: u.photo_url, nombre: u.nombre });
+                    setIsUserVerified(!!u.ci);
+                    setShowModal('user'); 
+                  }}><Edit2 size={14} /></button>
+                  <button 
+                    className="icon-btn" 
+                    style={{ color: 'var(--yellow)' }} 
+                    onClick={() => handleResetPassword(u.id)}
+                    title="Resetear Contraseña (Forzar Cambio)"
+                  >
+                    <Key size={14} />
+                  </button>
+                  <button className="icon-btn delete" onClick={() => handleDeleteUser(u.id)} disabled={u.username === 'admin'} title="Eliminar Operador"><Trash2 size={14} /></button>
+                </div>
+              )
+            }
+          ]}
+          data={filteredUsers}
+        />
+      </div>
+    );
+  };
+
 
   const renderLogistics = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
