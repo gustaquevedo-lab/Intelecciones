@@ -227,14 +227,14 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   const activeDistrict = getDistrict(req);
 
   // Column name mapping: most use 'distrito', but 'lists' (l) and 'electors' (e) use 'ciudad'
-  const distColumn = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
+  const distColumn = (tableAlias === 'l') ? 'ciudad' : 'distrito';
 
   // SuperUser can see everything, or filter by activeDistrict if provided
   if (role === 'SUPERUSUARIO') {
     let sql = '';
     let params: any[] = [];
     if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined') {
-      sql += ` AND ${tableAlias}.${distColumn} = ?`;
+      sql += ` AND UPPER(${tableAlias}.${distColumn}) = UPPER(?)`;
       params.push(activeDistrict);
     }
     const listId = getListId(req);
@@ -809,10 +809,10 @@ try { db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEF
 
 // One-time migration: Assign existing electors to Pedro Juan Caballero if distrito is empty
 try {
-  const result = db.prepare("UPDATE electors SET distrito = 'Pedro Juan Caballero' WHERE distrito IS NULL OR distrito = ''").run();
-  if (result.changes > 0) {
-    console.log(`MIGRATION: Asignados ${result.changes} electores a Pedro Juan Caballero.`);
-  }
+  db.prepare("UPDATE electors SET distrito = 'PEDRO JUAN CABALLERO' WHERE distrito IS NULL OR distrito = '' OR UPPER(distrito) = 'PEDRO JUAN CABALLERO'").run();
+  db.prepare("UPDATE electors SET ciudad = 'PEDRO JUAN CABALLERO' WHERE ciudad IS NULL OR ciudad = '' OR UPPER(ciudad) = 'PEDRO JUAN CABALLERO'").run();
+  db.prepare("UPDATE lists SET ciudad = 'PEDRO JUAN CABALLERO'").run();
+  console.log("MIGRATION: Datos de distrito normalizados a MAYÚSCULAS.");
 } catch(e) {
   console.error("Migration error:", e);
 }
@@ -916,7 +916,7 @@ app.get('/api/activities', (req, res) => {
 app.get('/api/captures', (req, res) => {
   const role = getRole(req);
   const local_id = req.query.localId;
-  const sec = getSecurityFilter(req, 'ec');
+  const sec = getSecurityFilter(req, 'e');
 
   try {
     const list_id = getListId(req);
@@ -1752,7 +1752,7 @@ app.get('/api/stats/command', (req, res) => {
   const local_id = req.query.localId as string;
   const role = getRole(req);
   const isPadrino = role === 'PADRINO';
-  const sec = getSecurityFilter(req, 'l');
+  const sec = getSecurityFilter(req, 'e');
 
   try {
     const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
