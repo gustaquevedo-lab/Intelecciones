@@ -286,17 +286,24 @@ try {
   `);
 } catch (e) {}
 
-// 🧹 MAINTENANCE
+// 🧹 MAINTENANCE (Disabled on startup to avoid locking)
 try {
-  console.log("Running DB maintenance (VACUUM)...");
-  db.pragma('wal_checkpoint(TRUNCATE)');
-  db.prepare('VACUUM').run();
+  // Only checkpointing WAL to keep the file size manageable without full VACUUM
+  db.pragma('wal_checkpoint(PASSIVE)');
 } catch (e) {}
 
 /* OPTIMIZATION INDEXES */
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors (ciudad)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_users_ci ON users (ci)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_users_list ON users (assigned_list_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captures(elector_ci)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_campaign ON elector_captures(campaign_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number)").run();
 
 /* INITIAL SEEDS */
 db.exec(`
