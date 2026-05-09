@@ -81,32 +81,32 @@
 
 /* LIGHT MODE — Enhanced with more depth for Premium DNA */
 .light-theme {
-  --bg:        #F8FAFC;
+  --bg:        #F1F5F9; /* Un gris muy tenue para que el blanco de las tarjetas resalte */
   --surface:   #FFFFFF;
-  --surface-2: #F1F5F9;
+  --surface-2: #E2E8F0;
   --surface-light: #F8FAFC;
-  --surface-3: #E2E8F0;
+  --surface-3: #CBD5E1;
   --primary:   #0047AB;
   --primary-h: #003D94;
   --primary-g: #1D4ED8;
 
-  --border:       rgba(0, 0, 0, 0.06);
-  --border-mid:   rgba(0, 0, 0, 0.12);
-  --border-hi:    rgba(0, 0, 0, 0.25);
+  --border:       rgba(0, 71, 171, 0.1);
+  --border-mid:   rgba(0, 71, 171, 0.2);
+  --border-hi:    rgba(0, 71, 171, 0.4);
 
-  --text:         #020617;
+  --text:         #0F172A; /* Azul oscuro casi negro para máxima legibilidad */
   --text-2:       #334155;
   --text-3:       #64748B;
 
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.1);
-  --shadow-md:  0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05);
-  --shadow-lg:  0 20px 50px -12px rgba(0,0,0,0.1);
-  --shadow-blue: 0 10px 30px rgba(0, 71, 171, 0.08);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.12);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg:  0 15px 35px rgba(0,0,0,0.12);
+  --shadow-blue: 0 10px 30px rgba(0, 71, 171, 0.12);
 
-  --glass-bg: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(0, 0, 0, 0.05);
-  --input-bg: #F1F5F9;
-  --accent-subtle: rgba(0, 71, 171, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.98);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --input-bg: #FFFFFF;
+  --accent-subtle: rgba(0, 71, 171, 0.06);
 }
 
 /* Specific component depth fixes */
@@ -294,10 +294,10 @@ body::before {
 }
 
 .card-premium-styled {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
   overflow: hidden;
 }

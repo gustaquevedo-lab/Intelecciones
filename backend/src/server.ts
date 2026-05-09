@@ -225,7 +225,22 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
   // SuperUser can see everything, or filter by activeDistrict if provided
   if (role === 'SUPERUSUARIO') {
-    return activeDistrict ? { sql: `AND ${tableAlias}.${distColumn} = ?`, params: [activeDistrict] } : { sql: '', params: [] };
+    let sql = '';
+    let params: any[] = [];
+    if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined') {
+      sql += ` AND ${tableAlias}.${distColumn} = ?`;
+      params.push(activeDistrict);
+    }
+    const listId = getListId(req);
+    if (listId) {
+       if (tableAlias === 'l') { sql += ` AND ${tableAlias}.id = ?`; params.push(listId); }
+       else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'u' || tableAlias === 'capture_conflicts') { 
+         const col = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
+         sql += ` AND ${tableAlias}.${col} = ?`; 
+         params.push(listId); 
+       }
+    }
+    return { sql, params };
   }
 
   // Non-SuperUsers are locked to their assignment
@@ -893,12 +908,10 @@ app.get('/api/activities', (req, res) => {
 // Vehicles route is defined later in the file
 
 app.get('/api/captures', (req, res) => {
-  const list_id = getListId(req);
-  const local_id = req.query.localId;
-  const role = getRole(req);
-  const sec = getSecurityFilter(req, 'l');
+  const sec = getSecurityFilter(req, 'ec');
 
   try {
+    const list_id = getListId(req);
     const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
     const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
 
@@ -2217,7 +2230,7 @@ app.get('/api/admin/disputes/global', (req, res) => {
     const disputes = db.prepare(`
       SELECT 
         e.ci, e.nombre, e.apellido, e.local_votacion,
-        GROUP_CONCAT('Lista ' || l.list_number || ' (' || u.nombre || ')') as details,
+        GROUP_CONCAT('Lista ' || l.list_number || ' (' || u.nombre || ')|' || ec.lat || '|' || ec.lng) as details,
         COUNT(DISTINCT ec.list_id) as list_count
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci

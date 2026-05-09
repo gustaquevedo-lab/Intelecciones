@@ -9,7 +9,7 @@ import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
   TrendingUp, TrendingDown, ChevronUp, ChevronDown,
   Download, MapPin, Activity, Bell, X, Search,
-  AlertCircle, ChevronRight, Truck, Target, Phone, MessageSquare, Mic, Clock
+  AlertCircle, ChevronRight, Truck, Target, Phone, MessageSquare, Mic, Clock, ExternalLink, Printer
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { ManagementTable } from '../components/ManagementTable';
@@ -1147,7 +1147,7 @@ const CommandCenter = () => {
               <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', marginBottom: '0.5rem' }}>Estructura de <span style={{ color: 'var(--plra-300)' }}>Mando</span></h2>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.5rem' }}>Estructura de <span style={{ color: 'var(--plra-300)' }}>Mando</span></h2>
                     <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Navegación jerárquica de la Lista 3.</p>
                   </div>
                   {(selectedPadrino || selectedCoordDetails) && (
@@ -1170,18 +1170,18 @@ const CommandCenter = () => {
                         whileHover={{ y: -5 }}
                         key={p.id}
                         onClick={() => setSelectedPadrino(p)}
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.75rem', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.75rem', cursor: 'pointer', boxShadow: 'var(--shadow-md)' }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
                           <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 900, color: 'white' }}>{p.nombre?.charAt(0)}</div>
                           <div>
-                            <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>{p.nombre}</p>
+                            <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{p.nombre}</p>
                             <span style={{ fontSize: '0.6rem', color: 'var(--plra-300)', fontWeight: 900 }}>PADRINO L-{p.list_number}</span>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '14px' }}>
-                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)' }}>COORDINADORES</span>
-                          <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{p.coordinator_count}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--accent-subtle)', padding: '1rem', borderRadius: '14px', border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)' }}>COORDINADORES</span>
+                          <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text)' }}>{p.coordinator_count}</span>
                         </div>
                       </motion.div>
                     ))}
@@ -1193,21 +1193,21 @@ const CommandCenter = () => {
                         whileHover={{ y: -5 }}
                         key={c.id}
                         onClick={() => setSelectedCoordDetails(c)}
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.5rem', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.5rem', cursor: 'pointer', boxShadow: 'var(--shadow-md)' }}
                       >
-                        <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', marginBottom: '1.25rem' }}>{c.nombre}</p>
+                        <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', marginBottom: '1.25rem' }}>{c.nombre}</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '1.25rem' }}>
-                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(34,197,94,0.08)', borderRadius: '14px' }}>
+                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(34,197,94,0.1)', borderRadius: '14px', border: '1px solid rgba(34,197,94,0.2)' }}>
                             <p style={{ fontSize: '0.5rem', color: 'var(--green)', fontWeight: 900 }}>FAVOR</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>{c.green || 0}</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)' }}>{c.green || 0}</p>
                           </div>
-                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(234,179,8,0.08)', borderRadius: '14px' }}>
+                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(234,179,8,0.1)', borderRadius: '14px', border: '1px solid rgba(234,179,8,0.2)' }}>
                             <p style={{ fontSize: '0.5rem', color: 'var(--yellow)', fontWeight: 900 }}>DUDOSO</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>{c.yellow || 0}</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)' }}>{c.yellow || 0}</p>
                           </div>
-                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(239,68,68,0.08)', borderRadius: '14px' }}>
+                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(239,68,68,0.1)', borderRadius: '14px', border: '1px solid rgba(239,68,68,0.2)' }}>
                             <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 900 }}>CONTRA</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>{c.red || 0}</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)' }}>{c.red || 0}</p>
                           </div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.08)', padding: '0.75rem 1rem', borderRadius: '14px' }}>
@@ -1335,7 +1335,7 @@ const CommandCenter = () => {
                 style={{ maxWidth: '500px', width: '100%' }}
               >
                 <div style={{ padding: '2rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(239,68,68,0.05), transparent)' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <AlertTriangle size={24} style={{ color: 'var(--red)' }} />
                     Conflicto de Captura
                   </h3>
@@ -1349,15 +1349,15 @@ const CommandCenter = () => {
                   
                     {/* Party 1: Original */}
                     <div style={{ 
-                      padding: '1.25rem', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', 
+                      padding: '1.25rem', borderRadius: '16px', background: 'var(--accent-subtle)', 
                       border: '1px solid var(--border)', position: 'relative', overflow: 'hidden' 
                     }}>
                       <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--plra-500)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>CAPTURA ORIGINAL</div>
                       
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', marginBottom: '0.2rem' }}>{showResolveModal.original_coordinator_name}</p>
-                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-200)' }}>{showResolveModal.original_parent_name || 'Mando Directo'}</span></p>
+                          <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.original_coordinator_name}</p>
+                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.original_parent_name || 'Mando Directo'}</span></p>
                           
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
                             <Clock size={12} />
@@ -1394,15 +1394,15 @@ const CommandCenter = () => {
 
                     {/* Party 2: New Conflict */}
                     <div style={{ 
-                      padding: '1.25rem', borderRadius: '16px', background: 'rgba(239,68,68,0.03)', 
+                      padding: '1.25rem', borderRadius: '16px', background: 'rgba(239,68,68,0.05)', 
                       border: '1px solid rgba(239,68,68,0.2)', position: 'relative', overflow: 'hidden' 
                     }}>
                       <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>NUEVA DISPUTA</div>
                       
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', marginBottom: '0.2rem' }}>{showResolveModal.coordinator_name}</p>
-                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-200)' }}>{showResolveModal.parent_name || 'Mando Directo'}</span></p>
+                          <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coordinator_name}</p>
+                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.parent_name || 'Mando Directo'}</span></p>
                           
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
                             <Clock size={12} />
