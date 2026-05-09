@@ -2051,6 +2051,7 @@ const CoordinatorApp = () => {
                 <AnimatePresence>
                   {showPhotoSource === 'COORD' && (
                     <motion.div 
+                      key="photo-source-coord"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 20 }}
@@ -2242,6 +2243,7 @@ const CoordinatorApp = () => {
                 <AnimatePresence>
                   {showPhotoSource === 'PADRINO' && (
                     <motion.div 
+                      key="photo-source-padrino"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 20 }}
