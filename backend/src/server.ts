@@ -41,19 +41,34 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
-// 📊 Storage Diagnosis
+// 📊 Recursive Storage Diagnosis
 if (process.env.NODE_ENV === 'production') {
   try {
     const dataDir = '/app/data';
     if (fs.existsSync(dataDir)) {
+      const getDirSize = (dirPath: string): number => {
+        let size = 0;
+        const files = fs.readdirSync(dirPath);
+        for (const f of files) {
+          const fullPath = path.join(dirPath, f);
+          const s = fs.statSync(fullPath);
+          if (s.isDirectory()) size += getDirSize(fullPath);
+          else size += s.size;
+        }
+        return size;
+      };
+
       const stats = fs.readdirSync(dataDir).map(f => {
         const fullPath = path.join(dataDir, f);
         const s = fs.statSync(fullPath);
+        if (s.isDirectory()) {
+          return { name: f + ' (DIR)', size: (getDirSize(fullPath) / 1024 / 1024).toFixed(2) + ' MB' };
+        }
         return { name: f, size: (s.size / 1024 / 1024).toFixed(2) + ' MB' };
       });
-      console.log('--- STORAGE DIAGNOSIS ---');
+      console.log('--- REAL STORAGE DIAGNOSIS ---');
       console.table(stats);
-      console.log('-------------------------');
+      console.log('------------------------------');
     }
   } catch (e) { console.error('Error diagnosing storage:', e); }
 }
