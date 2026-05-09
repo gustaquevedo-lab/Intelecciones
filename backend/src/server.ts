@@ -204,13 +204,19 @@ app.post('/api/ingest', (req, res) => {
 
 // --- Multi-tenancy Helpers ---
 const getListId = (req: express.Request) => {
+  const q = req.query.listId as string;
+  if (q && q !== 'null' && q !== 'undefined' && q !== '') return parseInt(q);
+  
   const h = req.headers['x-list-id'];
-  return (h && h !== 'null' && h !== 'undefined') ? parseInt(h as string) : null;
+  return (h && h !== 'null' && h !== 'undefined' && h !== '') ? parseInt(h as string) : null;
 };
 
 const getDistrict = (req: express.Request) => {
+  const q = req.query.district as string;
+  if (q && q !== 'null' && q !== 'undefined' && q !== '') return q;
+
   const d = req.headers['x-district'];
-  return (d && d !== 'null' && d !== 'undefined') ? d as string : null;
+  return (d && d !== 'null' && d !== 'undefined' && d !== '') ? d as string : null;
 };
 
 const getRole = (req: express.Request) => (req.headers['x-user-role'] as string) || 'GUEST';

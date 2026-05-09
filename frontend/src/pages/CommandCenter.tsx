@@ -482,7 +482,7 @@ const MapHandler = ({ center, selectedLocalId }: { center: [number, number] | nu
 };
 
 const CommandCenter = () => {
-  const { user: authUser, loading, activeListId } = useAuth();
+  const { user: authUser, loading, activeListId, activeDistrict } = useAuth();
   const { settings } = useSettings();
   const { isDark } = useTheme();
   const navigate = useNavigate();
@@ -530,16 +530,17 @@ const CommandCenter = () => {
       const params = new URLSearchParams();
       if (activeListId) params.append('listId', activeListId.toString());
       if (selectedLocal) params.append('localId', selectedLocal);
+      if (activeDistrict) params.append('district', activeDistrict);
 
       const [locRes, statRes, capRes, confRes, reqRes, actRes, vehRes, coordRes] = await Promise.all([
         api.get('/voting-locations'),
         api.get(`/stats/command?${params.toString()}`),
         api.get(`/captures?${params.toString()}`),
-        api.get('/admin/conflicts'),
-        api.get('/admin/requests'),
-        api.get('/admin/activity'),
-        api.get('/vehicles'),
-        api.get('/users') // To get coordinators for the layer filter
+        api.get(`/admin/conflicts?${params.toString()}`),
+        api.get(`/admin/requests?${params.toString()}`),
+        api.get(`/admin/activity?${params.toString()}`),
+        api.get(`/vehicles?${params.toString()}`),
+        api.get(`/users?${params.toString()}`) // To get coordinators for the layer filter
       ]);
       setLocales(locRes.data);
       setCommandStats(statRes.data);
@@ -562,11 +563,11 @@ const CommandCenter = () => {
   useEffect(() => {
     loadData();
     if (activeTab === 'hierarchy') {
-       api.get('/structure/padrinos').then(res => setStructureData(res.data));
+       api.get(`/structure/padrinos?district=${activeDistrict || ''}&listId=${activeListId || ''}`).then(res => setStructureData(res.data));
     }
     const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
-  }, [activeListId, selectedLocal, activeTab]);
+  }, [activeListId, activeDistrict, selectedLocal, activeTab]);
 
   useEffect(() => {
     if (selectedPadrino) {
