@@ -274,6 +274,14 @@ runMigration("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'ACTIVE'");
 runMigration("ALTER TABLE elector_captures ADD COLUMN is_disputed INTEGER DEFAULT 0");
 runMigration("ALTER TABLE elector_captures ADD COLUMN campaign_id INTEGER");
 runMigration("ALTER TABLE elector_captures ADD COLUMN list_id INTEGER");
+runMigration("ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ''");
+runMigration("ALTER TABLE participation_logs ADD COLUMN veedor_id INTEGER");
+runMigration("ALTER TABLE results ADD COLUMN veedor_id INTEGER");
+runMigration("ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ''");
+runMigration("ALTER TABLE campaigns ADD COLUMN enabled_modules TEXT DEFAULT 'COMMAND_CENTER,REGISTRY'");
+runMigration("ALTER TABLE users ADD COLUMN enabled_modules TEXT");
+runMigration("ALTER TABLE users ADD COLUMN parent_id INTEGER");
+runMigration("ALTER TABLE users ADD COLUMN telefono TEXT");
 
 try {
   console.log('MIGRATION: Normalizando distritos a MAYÚSCULAS...');
