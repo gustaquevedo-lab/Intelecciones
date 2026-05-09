@@ -1164,7 +1164,14 @@ const CommandCenter = () => {
                   )}
                 </header>
 
-                {!selectedPadrino ? (
+                {hierarchy.length === 0 ? (
+                  <div className="empty-state-card">
+                    <div className="icon-pulse"><Users size={48} /></div>
+                    <h3>Jerarquía de Mando Vacía</h3>
+                    <p>No se han encontrado Padrinos registrados en el distrito seleccionado.</p>
+                    <p className="hint">Cree Padrinos en el panel de administración para empezar a ver su desempeño.</p>
+                  </div>
+                ) : !selectedPadrino ? (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
                     {structureData.map(p => (
                       <motion.div 
@@ -1293,7 +1300,16 @@ const CommandCenter = () => {
                 </div>
               </div>
               <div style={{ background: 'var(--surface)', borderRadius: '20px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
-                <ManagementTable 
+                {searchResults.length === 0 && !searchQuery ? (
+                  <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+                    <div className="icon-pulse" style={{ marginBottom: '1.5rem', color: 'var(--plra-400)' }}><Search size={48} /></div>
+                    <h3 style={{ color: 'var(--text)', fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Búsqueda de Padrón Electoral</h3>
+                    <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto', lineHeight: '1.5' }}>
+                      Escriba una Cédula, Nombre o Apellido en el buscador superior para consultar el padrón nacional (37,000+ electores).
+                    </p>
+                  </div>
+                ) : (
+                  <ManagementTable 
                   isLoading={isSearching}
                   data={searchResults}
                   columns={[
@@ -1319,6 +1335,7 @@ const CommandCenter = () => {
                     { header: 'Responsable', accessor: 'coordinator_name' }
                   ]}
                 />
+                )}
               </div>
             </div>
           )}
