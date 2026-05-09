@@ -1179,9 +1179,19 @@ app.post('/api/users', (req, res) => {
       }
     }
 
+    let distrito = req.body.distrito;
+    if (!distrito && (assigned_campaign_id || campaign_id || assigned_list_id || list_id)) {
+      const campId = assigned_campaign_id || campaign_id;
+      const lstId = assigned_list_id || list_id;
+      const origin = campId 
+        ? db.prepare('SELECT distrito FROM campaigns WHERE id = ?').get(campId) 
+        : db.prepare('SELECT ciudad as distrito FROM lists WHERE id = ?').get(lstId);
+      distrito = (origin as any)?.distrito;
+    }
+
     const result = db.prepare(`
-      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci, needs_password_change)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+      INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci, needs_password_change, distrito)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `).run(
       finalUsername, 
       finalPassword, 
@@ -1194,7 +1204,8 @@ app.post('/api/users', (req, res) => {
       photo_url || null, 
       parent_id || null, 
       telefono || null, 
-      cleanCI
+      cleanCI,
+      distrito || null
     );
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${finalUsername} with role ${role}`);
@@ -1315,9 +1326,22 @@ app.put('/api/users/:id', (req, res) => {
   try {
     db.prepare(`
       UPDATE users 
-      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?, ci = ?
+      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?, ci = ?, distrito = ?
       WHERE id = ?
-    `).run(role, assigned_list_id || null, req.body.assigned_campaign_id || null, req.body.assigned_local || null, req.body.assigned_mesa || null, nombre, photo_url, parent_id || null, telefono || null, cleanCI, req.params.id);
+    `).run(
+      role, 
+      assigned_list_id || null, 
+      req.body.assigned_campaign_id || null, 
+      req.body.assigned_local || null, 
+      req.body.assigned_mesa || null, 
+      nombre, 
+      photo_url, 
+      parent_id || null, 
+      telefono || null, 
+      cleanCI, 
+      req.body.distrito || null,
+      req.params.id
+    );
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
     res.json({ success: true });
   } catch (err: any) {
