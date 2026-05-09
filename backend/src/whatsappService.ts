@@ -126,7 +126,11 @@ class WhatsAppManager {
           const media = await msg.downloadMedia();
           if (media) {
             const filename = `${Date.now()}-${terminalId}.${media.mimetype.split('/')[1]}`;
-            const filePath = path.join(__dirname, '../uploads', filename);
+            // Correct path for production (Railway Volume)
+            const uploadDir = process.env.NODE_ENV === 'production' ? '/app/data/uploads' : path.join(__dirname, '../uploads');
+            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+            
+            const filePath = path.join(uploadDir, filename);
             fs.writeFileSync(filePath, Buffer.from(media.data, 'base64'));
             const host = process.env.APP_URL || 'http://localhost:5000';
             mediaUrl = `${host}/uploads/${filename}`;

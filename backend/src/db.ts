@@ -2,27 +2,19 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-// Use path relative to /app/data for Railway persistence
+// Consistently use root directory for development, /app/data for production
 const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
-let dbPath = path.join(dbDir, 'intellecciones.db');
+const dbPath = path.join(dbDir, 'intellecciones.db');
 
-// Development safety: Prioritize backend/intellecciones.db if it exists and is not empty
+// Migration/Bridge: If the DB exists in 'backend/' but not in root, copy it (Dev safety)
 if (process.env.NODE_ENV !== 'production') {
-  const backendPath = path.join(dbDir, 'backend', 'intellecciones.db');
-  const rootPath = path.join(dbDir, 'intellecciones.db');
-  
-  const backendExists = fs.existsSync(backendPath) && fs.statSync(backendPath).size > 1024;
-  const rootExists = fs.existsSync(rootPath) && fs.statSync(rootPath).size > 1024;
-
-  if (backendExists) {
-    dbPath = backendPath;
-  } else if (rootExists) {
-    dbPath = rootPath;
-  } else {
-    // Fallback to backend if both are empty or missing
-    dbPath = backendPath;
+  const legacyPath = path.join(process.cwd(), 'backend', 'intellecciones.db');
+  if (fs.existsSync(legacyPath) && !fs.existsSync(dbPath)) {
+    console.log("BRIDGE: Moving database from backend/ to root...");
+    fs.copyFileSync(legacyPath, dbPath);
   }
 }
+
 
 // Migration: If we are in production and the volume DB is an empty placeholder (< 100KB)
 if (process.env.NODE_ENV === 'production') {
@@ -98,6 +90,7 @@ db.exec(`
     needs_password_change INTEGER DEFAULT 0,
     parent_id INTEGER,
     telefono TEXT,
+    distrito TEXT,
     FOREIGN KEY(assigned_list_id) REFERENCES lists(id),
     FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id),
     FOREIGN KEY(parent_id) REFERENCES users(id)
@@ -294,6 +287,9 @@ try {
 } catch (e) {}
 try {
   db.prepare("ALTER TABLE users ADD COLUMN ci TEXT").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN distrito TEXT").run();
 } catch (e) {}
 try {
   db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 0').run();

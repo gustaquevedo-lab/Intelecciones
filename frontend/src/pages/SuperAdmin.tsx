@@ -896,6 +896,31 @@ const SuperAdmin = () => {
           <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0 }}>Administración Central de Multi-Tenancy</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button 
+            onClick={() => {
+              setActiveDistrict(null);
+              setActiveListId(null);
+              setSelectedCampaignId('all');
+            }}
+            className="mini-btn"
+            style={{ 
+              background: (activeDistrict || activeListId) ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
+              color: 'white',
+              fontSize: '0.65rem',
+              fontWeight: 800,
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Shield size={12} />
+            { (activeDistrict || activeListId) ? 'LIMPIAR FILTROS GLOBALES' : 'VISTA GLOBAL ACTIVA' }
+          </button>
+
           <div className="form-group" style={{ marginBottom: 0 }}>
             <select 
               className="mini-input" 

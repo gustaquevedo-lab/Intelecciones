@@ -226,20 +226,26 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   const user_id = req.headers['x-user-id'];
   const activeDistrict = getDistrict(req);
 
-  // Column name mapping: most use 'distrito', but 'lists' (l) and 'electors' (e) use 'ciudad'
+  // Column name mapping: most use 'distrito', but 'lists' (l) uses 'ciudad'
   const distColumn = (tableAlias === 'l') ? 'ciudad' : 'distrito';
 
   // SuperUser can see everything, or filter by activeDistrict if provided
   if (role === 'SUPERUSUARIO') {
     let sql = '';
     let params: any[] = [];
-    if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined') {
+    
+    // Only apply district filter if it's explicitly provided and not "Global" or empty
+    if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
       sql += ` AND UPPER(${tableAlias}.${distColumn}) = UPPER(?)`;
       params.push(activeDistrict);
     }
+    
     const listId = getListId(req);
-    if (listId) {
-       if (tableAlias === 'l') { sql += ` AND ${tableAlias}.id = ?`; params.push(listId); }
+    if (listId && !isNaN(listId)) {
+       if (tableAlias === 'l') { 
+         sql += ` AND ${tableAlias}.id = ?`; 
+         params.push(listId); 
+       }
        else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'u' || tableAlias === 'capture_conflicts') { 
          const col = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
          sql += ` AND ${tableAlias}.${col} = ?`; 
@@ -637,7 +643,8 @@ app.post('/api/voting-locations/:cod/icon', (req, res) => {
 
 // Campaign Management
 app.get('/api/campaigns', (req, res) => {
-  const sec = getSecurityFilter(req, 'c');
+  const role = getRole(req);
+  const sec = (role === 'SUPERUSUARIO') ? { sql: '', params: [] } : getSecurityFilter(req, 'c');
   const params = sec.params || [];
   
   try {
@@ -1247,7 +1254,8 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
 });
 
 app.get('/api/lists', (req, res) => {
-  const sec = getSecurityFilter(req, 'l');
+  const role = getRole(req);
+  const sec = (role === 'SUPERUSUARIO') ? { sql: '', params: [] } : getSecurityFilter(req, 'l');
   const params = sec.params || [];
 
   try {
