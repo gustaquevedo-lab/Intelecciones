@@ -110,27 +110,6 @@ db.exec(`
     ciudad TEXT DEFAULT ''
   );
 
-  CREATE TABLE IF NOT EXISTS participation_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    local_votacion TEXT NOT NULL,
-    mesa INTEGER NOT NULL,
-    orden INTEGER NOT NULL,
-    veedor_id INTEGER,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(veedor_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    action TEXT NOT NULL,
-    entity TEXT,
-    entity_id TEXT,
-    details TEXT,
-    list_id INTEGER,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
   CREATE TABLE IF NOT EXISTS elector_captures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     elector_ci TEXT,
@@ -145,56 +124,6 @@ db.exec(`
     telefono TEXT,
     original_capture_id INTEGER,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS capture_conflicts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    capture_id INTEGER,
-    elector_ci TEXT,
-    list_id INTEGER,
-    status TEXT DEFAULT 'PENDING',
-    resolved_by_jefe_id INTEGER,
-    resolved_coordinator_id INTEGER,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS field_requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    coordinator_id INTEGER,
-    list_id INTEGER,
-    type TEXT NOT NULL,
-    description TEXT,
-    photo_url TEXT,
-    audio_url TEXT,
-    status TEXT DEFAULT 'PENDING',
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS results (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tenant_id INTEGER,
-    mesa INTEGER,
-    local_votacion TEXT,
-    votos_blancos INTEGER DEFAULT 0,
-    votos_nulos INTEGER DEFAULT 0,
-    foto_acta_url TEXT,
-    veedor_id INTEGER,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(veedor_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS acta_results (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    acta_id INTEGER,
-    lista_id INTEGER,
-    votos INTEGER,
-    FOREIGN KEY(acta_id) REFERENCES results(id),
-    FOREIGN KEY(lista_id) REFERENCES lists(id)
   );
 
   CREATE TABLE IF NOT EXISTS whatsapp_terminals (
@@ -220,53 +149,65 @@ db.exec(`
 
 // 🛠️ Schema Migrations
 const runMigration = (sql: string) => { try { db.prepare(sql).run(); } catch (e) {} };
-runMigration("ALTER TABLE campaigns ADD COLUMN slogan TEXT");
-runMigration("ALTER TABLE campaigns ADD COLUMN photo_url TEXT");
 runMigration("ALTER TABLE campaigns ADD COLUMN distrito TEXT");
 runMigration("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''");
-runMigration("ALTER TABLE lists ADD COLUMN candidate_nombre TEXT");
-runMigration("ALTER TABLE lists ADD COLUMN candidate_alias TEXT");
-runMigration("ALTER TABLE lists ADD COLUMN is_adversary INTEGER DEFAULT 0");
-runMigration("ALTER TABLE users ADD COLUMN photo_url TEXT");
-runMigration("ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 0");
-runMigration("ALTER TABLE users ADD COLUMN parent_id INTEGER");
-runMigration("ALTER TABLE users ADD COLUMN telefono TEXT");
 runMigration("ALTER TABLE users ADD COLUMN distrito TEXT");
 runMigration("ALTER TABLE users ADD COLUMN ci TEXT");
 runMigration("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'ACTIVE'");
 runMigration("ALTER TABLE elector_captures ADD COLUMN is_disputed INTEGER DEFAULT 0");
-runMigration("ALTER TABLE elector_captures ADD COLUMN original_capture_id INTEGER");
 runMigration("ALTER TABLE elector_captures ADD COLUMN campaign_id INTEGER");
 runMigration("ALTER TABLE elector_captures ADD COLUMN list_id INTEGER");
-runMigration("ALTER TABLE field_requests ADD COLUMN photo_url TEXT");
-runMigration("ALTER TABLE field_requests ADD COLUMN audio_url TEXT");
-runMigration("ALTER TABLE capture_conflicts ADD COLUMN resolved_by_jefe_id INTEGER");
-runMigration("ALTER TABLE capture_conflicts ADD COLUMN resolved_coordinator_id INTEGER");
+
+// 📊 Data Normalization (Your work)
+try {
+  console.log('MIGRATION: Normalizando distritos a MAYÚSCULAS...');
+  db.exec(`
+    UPDATE electors SET ciudad = UPPER(COALESCE(NULLIF(TRIM(ciudad), ''), 'PEDRO JUAN CABALLERO')) WHERE ciudad IS NULL OR ciudad = '' OR ciudad != UPPER(ciudad);
+    UPDATE voting_locations SET distrito = UPPER(COALESCE(NULLIF(TRIM(distrito), ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
+    UPDATE lists SET ciudad = UPPER(COALESCE(NULLIF(TRIM(ciudad), ''), 'PEDRO JUAN CABALLERO')) WHERE ciudad IS NULL OR ciudad = '' OR ciudad != UPPER(ciudad);
+    UPDATE campaigns SET distrito = UPPER(COALESCE(NULLIF(TRIM(distrito), ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
+    UPDATE users SET distrito = UPPER(COALESCE(NULLIF(distrito, ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
+  `);
+  console.log('MIGRATION SUCCESS: Distritos normalizados.');
+} catch (e) { console.error('Migration failed:', e); }
 
 // 🧹 Maintenance
 try {
-  console.log("Running DB maintenance...");
+  console.log("Running DB maintenance (VACUUM)...");
   db.pragma('wal_checkpoint(TRUNCATE)');
   db.prepare('VACUUM').run();
-  console.log("DB maintenance complete.");
-} catch (e) { console.error("Maintenance failed:", e); }
+} catch (e) {}
 
 /* Optimization Indexes */
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa)").run();
-db.prepare("CREATE INDEX IF NOT EXISTS idx_captures_ci_list ON elector_captures (elector_ci, list_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").run();
 
-/* Initial Seeds */
+/* Initial Seeds (Including your custom data) */
 db.exec(`
+  -- Core Users
   INSERT OR IGNORE INTO users (id, username, password, role, nombre) VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito) VALUES (2, '5888408', '123', 'SUPERUSUARIO', 'Gustavo Quevedo', '5888408', 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito) VALUES (3, '4931831', '123', 'COORDINADOR', 'Coordinador Gustavo', '4931831', 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito, assigned_list_id) VALUES (4, '111', '111', 'COORDINADOR', 'Coord Lista 3', '111', 'PEDRO JUAN CABALLERO', 1);
+  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito, assigned_list_id) VALUES (5, '222', '222', 'PADRINO', 'Padrino Lista 3', '222', 'PEDRO JUAN CABALLERO', 1);
+  
+  UPDATE users SET parent_id = 5 WHERE id = 4;
+
+  -- Campaigns & Lists
   INSERT OR IGNORE INTO campaigns (id, name, distrito) VALUES (1, 'Elecciones 2026', 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO lists (id, campaign_id, type, list_number, ciudad) VALUES (1, 1, 'INTERNA', '3', 'PEDRO JUAN CABALLERO');
+
+  -- Voting Locations
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', 'COL. NAC. CERRO CORA EX JUAN E O''LEARY', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L2', 'ESC. BAS. CARLOS ANTONIO LOPEZ', -22.535, -55.715, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L3', 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', -22.555, -55.735, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L4', 'FACULTAD DE CIENCIAS AGRARIAS', -22.525, -55.705, 'PEDRO JUAN CABALLERO');
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre, assigned_list_id) VALUES (10, 'padrino1', '123', 'PADRINO', 'Padrino de Prueba', 1);
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre, parent_id, assigned_list_id) VALUES (20, 'coord1', '123', 'COORDINADOR', 'Coordinador de Prueba', 10, 1);
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L5', 'COL. NAC. ASUNCION ESCALADA', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L6', 'CENTRO REGIONAL DE EDUCACION', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
+
+  -- Sample Captures
+  INSERT OR IGNORE INTO elector_captures (elector_ci, coordinator_id, list_id, lat, lng, traffic_light) VALUES ('5888408', 4, 1, -22.54, -55.72, 'GREEN');
+  INSERT OR IGNORE INTO elector_captures (elector_ci, coordinator_id, list_id, lat, lng, traffic_light) VALUES ('4931831', 4, 1, -22.54, -55.72, 'YELLOW');
 `);
 
 export default db;
