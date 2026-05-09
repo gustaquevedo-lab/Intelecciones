@@ -353,7 +353,18 @@ db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").r
 /* Ensure default Super Admin exists */
 db.prepare(`
   INSERT OR IGNORE INTO users (id, username, password, role, nombre) 
-  VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General')
+  VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
+
+  -- Ensure at least one campaign and one list exist
+  INSERT OR IGNORE INTO campaigns (id, name, distrito) VALUES (1, 'Elecciones 2026', 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO lists (id, campaign_id, type, list_number, ciudad) VALUES (1, 1, 'INTERNA', '3', 'PEDRO JUAN CABALLERO');
+
+  -- Ensure some default voting locations exist
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L1', 'CENTRO REGIONAL DE EDUCACION', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
+  INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L2', 'COLEGIO NACIONAL ASUNCION ESCALADA', -22.535, -55.715, 'PEDRO JUAN CABALLERO');
+
+  -- Ensure a sample Padrino exists to activate hierarchy view
+  INSERT OR IGNORE INTO users (username, password, role, nombre, assigned_list_id) VALUES ('padrino1', '123', 'PADRINO', 'Padrino de Prueba', 1);
 `).run();
 
 export default db;
