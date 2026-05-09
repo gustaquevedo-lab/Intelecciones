@@ -67,8 +67,11 @@ class WhatsAppManager {
 
     const client = new Client({
       authStrategy: new LocalAuth({ dataPath: sessionPath }),
+      takeoverOnConflict: true,
+      authTimeoutMs: 120000,
       puppeteer: {
         handleSIGINT: false,
+        executablePath: process.env.CHROME_BIN || undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -78,9 +81,16 @@ class WhatsAppManager {
           '--no-zygote',
           '--disable-gpu',
           '--disable-extensions',
-          '--disable-software-rasterizer'
+          '--disable-software-rasterizer',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--aggressive-cache-discard'
         ],
         headless: true
+      },
+      webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
       }
     });
 
@@ -267,6 +277,21 @@ class WhatsAppManager {
     `).run(terminalId, chatId, message || 'Archivo', mediaUrl);
     return res;
   }
+
+  // 🛠️ Auto-repair and monitoring
+  startMaintenance() {
+    setInterval(async () => {
+      for (const [id, terminal] of this.terminals) {
+        if (terminal.status === 'DISCONNECTED') {
+          console.log(`[WHATSAPP][MAINTENANCE] Terminal ${id} disconnected. Repairing...`);
+          try {
+            await this.connect(id);
+          } catch (e) {}
+        }
+      }
+    }, 300000); // Check every 5 minutes
+  }
 }
 
 export const whatsappService = new WhatsAppManager();
+whatsappService.startMaintenance();

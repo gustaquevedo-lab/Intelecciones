@@ -26,8 +26,23 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    // Try to get location
+    let lat = null;
+    let lng = null;
+    
     try {
-      const loggedUser = await login({ username, password });
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+      });
+      lat = position.coords.latitude;
+      lng = position.coords.longitude;
+    } catch (e) {
+      console.warn("Location capture skipped or denied");
+    }
+
+    try {
+      const loggedUser = await login({ username, password, lat, lng });
       
       if (loggedUser.needs_password_change) {
         setOnboardingUser(loggedUser);

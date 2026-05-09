@@ -247,6 +247,21 @@ db.exec(`
     status TEXT DEFAULT 'AVAILABLE',
     assigned_list_id INTEGER
   );
+
+  CREATE TABLE IF NOT EXISTS login_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT,
+    ip TEXT,
+    user_agent TEXT,
+    browser TEXT,
+    os TEXT,
+    device TEXT,
+    lat REAL,
+    lng REAL,
+    status TEXT,
+    details TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // 🛠️ MIGRATIONS & NORMALIZATION

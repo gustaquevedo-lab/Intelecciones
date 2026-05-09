@@ -41,43 +41,51 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
-// 📊 Recursive Storage Diagnosis & Cache Purge
+// 📊 Robust Recursive Storage Diagnosis & Safe Cache Purge
 if (process.env.NODE_ENV === 'production') {
   try {
     const dataDir = '/app/data';
     if (fs.existsSync(dataDir)) {
-      // 🧹 PRE-START PURGE: Remove Chromium Cache folders to free space
-      const purgeCache = (basePath: string) => {
-        const cacheFolders = ['Cache', 'Code Cache', 'GPUCache', 'Service Worker/CacheStorage'];
-        if (fs.existsSync(basePath)) {
+      const safePurge = (basePath: string) => {
+        try {
+          const cacheFolders = ['Cache', 'Code Cache', 'GPUCache', 'Service Worker/CacheStorage'];
+          if (!fs.existsSync(basePath)) return;
           const items = fs.readdirSync(basePath);
           for (const item of items) {
             const fullPath = path.join(basePath, item);
-            if (fs.statSync(fullPath).isDirectory()) {
-              if (cacheFolders.some(cf => item.includes(cf) || fullPath.endsWith(cf))) {
-                console.log(`PURGE: Deleting cache folder: ${fullPath}`);
-                fs.rmSync(fullPath, { recursive: true, force: true });
-              } else {
-                purgeCache(fullPath);
+            try {
+              if (!fs.existsSync(fullPath)) continue;
+              const s = fs.statSync(fullPath);
+              if (s.isDirectory()) {
+                if (cacheFolders.some(cf => item.includes(cf) || fullPath.endsWith(cf))) {
+                  console.log(`[STORAGE] Purging cache: ${fullPath}`);
+                  fs.rmSync(fullPath, { recursive: true, force: true });
+                } else {
+                  safePurge(fullPath);
+                }
               }
-            }
+            } catch (e) {} // Ignore errors for individual files
           }
-        }
+        } catch (e) {}
       };
       
-      console.log("STORAGE: Purging WhatsApp session caches...");
-      purgeCache(path.join(dataDir, 'whatsapp_session_default'));
-      purgeCache(path.join(dataDir, 'whatsapp_session'));
+      console.log("[STORAGE] Starting safe background cleanup...");
+      safePurge(path.join(dataDir, 'whatsapp_session_default'));
+      safePurge(path.join(dataDir, 'whatsapp_session'));
 
       const getDirSize = (dirPath: string): number => {
         let size = 0;
         try {
+          if (!fs.existsSync(dirPath)) return 0;
           const files = fs.readdirSync(dirPath);
           for (const f of files) {
             const fullPath = path.join(dirPath, f);
-            const s = fs.statSync(fullPath);
-            if (s.isDirectory()) size += getDirSize(fullPath);
-            else size += s.size;
+            try {
+              if (!fs.existsSync(fullPath)) continue;
+              const s = fs.statSync(fullPath);
+              if (s.isDirectory()) size += getDirSize(fullPath);
+              else size += s.size;
+            } catch (e) {}
           }
         } catch (e) {}
         return size;
@@ -85,17 +93,19 @@ if (process.env.NODE_ENV === 'production') {
 
       const stats = fs.readdirSync(dataDir).map(f => {
         const fullPath = path.join(dataDir, f);
-        const s = fs.statSync(fullPath);
-        if (s.isDirectory()) {
-          return { name: f + ' (DIR)', size: (getDirSize(fullPath) / 1024 / 1024).toFixed(2) + ' MB' };
-        }
-        return { name: f, size: (s.size / 1024 / 1024).toFixed(2) + ' MB' };
+        try {
+          const s = fs.statSync(fullPath);
+          if (s.isDirectory()) {
+            return { name: f + ' (DIR)', size: (getDirSize(fullPath) / 1024 / 1024).toFixed(2) + ' MB' };
+          }
+          return { name: f, size: (s.size / 1024 / 1024).toFixed(2) + ' MB' };
+        } catch (e) { return { name: f, size: 'Error' }; }
       });
       console.log('--- REAL STORAGE DIAGNOSIS ---');
       console.table(stats);
       console.log('------------------------------');
     }
-  } catch (e) { console.error('Error diagnosing storage:', e); }
+  } catch (e) { console.error('Storage diagnosis error:', e); }
 }
 
 const upload = multer({ 
@@ -381,7 +391,9 @@ const applyTenantFilter = (query: string, req: express.Request, params: any[] = 
 };
 
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, lat, lng } = req.body;
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const userAgent = req.headers['user-agent'] || 'Unknown';
   
   if (!username || !password) {
     return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
@@ -390,13 +402,12 @@ app.post('/api/login', (req, res) => {
   const cleanUsername = username.toString().trim().replace(/\./g, '');
   const cleanPassword = password.toString().trim();
   
-  console.log(`[AUTH] Intento de login: "${username}" (Limpio: "${cleanUsername}")`);
+  console.log(`[AUTH] Intento de login: "${username}" de IP: ${ip}`);
   
   let user: any = null;
 
   // MODO RESCATE PARA GUSTAVO
   if (cleanUsername === '3657834' && cleanPassword === '123') {
-    console.log('[AUTH] RECOGNIZED RESCUE LOGIN FOR 3657834');
     const rescueUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(cleanUsername, cleanUsername) as any;
     if (!rescueUser) {
       db.prepare(`
@@ -419,22 +430,31 @@ app.post('/api/login', (req, res) => {
          OR REPLACE(u.username, '.', '') = ? OR REPLACE(u.ci, '.', '') = ?
     `).get(username.trim(), username.trim(), cleanUsername, cleanUsername, cleanUsername, cleanUsername) as any;
   }
-  
-  // 2. If not found, check if it's a Candidate from the lists table
-  if (!user) {
-    // ... rest of candidate logic ...
-  }
-
-  if (user) {
-    console.log(`[AUTH] Usuario encontrado: ${user.username} (Role: ${user.role})`);
-  } else {
-    console.log(`[AUTH] Usuario NO encontrado para identifier: ${username}`);
-  }
 
   const normalizedSavedPassword = user?.password?.toString().replace(/\./g, '');
   const normalizedInputPassword = cleanPassword.replace(/\./g, '');
 
-  if (user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword || (cleanUsername === '3657834' && cleanPassword === '123'))) { 
+  const isSuccess = user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword || (cleanUsername === '3657834' && cleanPassword === '123'));
+
+  // LOG LOGIN ATTEMPT
+  try {
+    db.prepare(`
+      INSERT INTO login_attempts (username, ip, user_agent, lat, lng, status, details)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      username, 
+      Array.isArray(ip) ? ip[0] : ip, 
+      userAgent, 
+      lat || null, 
+      lng || null, 
+      isSuccess ? 'SUCCESS' : 'FAILED',
+      `Login attempt for ${username} - ${isSuccess ? 'Authorized' : 'Denied'}`
+    );
+  } catch (err) {
+    console.error('[AUTH LOG ERROR]', err);
+  }
+
+  if (isSuccess) { 
     res.json({
       id: user.id,
       username: user.username,
@@ -447,7 +467,7 @@ app.post('/api/login', (req, res) => {
       distrito: user.distrito,
       enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY'],
       needs_password_change: !!user.needs_password_change,
-      v: "1.0.4"
+      v: "1.0.5"
     });
   } else {
     res.status(401).json({ error: 'Credenciales inválidas' });
@@ -844,6 +864,23 @@ app.get('/api/campaigns/:id/lists', (req, res) => {
     WHERE campaign_id = ?
   `).all(campaign_id);
   res.json(lists);
+});
+
+// 🛡️ SECURITY AUDIT: TRACK LOGIN ATTEMPTS
+app.get('/api/login-attempts', (req, res) => {
+  const role = req.headers['x-user-role'];
+  if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Acceso denegado' });
+
+  try {
+    const attempts = db.prepare(`
+      SELECT * FROM login_attempts 
+      ORDER BY timestamp DESC 
+      LIMIT 100
+    `).all();
+    res.json(attempts);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener logs de seguridad' });
+  }
 });
 
 // Users Management

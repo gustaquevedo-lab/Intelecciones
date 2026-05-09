@@ -202,6 +202,8 @@ const SuperAdmin = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [locales, setLocales] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [loginAttempts, setLoginAttempts] = useState<any[]>([]);
+  const [activeAuditTab, setActiveAuditTab] = useState<'logs' | 'security'>('logs');
   const [auditStats, setAuditStats] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any>(null);
@@ -790,7 +792,7 @@ const SuperAdmin = () => {
     } catch (err) { console.error(err); }
   };
 
-  const fetchAuditData = async () => {
+  const fetchAuditData = useCallback(async () => {
     try {
       const [logs, stats] = await Promise.all([
         api.get('/audit/logs', {
@@ -806,7 +808,26 @@ const SuperAdmin = () => {
       setAuditLogs(logs.data);
       setAuditStats(stats.data);
     } catch (err) { console.error(err); }
-  };
+  }, [auditFilterAction, auditFilterUser, auditFilterStart, auditFilterEnd]);
+
+  const fetchLoginAttempts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data } = await api.get('/login-attempts');
+      setLoginAttempts(data);
+    } catch (err) {
+      console.error('Error fetching login attempts:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      if (activeAuditTab === 'logs') fetchAuditData();
+      else fetchLoginAttempts();
+    }
+  }, [activeTab, activeAuditTab, fetchAuditData, fetchLoginAttempts]);
 
   useEffect(() => {
     if (!loading && !authUser) {
@@ -1324,50 +1345,114 @@ const SuperAdmin = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Auditoría de Sistema</h2>
-        <button className="action-btn-primary" onClick={handleExportAudit}>
-          <Download size={18} /> Exportar CSV
-        </button>
-      </div>
-      
-      <div style={{ 
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-        gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', 
-        borderRadius: '12px', border: '1px solid var(--border)' 
-      }}>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Acción</label>
-          <select className="mini-input" value={auditFilterAction} onChange={e => setAuditFilterAction(e.target.value)}>
-            <option value="">Todas</option>
-            <option value="CREATE">Creación</option>
-            <option value="UPDATE">Edición</option>
-            <option value="DELETE">Eliminación</option>
-          </select>
-        </div>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Desde</label>
-          <input type="date" className="mini-input" value={auditFilterStart} onChange={e => setAuditFilterStart(e.target.value)} />
-        </div>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Hasta</label>
-          <input type="date" className="mini-input" value={auditFilterEnd} onChange={e => setAuditFilterEnd(e.target.value)} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <button className="action-btn-primary" onClick={fetchAuditData} style={{ width: '100%', height: '38px', justifyContent: 'center' }}>
-            <Search size={16} /> Filtrar
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            className={activeAuditTab === 'logs' ? 'tab-btn active' : 'tab-btn'} 
+            onClick={() => setActiveAuditTab('logs')}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+          >
+            <Activity size={16} /> Logs de Actividad
+          </button>
+          <button 
+            className={activeAuditTab === 'security' ? 'tab-btn active' : 'tab-btn'} 
+            onClick={() => setActiveAuditTab('security')}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+          >
+            <Shield size={16} /> Seguridad (Logins)
           </button>
         </div>
       </div>
+      
+      {activeAuditTab === 'logs' ? (
+        <>
+          <div style={{ 
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+            gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', 
+            borderRadius: '12px', border: '1px solid var(--border)' 
+          }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Acción</label>
+              <select className="mini-input" value={auditFilterAction} onChange={e => setAuditFilterAction(e.target.value)}>
+                <option value="">Todas</option>
+                <option value="CREATE">Creación</option>
+                <option value="UPDATE">Edición</option>
+                <option value="DELETE">Eliminación</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Desde</label>
+              <input type="date" className="mini-input" value={auditFilterStart} onChange={e => setAuditFilterStart(e.target.value)} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Hasta</label>
+              <input type="date" className="mini-input" value={auditFilterEnd} onChange={e => setAuditFilterEnd(e.target.value)} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <button className="action-btn-primary" onClick={fetchAuditData} style={{ width: '100%', height: '38px', justifyContent: 'center' }}>
+                <Search size={16} /> Filtrar
+              </button>
+            </div>
+          </div>
 
-      <ManagementTable 
-        isLoading={isLoading}
-        columns={[
-          { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp' },
-          { header: 'Usuario', accessor: 'username', sortKey: 'username' },
-          { header: 'Acción', accessor: 'action', sortKey: 'action' },
-          { header: 'Detalles', accessor: 'details', sortKey: 'details' }
-        ]}
-        data={auditLogs}
-      />
+          <ManagementTable 
+            isLoading={isLoading}
+            columns={[
+              { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp' },
+              { header: 'Usuario', accessor: 'username', sortKey: 'username' },
+              { header: 'Acción', accessor: 'action', sortKey: 'action' },
+              { header: 'Detalles', accessor: 'details', sortKey: 'details' }
+            ]}
+            data={auditLogs}
+          />
+        </>
+      ) : (
+        <ManagementTable 
+          isLoading={isLoading}
+          columns={[
+            { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp', width: '180px' },
+            { header: 'Usuario', accessor: 'username', sortKey: 'username' },
+            { 
+              header: 'Estado', 
+              accessor: (row: any) => (
+                <span style={{ 
+                  padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800,
+                  background: row.status === 'SUCCESS' ? 'rgba(37,200,130,0.1)' : 'rgba(239,68,68,0.1)',
+                  color: row.status === 'SUCCESS' ? 'var(--green)' : 'var(--red)'
+                }}>
+                  {row.status}
+                </span>
+              )
+            },
+            { header: 'IP', accessor: 'ip', width: '120px' },
+            { 
+              header: 'Dispositivo / Navegador', 
+              accessor: (row: any) => (
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.user_agent}>
+                  {row.user_agent}
+                </div>
+              )
+            },
+            { 
+              header: 'GPS', 
+              accessor: (row: any) => (
+                row.lat ? (
+                  <a 
+                    href={`https://www.google.com/maps?q=${row.lat},${row.lng}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--plra-300)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <MapPin size={12} /> Ver Mapa
+                  </a>
+                ) : (
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>No disponible</span>
+                )
+              )
+            }
+          ]}
+          data={loginAttempts}
+        />
+      )}
     </div>
   );
 
