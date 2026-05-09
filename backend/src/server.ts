@@ -1850,9 +1850,13 @@ app.get('/api/stats/command', (req, res) => {
 
 app.get('/api/padrino/team-stats', (req, res) => {
   const padrino_id = req.query.padrino_id || req.headers['x-user-id'];
-  if (!padrino_id) return res.status(400).json({ error: 'Padrino ID requerido' });
+  const role = getRole(req);
+  if (!padrino_id && role !== 'SUPERUSUARIO') return res.status(400).json({ error: 'Padrino ID requerido' });
 
   try {
+    const whereClause = (role === 'SUPERUSUARIO' && !req.query.padrino_id) ? "u.role = 'COORDINADOR'" : "u.parent_id = ? AND u.role = 'COORDINADOR'";
+    const params = (role === 'SUPERUSUARIO' && !req.query.padrino_id) ? [] : [padrino_id];
+
     const stats = db.prepare(`
       SELECT 
         u.id, u.nombre, u.username, u.photo_url, u.telefono,
@@ -1864,10 +1868,75 @@ app.get('/api/padrino/team-stats', (req, res) => {
         SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as transport_needed
       FROM users u
       LEFT JOIN elector_captures ec ON u.id = ec.coordinator_id
-      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+      WHERE ${whereClause}
       GROUP BY u.id
-    `).all(padrino_id);
+    `).all(...params);
     res.json(stats);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// New Structure Endpoints for Command Hierarchy
+app.get('/api/structure/padrinos', (req, res) => {
+  const district = getDistrict(req);
+  const list_id = getListId(req);
+  const role = getRole(req);
+
+  try {
+    let sql = `
+      SELECT u.id, u.nombre, u.photo_url, u.telefono,
+      (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id) as coordinator_count,
+      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id) as total_electors
+      FROM users u
+      WHERE u.role = 'PADRINO'
+    `;
+    let params: any[] = [];
+    
+    if (district && district !== 'Global') {
+      sql += " AND UPPER(u.distrito) = UPPER(?)";
+      params.push(district);
+    }
+    if (list_id) {
+      sql += " AND u.assigned_list_id = ?";
+      params.push(list_id);
+    }
+
+    const padrinos = db.prepare(sql).all(...params);
+    res.json(padrinos);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
+  const { id } = req.params;
+  try {
+    const coordinators = db.prepare(`
+      SELECT u.id, u.nombre, u.photo_url, u.telefono,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) as total_electors,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') as green_electors,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) as transport_needed
+      FROM users u
+      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+    `).all(id);
+    res.json(coordinators);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/structure/coordinators/:id/electors', (req, res) => {
+  const { id } = req.params;
+  try {
+    const electors = db.prepare(`
+      SELECT e.nombre, e.apellido, e.ci as elector_ci, e.local_votacion, e.mesa, e.orden,
+      ec.traffic_light, ec.needs_transport, ec.telefono
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.coordinator_id = ?
+    `).all(id);
+    res.json(electors);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
