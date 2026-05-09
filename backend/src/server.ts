@@ -1753,6 +1753,7 @@ app.get('/api/stats/command', (req, res) => {
   const role = getRole(req);
   const isPadrino = role === 'PADRINO';
   const sec = getSecurityFilter(req, 'e');
+  const secLoc = getSecurityFilter(req, 'loc');
 
   try {
     const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
@@ -1821,10 +1822,10 @@ app.get('/api/stats/command', (req, res) => {
         WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${hierarchyFilter}
         GROUP BY e.local_votacion
       ) ec_counts ON loc.nombre = ec_counts.local_votacion
-      WHERE 1=1 ${sec.sql.replace('c.distrito', 'loc.distrito').replace('l.ciudad', 'loc.distrito')}
+      WHERE 1=1 ${secLoc.sql}
     `;
     
-    const locParams = [...electorParams, ...params, ...(sec.params || [])];
+    const locParams = [...electorParams, ...params, ...(secLoc.params || [])];
     
     const locationStats = db.prepare(locationStatsQuery).all(...locParams) as any[];
 
