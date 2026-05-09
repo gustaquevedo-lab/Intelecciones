@@ -41,20 +41,45 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
-// 📊 Recursive Storage Diagnosis
+// 📊 Recursive Storage Diagnosis & Cache Purge
 if (process.env.NODE_ENV === 'production') {
   try {
     const dataDir = '/app/data';
     if (fs.existsSync(dataDir)) {
+      // 🧹 PRE-START PURGE: Remove Chromium Cache folders to free space
+      const purgeCache = (basePath: string) => {
+        const cacheFolders = ['Cache', 'Code Cache', 'GPUCache', 'Service Worker/CacheStorage'];
+        if (fs.existsSync(basePath)) {
+          const items = fs.readdirSync(basePath);
+          for (const item of items) {
+            const fullPath = path.join(basePath, item);
+            if (fs.statSync(fullPath).isDirectory()) {
+              if (cacheFolders.some(cf => item.includes(cf) || fullPath.endsWith(cf))) {
+                console.log(`PURGE: Deleting cache folder: ${fullPath}`);
+                fs.rmSync(fullPath, { recursive: true, force: true });
+              } else {
+                purgeCache(fullPath);
+              }
+            }
+          }
+        }
+      };
+      
+      console.log("STORAGE: Purging WhatsApp session caches...");
+      purgeCache(path.join(dataDir, 'whatsapp_session_default'));
+      purgeCache(path.join(dataDir, 'whatsapp_session'));
+
       const getDirSize = (dirPath: string): number => {
         let size = 0;
-        const files = fs.readdirSync(dirPath);
-        for (const f of files) {
-          const fullPath = path.join(dirPath, f);
-          const s = fs.statSync(fullPath);
-          if (s.isDirectory()) size += getDirSize(fullPath);
-          else size += s.size;
-        }
+        try {
+          const files = fs.readdirSync(dirPath);
+          for (const f of files) {
+            const fullPath = path.join(dirPath, f);
+            const s = fs.statSync(fullPath);
+            if (s.isDirectory()) size += getDirSize(fullPath);
+            else size += s.size;
+          }
+        } catch (e) {}
         return size;
       };
 
