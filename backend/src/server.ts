@@ -935,8 +935,8 @@ app.get('/api/captures', (req, res) => {
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       LEFT JOIN users p ON u.parent_id = p.id
-      JOIN lists l ON ec.list_id = l.id
-      JOIN campaigns c ON l.campaign_id = c.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
       WHERE 1=1 ${sec.sql} ${listFilter} ${localFilter}
       ORDER BY ec.timestamp DESC
     `).all(...params);
