@@ -1788,6 +1788,7 @@ const CoordinatorApp = () => {
       <AnimatePresence>
         {showModal && (
           <motion.div
+            key="modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1805,6 +1806,7 @@ const CoordinatorApp = () => {
             }}
           >
             <motion.div
+              key="modal-sheet"
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
@@ -1873,7 +1875,7 @@ const CoordinatorApp = () => {
                     fontFamily: 'var(--font-display)',
                   }}>
                     <User size={12} />
-                    {(elector || editingCapture).nombre} {(elector || editingCapture).apellido}
+                    {(elector || editingCapture)?.nombre} {(elector || editingCapture)?.apellido}
                   </div>
                 )}
               </div>
@@ -2000,12 +2002,14 @@ const CoordinatorApp = () => {
       <AnimatePresence>
         {showCoordModal && (
           <motion.div
+            key="coord-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="modal-overlay-premium"
           >
             <motion.div
+              key="coord-modal-content"
               initial={{ scale: 0.9, y: 50, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 50, opacity: 0 }}
@@ -2214,12 +2218,14 @@ const CoordinatorApp = () => {
       <AnimatePresence>
         {showPadrinoModal && (
           <motion.div
+            key="padrino-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="modal-overlay-premium"
           >
             <motion.div
+              key="padrino-modal-content"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
