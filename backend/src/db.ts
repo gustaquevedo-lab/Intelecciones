@@ -271,12 +271,29 @@ try {
   `);
 } catch (e) {}
 
-// 🧹 MAINTENANCE
-try {
-  console.log("Running DB maintenance (VACUUM)...");
-  db.pragma('wal_checkpoint(TRUNCATE)');
-  db.prepare('VACUUM').run();
-} catch (e) {}
+// 🧹 STARTUP CLEANUP (production only)
+if (process.env.NODE_ENV === 'production') {
+  // Lazy-import so the module is only evaluated at runtime (avoids circular deps)
+  const { cleanupWhatsAppSessions, compactDatabase } = require('./startup-cleanup');
+
+  console.log('[CLEANUP] Running startup cleanup...');
+
+  // 1. Remove stale / empty WhatsApp session directories
+  try {
+    cleanupWhatsAppSessions();
+  } catch (e) {
+    console.error('[CLEANUP] WhatsApp session cleanup error (non-fatal):', e);
+  }
+
+  // 2. Compact the database (VACUUM + optimize)
+  try {
+    compactDatabase(db, dbPath);
+  } catch (e) {
+    console.error('[CLEANUP] Database compaction error (non-fatal):', e);
+  }
+
+  console.log('[CLEANUP] Startup cleanup complete.');
+}
 
 /* OPTIMIZATION INDEXES */
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa)").run();
