@@ -289,22 +289,29 @@ const getDistrict = (req: express.Request) => {
 const getRole = (req: express.Request) => (req.headers['x-user-role'] as string) || 'GUEST';
 
 const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
-  const role = getRole(req);
+  const role = (getRole(req) || 'GUEST').toUpperCase().trim();
   const user_id = req.headers['x-user-id'];
   const activeDistrict = getDistrict(req);
 
-  // Column name mapping: most use 'distrito', but 'lists' (l) uses 'ciudad'
-  const distColumn = (tableAlias === 'l') ? 'ciudad' : 'distrito';
+  // 1. Column name mapping: 'lists' and 'electors' use 'ciudad', others use 'distrito'
+  let distColumn = 'distrito';
+  if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
 
-  // SuperUser can see everything, or filter by activeDistrict if provided
+  // 2. SuperUser Isolation: Can see everything, or filter by activeDistrict if provided
   if (role === 'SUPERUSUARIO') {
     let sql = '';
     let params: any[] = [];
     
-    // Only apply district filter if it's explicitly provided and not "Global" or empty
+    // Only apply district filter if a specific district is selected and the table supports it
     if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
-      sql += ` AND UPPER(${tableAlias}.${distColumn}) = UPPER(?)`;
-      params.push(activeDistrict);
+      if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
+        sql += ` AND UPPER(${tableAlias}.${distColumn}) = UPPER(?)`;
+        params.push(activeDistrict);
+      } else if (tableAlias === 'ec') {
+        // For captures, we join with electors 'e' and filter by e.ciudad
+        sql += ` AND UPPER(e.ciudad) = UPPER(?)`;
+        params.push(activeDistrict);
+      }
     }
     
     const listId = getListId(req);
@@ -322,8 +329,8 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     return { sql, params };
   }
 
-  // Non-SuperUsers are locked to their assignment
-  if (!user_id) return { sql: 'AND 1=0', param: null };
+  // 3. Non-SuperUsers: Locked to their assignment
+  if (!user_id) return { sql: ' AND 1=0', params: [] };
 
   const user = db.prepare(`
     SELECT u.assigned_list_id, u.assigned_campaign_id, COALESCE(l.ciudad, c.distrito) as distrito 
@@ -333,12 +340,20 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     WHERE u.id = ?
   `).get(user_id) as any;
 
-  if (!user) return { sql: 'AND 1=0', param: null };
+  if (!user || !user.distrito) return { sql: ' AND 1=0', params: [] };
 
-  let sql = `AND ${tableAlias}.${distColumn} = ?`;
-  let params = [user.distrito || ''];
+  // Adjust for ec (elector_captures) which needs to filter via joined electors table 'e'
+  let targetAlias = tableAlias;
+  let targetCol = distColumn;
+  if (tableAlias === 'ec') {
+    targetAlias = 'e';
+    targetCol = 'ciudad';
+  }
 
-  // STRICT isolation for users/management
+  let sql = ` AND UPPER(${targetAlias}.${targetCol}) = UPPER(?)`;
+  let params = [user.distrito];
+
+  // 4. Strict Hierarchy Isolation (for users/lists)
   if (tableAlias === 'u' || tableAlias === 'l') {
     if (user.assigned_list_id) {
        if (tableAlias === 'l') sql += ` AND ${tableAlias}.id = ?`;
@@ -353,7 +368,6 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   // PERMISSIVE isolation for Map/Stats for Jefes (they see the whole district battle)
   else if (role === 'JEFE_CAMPANA') {
      // Jefes see EVERYTHING in their district for intelligence tables
-     // This allows them to see the map, clusters, and overall stats
   }
   // STRICT isolation for other roles (Coordinators only see their list)
   else if (user.assigned_list_id) {
@@ -1394,15 +1408,41 @@ app.delete('/api/lists/:id', (req, res) => {
   }
 });
 
-app.get('/api/stats/summary', (req, res) => {
+app.get('/api/health', (req, res) => {
   try {
-    const usersCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
-    const campaignsCount = db.prepare('SELECT COUNT(*) as count FROM campaigns').get() as any;
-    const listsCount = db.prepare('SELECT COUNT(*) as count FROM lists').get() as any;
-    const electorsCount = db.prepare('SELECT COUNT(*) as count FROM electors').get() as any;
-    const capturesCount = db.prepare('SELECT COUNT(*) as count FROM elector_captures').get() as any;
-    const transportNeeded = db.prepare('SELECT COUNT(*) as count FROM elector_captures WHERE needs_transport = 1').get() as any;
-    const transportAssigned = db.prepare('SELECT COUNT(*) as count FROM elector_captures WHERE needs_transport = 1 AND assigned_vehicle_id IS NOT NULL').get() as any;
+    const users = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
+    const campaigns = db.prepare('SELECT COUNT(*) as count FROM campaigns').get() as any;
+    const electors = db.prepare('SELECT COUNT(*) as count FROM electors').get() as any;
+    const lists = db.prepare('SELECT COUNT(*) as count FROM lists').get() as any;
+    
+    res.json({
+      status: 'ok',
+      database: {
+        users: users.count,
+        campaigns: campaigns.count,
+        electors: electors.count,
+        lists: lists.count
+      },
+      time: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+app.get('/api/stats/summary', (req, res) => {
+  const sec = getSecurityFilter(req, 'ec');
+  const params = sec.params || [];
+  
+  try {
+    const usersCount = db.prepare(`SELECT COUNT(*) as count FROM users u WHERE 1=1 ${getSecurityFilter(req, 'u').sql}`).get(...getSecurityFilter(req, 'u').params) as any;
+    const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${getSecurityFilter(req, 'c').sql}`).get(...getSecurityFilter(req, 'c').params) as any;
+    const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${getSecurityFilter(req, 'l').sql}`).get(...getSecurityFilter(req, 'l').params) as any;
+    const electorsCount = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${getSecurityFilter(req, 'e').sql}`).get(...getSecurityFilter(req, 'e').params) as any;
+    
+    const capturesCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`).get(...params) as any;
+    const transportNeeded = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 ${sec.sql}`).get(...params) as any;
+    const transportAssigned = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NOT NULL ${sec.sql}`).get(...params) as any;
 
     res.json({
       users: usersCount.count,
@@ -1414,6 +1454,7 @@ app.get('/api/stats/summary', (req, res) => {
       transportAssigned: transportAssigned.count
     });
   } catch (err: any) {
+    console.error('[STATS ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
