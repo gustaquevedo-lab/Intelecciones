@@ -39,7 +39,7 @@ console.log("Initializing database at:", dbPath);
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
-// 🏗️ Initialize/Consolidate Tables
+// 🏗️ SCHEMA CONSOLIDATION
 db.exec(`
   CREATE TABLE IF NOT EXISTS campaigns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,6 +110,27 @@ db.exec(`
     ciudad TEXT DEFAULT ''
   );
 
+  CREATE TABLE IF NOT EXISTS participation_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    local_votacion TEXT NOT NULL,
+    mesa INTEGER NOT NULL,
+    orden INTEGER NOT NULL,
+    veedor_id INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(veedor_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    action TEXT NOT NULL,
+    entity TEXT,
+    entity_id TEXT,
+    details TEXT,
+    list_id INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS elector_captures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     elector_ci TEXT,
@@ -126,12 +147,82 @@ db.exec(`
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS capture_conflicts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    capture_id INTEGER,
+    elector_ci TEXT,
+    list_id INTEGER,
+    status TEXT DEFAULT 'PENDING',
+    resolved_by_jefe_id INTEGER,
+    resolved_coordinator_id INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS field_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    coordinator_id INTEGER,
+    list_id INTEGER,
+    type TEXT NOT NULL,
+    description TEXT,
+    photo_url TEXT,
+    audio_url TEXT,
+    status TEXT DEFAULT 'PENDING',
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER,
+    mesa INTEGER,
+    local_votacion TEXT,
+    votos_blancos INTEGER DEFAULT 0,
+    votos_nulos INTEGER DEFAULT 0,
+    foto_acta_url TEXT,
+    veedor_id INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(veedor_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS acta_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    acta_id INTEGER,
+    lista_id INTEGER,
+    votos INTEGER,
+    FOREIGN KEY(acta_id) REFERENCES results(id),
+    FOREIGN KEY(lista_id) REFERENCES lists(id)
+  );
+
   CREATE TABLE IF NOT EXISTS whatsapp_terminals (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     status TEXT DEFAULT 'DISCONNECTED',
     last_qr TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS whatsapp_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    content TEXT,
+    media_url TEXT,
+    media_type TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS whatsapp_broadcast_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER,
+    terminal_id TEXT DEFAULT 'default',
+    target_count INTEGER,
+    success_count INTEGER DEFAULT 0,
+    fail_count INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'RUNNING',
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS whatsapp_messages (
@@ -145,9 +236,20 @@ db.exec(`
     is_incoming INTEGER DEFAULT 0,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS vehicles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    driver_name TEXT,
+    driver_ci TEXT,
+    driver_phone TEXT,
+    capacity INTEGER DEFAULT 4,
+    status TEXT DEFAULT 'AVAILABLE',
+    assigned_list_id INTEGER
+  );
 `);
 
-// 🛠️ Schema Migrations
+// 🛠️ MIGRATIONS & NORMALIZATION
 const runMigration = (sql: string) => { try { db.prepare(sql).run(); } catch (e) {} };
 runMigration("ALTER TABLE campaigns ADD COLUMN distrito TEXT");
 runMigration("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''");
@@ -158,7 +260,6 @@ runMigration("ALTER TABLE elector_captures ADD COLUMN is_disputed INTEGER DEFAUL
 runMigration("ALTER TABLE elector_captures ADD COLUMN campaign_id INTEGER");
 runMigration("ALTER TABLE elector_captures ADD COLUMN list_id INTEGER");
 
-// 📊 Data Normalization (Your work)
 try {
   console.log('MIGRATION: Normalizando distritos a MAYÚSCULAS...');
   db.exec(`
@@ -168,29 +269,33 @@ try {
     UPDATE campaigns SET distrito = UPPER(COALESCE(NULLIF(TRIM(distrito), ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
     UPDATE users SET distrito = UPPER(COALESCE(NULLIF(distrito, ''), 'PEDRO JUAN CABALLERO')) WHERE distrito IS NULL OR distrito = '' OR distrito != UPPER(distrito);
   `);
-  console.log('MIGRATION SUCCESS: Distritos normalizados.');
-} catch (e) { console.error('Migration failed:', e); }
+} catch (e) {}
 
-// 🧹 Maintenance
+// 🧹 MAINTENANCE
 try {
   console.log("Running DB maintenance (VACUUM)...");
   db.pragma('wal_checkpoint(TRUNCATE)');
   db.prepare('VACUUM').run();
 } catch (e) {}
 
-/* Optimization Indexes */
+/* OPTIMIZATION INDEXES */
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captures(elector_ci)").run();
 
-/* Initial Seeds (Including your custom data) */
+/* INITIAL SEEDS */
 db.exec(`
-  -- Core Users
+  -- Settings
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message', 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:');
+
+  -- Users
   INSERT OR IGNORE INTO users (id, username, password, role, nombre) VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
   INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito) VALUES (2, '5888408', '123', 'SUPERUSUARIO', 'Gustavo Quevedo', '5888408', 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito) VALUES (3, '4931831', '123', 'COORDINADOR', 'Coordinador Gustavo', '4931831', 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito, assigned_list_id) VALUES (4, '111', '111', 'COORDINADOR', 'Coord Lista 3', '111', 'PEDRO JUAN CABALLERO', 1);
   INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, distrito, assigned_list_id) VALUES (5, '222', '222', 'PADRINO', 'Padrino Lista 3', '222', 'PEDRO JUAN CABALLERO', 1);
-  
   UPDATE users SET parent_id = 5 WHERE id = 4;
 
   -- Campaigns & Lists
@@ -204,10 +309,6 @@ db.exec(`
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L4', 'FACULTAD DE CIENCIAS AGRARIAS', -22.525, -55.705, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L5', 'COL. NAC. ASUNCION ESCALADA', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
   INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, distrito) VALUES ('L6', 'CENTRO REGIONAL DE EDUCACION', -22.545, -55.725, 'PEDRO JUAN CABALLERO');
-
-  -- Sample Captures
-  INSERT OR IGNORE INTO elector_captures (elector_ci, coordinator_id, list_id, lat, lng, traffic_light) VALUES ('5888408', 4, 1, -22.54, -55.72, 'GREEN');
-  INSERT OR IGNORE INTO elector_captures (elector_ci, coordinator_id, list_id, lat, lng, traffic_light) VALUES ('4931831', 4, 1, -22.54, -55.72, 'YELLOW');
 `);
 
 export default db;
