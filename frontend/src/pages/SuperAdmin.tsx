@@ -10,34 +10,22 @@ import {
   ListOrdered, 
   Activity,
   CheckCircle2,
-  XCircle,
   X,
-  Building2,
-  Home,
   Check,
-  ChevronDown,
   Users,
   Shield,
   Layout,
   Image,
-  History,
   LayoutList,
   MapPin,
-  Map,
-  Landmark,
-  School,
-  Building,
   Settings,
   AlertTriangle,
   FileText,
   Download,
-  Calendar,
   Truck,
   Clock,
-  PlusCircle,
   Save,
   Key,
-  Share2,
   TrendingUp,
   TrendingDown,
   User
@@ -53,9 +41,6 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { CountdownCard } from '../components/CountdownCard';
 import api, { API_BASE } from '../services/api';
 const getImageUrl = (url?: string) => {
   if (!url) return null;
@@ -109,14 +94,13 @@ const createCustomIcon = (color: string, iconName: string = 'Landmark', size: nu
   });
 };
 
-const BLUE_ICON = createCustomIcon('var(--plra-500)');
-
 // --- Types ---
 interface Campaign {
   id: number;
   name: string;
   status: string;
   distrito?: string;
+  goal?: number;
 }
 
 interface List {
@@ -129,6 +113,8 @@ interface List {
   candidate_ci: string;
   candidate_nombre?: string;
   candidate_apellido?: string;
+  candidate_alias?: string;
+  ciudad?: string;
 }
 
 import { useSettings } from '../context/SettingsContext';
@@ -178,6 +164,7 @@ interface User {
   role: string;
   nombre: string;
   assigned_list_id?: number;
+  assigned_campaign_id?: number;
   list_number?: string;
 }
 
@@ -185,13 +172,12 @@ const SuperAdmin = () => {
   const { 
     user: authUser, 
     loading, 
-    updateUser, 
     activeListId, 
     setActiveListId, 
     activeDistrict, 
     setActiveDistrict 
   } = useAuth();
-  const { settings: globalSettings, updateSettings, refreshSettings } = useSettings();
+  const { refreshSettings } = useSettings();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
@@ -203,7 +189,6 @@ const SuperAdmin = () => {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loginAttempts, setLoginAttempts] = useState<any[]>([]);
   const [activeAuditTab, setActiveAuditTab] = useState<'logs' | 'security'>('logs');
-  const [auditStats, setAuditStats] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any>(null);
   const [pendingLogistics, setPendingLogistics] = useState<any[]>([]);
@@ -211,7 +196,6 @@ const SuperAdmin = () => {
   
   // Audit Filters
   const [auditFilterAction, setAuditFilterAction] = useState('');
-  const [auditFilterUser, setAuditFilterUser] = useState('');
   const [auditFilterStart, setAuditFilterStart] = useState('');
   const [auditFilterEnd, setAuditFilterEnd] = useState('');
   const [electionDate, setElectionDate] = useState('2026-06-07T07:00:00');
@@ -251,21 +235,6 @@ const SuperAdmin = () => {
   const [padronStats, setPadronStats] = useState<any[]>([]);
   const [importingPadron, setImportingPadron] = useState(false);
   const [importCity, setImportCity] = useState('');
-
-  const formatPhone = (val: string) => {
-    let cleaned = val.replace(/\D/g, '');
-    if (cleaned.startsWith('09')) {
-      cleaned = '5959' + cleaned.substring(2);
-    } else if (cleaned.startsWith('9')) {
-      cleaned = '595' + cleaned;
-    } 
-    
-    if (cleaned.length > 0) {
-      setNewVehiclePhone('+' + cleaned);
-    } else {
-      setNewVehiclePhone('');
-    }
-  };
 
   const handleWipeCaptures = async () => {
     const confirm1 = confirm(
@@ -338,8 +307,6 @@ const SuperAdmin = () => {
   ]);
   const [newUserName, setNewUserName] = useState('');
   const [takenOptions, setTakenOptions] = useState<number[]>([]);
-  const [hasIntendente, setHasIntendente] = useState(false);
-  const [intendenteListNumber, setIntendenteListNumber] = useState('');
   const [newUserPass, setNewUserPass] = useState('');
   const [newUserRole, setNewUserRole] = useState('COORDINADOR');
   const [newUserRealName, setNewUserRealName] = useState('');
@@ -714,9 +681,6 @@ const SuperAdmin = () => {
     if (newListCampaign) {
       const campaignLists = lists.filter(l => l.campaign_id?.toString() === newListCampaign.toString());
       const intendant = campaignLists.find(l => l.type === 'INTENDENTE');
-      setHasIntendente(!!intendant);
-      if (intendant) setIntendenteListNumber(intendant.list_number);
-      else setIntendenteListNumber('');
       
       const options = campaignLists
         .filter(l => l.type === 'CONCEJAL')
@@ -752,10 +716,6 @@ const SuperAdmin = () => {
       setNewVehicleList('');
       fetchData();
     } catch (err) { console.error(err); }
-  };
-
-  const handleExportAudit = () => {
-    window.open(`${API_BASE}/audit/export`, '_blank');
   };
 
   const handleUpdateSettings = async (e: React.FormEvent) => {
@@ -800,9 +760,10 @@ const SuperAdmin = () => {
       }
       setShowModal(null);
       fetchData();
-    } catch (err) { 
-      console.error(err); 
-      alert('Error al guardar el local. Verifique el código único o el formato de las coordenadas.');
+    } catch (err: any) { 
+      console.error('[LOCALE SAVE ERROR]', err); 
+      const serverError = err.response?.data?.error || err.message;
+      alert(`⚠️ ERROR AL GUARDAR LOCAL:\n\n${serverError}\n\nSi el error persiste, verifique que el Código Único no esté duplicado.`);
     }
   };
 
@@ -820,7 +781,6 @@ const SuperAdmin = () => {
         api.get('/audit/logs', {
           params: {
             action: auditFilterAction,
-            user_id: auditFilterUser,
             start_date: auditFilterStart,
             end_date: auditFilterEnd
           }
@@ -828,9 +788,8 @@ const SuperAdmin = () => {
         api.get('/audit/stats')
       ]);
       setAuditLogs(logs.data);
-      setAuditStats(stats.data);
     } catch (err) { console.error(err); }
-  }, [auditFilterAction, auditFilterUser, auditFilterStart, auditFilterEnd]);
+  }, [auditFilterAction, auditFilterStart, auditFilterEnd]);
 
   const fetchLoginAttempts = useCallback(async () => {
     setIsLoading(true);
