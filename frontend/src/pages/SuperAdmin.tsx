@@ -1012,7 +1012,7 @@ const SuperAdmin = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        <div className="card-premium-styled" style={{ background: 'var(--accent-subtle)', border: '1px solid rgba(59,130,246,0.15)' }}>
+        <div className="card-premium-styled" style={{ background: 'var(--accent-subtle)', border: '1px solid rgba(59,130,246,0.15)', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
             <Activity size={24} style={{ color: 'var(--plra-300)' }} />
             <div>
@@ -1023,7 +1023,7 @@ const SuperAdmin = () => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', marginTop: 'auto' }}>
             {predictions?.trend === 'up' ? <TrendingUp size={14} color="var(--green)" /> : <TrendingDown size={14} color="var(--red)" />}
             <span style={{ fontSize: '0.7rem', fontWeight: 700, color: predictions?.trend === 'up' ? 'var(--green)' : 'var(--red)' }}>
               {predictions?.trend === 'up' ? 'Ritmo en Aumento (+12%)' : 'Ritmo en Descenso'}
@@ -1031,7 +1031,7 @@ const SuperAdmin = () => {
           </div>
         </div>
 
-        <div className="card-premium-styled" style={{ background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.15)' }}>
+        <div className="card-premium-styled" style={{ background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.15)', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
             <Flag size={24} style={{ color: 'var(--green)' }} />
             <div>
@@ -1042,10 +1042,10 @@ const SuperAdmin = () => {
               </div>
             </div>
           </div>
-          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Basado en el ritmo de los últimos 60 minutos</p>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0, marginTop: 'auto', paddingTop: '0.5rem' }}>Basado en el ritmo de los últimos 60 minutos</p>
         </div>
 
-        <div className="card-premium-styled" style={{ border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.03)' }}>
+        <div className="card-premium-styled" style={{ border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.03)', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
             <Shield size={24} style={{ color: 'var(--red)' }} />
             <div>
@@ -1057,10 +1057,10 @@ const SuperAdmin = () => {
             onClick={handleWipeCaptures}
             className="action-btn-danger"
             style={{ 
-              width: '100%', padding: '0.75rem', borderRadius: '10px', 
+              width: '100%', padding: '1rem', borderRadius: '10px', 
               background: 'rgba(239,68,68,0.1)', color: 'var(--red)', 
-              border: '1px solid var(--red)', fontSize: '0.7rem', 
-              fontWeight: 800, cursor: 'pointer'
+              border: '1px solid var(--red)', fontSize: '0.75rem', 
+              fontWeight: 800, cursor: 'pointer', marginTop: 'auto'
             }}
           >
             PURGAR DATOS DE CAMPO
