@@ -4,136 +4,85 @@ import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap } from 'luci
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
+const MODULES = [
+  { id: 'coordinador',    label: 'Coordinador', short: 'Coord',  path: '/coordinador',   icon: Users,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'REGISTRY' },
+  { id: 'comando',        label: 'Comando',     short: 'Cmd',    path: '/comando',        icon: Map,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'COMMAND_CENTER' },
+  { id: 'logistics',      label: 'Logística',   short: 'Log',    path: '/logistica',      icon: Truck,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'LOGISTICS' },
+  { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA'], moduleKey: 'DAY_D' },
+  { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'COMMUNICATIONS' },
+  { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
+  { id: 'admin',          label: 'Admin',       short: 'Admin',  path: '/admin',          icon: Shield,       roles: ['SUPERUSUARIO'],                                           moduleKey: 'SUPER_ADMIN' },
+];
+
 export const ModuleSwitcher: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [hoveredId, setHoveredId] = React.useState<string | null>(null);
+  const [tooltip, setTooltip] = React.useState<string | null>(null);
 
-  if (!user || (user.role !== 'SUPERUSUARIO' && user.role !== 'JEFE_CAMPANA' && user.role !== 'PADRINO' && user.role !== 'MIEMBRO_DE_MESA')) {
-    return null;
-  }
+  if (!user) return null;
+  const canSeeAny =
+    user.role === 'SUPERUSUARIO' ||
+    user.role === 'JEFE_CAMPANA' ||
+    user.role === 'PADRINO' ||
+    user.role === 'MIEMBRO_DE_MESA';
+  if (!canSeeAny) return null;
 
-  const modules = [
-    { id: 'coordinador', label: 'Coordinador', path: '/coordinador', icon: Users, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'REGISTRY' },
-    { id: 'comando', label: 'Comando', path: '/comando', icon: Map, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'COMMAND_CENTER' },
-    { id: 'logistics', label: 'Logística', path: '/logistica', icon: Truck, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'LOGISTICS' },
-    { id: 'veedor', label: 'Veedor', path: '/veedor', icon: CheckSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'MIEMBRO_DE_MESA'], moduleKey: 'DAY_D' },
-    { id: 'communications', label: 'WhatsApp', path: '/comunicaciones', icon: MessageSquare, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'COMMUNICATIONS' },
-    { id: 'diad', label: 'Dia D', path: '/diad', icon: Zap, roles: ['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'], moduleKey: 'DAY_D', accent: '#22C47E' },
-    { id: 'admin', label: 'Admin', path: '/admin', icon: Shield, roles: ['SUPERUSUARIO'], moduleKey: 'SUPER_ADMIN' },
-  ];
-
-  const availableModules = modules.filter(m => {
+  const available = MODULES.filter(m => {
     if (user.role === 'SUPERUSUARIO') return true;
     if (user.role === 'JEFE_CAMPANA') return m.id !== 'admin';
-    if (user.role === 'MIEMBRO_DE_MESA' && m.id === 'veedor') return true;
-    
-    const hasRole = m.roles.includes(user.role);
-    const isEnabled = user.enabled_modules?.includes(m.moduleKey);
-    return hasRole && isEnabled;
+    if (user.role === 'MIEMBRO_DE_MESA') return m.id === 'veedor';
+    return m.roles.includes(user.role) && !!user.enabled_modules?.includes(m.moduleKey);
   });
 
   return (
-    <div className="custom-scrollbar" style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.4rem',
-      background: 'var(--accent-subtle)',
-      padding: '0.3rem',
-      borderRadius: '12px',
-      border: '1px solid var(--border)',
-      margin: '0 1rem',
-      overflowX: 'auto',
-      maxWidth: 'calc(100vw - 2rem)',
-      WebkitOverflowScrolling: 'touch',
-      msOverflowStyle: 'none',
-      scrollbarWidth: 'none'
-    }}>
-      {availableModules.map((m) => {
+    <nav className="module-switcher" aria-label="Módulos">
+      {available.map(m => {
         const isActive = location.pathname === m.path;
         const Icon = m.icon;
-        const accentColor = (m as any).accent;
+        const accent = m.accent;
 
         return (
-          <div 
-            key={m.id} 
-            style={{ position: 'relative' }}
-            onMouseEnter={() => setHoveredId(m.id)}
-            onMouseLeave={() => setHoveredId(null)}
+          <div
+            key={m.id}
+            className="module-btn-wrap"
+            onMouseEnter={() => setTooltip(m.id)}
+            onMouseLeave={() => setTooltip(null)}
           >
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.92 }}
               onClick={() => navigate(m.path)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                border: isActive && accentColor ? `1px solid ${accentColor}55` : 'none',
-                background: isActive
-                  ? accentColor
-                    ? `linear-gradient(135deg, ${accentColor}33, ${accentColor}22)`
-                    : 'var(--plra-500)'
-                  : 'transparent',
-                color: isActive
-                  ? accentColor || 'white'
-                  : accentColor
-                    ? accentColor + 'BB'
-                    : 'var(--text-2)',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
+              className={`module-btn${isActive ? ' active' : ''}${accent ? ' accent' : ''}`}
+              style={accent ? ({
+                '--module-accent': accent,
+              } as React.CSSProperties) : undefined}
+              aria-label={m.label}
+              aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={18} />
+              <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
+              {/* Short label — visible only on mobile via CSS */}
+              <span className="module-btn-label">{m.short}</span>
             </motion.button>
 
+            {/* Tooltip — desktop hover only, hidden on touch */}
             <AnimatePresence>
-              {hoveredId === m.id && (
+              {tooltip === m.id && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10, x: '-50%' }}
-                  animate={{ opacity: 1, y: 0, x: '-50%' }}
-                  exit={{ opacity: 0, y: 5, x: '-50%' }}
-                  style={{
-                    position: 'absolute',
-                    bottom: '-40px',
-                    left: '50%',
-                    background: 'var(--surface-3)',
-                    color: 'var(--text)',
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '8px',
-                    fontSize: '0.65rem',
-                    fontWeight: 800,
-                    whiteSpace: 'nowrap',
-                    boxShadow: 'var(--shadow-md)',
-                    border: '1px solid var(--border-mid)',
-                    zIndex: 1000,
-                    pointerEvents: 'none',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.12 }}
+                  className="module-tooltip"
+                  role="tooltip"
                 >
                   {m.label}
-                  <div style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    left: '50%',
-                    transform: 'translateX(-50%) rotate(45deg)',
-                    width: '8px',
-                    height: '8px',
-                    background: 'var(--surface-3)',
-                    borderTop: '1px solid var(--border-mid)',
-                    borderLeft: '1px solid var(--border-mid)',
-                  }} />
+                  <div className="module-tooltip-arrow" />
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         );
       })}
-    </div>
+    </nav>
   );
 };

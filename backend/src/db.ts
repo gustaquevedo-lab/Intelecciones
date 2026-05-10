@@ -267,7 +267,9 @@ runMigration("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'ACTIVE'");
 runMigration("ALTER TABLE elector_captures ADD COLUMN is_disputed INTEGER DEFAULT 0");
 runMigration("ALTER TABLE elector_captures ADD COLUMN campaign_id INTEGER");
 runMigration("ALTER TABLE elector_captures ADD COLUMN list_id INTEGER");
+runMigration("ALTER TABLE elector_captures ADD COLUMN assigned_vehicle_id INTEGER");
 runMigration("ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ''");
+runMigration("ALTER TABLE electors ADD COLUMN barrio TEXT DEFAULT ''")
 runMigration("ALTER TABLE participation_logs ADD COLUMN veedor_id INTEGER");
 runMigration("ALTER TABLE results ADD COLUMN veedor_id INTEGER");
 runMigration("ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ''");
@@ -299,6 +301,11 @@ try {
     UPDATE users SET distrito = 'PEDRO JUAN CABALLERO' WHERE (distrito IS NULL OR TRIM(distrito) = '') AND role != 'SUPERUSUARIO';
   `);
 } catch (e) {}
+
+runMigration("ALTER TABLE whatsapp_templates ADD COLUMN lat REAL");
+runMigration("ALTER TABLE whatsapp_templates ADD COLUMN lng REAL");
+runMigration("ALTER TABLE whatsapp_templates ADD COLUMN contact_name TEXT");
+runMigration("ALTER TABLE whatsapp_templates ADD COLUMN contact_phone TEXT");
 
 // 🧹 MAINTENANCE (Disabled on startup to avoid locking)
 try {

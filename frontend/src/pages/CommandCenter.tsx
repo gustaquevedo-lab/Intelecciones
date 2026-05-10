@@ -46,47 +46,62 @@ const ICON_SVGS: Record<string, string> = {
   Car: `<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.5C2.1 11 2 11.5 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle>`
 };
 
-const createCustomIcon = (color: string, iconName: string = 'Landmark', needsTransport: boolean = false) => L.divIcon({
-  html: `
-    <div style="
-      background-color: ${color};
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      border: 2px solid ${needsTransport ? 'var(--plra-300)' : 'white'};
-      box-shadow: ${needsTransport ? '0 0 12px var(--plra-300)' : '0 2px 5px rgba(0,0,0,0.3)'};
-      position: relative;
-    ">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        ${ICON_SVGS[needsTransport ? 'Car' : iconName] || ICON_SVGS.Landmark}
-      </svg>
-      ${needsTransport ? `
+const TRAFFIC_COLORS: Record<string, string> = {
+  GREEN:  '#22C55E',
+  YELLOW: '#EAB308',
+  RED:    '#EF4444',
+  PURPLE: '#A855F7',
+};
+
+const createCustomIcon = (color: string, iconName: string = 'Landmark', needsTransport: boolean = false, size: 'sm' | 'md' = 'md') => {
+  const sz = size === 'sm' ? 28 : 36;
+  const tailH = size === 'sm' ? 10 : 14;
+  const totalH = sz + tailH;
+  const icoSz = size === 'sm' ? 14 : 18;
+  // Resolve CSS variable colors to hex for use inside SVG/shadow
+  const resolvedColor = color.startsWith('var(') ? (
+    color.includes('green') ? '#22C55E' :
+    color.includes('yellow') ? '#EAB308' :
+    color.includes('red') ? '#EF4444' :
+    color.includes('plra-300') ? '#3B82F6' :
+    color.includes('plra-500') ? '#0047AB' : '#3B82F6'
+  ) : color;
+
+  return L.divIcon({
+    html: `
+      <div style="position:relative;width:${sz}px;height:${totalH}px;filter:drop-shadow(0 4px 8px ${resolvedColor}60);">
         <div style="
-          position: absolute;
-          top: -5px;
-          right: -5px;
-          background: white;
-          border-radius: 50%;
-          width: 14px;
-          height: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+          width:${sz}px;height:${sz}px;border-radius:${sz/2}px ${sz/2}px ${sz*0.35}px ${sz*0.35}px;
+          background:${resolvedColor};
+          border:2.5px solid rgba(255,255,255,0.9);
+          box-shadow:0 0 0 3px ${resolvedColor}40,inset 0 2px 4px rgba(255,255,255,0.25);
+          display:flex;align-items:center;justify-content:center;
+          position:relative;
         ">
-          <div style="background: var(--plra-300); width: 8px; height: 8px; border-radius: 50%;"></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="${icoSz}" height="${icoSz}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            ${ICON_SVGS[needsTransport ? 'Car' : iconName] || ICON_SVGS.Landmark}
+          </svg>
+          ${needsTransport ? `
+            <div style="position:absolute;top:-6px;right:-6px;background:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+              <div style="width:9px;height:9px;border-radius:50%;background:#3B82F6;"></div>
+            </div>
+          ` : ''}
         </div>
-      ` : ''}
-    </div>
-  `,
-  className: 'custom-div-icon',
-  iconSize: [30, 30],
-  iconAnchor: [15, 30],
-  popupAnchor: [0, -30],
-});
+        <div style="
+          position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+          width:0;height:0;
+          border-left:${sz*0.22}px solid transparent;
+          border-right:${sz*0.22}px solid transparent;
+          border-top:${tailH}px solid ${resolvedColor};
+        "></div>
+      </div>
+    `,
+    className: '',
+    iconSize: [sz, totalH],
+    iconAnchor: [sz / 2, totalH],
+    popupAnchor: [0, -totalH - 4],
+  });
+};
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -511,10 +526,11 @@ const CommandCenter = () => {
   const [isClusteringEnabled, setIsClusteringEnabled] = useState(true);
   const [trafficLightFilter, setTrafficLightFilter] = useState<string | null>(null);
   const [coordinators, setCoordinators] = useState<any[]>([]);
-  const [selectedCoords, setSelectedCoords] = useState<number[]>([]);
-  const [showCoordSelector, setShowCoordSelector] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [disputeHistory, setDisputeHistory] = useState<any[]>([]);
+  const [selectedPadrinoLayers, setSelectedPadrinoLayers] = useState<number[]>([]);
+  const [selectedCoordLayers, setSelectedCoordLayers] = useState<number[]>([]);
+  const [showLayerSelector, setShowLayerSelector] = useState(false);
+  const [expandedLayerPadrinos, setExpandedLayerPadrinos] = useState<number[]>([]);
+  const [needsTransportFilter, setNeedsTransportFilter] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -687,56 +703,35 @@ const CommandCenter = () => {
         </div>
       </div>
 
-      <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '2rem', alignItems: 'center', background: 'rgba(255,255,255,0.01)' }}>
-        <div 
-          onClick={() => setActiveTab('map')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
-            color: activeTab === 'map' ? 'var(--plra-300)' : 'var(--text-3)',
-            borderBottom: activeTab === 'map' ? '2px solid var(--plra-300)' : 'none',
-            paddingBottom: '0.25rem'
-          }}
-        >
-          <MapPin size={16} /> <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Mapa Táctico</span>
-        </div>
-        <div 
-          onClick={() => setActiveTab('requests')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
-            color: activeTab === 'requests' ? 'var(--plra-300)' : 'var(--text-3)',
-            borderBottom: activeTab === 'requests' ? '2px solid var(--plra-300)' : 'none',
-            paddingBottom: '0.25rem'
-          }}
-        >
-          <Bell size={16} /> <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Centro de Control</span>
-          {requests.filter(r => r.status === 'PENDING').length > 0 && (
-            <span style={{ background: 'var(--red)', color: 'white', fontSize: '0.6rem', padding: '1px 5px', borderRadius: '10px' }}>
-              {requests.filter(r => r.status === 'PENDING').length}
-            </span>
-          )}
-        </div>
-        <div 
-          onClick={() => setActiveTab('registry')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
-            color: activeTab === 'registry' ? 'var(--plra-300)' : 'var(--text-3)',
-            borderBottom: activeTab === 'registry' ? '2px solid var(--plra-300)' : 'none',
-            paddingBottom: '0.25rem'
-          }}
-        >
-          <Users size={16} /> <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Registro de Electores</span>
-        </div>
-        <div 
-          onClick={() => setActiveTab('hierarchy')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
-            color: activeTab === 'hierarchy' ? 'var(--plra-300)' : 'var(--text-3)',
-            borderBottom: activeTab === 'hierarchy' ? '2px solid var(--plra-300)' : 'none',
-            paddingBottom: '0.25rem'
-          }}
-        >
-          <Shield size={16} /> <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Jerarquía de Mando</span>
-        </div>
+      <div style={{ padding: '0 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '0', alignItems: 'center', background: 'rgba(255,255,255,0.01)', overflowX: 'auto' }}>
+        {([
+          { id: 'map',       icon: MapPin,  label: 'Mapa Táctico',    badge: null },
+          { id: 'hierarchy', icon: Shield,  label: 'Jerarquía',       badge: null },
+          { id: 'requests',  icon: Bell,    label: 'Solicitudes',     badge: requests.filter(r => r.status === 'PENDING').length || null },
+        ] as const).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer',
+              padding: '0.85rem 1.25rem',
+              borderBottom: activeTab === tab.id ? '2px solid var(--plra-300)' : '2px solid transparent',
+              color: activeTab === tab.id ? 'var(--plra-300)' : 'var(--text-3)',
+              background: 'none', border: 'none', borderBottom: activeTab === tab.id ? '2px solid var(--plra-300)' : '2px solid transparent',
+              fontWeight: activeTab === tab.id ? 800 : 600,
+              fontSize: '0.82rem', whiteSpace: 'nowrap', transition: 'color 0.15s',
+              fontFamily: 'var(--font-display)'
+            }}
+          >
+            <tab.icon size={15} strokeWidth={activeTab === tab.id ? 2.2 : 1.6} />
+            {tab.label}
+            {tab.badge ? (
+              <span style={{ background: 'var(--red)', color: 'white', fontSize: '0.58rem', fontWeight: 900, padding: '1px 6px', borderRadius: '999px', lineHeight: '1.4' }}>
+                {tab.badge}
+              </span>
+            ) : null}
+          </button>
+        ))}
       </div>
 
       <div style={{ 
@@ -825,48 +820,62 @@ const CommandCenter = () => {
                 </button>
                 
                 <div style={{ position: 'relative' }}>
-                  <button 
-                    onClick={() => setShowCoordSelector(!showCoordSelector)}
-                    style={{ 
-                      padding: '0.6rem 1rem', borderRadius: '10px', 
-                      background: selectedCoords.length > 0 ? 'var(--plra-400)' : 'rgba(255,255,255,0.05)', 
-                      color: 'white',
-                      border: '1px solid var(--border)', fontSize: '0.7rem', fontWeight: 800,
+                  <button
+                    onClick={() => setShowLayerSelector(!showLayerSelector)}
+                    style={{
+                      padding: '0.6rem 1rem', borderRadius: '10px',
+                      background: (selectedPadrinoLayers.length > 0 || selectedCoordLayers.length > 0) ? 'var(--plra-400)' : 'rgba(255,255,255,0.07)',
+                      color: 'white', border: '1px solid var(--border)', fontSize: '0.7rem', fontWeight: 800,
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                      backdropFilter: 'blur(8px)',
-                      width: '100%'
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', width: '100%'
                     }}
                   >
-                    <Users size={14} /> Capas: {selectedCoords.length === 0 ? 'Global' : `${selectedCoords.length} Coords.`}
+                    <Users size={14} />
+                    Capas: {selectedPadrinoLayers.length === 0 && selectedCoordLayers.length === 0 ? 'Global' : `${selectedPadrinoLayers.length}P ${selectedCoordLayers.length}C`}
                   </button>
-                  {showCoordSelector && (
+                  {showLayerSelector && (
                     <div style={{
-                      position: 'absolute', top: '0', right: '110%', width: '220px', maxHeight: '300px',
-                      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 2000, overflowY: 'auto',
-                      padding: '0.5rem'
+                      position: 'absolute', top: 0, right: 'calc(100% + 8px)', width: '240px', maxHeight: '340px',
+                      background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px',
+                      boxShadow: '0 12px 32px rgba(0,0,0,0.6)', zIndex: 2000, overflowY: 'auto', padding: '0.6rem'
                     }}>
-                      <div style={{ padding: '0.4rem', borderBottom: '1px solid var(--border)', marginBottom: '0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)' }}>COORDINADORES</span>
-                        <button onClick={() => setSelectedCoords([])} style={{ fontSize: '0.55rem', color: 'var(--plra-300)', background: 'none', border: 'none', cursor: 'pointer' }}>Limpiar</button>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0.4rem 0.6rem', borderBottom: '1px solid var(--border)', marginBottom: '0.4rem' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Capas por Padrino</span>
+                        <button onClick={() => { setSelectedPadrinoLayers([]); setSelectedCoordLayers([]); }} style={{ fontSize: '0.55rem', color: 'var(--plra-300)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Limpiar</button>
                       </div>
-                      {coordinators.map(c => (
-                        <div 
-                          key={c.id} 
-                          onClick={() => setSelectedCoords(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}
-                          style={{
-                            padding: '0.5rem', borderRadius: '8px', cursor: 'pointer',
-                            background: selectedCoords.includes(c.id) ? 'var(--accent-subtle)' : 'transparent',
-                            display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2px'
-                          }}
-                        >
-                          <div style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1px solid var(--border)', background: selectedCoords.includes(c.id) ? 'var(--plra-300)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {selectedCoords.includes(c.id) && <div style={{ width: '6px', height: '6px', background: 'white', borderRadius: '1px' }} />}
+                      {structureData.map((p: any) => {
+                        const pCoords = coordinators.filter(c => c.parent_id === p.id);
+                        const pSelected = selectedPadrinoLayers.includes(p.id);
+                        const expanded = expandedLayerPadrinos.includes(p.id);
+                        return (
+                          <div key={p.id} style={{ marginBottom: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.5rem', borderRadius: '8px', cursor: 'pointer', background: pSelected ? 'rgba(59,130,246,0.12)' : 'transparent' }}>
+                              <div
+                                onClick={() => setSelectedPadrinoLayers(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}
+                                style={{ width: '13px', height: '13px', borderRadius: '4px', border: `1.5px solid ${pSelected ? 'var(--plra-300)' : 'var(--border)'}`, background: pSelected ? 'var(--plra-300)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                              >
+                                {pSelected && <div style={{ width: '6px', height: '6px', background: 'white', borderRadius: '1px' }} />}
+                              </div>
+                              <span onClick={() => setSelectedPadrinoLayers(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])} style={{ fontSize: '0.72rem', fontWeight: 700, color: pSelected ? 'var(--text)' : 'var(--text-2)', flex: 1 }}>{p.nombre}</span>
+                              {pCoords.length > 0 && (
+                                <button onClick={() => setExpandedLayerPadrinos(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '0', display: 'flex' }}>
+                                  {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                </button>
+                              )}
+                            </div>
+                            {expanded && pCoords.map(c => {
+                              const cSelected = selectedCoordLayers.includes(c.id);
+                              return (
+                                <div key={c.id} onClick={() => setSelectedCoordLayers(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.5rem 0.35rem 1.6rem', borderRadius: '6px', cursor: 'pointer', background: cSelected ? 'rgba(59,130,246,0.08)' : 'transparent' }}>
+                                  <div style={{ width: '11px', height: '11px', borderRadius: '3px', border: `1.5px solid ${cSelected ? 'var(--plra-300)' : 'var(--border)'}`, background: cSelected ? 'var(--plra-300)' : 'transparent', flexShrink: 0 }} />
+                                  <span style={{ fontSize: '0.67rem', color: cSelected ? 'var(--text)' : 'var(--text-3)', fontWeight: 600 }}>{c.nombre}</span>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <span style={{ fontSize: '0.7rem', color: selectedCoords.includes(c.id) ? 'var(--text)' : 'var(--text-2)', fontWeight: 600 }}>{c.nombre}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -939,7 +948,14 @@ const CommandCenter = () => {
                     {captures
                       .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
                       .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
-                      .filter(cap => selectedCoords.length === 0 || selectedCoords.includes(cap.coordinator_id))
+                      .filter(cap => !needsTransportFilter || cap.needs_transport === 1)
+                      .filter(cap => {
+                        if (selectedPadrinoLayers.length === 0 && selectedCoordLayers.length === 0) return true;
+                        const coord = coordinators.find((c: any) => c.id === cap.coordinator_id);
+                        if (selectedCoordLayers.includes(cap.coordinator_id)) return true;
+                        if (coord?.parent_id && selectedPadrinoLayers.includes(coord.parent_id)) return true;
+                        return false;
+                      })
                       .map((cap, idx) => {
                       const jitter = 0.00003 * Math.sqrt(idx);
                       const angle = idx * 137.5;
@@ -958,29 +974,58 @@ const CommandCenter = () => {
                             cap.needs_transport === 1
                           )}
                         >
-                          <Popup>
-                            <div style={{ padding: '0.6rem', minWidth: '190px' }}>
-                               <p style={{ fontWeight: 900, fontSize: '1.05rem', marginBottom: '0.3rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1, borderBottom: '1px solid var(--border)', paddingBottom: '0.3rem' }}>{cap.nombre} {cap.apellido}</p>
-                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                                 <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 5px', borderRadius: '4px', background: 'var(--plra-500)', color: 'white' }}>
-                                   L-{cap.list_number}
-                                 </span>
-                                 <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800 }}>{cap.campaign_name?.substring(0, 15)}</span>
-                               </div>
-                               <div style={{ marginBottom: '0.5rem', padding: '0.4rem 0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                 <p style={{ fontSize: '0.65rem', color: 'var(--text)', margin: 0, fontWeight: 700 }}>
-                                   <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Captado:</span> {cap.coordinator_name} 
-                                 </p>
-                                 {(cap.padrino_name || cap.parent_name) && (
-                                   <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', margin: '2px 0 0 0', fontWeight: 500, fontStyle: 'italic' }}>
-                                     Superior: {cap.padrino_name || cap.parent_name}
-                                   </p>
-                                 )}
-                               </div>
-                               <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.3rem', opacity: 0.8 }}>
-                                 <MapPin size={10} /> {cap.local_votacion}
-                               </div>
-                             </div>
+                          <Popup className="premium-popup">
+                            <div style={{ minWidth: '230px', maxWidth: '265px' }}>
+                              {/* Header */}
+                              <div style={{ padding: '0.75rem 0.9rem 0.55rem', background: 'linear-gradient(135deg,#081526,#0d1f3c)', borderBottom: '1px solid rgba(59,130,246,0.18)' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginBottom: '0.35rem' }}>
+                                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', marginTop: '3px', flexShrink: 0,
+                                    background: cap.traffic_light === 'GREEN' ? '#22C55E' : cap.traffic_light === 'YELLOW' ? '#EAB308' : cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444',
+                                    boxShadow: `0 0 8px ${cap.traffic_light === 'GREEN' ? '#22C55E80' : cap.traffic_light === 'YELLOW' ? '#EAB30880' : cap.traffic_light === 'PURPLE' ? '#A855F780' : '#EF444480'}`
+                                  }} />
+                                  <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.15, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                    {cap.nombre} {cap.apellido}
+                                  </p>
+                                </div>
+                                <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px', background: '#0047AB', color: 'white', letterSpacing: '0.06em', marginLeft: '1.5rem' }}>
+                                  L-{cap.list_number}
+                                </span>
+                              </div>
+                              {/* Body */}
+                              <div style={{ padding: '0.6rem 0.9rem 0.75rem', background: '#0a1525' }}>
+                                {/* Coordinator */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                  <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#3B82F6', flexShrink: 0 }}>
+                                    {cap.coordinator_name?.charAt(0) || '?'}
+                                  </div>
+                                  <div>
+                                    <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>CAPTADO POR</p>
+                                    <p style={{ fontSize: '0.72rem', color: 'white', margin: 0, fontWeight: 800 }}>{cap.coordinator_name}</p>
+                                  </div>
+                                </div>
+                                {/* Padrino */}
+                                {(cap.padrino_name || cap.parent_name) && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#A855F7', flexShrink: 0 }}>
+                                      {(cap.padrino_name || cap.parent_name)?.charAt(0) || '?'}
+                                    </div>
+                                    <div>
+                                      <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>SUPERIOR</p>
+                                      <p style={{ fontSize: '0.72rem', color: '#A855F7', margin: 0, fontWeight: 800 }}>{cap.padrino_name || cap.parent_name}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Local */}
+                                <div style={{ padding: '0.4rem 0.55rem', background: 'rgba(255,255,255,0.03)', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.06)', marginTop: '0.15rem' }}>
+                                  <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.3 }}>{cap.local_votacion}</p>
+                                  {cap.needs_transport === 1 && (
+                                    <span style={{ display: 'inline-block', marginTop: '0.3rem', fontSize: '0.52rem', color: '#93C5FD', fontWeight: 900, background: 'rgba(59,130,246,0.15)', padding: '1px 6px', borderRadius: '4px' }}>
+                                      🚌 REQUIERE TRANSPORTE
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
                           </Popup>
                         </Marker>
                       );
@@ -990,6 +1035,14 @@ const CommandCenter = () => {
                   captures
                     .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
                     .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
+                    .filter(cap => !needsTransportFilter || cap.needs_transport === 1)
+                    .filter(cap => {
+                      if (selectedPadrinoLayers.length === 0 && selectedCoordLayers.length === 0) return true;
+                      const coord = coordinators.find((c: any) => c.id === cap.coordinator_id);
+                      if (selectedCoordLayers.includes(cap.coordinator_id)) return true;
+                      if (coord?.parent_id && selectedPadrinoLayers.includes(coord.parent_id)) return true;
+                      return false;
+                    })
                     .map((cap, idx) => {
                     const jitter = 0.00003 * Math.sqrt(idx);
                     const angle = idx * 137.5;
@@ -1008,12 +1061,53 @@ const CommandCenter = () => {
                           cap.needs_transport === 1
                         )}
                       >
-                        <Popup>
-                           <div style={{ padding: '0.4rem', minWidth: '160px' }}>
-                              <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.2rem', color: 'var(--text)', textTransform: 'uppercase', lineHeight: 1.1 }}>{cap.nombre} {cap.apellido}</p>
-                              <div style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 4px', borderRadius: '3px', background: 'var(--plra-500)', color: 'white', display: 'inline-block' }}>L-{cap.list_number}</div>
-                              <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginTop: '0.4rem' }}><MapPin size={10} /> {cap.local_votacion}</div>
-                           </div>
+                        <Popup className="premium-popup">
+                          <div style={{ minWidth: '230px', maxWidth: '265px' }}>
+                            <div style={{ padding: '0.75rem 0.9rem 0.55rem', background: 'linear-gradient(135deg,#081526,#0d1f3c)', borderBottom: '1px solid rgba(59,130,246,0.18)' }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginBottom: '0.35rem' }}>
+                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', marginTop: '3px', flexShrink: 0,
+                                  background: cap.traffic_light === 'GREEN' ? '#22C55E' : cap.traffic_light === 'YELLOW' ? '#EAB308' : cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444',
+                                  boxShadow: `0 0 8px ${cap.traffic_light === 'GREEN' ? '#22C55E80' : cap.traffic_light === 'YELLOW' ? '#EAB30880' : cap.traffic_light === 'PURPLE' ? '#A855F780' : '#EF444480'}`
+                                }} />
+                                <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.15, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                  {cap.nombre} {cap.apellido}
+                                </p>
+                              </div>
+                              <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px', background: '#0047AB', color: 'white', letterSpacing: '0.06em', marginLeft: '1.5rem' }}>
+                                L-{cap.list_number}
+                              </span>
+                            </div>
+                            <div style={{ padding: '0.6rem 0.9rem 0.75rem', background: '#0a1525' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#3B82F6', flexShrink: 0 }}>
+                                  {cap.coordinator_name?.charAt(0) || '?'}
+                                </div>
+                                <div>
+                                  <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>CAPTADO POR</p>
+                                  <p style={{ fontSize: '0.72rem', color: 'white', margin: 0, fontWeight: 800 }}>{cap.coordinator_name}</p>
+                                </div>
+                              </div>
+                              {(cap.padrino_name || cap.parent_name) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                  <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#A855F7', flexShrink: 0 }}>
+                                    {(cap.padrino_name || cap.parent_name)?.charAt(0) || '?'}
+                                  </div>
+                                  <div>
+                                    <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>SUPERIOR</p>
+                                    <p style={{ fontSize: '0.72rem', color: '#A855F7', margin: 0, fontWeight: 800 }}>{cap.padrino_name || cap.parent_name}</p>
+                                  </div>
+                                </div>
+                              )}
+                              <div style={{ padding: '0.4rem 0.55rem', background: 'rgba(255,255,255,0.03)', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.06)', marginTop: '0.15rem' }}>
+                                <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.3 }}>{cap.local_votacion}</p>
+                                {cap.needs_transport === 1 && (
+                                  <span style={{ display: 'inline-block', marginTop: '0.3rem', fontSize: '0.52rem', color: '#93C5FD', fontWeight: 900, background: 'rgba(59,130,246,0.15)', padding: '1px 6px', borderRadius: '4px' }}>
+                                    🚌 REQUIERE TRANSPORTE
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </Popup>
                       </Marker>
                     );
@@ -1066,85 +1160,67 @@ const CommandCenter = () => {
                 {/* Map Legend */}
                 <div style={{
                   position: 'absolute', bottom: isMobile ? '7rem' : '2rem', left: '1rem', zIndex: 1000,
-                  background: 'rgba(10, 14, 23, 0.85)', backdropFilter: 'blur(12px)',
-                  padding: '0.85rem', borderRadius: '14px', border: '1px solid var(--border)',
-                  display: 'flex', flexDirection: 'column', gap: '0.65rem', boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+                  background: 'rgba(8, 14, 26, 0.92)', backdropFilter: 'blur(16px)',
+                  padding: '0.85rem 0.9rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex', flexDirection: 'column', gap: '0.5rem', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                  minWidth: '150px'
                 }}>
-                  <div style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--text-3)', marginBottom: '0.2rem', letterSpacing: '0.05em' }}>FILTRAR POR ESTADO:</div>
+                  <div style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.15rem' }}>Estado del elector</div>
                   {[
-                    { id: 'GREEN', label: 'A FAVOR', color: 'var(--green)' },
-                    { id: 'YELLOW', label: 'DUDOSO', color: 'var(--yellow)' },
-                    { id: 'RED', label: 'EN CONTRA', color: 'var(--red)' }
-                  ].map(item => (
-                    <div 
-                      key={item.id}
-                      onClick={() => setTrafficLightFilter(trafficLightFilter === item.id ? null : item.id)}
-                      style={{ 
-                        display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer',
-                        opacity: !trafficLightFilter || trafficLightFilter === item.id ? 1 : 0.3,
-                        transition: '0.2s',
-                        background: trafficLightFilter === item.id ? 'rgba(255,255,255,0.05)' : 'transparent',
-                        padding: '0.3rem 0.5rem', borderRadius: '6px',
-                        margin: '0 -0.3rem'
-                      }}
-                    >
-                      <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: item.color, boxShadow: trafficLightFilter === item.id ? `0 0 10px ${item.color}` : 'none' }} />
-                      <span style={{ fontSize: '0.65rem', color: 'white', fontWeight: 800 }}>{item.label}</span>
-                    </div>
-                  ))}
-                  
-                  {trafficLightFilter && (
-                    <button 
-                      onClick={() => setTrafficLightFilter(null)}
-                      style={{ 
-                        marginTop: '0.2rem', padding: '0.3rem', borderRadius: '6px', 
-                        background: 'var(--accent-subtle)', border: '1px solid var(--border)',
-                        color: 'var(--plra-300)', fontSize: '0.55rem', fontWeight: 800, cursor: 'pointer'
-                      }}
-                    >
-                      LIMPIAR FILTRO
-                  </button>
-                  )}
+                    { id: 'GREEN',  label: 'A FAVOR',    color: '#22C55E' },
+                    { id: 'YELLOW', label: 'DUDOSO',     color: '#EAB308' },
+                    { id: 'RED',    label: 'EN CONTRA',  color: '#EF4444' },
+                    { id: 'PURPLE', label: 'NO DEFINIDO',color: '#A855F7' },
+                  ].map(item => {
+                    const active = trafficLightFilter === item.id;
+                    const dimmed = !!trafficLightFilter && !active;
+                    return (
+                      <div key={item.id} onClick={() => setTrafficLightFilter(active ? null : item.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
+                          opacity: dimmed ? 0.28 : 1, transition: 'opacity 0.2s, background 0.15s',
+                          background: active ? 'rgba(255,255,255,0.07)' : 'transparent',
+                          padding: '0.28rem 0.5rem', borderRadius: '7px', margin: '0 -0.3rem'
+                        }}
+                      >
+                        <div style={{
+                          width: '13px', height: '13px', borderRadius: '50%', flexShrink: 0,
+                          background: item.color,
+                          boxShadow: active ? `0 0 8px ${item.color}` : 'none',
+                          border: active ? `2px solid rgba(255,255,255,0.6)` : '2px solid transparent'
+                        }} />
+                        <span style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.9)', fontWeight: active ? 900 : 700 }}>{item.label}</span>
+                        {active && <div style={{ marginLeft: 'auto', width: '5px', height: '5px', borderRadius: '50%', background: item.color }} />}
+                      </div>
+                    );
+                  })}
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.6rem' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid var(--plra-300)' }} />
-                    <span style={{ fontSize: '0.6rem', color: 'var(--plra-200)', fontWeight: 800 }}>REQUIERE TRANSPORTE</span>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.5rem', marginTop: '0.15rem' }}>
+                    <div
+                      onClick={() => setNeedsTransportFilter(!needsTransportFilter)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
+                        background: needsTransportFilter ? 'rgba(59,130,246,0.15)' : 'transparent',
+                        padding: '0.28rem 0.5rem', borderRadius: '7px', margin: '0 -0.3rem',
+                        border: needsTransportFilter ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      <div style={{ width: '13px', height: '13px', borderRadius: '50%', flexShrink: 0, border: `2.5px solid #3B82F6`, background: needsTransportFilter ? '#3B82F650' : 'transparent' }} />
+                      <span style={{ fontSize: '0.62rem', color: needsTransportFilter ? '#93C5FD' : 'rgba(255,255,255,0.6)', fontWeight: 800 }}>
+                        {needsTransportFilter ? '✓ ' : ''}TRANSPORTE
+                      </span>
+                    </div>
                   </div>
+
+                  {(trafficLightFilter || needsTransportFilter) && (
+                    <button onClick={() => { setTrafficLightFilter(null); setNeedsTransportFilter(false); }}
+                      style={{ marginTop: '0.15rem', padding: '0.3rem', borderRadius: '7px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: '0.55rem', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em' }}>
+                      LIMPIAR FILTROS
+                    </button>
+                  )}
                 </div>
               </MapContainer>
-            </div>
-          ) : activeTab === 'registry' ? (
-            <div style={{ height: '100%', overflowY: 'auto', padding: isMobile ? '1rem' : '2rem', background: 'var(--bg)' }}>
-              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <header style={{ marginBottom: '2rem' }}>
-                  <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.75rem', fontWeight: 900, color: 'white', marginBottom: '0.5rem' }}>
-                    Consulta de <span style={{ color: 'var(--plra-300)' }}>Padrón</span>
-                  </h2>
-                  <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Localice electores y verifique locales de votación.</p>
-                </header>
-
-                <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--plra-500)', background: 'rgba(59,130,246,0.05)' }}>
-                  <div className="search-input-wrapper-premium">
-                    <Search size={20} style={{ marginLeft: '1rem', color: 'var(--plra-300)' }} />
-                    <input 
-                      type="text" 
-                      className="modern-input-premium-styled" 
-                      placeholder="Nombre, Apellido o CI..."
-                      style={{ paddingLeft: '3rem', fontSize: '1rem' }}
-                      onChange={(e) => handleSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
-                  {searchResults.map((elector: any) => (
-                    <motion.div layout key={elector.ci} className="card-premium-styled" style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
-                      <p style={{ fontWeight: 800, fontSize: '1rem', color: 'white' }}>{elector.nombre} {elector.apellido}</p>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--plra-300)', fontWeight: 700 }}>C.I. {elector.ci}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
             </div>
           ) : activeTab === 'hierarchy' ? (
             <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
@@ -1167,7 +1243,7 @@ const CommandCenter = () => {
                   )}
                 </header>
 
-                {hierarchy.length === 0 ? (
+                {structureData.length === 0 ? (
                   <div className="empty-state-card">
                     <div className="icon-pulse"><Users size={48} /></div>
                     <h3>Jerarquía de Mando Vacía</h3>
@@ -1289,55 +1365,53 @@ const CommandCenter = () => {
               </div>
             </div>
           ) : (
+            /* ── Solicitudes tab ── */
             <div style={{ padding: 'clamp(1rem, 3vw, 2rem)', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.25rem' }}>Padrón Electoral Inteligente</h3>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Búsqueda y gestión avanzada de electores por local y mesa.</p>
+              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.3rem' }}>
+                      Solicitudes <span style={{ color: 'var(--plra-300)' }}>de Campo</span>
+                    </h2>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Conflictos, incidentes y requerimientos reportados por coordinadores.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    {requests.filter(r => r.status === 'PENDING').length > 0 && (
+                      <div style={{ padding: '0.4rem 0.9rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', color: 'var(--red)', fontSize: '0.72rem', fontWeight: 900 }}>
+                        {requests.filter(r => r.status === 'PENDING').length} PENDIENTES
+                      </div>
+                    )}
+                    <div style={{ padding: '0.4rem 0.9rem', background: 'var(--accent-subtle)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--plra-300)', fontSize: '0.72rem', fontWeight: 800 }}>
+                      {requests.length} TOTAL
+                    </div>
+                  </div>
                 </div>
-                <div style={{ 
-                  padding: '0.5rem 1rem', background: 'var(--accent-subtle)', border: '1px solid var(--border)', 
-                  borderRadius: '10px', color: 'var(--plra-300)', fontSize: '0.75rem', fontWeight: 800 
-                }}>
-                  {searchResults.length} Registros Encontrados
-                </div>
-              </div>
-              <div style={{ background: 'var(--surface)', borderRadius: '20px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
-                {searchResults.length === 0 && !searchQuery ? (
-                  <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                    <div className="icon-pulse" style={{ marginBottom: '1.5rem', color: 'var(--plra-400)' }}><Search size={48} /></div>
-                    <h3 style={{ color: 'var(--text)', fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Búsqueda de Padrón Electoral</h3>
-                    <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto', lineHeight: '1.5' }}>
-                      Escriba una Cédula, Nombre o Apellido en el buscador superior para consultar el padrón nacional (37,000+ electores).
-                    </p>
+
+                {requests.length === 0 ? (
+                  <div className="empty-state-card">
+                    <div className="icon-pulse"><Bell size={48} /></div>
+                    <h3>Sin Solicitudes Activas</h3>
+                    <p>No hay incidentes ni solicitudes de campo reportadas en este momento.</p>
                   </div>
                 ) : (
-                  <ManagementTable 
-                  isLoading={isSearching}
-                  data={searchResults}
-                  columns={[
-                    { header: 'CI', accessor: 'ci', width: '120px' },
-                    { header: 'Nombre Completo', accessor: (e: any) => `${e.nombre} ${e.apellido}` },
-                    { header: 'Local de Votación', accessor: 'local_votacion' },
-                    { header: 'Mesa', accessor: 'mesa', width: '80px' },
-                    { 
-                      header: 'Estado', 
-                      accessor: (e: any) => (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <div style={{ 
-                            width: '10px', height: '10px', borderRadius: '50%', 
-                            background: e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : e.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)',
-                            boxShadow: e.traffic_light ? `0 0 8px ${e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : 'var(--red)'}` : 'none'
-                          }} />
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: e.traffic_light ? 'var(--text)' : 'var(--text-3)' }}>
-                            {e.traffic_light ? 'CAPTADO' : 'PENDIENTE'}
-                          </span>
-                        </div>
-                      )
-                    },
-                    { header: 'Responsable', accessor: 'coordinator_name' }
-                  ]}
-                />
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1rem' }}>
+                    {requests
+                      .sort((a: any, b: any) => {
+                        const order = { CRITICAL: 0, HIGH: 1, NORMAL: 2 };
+                        const pa = order[a.priority as keyof typeof order] ?? 3;
+                        const pb = order[b.priority as keyof typeof order] ?? 3;
+                        if (pa !== pb) return pa - pb;
+                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                      })
+                      .map((req: any) => (
+                        <RequestItem
+                          key={req.id}
+                          req={req}
+                          onResolve={(status) => handleResolveRequest(req.id, status)}
+                          isReadOnly={user?.role === 'PADRINO'}
+                        />
+                      ))}
+                  </div>
                 )}
               </div>
             </div>

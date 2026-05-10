@@ -14,16 +14,36 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const ALLOWED_ORIGINS = [
+  'https://intelecciones.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
 app.use(cors({
-  origin: [
-    'https://intelecciones.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (native mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    // In development: allow all origins (covers LAN IPs for phone testing)
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+    // In production: allow listed origins + any *.vercel.app subdomain
+    if (ALLOWED_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'x-district', 'Accept']
 }));
+
+// Global request timeout (30s) — prevents hanging queries on slow mobile connections
+app.use((_req, res, next) => {
+  res.setTimeout(30000, () => {
+    if (!res.headersSent) res.status(408).json({ error: 'Request timeout' });
+  });
+  next();
+});
 // 📸 Multer Setup for Photos
 const uploadDir = process.env.NODE_ENV === 'production'
   ? '/app/data/uploads'
@@ -1057,25 +1077,27 @@ app.get('/api/captures', (req, res) => {
 
 app.get('/api/logistics/stats', (req, res) => {
   const list_id = getListId(req);
-  const filter = list_id ? `AND ec.list_id = ${list_id}` : '';
   try {
+    const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
+    const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
+
     const stats = db.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_requests,
-        SUM(CASE WHEN assigned_vehicle_id IS NOT NULL THEN 1 ELSE 0 END) as assigned,
+        SUM(CASE WHEN ec.assigned_vehicle_id IS NOT NULL THEN 1 ELSE 0 END) as assigned,
         SUM(CASE WHEN e.is_priority = 1 THEN 1 ELSE 0 END) as priority
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 ${filter}
-    `).get() as any;
+      WHERE ec.needs_transport = 1 ${filterSql}
+    `).get(...filterParams) as any;
 
     const fleet = db.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_vehicles,
         SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) as available
       FROM vehicles
-      ${list_id ? `WHERE list_id = ${list_id}` : ''}
-    `).get() as any;
+      ${list_id && !isNaN(list_id) ? 'WHERE assigned_list_id = ?' : ''}
+    `).get(...filterParams) as any;
 
     res.json({ ...stats, ...fleet });
   } catch (err: any) {
@@ -1085,19 +1107,20 @@ app.get('/api/logistics/stats', (req, res) => {
 
 app.get('/api/logistics/clusters', (req, res) => {
   const list_id = getListId(req);
-  const filter = list_id ? `AND ec.list_id = ${list_id}` : '';
+  const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
+  const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
   try {
     const clusters = db.prepare(`
-      SELECT 
-        e.barrio,
+      SELECT
+        COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio') as barrio,
         COUNT(ec.id) as count,
         AVG(ec.lat) as lat,
         AVG(ec.lng) as lng
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filter}
-      GROUP BY e.barrio
-    `).all();
+      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
+      GROUP BY COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio')
+    `).all(...filterParams);
     res.json(clusters);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1117,15 +1140,18 @@ app.put('/api/vehicles/:id/status', (req, res) => {
 
 app.get('/api/logistics/pending', (req, res) => {
   const list_id = getListId(req);
-  const filter = list_id ? `AND ec.list_id = ${list_id}` : '';
+  const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
+  const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
   try {
     const pending = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, e.barrio, e.is_priority
+      SELECT ec.*, e.nombre, e.apellido, e.local_votacion,
+        COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio') as barrio,
+        e.is_priority
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filter}
+      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
       ORDER BY e.is_priority DESC, ec.timestamp ASC
-    `).all();
+    `).all(...filterParams);
     res.json(pending);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1910,98 +1936,130 @@ app.get('/api/admin/electors/stats', (req, res) => {
 
 app.get('/api/stats/command', (req, res) => {
   const list_id = getListId(req);
-  const local_id = req.query.localId as string;
+  const local_id = (req.query.localId as string) || '';
   const role = getRole(req);
   const isPadrino = role === 'PADRINO';
   const sec = getSecurityFilter(req, 'e');
   const secLoc = getSecurityFilter(req, 'loc');
 
   try {
-    const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
-    const localFilter = local_id ? `AND e.cod_local = '${local_id}'` : '';
-    const hierarchyFilter = isPadrino ? `AND (u.parent_id = ${req.headers['x-user-id']} OR u.id = ${req.headers['x-user-id']})` : '';
+    // --- Parameterized list filter (avoids = NULL bug and SQL injection) ---
+    let listFilterSql = '';
+    const listFilterParams: any[] = [];
+    if (list_id && !isNaN(list_id)) {
+      listFilterSql = 'AND ec.list_id = ?';
+      listFilterParams.push(list_id);
+    }
 
-    const params = sec.params || [];
+    // --- Parameterized local filter (fixed: uses local_votacion, not cod_local) ---
+    let localFilterSql = '';
+    const localFilterParams: any[] = [];
+    if (local_id && local_id !== 'null' && local_id !== 'undefined') {
+      // local_id is cod_local; resolve to nombre used in electors.local_votacion
+      localFilterSql = 'AND e.local_votacion = (SELECT nombre FROM voting_locations WHERE cod_local = ?)';
+      localFilterParams.push(local_id);
+    }
 
-    const statsQuery = `
-      SELECT traffic_light, COUNT(*) as count 
+    // --- Parameterized hierarchy filter (avoids SQL injection from header) ---
+    let hierarchyFilterSql = '';
+    const hierarchyFilterParams: any[] = [];
+    if (isPadrino) {
+      const userId = parseInt(req.headers['x-user-id'] as string);
+      if (!isNaN(userId)) {
+        hierarchyFilterSql = 'AND (u.parent_id = ? OR u.id = ?)';
+        hierarchyFilterParams.push(userId, userId);
+      }
+    }
+
+    // Combined params in order matching SQL placeholders
+    const captureParams = [
+      ...(sec.params || []),
+      ...listFilterParams,
+      ...localFilterParams,
+      ...hierarchyFilterParams,
+    ];
+
+    // LEFT JOINs on lists/campaigns so captures without list_id are still counted
+    const captureJoins = `
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
-      JOIN users u ON ec.coordinator_id = u.id
-      JOIN lists l ON ec.list_id = l.id
-      JOIN campaigns c ON l.campaign_id = c.id
-      WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${localFilter} ${hierarchyFilter}
-      GROUP BY traffic_light
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
     `;
-    
-    const stats = db.prepare(statsQuery).all(...params) as any[];
-
-    const totalCapturesQuery = `
-      SELECT COUNT(*) as count 
-      FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
-      JOIN users u ON ec.coordinator_id = u.id
-      JOIN lists l ON ec.list_id = l.id
-      JOIN campaigns c ON l.campaign_id = c.id
-      WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${localFilter} ${hierarchyFilter}
+    const captureWhere = `
+      WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${localFilterSql} ${hierarchyFilterSql}
     `;
-    
-    const totalCaptures = db.prepare(totalCapturesQuery).get(...params) as any;
-    
-    // For total electors, we need a separate security filter targeting electors table
-    const secElectors = getSecurityFilter(req, 'e'); // Assuming ciudad/distrito in electors
-    const electorParams = secElectors.params || [];
 
-    // Note: electors table uses 'ciudad' or 'distrito'. We use the same filter logic.
-    const totalElectorsQuery = `
-      SELECT COUNT(*) as count FROM electors e 
-      WHERE 1=1 ${local_id ? `AND e.cod_local = '${local_id}'` : ''} 
-      ${secElectors.sql}
-    `;
-    const totalElectors = db.prepare(totalElectorsQuery).get(...electorParams) as any;
+    const stats = db.prepare(`
+      SELECT traffic_light, COUNT(*) as count ${captureJoins} ${captureWhere} GROUP BY traffic_light
+    `).all(...captureParams) as any[];
 
+    const totalCaptures = db.prepare(`
+      SELECT COUNT(*) as count ${captureJoins} ${captureWhere}
+    `).get(...captureParams) as any;
+
+    // Total electors (separate filter — no list/hierarchy filter needed)
+    const secElectors = getSecurityFilter(req, 'e');
+    const electorParams = [...(secElectors.params || []), ...localFilterParams];
+    const totalElectors = db.prepare(`
+      SELECT COUNT(*) as count FROM electors e
+      WHERE 1=1 ${localFilterSql} ${secElectors.sql}
+    `).get(...electorParams) as any;
+
+    // Location stats
     const locationStatsQuery = `
-      SELECT 
+      SELECT
         loc.cod_local,
         loc.nombre,
-        COALESCE(e_counts.total, 0) as total_electors,
+        COALESCE(e_counts.total, 0)  as total_electors,
         COALESCE(ec_counts.total, 0) as total_captures,
         COALESCE(ec_counts.green, 0) as green_captures
       FROM voting_locations loc
       LEFT JOIN (
-        SELECT local_votacion, COUNT(*) as total FROM electors e 
-        WHERE 1=1 ${secElectors.sql}
+        SELECT local_votacion, COUNT(*) as total
+        FROM electors e WHERE 1=1 ${secElectors.sql}
         GROUP BY local_votacion
       ) e_counts ON loc.nombre = e_counts.local_votacion
       LEFT JOIN (
-        SELECT e.local_votacion, COUNT(ec.id) as total, SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
+        SELECT e.local_votacion,
+          COUNT(ec.id) as total,
+          SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
         FROM elector_captures ec
         JOIN electors e ON ec.elector_ci = e.ci
-        JOIN users u ON ec.coordinator_id = u.id
-        JOIN lists l ON ec.list_id = l.id
-        JOIN campaigns c ON l.campaign_id = c.id
-        WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${hierarchyFilter}
+        LEFT JOIN users u ON ec.coordinator_id = u.id
+        LEFT JOIN lists l ON ec.list_id = l.id
+        LEFT JOIN campaigns c ON l.campaign_id = c.id
+        WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${hierarchyFilterSql}
         GROUP BY e.local_votacion
       ) ec_counts ON loc.nombre = ec_counts.local_votacion
       WHERE 1=1 ${secLoc.sql}
     `;
-    
-    const locParams = [...electorParams, ...params, ...(secLoc.params || [])];
-    
+    const locParams = [
+      ...(secElectors.params || []),
+      ...(sec.params || []),
+      ...listFilterParams,
+      ...hierarchyFilterParams,
+      ...(secLoc.params || []),
+    ];
     const locationStats = db.prepare(locationStatsQuery).all(...locParams) as any[];
 
+    const totalCap = totalCaptures?.count || 0;
+    const totalEl  = totalElectors?.count  || 0;
     res.json({
-      green: stats.find(s => s.traffic_light === 'GREEN')?.count || 0,
-      yellow: stats.find(s => s.traffic_light === 'YELLOW')?.count || 0,
-      red: stats.find(s => s.traffic_light === 'RED')?.count || 0,
-      purple: stats.find(s => s.traffic_light === 'PURPLE')?.count || 0,
-      total_captures: totalCaptures.count,
-      total_electors: totalElectors.count,
-      percentage: totalElectors.count > 0 ? ((totalCaptures.count / totalElectors.count) * 100).toFixed(1) : 0,
+      green:   stats.find(s => s.traffic_light === 'GREEN')?.count  || 0,
+      yellow:  stats.find(s => s.traffic_light === 'YELLOW')?.count || 0,
+      red:     stats.find(s => s.traffic_light === 'RED')?.count    || 0,
+      purple:  stats.find(s => s.traffic_light === 'PURPLE')?.count || 0,
+      total_captures: totalCap,
+      total_electors: totalEl,
+      percentage: totalEl > 0 ? ((totalCap / totalEl) * 100).toFixed(1) : '0',
       locations: locationStats.map(loc => ({
         ...loc,
-        percentage: loc.total_electors > 0 ? ((loc.total_captures / loc.total_electors) * 100).toFixed(1) : 0
-      }))
+        percentage: loc.total_electors > 0
+          ? ((loc.total_captures / loc.total_electors) * 100).toFixed(1)
+          : '0',
+      })),
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2447,17 +2505,134 @@ app.get('/api/whatsapp/messages', (req, res) => {
 app.get('/api/whatsapp/chats', (req, res) => {
   try {
     const chats = db.prepare(`
-      SELECT 
-        m1.contact_number, 
+      SELECT
+        m1.contact_number,
         COALESCE((SELECT m2.contact_name FROM whatsapp_messages m2 WHERE m2.contact_number = m1.contact_number AND m2.contact_name IS NOT NULL LIMIT 1), m1.contact_number) as contact_name,
-        m1.body as last_message, 
-        m1.timestamp, 
-        m1.is_incoming
+        m1.body as last_message,
+        m1.timestamp,
+        m1.is_incoming,
+        (SELECT COUNT(*) FROM whatsapp_messages WHERE contact_number = m1.contact_number AND is_incoming = 1) as unread_count
       FROM whatsapp_messages m1
       WHERE m1.id IN (SELECT MAX(id) FROM whatsapp_messages GROUP BY contact_number)
       ORDER BY m1.timestamp DESC
     `).all();
     res.json(chats);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// WhatsApp Recipient Selection Endpoints
+app.get('/api/whatsapp/recipients/coordinators', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  try {
+    const coordinators = db.prepare(`
+      SELECT
+        u.id, u.nombre, u.telefono, u.ci, u.distrito,
+        u.assigned_list_id, l.list_number, l.candidate_alias, l.candidate_nombre, l.ciudad,
+        COUNT(ec.id) as capture_count
+      FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
+      WHERE u.role = 'COORDINADOR' AND u.status = 'ACTIVE'
+      GROUP BY u.id
+      ORDER BY u.nombre
+    `).all();
+    res.json(coordinators);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/recipients/padrinos', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  try {
+    const padrinos = db.prepare(`
+      SELECT
+        u.id, u.nombre, u.telefono, u.ci, u.distrito,
+        u.assigned_list_id, l.list_number, l.candidate_alias, l.ciudad,
+        COUNT(DISTINCT ch.id) as coordinator_count,
+        COUNT(DISTINCT ec.id) as total_captures
+      FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN users ch ON ch.parent_id = u.id AND ch.role = 'COORDINADOR'
+      LEFT JOIN elector_captures ec ON ec.coordinator_id = ch.id
+      WHERE u.role = 'PADRINO' AND u.status = 'ACTIVE'
+      GROUP BY u.id
+      ORDER BY u.nombre
+    `).all();
+    res.json(padrinos);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/recipients/padrinos/:id/team', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const padrinoId = parseInt(req.params.id);
+  try {
+    const coordinators = db.prepare(`
+      SELECT u.id, u.nombre, u.telefono, u.ci, u.distrito,
+        COUNT(ec.id) as capture_count
+      FROM users u
+      LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
+      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+      GROUP BY u.id
+      ORDER BY u.nombre
+    `).all(padrinoId);
+
+    const electorsRaw = db.prepare(`
+      SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
+        e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden,
+        u.id as coordinator_id, u.nombre as coordinator_nombre
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      JOIN users u ON ec.coordinator_id = u.id
+      WHERE u.parent_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != ''
+      ORDER BY u.nombre, e.nombre
+    `).all(padrinoId);
+
+    res.json({ coordinators, electors: electorsRaw });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/recipients/coordinator/:id/electors', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const coordId = parseInt(req.params.id);
+  try {
+    const electors = db.prepare(`
+      SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
+        e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.coordinator_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != ''
+      ORDER BY e.nombre
+    `).all(coordId);
+    res.json(electors);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/recipients/search', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const q = `%${req.query.q || ''}%`;
+  try {
+    const users = db.prepare(`
+      SELECT id, nombre, telefono, ci, role, distrito FROM users
+      WHERE telefono IS NOT NULL AND telefono != '' AND status = 'ACTIVE'
+        AND (nombre LIKE ? OR telefono LIKE ? OR ci LIKE ?)
+      LIMIT 10
+    `).all(q, q, q);
+
+    const electors = db.prepare(`
+      SELECT ec.elector_ci, ec.telefono, ec.traffic_light,
+        e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.telefono IS NOT NULL AND ec.telefono != ''
+        AND (e.nombre LIKE ? OR e.apellido LIKE ? OR ec.telefono LIKE ? OR ec.elector_ci LIKE ?)
+      LIMIT 10
+    `).all(q, q, q, q);
+
+    res.json({ users, electors });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
