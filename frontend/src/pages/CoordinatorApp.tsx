@@ -1168,14 +1168,17 @@ const CoordinatorApp = () => {
                     animation: (isLoading || isReadOnly) ? 'none' : 'glow-pulse 3s ease-in-out infinite',
                     opacity: isReadOnly ? 0.6 : 1,
                     background: isReadOnly ? 'var(--surface-3)' : undefined,
-                    cursor: isReadOnly ? 'not-allowed' : 'pointer'
+                    cursor: isReadOnly ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   {isLoading ? <Spinner size={20} /> : (
                     isReadOnly ? (
-                      <><Search size={20} /> Perfil Solo Consulta</>
+                      <><Search size={20} /> <span>Perfil Solo Consulta</span></>
                     ) : (
-                      <><ClipboardCheck size={20} strokeWidth={2.5} />Registrar Elector</>
+                      <><ClipboardCheck size={20} strokeWidth={2.5} /> <span>Registrar Elector</span></>
                     )
                   )}
                 </button>
