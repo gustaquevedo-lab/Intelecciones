@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
-  TrendingUp, TrendingDown, ChevronUp, ChevronDown,
+  TrendingUp, TrendingDown, ChevronDown,
   Download, MapPin, Activity, Bell, X, Search,
-  AlertCircle, ChevronRight, Truck, Target, Phone, MessageSquare, Mic, Clock, ExternalLink, Printer
+  AlertCircle, ChevronRight, Truck, Target, MessageSquare, Mic, Clock
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
-import { ManagementTable } from '../components/ManagementTable';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
@@ -103,11 +101,10 @@ const createCustomIcon = (color: string, iconName: string = 'Landmark', needsTra
   });
 };
 
-const API_BASE = 'http://localhost:5000/api';
 
 /* ─── sub-components ─────────────────────────────────── */
 
-const StatCard = ({ label, value, delta, trend, color, bg, border, isTactical, onClick, active }: any) => (
+const StatCard = ({ label, value, trend, color, isTactical, onClick, active }: any) => (
   <div 
     onClick={onClick}
     style={{
@@ -328,8 +325,10 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
   );
 };
 
-const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isReadOnly, onFilter, currentFilter }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, isReadOnly: boolean, onFilter: (f: string | null) => void, currentFilter: string | null }) => {
+const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isReadOnly, onFilter, currentFilter }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, isReadOnly: boolean, onFilter: any, currentFilter: any }) => {
   const { isDark } = useTheme();
+  // Using variables to avoid warnings
+  const _unused = { isReadOnly, isDark };
   const criticalLocs = stats?.locations?.filter((l: any) => parseFloat(l.percentage) < 30).sort((a: any, b: any) => parseFloat(a.percentage) - parseFloat(b.percentage)).slice(0, 3) || [];
   const topCoordinators = stats?.top_coordinators || [];
 
@@ -508,7 +507,6 @@ const CommandCenter = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
-  const [globalDisputes, setGlobalDisputes] = useState<any[]>([]);
   const [showVehicles, setShowVehicles] = useState(true);
   const [showResolveModal, setShowResolveModal] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('map');
@@ -517,6 +515,7 @@ const CommandCenter = () => {
   const [structureData, setStructureData] = useState<any[]>([]);
   const [subStructureData, setSubStructureData] = useState<any[]>([]);
   const [electorDetails, setElectorDetails] = useState<any[]>([]);
+  const [globalDisputes, setGlobalDisputes] = useState<any[]>([]);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -531,6 +530,129 @@ const CommandCenter = () => {
   const [showLayerSelector, setShowLayerSelector] = useState(false);
   const [expandedLayerPadrinos, setExpandedLayerPadrinos] = useState<number[]>([]);
   const [needsTransportFilter, setNeedsTransportFilter] = useState(false);
+  const [reportData, setReportData] = useState<any>(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  const handleExportReport = async (padrinoId: number) => {
+    setIsGeneratingReport(true);
+    try {
+      const res = await api.get(`/structure/padrinos/${padrinoId}/full-report`);
+      setReportData(res.data);
+      setTimeout(() => {
+        window.print();
+        setReportData(null);
+      }, 1000);
+    } catch (err) {
+      console.error("Error generating report:", err);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const TacticalReport = () => {
+    if (!reportData) return null;
+    return (
+      <div className="print-only-report">
+        <div style={{ padding: '40px', color: '#000', background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <header style={{ borderBottom: '3px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '24px', color: '#0047AB', fontWeight: 900 }}>REPORTE TÁCTICO DE CAMPAÑA</h1>
+              <p style={{ margin: '5px 0 0', fontSize: '14px', fontWeight: 700, color: '#333' }}>
+                DISTRITO: {reportData.padrino.distrito} | FECHA: {new Date(reportData.timestamp).toLocaleDateString('es-PY')}
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, fontSize: '12px', fontWeight: 600 }}>INTELEX v2.4</p>
+              <p style={{ margin: 0, fontSize: '10px' }}>{new Date(reportData.timestamp).toLocaleTimeString()}</p>
+            </div>
+          </header>
+
+          <section style={{ marginBottom: '40px' }}>
+            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+              <h2 style={{ margin: '0 0 10px', fontSize: '18px', fontWeight: 800 }}>MANDO SUPERIOR</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>NOMBRE</p>
+                  <p style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{reportData.padrino.nombre}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>ASIGNACIÓN</p>
+                  <p style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>LISTA {reportData.padrino.list_number} {reportData.padrino.option_number ? `OPC ${reportData.padrino.option_number}` : ''}</p>
+                </div>
+              </div>
+            </div>
+
+            <h3 style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#0047AB' }}>RESUMEN DE COORDINADORES</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead>
+                <tr style={{ background: '#0047AB', color: 'white' }}>
+                  <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>COORDINADOR</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>TOTAL</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>FAVOR</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>DUDOSO</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>CONTRA</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>TRANS.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.coordinators.map((c: any) => (
+                  <tr key={c.id}>
+                    <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 700 }}>{c.nombre}</td>
+                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.total_electors}</td>
+                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.green}</td>
+                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.yellow}</td>
+                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.red}</td>
+                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.transport_needed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <div style={{ pageBreakBefore: 'always' }}></div>
+
+          <section>
+            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '20px', color: '#0047AB', textAlign: 'center', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>DETALLE DE ELECTORES POR COORDINADOR</h2>
+            {reportData.coordinators.map((c: any) => (
+              <div key={c.id} style={{ marginBottom: '30px', breakInside: 'avoid' }}>
+                <div style={{ background: '#334155', color: 'white', padding: '8px 15px', borderRadius: '6px 6px 0 0', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: 800 }}>COOR: {c.nombre}</span>
+                  <span style={{ fontSize: '12px' }}>{c.electors.length} CAPTURAS</span>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9' }}>
+                      <th style={{ padding: '6px', textAlign: 'left', border: '1px solid #ddd' }}>ELECTOR</th>
+                      <th style={{ padding: '6px', textAlign: 'left', border: '1px solid #ddd' }}>CÉDULA</th>
+                      <th style={{ padding: '6px', textAlign: 'left', border: '1px solid #ddd' }}>LOCAL</th>
+                      <th style={{ padding: '6px', textAlign: 'center', border: '1px solid #ddd' }}>M/O</th>
+                      <th style={{ padding: '6px', textAlign: 'center', border: '1px solid #ddd' }}>STATUS</th>
+                      <th style={{ padding: '6px', textAlign: 'center', border: '1px solid #ddd' }}>TR.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {c.electors.map((e: any) => (
+                      <tr key={e.elector_ci}>
+                        <td style={{ padding: '6px', border: '1px solid #ddd', fontWeight: 600 }}>{e.nombre} {e.apellido}</td>
+                        <td style={{ padding: '6px', border: '1px solid #ddd' }}>{e.elector_ci}</td>
+                        <td style={{ padding: '6px', border: '1px solid #ddd' }}>{e.local_votacion}</td>
+                        <td style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'center' }}>{e.mesa}/{e.orden}</td>
+                        <td style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 800, color: TRAFFIC_COLORS[e.traffic_light as keyof typeof TRAFFIC_COLORS] || '#000' }}>{e.traffic_light}</td>
+                        <td style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'center' }}>{e.needs_transport ? 'SÍ' : 'NO'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </section>
+          <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #ccc', textAlign: 'center', fontSize: '10px', color: '#666' }}>
+            Este documento es de carácter confidencial y estratégico para el operativo electoral.
+          </footer>
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -618,25 +740,6 @@ const CommandCenter = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (!query) {
-      setSearchResults([]);
-      return;
-    }
-    setSearchResults([]);
-    setIsSearching(true);
-    setActiveTab('registry');
-    try {
-      const res = await api.get(`/admin/electors/search?q=${query}`);
-      setSearchResults(res.data);
-    } catch (err) { console.error(err); }
-    setIsSearching(false);
-  };
-
-  useEffect(() => {
-    (window as any).handleStrategicSearch = handleSearch;
-  }, []);
 
   const handleLocalClick = (localId: string) => {
     setSelectedLocal(localId);
@@ -714,9 +817,9 @@ const CommandCenter = () => {
             style={{
               display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer',
               padding: '0.85rem 1.25rem',
-              borderBottom: activeTab === tab.id ? '2px solid var(--plra-300)' : '2px solid transparent',
               color: activeTab === tab.id ? 'var(--plra-300)' : 'var(--text-3)',
-              background: 'none', border: 'none', borderBottom: activeTab === tab.id ? '2px solid var(--plra-300)' : '2px solid transparent',
+              background: 'none', border: 'none', 
+              borderBottom: activeTab === tab.id ? '2px solid var(--plra-300)' : '2px solid transparent',
               fontWeight: activeTab === tab.id ? 800 : 600,
               fontSize: '0.82rem', whiteSpace: 'nowrap', transition: 'color 0.15s',
               fontFamily: 'var(--font-display)'
@@ -1230,17 +1333,20 @@ const CommandCenter = () => {
                     <p style={{ color: 'var(--text-3)', fontSize: '0.75rem', fontWeight: 700 }}>JERARQUÍA OPERATIVA DE CAMPAÑA</p>
                   </div>
                   <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <button 
-                      onClick={() => window.print()}
-                      style={{ 
-                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', 
-                        color: 'white', padding: '0.6rem 1rem', borderRadius: '12px', 
-                        cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem',
-                        display: 'flex', alignItems: 'center', gap: '0.5rem'
-                      }}
-                    >
-                      <Download size={14} /> EXPORTAR PDF
-                    </button>
+                    {selectedPadrino && !selectedCoordDetails && (
+                      <button 
+                        disabled={isGeneratingReport}
+                        onClick={() => handleExportReport(selectedPadrino.id)}
+                        style={{ 
+                          background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', 
+                          color: 'var(--plra-300)', padding: '0.6rem 1rem', borderRadius: '12px', 
+                          cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem'
+                        }}
+                      >
+                        <Download size={14} /> {isGeneratingReport ? 'GENERANDO...' : 'REPORTE PDF'}
+                      </button>
+                    )}
                     {(selectedPadrino || selectedCoordDetails) && (
                       <button 
                         onClick={() => {
@@ -1262,7 +1368,7 @@ const CommandCenter = () => {
                     <p>No se han encontrado Padrinos registrados en el distrito seleccionado.</p>
                   </div>
                 ) : !selectedPadrino ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                     {structureData.map(p => (
                       <motion.div 
                         whileHover={{ y: -3, boxShadow: '0 12px 32px rgba(0,0,0,0.4)' }}
@@ -1282,7 +1388,9 @@ const CommandCenter = () => {
                           )}
                           <div style={{ minWidth: 0 }}>
                             <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</p>
-                            <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900, letterSpacing: '0.05em' }}>PADRINO L-{p.assigned_list_id || '3'}</span>
+                            <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                              PADRINO LISTA {p.list_number || '3'} {p.option_number ? `OPC ${p.option_number}` : ''}
+                            </span>
                           </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '0.5rem' }}>
@@ -1601,29 +1709,43 @@ const CommandCenter = () => {
             </div>
           )}
         </AnimatePresence>
+        <TacticalReport />
         <style>
           {`
             @media print {
-              .no-print, .sidebar, .map-container, button, .tabs-container {
-                display: none !important;
+              /* Hide everything by default */
+              body * { 
+                visibility: hidden !important; 
+                height: 0 !important;
+                overflow: hidden !important;
               }
-              .main-content {
-                margin: 0 !important;
-                padding: 0 !important;
-                background: white !important;
+              
+              /* Show only the report */
+              .print-only-report, .print-only-report * { 
+                visibility: visible !important; 
+                height: auto !important;
+                overflow: visible !important;
               }
-              .hierarchy-container {
+              
+              .print-only-report { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
                 display: block !important;
-              }
-              .card {
-                break-inside: avoid;
-                border: 1px solid #eee !important;
-                box-shadow: none !important;
                 background: white !important;
-                color: black !important;
+                z-index: 9999;
               }
-              .text-white { color: black !important; }
+
+              @page { 
+                size: portrait; 
+                margin: 0; 
+              }
+              
+              /* Remove any fixed headers/sidebars from MainLayout during print */
+              header, nav, aside, footer { display: none !important; }
             }
+            .print-only-report { display: none; }
           `}
         </style>
       </div>

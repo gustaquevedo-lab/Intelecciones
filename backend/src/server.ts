@@ -2105,6 +2105,7 @@ app.get('/api/structure/padrinos', (req, res) => {
   try {
     let sql = `
       SELECT u.id, u.nombre, u.photo_url, u.telefono, u.assigned_list_id,
+      l.list_number, l.option_number,
       (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id) as coordinator_count,
       (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id) as total_electors,
       (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'GREEN') as green_total,
@@ -2112,6 +2113,7 @@ app.get('/api/structure/padrinos', (req, res) => {
       (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'RED') as red_total,
       (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'PURPLE') as purple_total
       FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
       WHERE u.role = 'PADRINO'
     `;
     let params: any[] = [];
@@ -2163,6 +2165,51 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
       WHERE ec.coordinator_id = ?
     `).all(id);
     res.json(electors);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
+  const { id } = req.params;
+  try {
+    const padrino = db.prepare(`
+      SELECT u.nombre, l.list_number, l.option_number, u.distrito
+      FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      WHERE u.id = ?
+    `).get(id) as any;
+
+    if (!padrino) return res.status(404).json({ error: 'Padrino no encontrado' });
+
+    const coordinators = db.prepare(`
+      SELECT u.id, u.nombre, u.telefono,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) as total_electors,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') as green,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') as yellow,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'RED') as red,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') as purple,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) as transport_needed
+      FROM users u
+      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+    `).all(id) as any[];
+
+    const fullHierarchy = coordinators.map(c => {
+      const electors = db.prepare(`
+        SELECT e.nombre, e.apellido, e.ci as elector_ci, e.local_votacion, e.mesa, e.orden,
+        ec.traffic_light, ec.needs_transport, ec.telefono
+        FROM elector_captures ec
+        JOIN electors e ON ec.elector_ci = e.ci
+        WHERE ec.coordinator_id = ?
+      `).all(c.id);
+      return { ...c, electors };
+    });
+
+    res.json({
+      padrino,
+      coordinators: fullHierarchy,
+      timestamp: new Date().toISOString()
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
