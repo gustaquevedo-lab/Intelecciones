@@ -28,7 +28,8 @@ import {
   Key,
   TrendingUp,
   TrendingDown,
-  User
+  User,
+  Copy
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
@@ -211,6 +212,19 @@ const SuperAdmin = () => {
   const [isUserVerified, setIsUserVerified] = useState(false);
   const [isCandidateVerified, setIsCandidateVerified] = useState(false);
   const [isVehicleDriverVerified, setIsVehicleDriverVerified] = useState(false);
+  const [apiError, setApiError] = useState<{ message: string; details?: string } | null>(null);
+
+  const handleCopyDiagnostic = (error: any) => {
+    const report = `--- API ERROR REPORT ---
+URL: ${window.location.href}
+Timestamp: ${new Date().toISOString()}
+Message: ${error.message || 'Unknown'}
+Server Response: ${JSON.stringify(error.response?.data || 'No data')}
+Status: ${error.response?.status || 'N/A'}
+-----------------------`;
+    navigator.clipboard.writeText(report);
+    alert('Reporte diagnóstico copiado al portapapeles. Pégalo en el chat de soporte.');
+  };
 
   // Vehicle states
   const [newVehicleDesc, setNewVehicleDesc] = useState('');
@@ -763,7 +777,10 @@ const SuperAdmin = () => {
     } catch (err: any) { 
       console.error('[LOCALE SAVE ERROR]', err); 
       const serverError = err.response?.data?.error || err.message;
-      alert(`⚠️ ERROR AL GUARDAR LOCAL:\n\n${serverError}\n\nSi el error persiste, verifique que el Código Único no esté duplicado.`);
+      setApiError({ 
+        message: 'Error al guardar el local', 
+        details: serverError 
+      });
     }
   };
 
@@ -777,15 +794,14 @@ const SuperAdmin = () => {
 
   const fetchAuditData = useCallback(async () => {
     try {
-      const [logs, stats] = await Promise.all([
+      const [logs] = await Promise.all([
         api.get('/audit/logs', {
           params: {
             action: auditFilterAction,
             start_date: auditFilterStart,
             end_date: auditFilterEnd
           }
-        }),
-        api.get('/audit/stats')
+        })
       ]);
       setAuditLogs(logs.data);
     } catch (err) { console.error(err); }
@@ -2830,6 +2846,48 @@ const SuperAdmin = () => {
             onCropComplete={onCropComplete} 
             onCancel={() => setCropperData(null)} 
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {apiError && (
+          <div className="modal-overlay" style={{ zIndex: 1000000 }}>
+            <motion.div 
+              className="modal-content-premium"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              style={{ maxWidth: '450px', padding: '2rem', textAlign: 'center' }}
+            >
+              <div style={{ width: '64px', height: '64px', background: 'rgba(239,68,68,0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#EF4444' }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>Incidencia Detectada</h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '1.5rem' }}>{apiError.message}</p>
+              
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', textAlign: 'left', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
+                <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--red)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Detalle Técnico:</p>
+                <code style={{ fontSize: '0.75rem', color: 'var(--text)', wordBreak: 'break-all' }}>{apiError.details}</code>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <button 
+                  className="btn-confirm-styled" 
+                  onClick={() => handleCopyDiagnostic({ message: apiError.message, response: { data: apiError.details } })}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
+                  <Copy size={18} /> Copiar Diagnóstico
+                </button>
+                <button 
+                  className="btn-cancel-styled" 
+                  onClick={() => setApiError(null)}
+                  style={{ width: '100%' }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </MainLayout>
