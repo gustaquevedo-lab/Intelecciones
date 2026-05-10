@@ -362,6 +362,12 @@ const SuperAdmin = () => {
   const [candidatePreview, setCandidatePreview] = useState<any>(null);
   const [newListGoal, setNewListGoal] = useState(1000);
   const [listPhotoUrl, setListPhotoUrl] = useState('');
+  
+  // List Filters
+  const [listSearchTerm, setListSearchTerm] = useState('');
+  const [listCityFilter, setListCityFilter] = useState('');
+  const [listTypeFilter, setListTypeFilter] = useState('');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropperData, setCropperData] = useState<{ image: string, type: 'user' | 'list' | 'app' | 'campaign' } | null>(null);
 
@@ -1249,112 +1255,177 @@ const SuperAdmin = () => {
     </div>
   );
 
-  const renderLists = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Listas Electorales</h2>
-        <button className="action-btn-primary" onClick={() => {
-          setEditingList(null);
-          setNewListCiudad('');
-          setNewListNumber('');
-          setNewListCandidateCI('');
-          setCandidatePreview(null);
-          setListPhotoUrl('');
-          setNewListCampaign(campaigns[0]?.id?.toString() || '');
-          setNewListType('INTENDENTE');
-          setNewListOption('');
-          setNewListGoal(1000);
-          setNewListAlias('');
-          setIsCandidateVerified(false);
-          setShowModal('list');
+  const renderLists = () => {
+    const filteredLists = lists.filter(l => {
+      const matchesSearch = !listSearchTerm || 
+        l.candidate_nombre?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
+        (l as any).candidate_alias?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
+        l.list_number?.toString().includes(listSearchTerm);
+      const matchesCity = !listCityFilter || l.ciudad === listCityFilter;
+      const matchesType = !listTypeFilter || l.type === listTypeFilter;
+      return matchesSearch && matchesCity && matchesType;
+    });
+
+    const cities = Array.from(new Set(lists.map(l => l.ciudad).filter(Boolean))).sort();
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Listas Electorales</h2>
+          <button className="action-btn-primary" onClick={() => {
+            setEditingList(null);
+            setNewListCiudad('');
+            setNewListNumber('');
+            setNewListCandidateCI('');
+            setCandidatePreview(null);
+            setListPhotoUrl('');
+            setNewListCampaign(campaigns[0]?.id?.toString() || '');
+            setNewListType('INTENDENTE');
+            setNewListOption('');
+            setNewListGoal(1000);
+            setNewListAlias('');
+            setIsCandidateVerified(false);
+            setShowModal('list');
+          }}>
+            <UserPlus size={18} /> Registrar Lista
+          </button>
+        </div>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 200px 200px auto', 
+          gap: '1rem', 
+          padding: '1rem', 
+          background: 'rgba(255,255,255,0.02)', 
+          borderRadius: '16px', 
+          border: '1px solid var(--border)',
+          alignItems: 'center'
         }}>
-          <UserPlus size={18} /> Registrar Lista
-        </button>
+          <div style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', zIndex: 1 }} />
+            <input 
+              className="modern-input-premium-styled" 
+              style={{ paddingLeft: '2.75rem', marginBottom: 0 }}
+              placeholder="Buscar por candidato, alias o lista..." 
+              value={listSearchTerm}
+              onChange={e => setListSearchTerm(e.target.value)}
+            />
+          </div>
+          <select 
+            className="modern-input-premium-styled" 
+            style={{ marginBottom: 0 }}
+            value={listCityFilter} 
+            onChange={e => setListCityFilter(e.target.value)}
+          >
+            <option value="">Todas las Ciudades</option>
+            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select 
+            className="modern-input-premium-styled" 
+            style={{ marginBottom: 0 }}
+            value={listTypeFilter} 
+            onChange={e => setListTypeFilter(e.target.value)}
+          >
+            <option value="">Todos los Tipos</option>
+            <option value="INTENDENTE">INTENDENTE</option>
+            <option value="CONCEJAL">CONCEJAL</option>
+          </select>
+          {(listSearchTerm || listCityFilter || listTypeFilter) && (
+            <button 
+              className="icon-btn" 
+              onClick={() => { setListSearchTerm(''); setListCityFilter(''); setListTypeFilter(''); }}
+              style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)' }}
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        <ManagementTable 
+          isLoading={isLoading}
+          columns={[
+            { 
+              header: 'Lista / Opción', 
+              accessor: (l: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontWeight: 800, color: 'var(--plra-300)', background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>L {l.list_number}</span>
+                  {l.type === 'CONCEJAL' && (
+                    <span style={{ fontWeight: 700, color: 'var(--yellow)', background: 'rgba(234,179,8,0.1)', padding: '2px 6px', borderRadius: '4px' }}>Op {l.option_number}</span>
+                  )}
+                </div>
+              ),
+              sortKey: 'list_number',
+              width: '140px'
+            },
+            { 
+              header: 'Candidato (Identidad)', 
+              accessor: (l: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-light)', border: '1px solid var(--border)', flexShrink: 0 }}>
+                    {l.photo_url ? <img src={getImageUrl(l.photo_url) || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <User size={16} style={{ margin: '8px', color: 'var(--text-3)' }} />}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, color: 'white', fontSize: '0.85rem' }}>{l.candidate_alias || l.candidate_nombre}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>{l.candidate_nombre}</div>
+                  </div>
+                </div>
+              ),
+              sortKey: 'candidate_alias'
+            },
+            { header: 'Campaña', accessor: 'campaign_name', sortKey: 'campaign_name' },
+            { header: 'Ciudad', accessor: 'ciudad', sortKey: 'ciudad' },
+            { 
+              header: 'Tipo', 
+              accessor: (l: any) => (
+                <span style={{ 
+                  padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800,
+                  background: l.type === 'INTENDENTE' ? 'var(--accent-subtle)' : 'var(--surface-light)',
+                  color: l.type === 'INTENDENTE' ? 'var(--plra-300)' : 'var(--text-3)'
+                }}>
+                  {l.type}
+                </span>
+              ),
+              sortKey: 'type'
+            },
+            { 
+              header: 'Meta', 
+              accessor: (l: any) => (
+                <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: '0.85rem' }}>{l.goal} <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>votos</span></div>
+              ),
+              sortKey: 'goal'
+            },
+            {
+              header: 'Acciones',
+              accessor: (l: any) => (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="icon-btn" onClick={() => { 
+                    setEditingList(l); 
+                    setNewListCiudad(l.ciudad || '');
+                    setNewListGoal(l.goal || 1000); 
+                    setNewListCandidateCI(l.candidate_ci || '');
+                    setNewListAlias(l.candidate_alias || '');
+                    setCandidatePreview({ 
+                      photo_url: l.photo_url, 
+                      nombre: l.candidate_nombre,
+                      apellido: l.candidate_apellido
+                    });
+                    setNewListType(l.type);
+                    setNewListNumber(l.list_number);
+                    setNewListOption(l.option_number || '');
+                    setNewListCampaign(l.campaign_id?.toString() || '');
+                    setIsCandidateVerified(true);
+                    setShowModal('list'); 
+                  }}><Edit2 size={14} /></button>
+                  <button className="icon-btn delete" onClick={() => handleDeleteList(l.id)}><Trash2 size={14} /></button>
+                </div>
+              )
+            }
+          ]}
+          data={filteredLists}
+        />
       </div>
-      <ManagementTable 
-        isLoading={isLoading}
-        columns={[
-          { 
-            header: 'Lista / Opción', 
-            accessor: (l: any) => (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontWeight: 800, color: 'var(--plra-300)', background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>L {l.list_number}</span>
-                {l.type === 'CONCEJAL' && (
-                  <span style={{ fontWeight: 700, color: 'var(--yellow)', background: 'rgba(234,179,8,0.1)', padding: '2px 6px', borderRadius: '4px' }}>Op {l.option_number}</span>
-                )}
-              </div>
-            ),
-            sortKey: 'list_number',
-            width: '140px'
-          },
-          { 
-            header: 'Candidato (Identidad)', 
-            accessor: (l: any) => (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-light)', border: '1px solid var(--border)', flexShrink: 0 }}>
-                  {l.photo_url ? <img src={getImageUrl(l.photo_url) || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <User size={16} style={{ margin: '8px', color: 'var(--text-3)' }} />}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, color: 'white', fontSize: '0.85rem' }}>{l.candidate_alias || l.candidate_nombre}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>{l.candidate_nombre}</div>
-                </div>
-              </div>
-            ),
-            sortKey: 'candidate_alias'
-          },
-          { header: 'Campaña', accessor: 'campaign_name', sortKey: 'campaign_name' },
-          { header: 'Ciudad', accessor: 'ciudad', sortKey: 'ciudad' },
-          { 
-            header: 'Tipo', 
-            accessor: (l: any) => (
-              <span style={{ 
-                padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800,
-                background: l.type === 'INTENDENTE' ? 'var(--accent-subtle)' : 'var(--surface-light)',
-                color: l.type === 'INTENDENTE' ? 'var(--plra-300)' : 'var(--text-3)'
-              }}>
-                {l.type}
-              </span>
-            ),
-            sortKey: 'type'
-          },
-          { 
-            header: 'Meta', 
-            accessor: (l: any) => (
-              <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: '0.85rem' }}>{l.goal} <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>votos</span></div>
-            ),
-            sortKey: 'goal'
-          },
-          {
-            header: 'Acciones',
-            accessor: (l: any) => (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="icon-btn" onClick={() => { 
-                  setEditingList(l); 
-                  setNewListCiudad(l.ciudad || '');
-                  setNewListGoal(l.goal || 1000); 
-                  setNewListCandidateCI(l.candidate_ci || '');
-                  setNewListAlias(l.candidate_alias || '');
-                  setCandidatePreview({ 
-                    photo_url: l.photo_url, 
-                    nombre: l.candidate_nombre,
-                    apellido: l.candidate_apellido
-                  });
-                  setNewListType(l.type);
-                  setNewListNumber(l.list_number);
-                  setNewListOption(l.option_number || '');
-                  setNewListCampaign(l.campaign_id?.toString() || '');
-                  setIsCandidateVerified(true);
-                  setShowModal('list'); 
-                }}><Edit2 size={14} /></button>
-                <button className="icon-btn delete" onClick={() => handleDeleteList(l.id)}><Trash2 size={14} /></button>
-              </div>
-            )
-          }
-        ]}
-        data={lists}
-      />
-    </div>
-  );
+    );
+  };
 
 
   const renderAudit = () => (

@@ -252,32 +252,48 @@ db.exec(`
 // 🛠️ MIGRATIONS & NORMALIZATION
 const runMigration = (sql: string) => { 
   try { 
-    const result = db.prepare(sql).run(); 
-    if (result.changes > 0) console.log(`MIGRATION SUCCESS: ${sql.slice(0, 50)}... (${result.changes} rows)`);
+    db.prepare(sql).run(); 
   } catch (e: any) {
-    console.error(`MIGRATION FAILED: ${sql.slice(0, 50)}... Error: ${e.message}`);
+    // Only log if it's NOT a duplicate column error
+    if (!e.message.includes('duplicate column name')) {
+      console.error(`MIGRATION ERROR: ${sql.slice(0, 50)}... -> ${e.message}`);
+    }
   } 
 };
-runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
-runMigration("ALTER TABLE campaigns ADD COLUMN distrito TEXT");
-runMigration("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''");
-runMigration("ALTER TABLE users ADD COLUMN distrito TEXT");
-runMigration("ALTER TABLE users ADD COLUMN ci TEXT");
-runMigration("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'ACTIVE'");
-runMigration("ALTER TABLE elector_captures ADD COLUMN is_disputed INTEGER DEFAULT 0");
-runMigration("ALTER TABLE elector_captures ADD COLUMN campaign_id INTEGER");
-runMigration("ALTER TABLE elector_captures ADD COLUMN list_id INTEGER");
-runMigration("ALTER TABLE elector_captures ADD COLUMN assigned_vehicle_id INTEGER");
-runMigration("ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ''");
-runMigration("ALTER TABLE electors ADD COLUMN barrio TEXT DEFAULT ''")
-runMigration("ALTER TABLE participation_logs ADD COLUMN veedor_id INTEGER");
-runMigration("ALTER TABLE results ADD COLUMN veedor_id INTEGER");
-runMigration("ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ''");
-runMigration("ALTER TABLE campaigns ADD COLUMN enabled_modules TEXT DEFAULT 'COMMAND_CENTER,REGISTRY'");
-runMigration("ALTER TABLE users ADD COLUMN enabled_modules TEXT");
-runMigration("ALTER TABLE users ADD COLUMN parent_id INTEGER");
-runMigration("ALTER TABLE users ADD COLUMN telefono TEXT");
-runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
+
+const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
+  try {
+    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as any[];
+    if (!columns.some(c => c.name === columnName)) {
+      db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`).run();
+      console.log(`MIGRATION: Added column [${columnName}] to table [${tableName}]`);
+    }
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column name')) {
+      console.error(`MIGRATION ERROR adding ${columnName} to ${tableName}: ${e.message}`);
+    }
+  }
+};
+addColumnIfNotExists("campaigns", "goal", "INTEGER DEFAULT 1000");
+addColumnIfNotExists("campaigns", "distrito", "TEXT");
+addColumnIfNotExists("lists", "ciudad", "TEXT DEFAULT ''");
+addColumnIfNotExists("users", "distrito", "TEXT");
+addColumnIfNotExists("users", "ci", "TEXT");
+addColumnIfNotExists("users", "status", "TEXT DEFAULT 'ACTIVE'");
+addColumnIfNotExists("elector_captures", "is_disputed", "INTEGER DEFAULT 0");
+addColumnIfNotExists("elector_captures", "campaign_id", "INTEGER");
+addColumnIfNotExists("elector_captures", "list_id", "INTEGER");
+addColumnIfNotExists("elector_captures", "assigned_vehicle_id", "INTEGER");
+addColumnIfNotExists("electors", "ciudad", "TEXT DEFAULT ''");
+addColumnIfNotExists("electors", "barrio", "TEXT DEFAULT ''");
+addColumnIfNotExists("participation_logs", "veedor_id", "INTEGER");
+addColumnIfNotExists("results", "veedor_id", "INTEGER");
+addColumnIfNotExists("voting_locations", "distrito", "TEXT DEFAULT ''");
+addColumnIfNotExists("campaigns", "enabled_modules", "TEXT DEFAULT 'COMMAND_CENTER,REGISTRY'");
+addColumnIfNotExists("users", "enabled_modules", "TEXT");
+addColumnIfNotExists("users", "parent_id", "INTEGER");
+addColumnIfNotExists("users", "telefono", "TEXT");
+
 runMigration(`
   UPDATE users 
   SET assigned_list_id = (SELECT id FROM lists WHERE list_number = '3' AND (option_number = '3' OR candidate_alias LIKE '%Lourdes%') LIMIT 1),
@@ -302,10 +318,10 @@ try {
   `);
 } catch (e) {}
 
-runMigration("ALTER TABLE whatsapp_templates ADD COLUMN lat REAL");
-runMigration("ALTER TABLE whatsapp_templates ADD COLUMN lng REAL");
-runMigration("ALTER TABLE whatsapp_templates ADD COLUMN contact_name TEXT");
-runMigration("ALTER TABLE whatsapp_templates ADD COLUMN contact_phone TEXT");
+addColumnIfNotExists("whatsapp_templates", "lat", "REAL");
+addColumnIfNotExists("whatsapp_templates", "lng", "REAL");
+addColumnIfNotExists("whatsapp_templates", "contact_name", "TEXT");
+addColumnIfNotExists("whatsapp_templates", "contact_phone", "TEXT");
 
 // 🧹 MAINTENANCE (Disabled on startup to avoid locking)
 try {

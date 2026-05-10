@@ -62,71 +62,81 @@ const storage = multer.diskStorage({
   }
 });
 // 📊 Robust Recursive Storage Diagnosis & Safe Cache Purge
-if (process.env.NODE_ENV === 'production') {
+const performStorageMaintenance = async () => {
+  if (process.env.NODE_ENV !== 'production') return;
+  
+  // Delay maintenance to allow server to handle initial traffic/health checks
+  await new Promise(resolve => setTimeout(resolve, 10000));
+
   try {
     const dataDir = '/app/data';
-    if (fs.existsSync(dataDir)) {
-      const safePurge = (basePath: string) => {
-        try {
-          const cacheFolders = ['Cache', 'Code Cache', 'GPUCache', 'Service Worker/CacheStorage'];
-          if (!fs.existsSync(basePath)) return;
-          const items = fs.readdirSync(basePath);
-          for (const item of items) {
-            const fullPath = path.join(basePath, item);
-            try {
-              if (!fs.existsSync(fullPath)) continue;
-              const s = fs.statSync(fullPath);
-              if (s.isDirectory()) {
-                if (cacheFolders.some(cf => item.includes(cf) || fullPath.endsWith(cf))) {
-                  console.log(`[STORAGE] Purging cache: ${fullPath}`);
-                  fs.rmSync(fullPath, { recursive: true, force: true });
-                } else {
-                  safePurge(fullPath);
-                }
+    if (!fs.existsSync(dataDir)) return;
+
+    const safePurge = (basePath: string) => {
+      try {
+        const cacheFolders = ['Cache', 'Code Cache', 'GPUCache', 'Service Worker/CacheStorage'];
+        if (!fs.existsSync(basePath)) return;
+        const items = fs.readdirSync(basePath);
+        for (const item of items) {
+          const fullPath = path.join(basePath, item);
+          try {
+            if (!fs.existsSync(fullPath)) continue;
+            const s = fs.statSync(fullPath);
+            if (s.isDirectory()) {
+              if (cacheFolders.some(cf => item.includes(cf) || fullPath.endsWith(cf))) {
+                console.log(`[STORAGE] Purging cache: ${fullPath}`);
+                fs.rmSync(fullPath, { recursive: true, force: true });
+              } else {
+                safePurge(fullPath);
               }
-            } catch (e) {} // Ignore errors for individual files
-          }
-        } catch (e) {}
-      };
-      
-      console.log("[STORAGE] Starting safe background cleanup...");
-      safePurge(path.join(dataDir, 'whatsapp_session_default'));
-      safePurge(path.join(dataDir, 'whatsapp_session'));
+            }
+          } catch (e) {} 
+        }
+      } catch (e) {}
+    };
+    
+    console.log("[STORAGE] Starting safe background cleanup...");
+    safePurge(path.join(dataDir, 'whatsapp_session_default'));
+    safePurge(path.join(dataDir, 'whatsapp_session'));
 
-      const getDirSize = (dirPath: string): number => {
-        let size = 0;
-        try {
-          if (!fs.existsSync(dirPath)) return 0;
-          const files = fs.readdirSync(dirPath);
-          for (const f of files) {
-            const fullPath = path.join(dirPath, f);
-            try {
-              if (!fs.existsSync(fullPath)) continue;
-              const s = fs.statSync(fullPath);
-              if (s.isDirectory()) size += getDirSize(fullPath);
-              else size += s.size;
-            } catch (e) {}
-          }
-        } catch (e) {}
-        return size;
-      };
+    const getDirSize = (dirPath: string): number => {
+      let size = 0;
+      try {
+        if (!fs.existsSync(dirPath)) return 0;
+        const files = fs.readdirSync(dirPath);
+        for (const f of files) {
+          const fullPath = path.join(dirPath, f);
+          try {
+            if (!fs.existsSync(fullPath)) continue;
+            const s = fs.statSync(fullPath);
+            if (s.isDirectory()) size += getDirSize(fullPath);
+            else size += s.size;
+          } catch (e) {}
+        }
+      } catch (e) {}
+      return size;
+    };
 
-      const stats = fs.readdirSync(dataDir).map(f => {
-        const fullPath = path.join(dataDir, f);
-        try {
-          const s = fs.statSync(fullPath);
-          if (s.isDirectory()) {
-            return { name: f + ' (DIR)', size: (getDirSize(fullPath) / 1024 / 1024).toFixed(2) + ' MB' };
-          }
-          return { name: f, size: (s.size / 1024 / 1024).toFixed(2) + ' MB' };
-        } catch (e) { return { name: f, size: 'Error' }; }
-      });
-      console.log('--- REAL STORAGE DIAGNOSIS ---');
-      console.table(stats);
-      console.log('------------------------------');
-    }
-  } catch (e) { console.error('Storage diagnosis error:', e); }
-}
+    const stats = fs.readdirSync(dataDir).map(f => {
+      const fullPath = path.join(dataDir, f);
+      try {
+        const s = fs.statSync(fullPath);
+        if (s.isDirectory()) {
+          return { name: f + ' (DIR)', size: (getDirSize(fullPath) / 1024 / 1024).toFixed(2) + ' MB' };
+        }
+        return { name: f, size: (s.size / 1024 / 1024).toFixed(2) + ' MB' };
+      } catch (e) { return { name: f, size: 'Error' }; }
+    });
+    console.log('--- REAL STORAGE DIAGNOSIS ---');
+    console.table(stats);
+    console.log('------------------------------');
+  } catch (e) { 
+    console.error('Storage maintenance error:', e); 
+  }
+};
+
+// Execute maintenance in background
+performStorageMaintenance();
 
 const upload = multer({ 
   storage,
