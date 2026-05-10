@@ -15,23 +15,7 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
-// Migration: If we are in production and the volume DB is an empty placeholder (< 100KB)
-if (process.env.NODE_ENV === 'production') {
-  const seedDbPath = path.join(process.cwd(), 'intellecciones.db');
-  const exists = fs.existsSync(dbPath);
-  const size = exists ? fs.statSync(dbPath).size : 0;
-  
-  if (size < 100000 && fs.existsSync(seedDbPath)) {
-    console.log(`MIGRATION: Volume DB size is ${size}. Seed size is ${fs.statSync(seedDbPath).size}. Overwriting...`);
-    try {
-      if (exists) fs.unlinkSync(dbPath);
-      fs.copyFileSync(seedDbPath, dbPath);
-      console.log("MIGRATION SUCCESSFUL.");
-    } catch (err) {
-      console.error("MIGRATION FAILED:", err);
-    }
-  }
-}
+
 
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
@@ -266,7 +250,14 @@ db.exec(`
 `);
 
 // 🛠️ MIGRATIONS & NORMALIZATION
-const runMigration = (sql: string) => { try { db.prepare(sql).run(); } catch (e) {} };
+const runMigration = (sql: string) => { 
+  try { 
+    const result = db.prepare(sql).run(); 
+    if (result.changes > 0) console.log(`MIGRATION SUCCESS: ${sql.slice(0, 50)}... (${result.changes} rows)`);
+  } catch (e: any) {
+    console.error(`MIGRATION FAILED: ${sql.slice(0, 50)}... Error: ${e.message}`);
+  } 
+};
 runMigration("ALTER TABLE campaigns ADD COLUMN goal INTEGER DEFAULT 1000");
 runMigration("ALTER TABLE campaigns ADD COLUMN distrito TEXT");
 runMigration("ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ''");
@@ -293,6 +284,8 @@ runMigration(`
     AND role != 'SUPERUSUARIO' 
     AND username NOT IN ('4500001', 'admin', '3657834')
 `);
+runMigration("UPDATE users SET assigned_list_id = NULL WHERE username = '4500001' OR ci = '4500001'");
+console.log("DB: Executed mandatory list reset for user 4500001.");
 
 
 try {
@@ -325,17 +318,5 @@ db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_cap
 db.prepare("CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number)").run();
 
-/* INITIAL SEEDS - DISABLED TO PREVENT AUTOMATIC DATA RECREATION */
-/*
-db.exec(`
-  -- Settings
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('election_date', '2026-06-07T07:00:00');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('master_key', 'admin123');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('share_message', 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:');
-
-  -- Users
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre) VALUES (1, 'admin', 'admin123', 'SUPERUSUARIO', 'Administrador General');
-`);
-*/
 
 export default db;
