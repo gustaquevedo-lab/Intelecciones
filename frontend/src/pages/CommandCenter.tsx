@@ -189,7 +189,7 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
               }}
             >
               <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: '0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: '0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
                 <Search size={20} color="white" />
               </div>
             </div>
@@ -1222,7 +1222,7 @@ const CommandCenter = () => {
               </MapContainer>
             </div>
           ) : activeTab === 'hierarchy' ? (
-            <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
+            <div className="hierarchy-container" style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
               <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -1340,15 +1340,15 @@ const CommandCenter = () => {
                           </div>
                           <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(234,179,8,0.08)', borderRadius: '10px', border: '1px solid rgba(234,179,8,0.15)' }}>
                             <p style={{ fontSize: '0.45rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 2px' }}>DUDOSO</p>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(239,68,68,0.08)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.15)' }}>
                             <p style={{ fontSize: '0.45rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 2px' }}>CONTRA</p>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(168,85,247,0.08)', borderRadius: '10px', border: '1px solid rgba(168,85,247,0.15)' }}>
                             <p style={{ fontSize: '0.45rem', color: '#A855F7', fontWeight: 900, margin: '0 0 2px' }}>PURPURA</p>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
                           </div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.08)', padding: '0.5rem 0.75rem', borderRadius: '12px' }}>
@@ -1357,10 +1357,6 @@ const CommandCenter = () => {
                             <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-200)' }}>TRANSPORTE</span>
                           </div>
                           <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{c.transport_needed || 0}</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
                         </div>
                       </motion.div>
                     ))}
@@ -1473,7 +1469,7 @@ const CommandCenter = () => {
                           key={req.id}
                           req={req}
                           onResolve={(status) => handleResolveRequest(req.id, status)}
-                          isReadOnly={user?.role === 'PADRINO'}
+                          isReadOnly={authUser?.role === 'PADRINO'}
                         />
                       ))}
                   </div>
@@ -1609,5 +1605,28 @@ const CommandCenter = () => {
     </MainLayout>
   );
 };
+
+/* Print Styles */
+@media print {
+  .no-print, .sidebar, .map-container, button, .tabs-container {
+    display: none !important;
+  }
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  .hierarchy-container {
+    display: block !important;
+  }
+  .card {
+    break-inside: avoid;
+    border: 1px solid #eee !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+  }
+  .text-white { color: black !important; }
+}
 
 export default CommandCenter;
