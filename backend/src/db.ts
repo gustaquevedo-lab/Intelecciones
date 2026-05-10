@@ -296,6 +296,7 @@ try {
     UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
     UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
     UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+    UPDATE users SET distrito = 'PEDRO JUAN CABALLERO' WHERE (distrito IS NULL OR TRIM(distrito) = '') AND role != 'SUPERUSUARIO';
   `);
 } catch (e) {}
 

@@ -581,7 +581,8 @@ const SuperAdmin = () => {
         assigned_mesa: newUserMesa || null,
         photo_url: userProfilePreview?.photo_url,
         parent_id: newUserParent || null,
-        telefono: newUserTelefono || null
+        telefono: newUserTelefono || null,
+        distrito: editingUser.distrito || null
       });
       setShowModal(null);
       setEditingUser(null);

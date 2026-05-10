@@ -1340,7 +1340,7 @@ app.put('/api/users/:id', (req, res) => {
   try {
     db.prepare(`
       UPDATE users 
-      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?, ci = ?, distrito = ?
+      SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?, ci = ?, distrito = COALESCE(?, distrito)
       WHERE id = ?
     `).run(
       role, 
