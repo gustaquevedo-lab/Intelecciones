@@ -778,10 +778,11 @@ const SuperAdmin = () => {
         cod_local: newLocaleCod, 
         nombre: newLocaleNombre, 
         direccion: newLocaleDireccion, 
-        lat: parseFloat(newLocaleLat), 
-        lng: parseFloat(newLocaleLng), 
+        lat: newLocaleLat ? parseFloat(newLocaleLat) : null, 
+        lng: newLocaleLng ? parseFloat(newLocaleLng) : null, 
         icon: newLocaleIcon,
-        ciudad: newLocaleCiudad
+        ciudad: newLocaleCiudad,
+        distrito: newLocaleCiudad
       };
       if (editingLocale) {
         await api.put(`/locales/${newLocaleCod}`, payload);
@@ -1532,10 +1533,11 @@ const SuperAdmin = () => {
                   setNewLocaleLat(l.lat?.toString() || '');
                   setNewLocaleLng(l.lng?.toString() || '');
                   setNewLocaleIcon(l.icon || 'Landmark');
-                  setNewLocaleCiudad(l.ciudad || '');
-                  if (l.ciudad && CIUDADES_PARAGUAY[l.ciudad]) {
-                    setMapCenter([CIUDADES_PARAGUAY[l.ciudad].lat, CIUDADES_PARAGUAY[l.ciudad].lng]);
-                    setMapZoom(CIUDADES_PARAGUAY[l.ciudad].zoom);
+                  const currentCity = l.distrito || l.ciudad || '';
+                  setNewLocaleCiudad(currentCity);
+                  if (currentCity && CIUDADES_PARAGUAY[currentCity]) {
+                    setMapCenter([CIUDADES_PARAGUAY[currentCity].lat, CIUDADES_PARAGUAY[currentCity].lng]);
+                    setMapZoom(CIUDADES_PARAGUAY[currentCity].zoom);
                   }
                   setShowModal('locale'); 
                 }}><Edit2 size={14} /></button>
