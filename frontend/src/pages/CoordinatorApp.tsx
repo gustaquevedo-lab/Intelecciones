@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, MapPin, User, CheckCircle2,
-  Map, Building2, Home, Briefcase,
+  Search, MapPin, User,
+  Map, Building2, Home,
   ClipboardCheck, ArrowRight, AlertCircle,
-  CheckCheck, ThumbsUp, HelpCircle, ThumbsDown, X, Shield, Share2, History, Edit2, Trash2, Phone, MessageSquare, Fingerprint, Landmark,
-  UserPlus, Camera, Settings, LayoutList, CheckCircle, Users, Mic, Square, ChevronRight,
-  Car, Inbox, ArrowLeft, Truck, Download, Activity
+  CheckCheck, ThumbsUp, HelpCircle, X, Shield, Share2, History, Edit2, Trash2, MessageSquare, Fingerprint, Landmark,
+  UserPlus, Camera, LayoutList, Users, Mic, Square, ChevronRight,
+  Car, Inbox, Truck, Download, Activity
 } from 'lucide-react';
-import axios from 'axios';
 import MainLayout from '../components/MainLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageCropperModal } from '../components/ImageCropperModal';
@@ -148,8 +147,6 @@ const NumberBadge = ({ label, value }: { label: string; value: React.ReactNode }
   </div>
 );
 
-/* ─── main component ────────────────────────────────────── */
-
 const CoordinatorApp = () => {
   const { user, loading } = useAuth();
   const { settings } = useSettings();
@@ -168,18 +165,14 @@ const CoordinatorApp = () => {
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [telefono, setTelefono] = useState('');
   const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
-  const [pendingCaptures, setPendingCaptures] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // Padrino specifics
-  const [myCoordinators, setMyCoordinators] = useState<any[]>([]);
   const [showCoordModal, setShowCoordModal] = useState(false);
   const [newCoordCI, setNewCoordCI] = useState('');
   const [newCoordName, setNewCoordName] = useState('');
   const [newCoordRealName, setNewCoordRealName] = useState('');
   const [newCoordPhoto, setNewCoordPhoto] = useState<string | null>(null);
   
-  // Offline Padron States
   const [offlineCount, setOfflineCount] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -203,7 +196,6 @@ const CoordinatorApp = () => {
       }
       setDownloadProgress(75);
       await savePadronOffline(res.data, (pct) => {
-        // Map 0-100% of saving to 75-100% of the progress bar
         setDownloadProgress(75 + Math.floor(pct * 0.25));
       });
       setDownloadProgress(100);
@@ -220,21 +212,13 @@ const CoordinatorApp = () => {
   };
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const frontCameraInputRef = React.useRef<HTMLInputElement>(null);
-  const galleryInputRef = React.useRef<HTMLInputElement>(null);
-  const padrinoFileInputRef = React.useRef<HTMLInputElement>(null);
-  const padrinoFrontCameraInputRef = React.useRef<HTMLInputElement>(null);
-  const padrinoGalleryInputRef = React.useRef<HTMLInputElement>(null);
   
-  const [showPhotoSource, setShowPhotoSource] = useState<'NONE' | 'COORD' | 'PADRINO'>('NONE');
   const [teamStats, setTeamStats] = useState<any[]>([]);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [selectedCoordDetail, setSelectedCoordDetail] = useState<any>(null);
   const [coordCaptures, setCoordCaptures] = useState<any[]>([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   
-  // Jefe de Campaña specifics
   const [myPadrinos, setMyPadrinos] = useState<any[]>([]);
   const [showPadrinoModal, setShowPadrinoModal] = useState(false);
   const [newPadrinoCI, setNewPadrinoCI] = useState('');
@@ -243,13 +227,16 @@ const CoordinatorApp = () => {
   const [newPadrinoTelefono, setNewPadrinoTelefono] = useState('');
   const [isPadrinoVerified, setIsPadrinoVerified] = useState(false);
 
-  // Cropper states
-  const [cropperData, setCropperData] = useState<{ image: string } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const frontCameraInputRef = React.useRef<HTMLInputElement>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
+  const padrinoFileInputRef = React.useRef<HTMLInputElement>(null);
+  const padrinoFrontCameraInputRef = React.useRef<HTMLInputElement>(null);
+  const padrinoGalleryInputRef = React.useRef<HTMLInputElement>(null);
+  
+  const [showPhotoSource, setShowPhotoSource] = useState<'NONE' | 'COORD' | 'PADRINO'>('NONE');
 
-  const onCropComplete = (croppedImage: string) => {
-    setNewCoordPhoto(croppedImage);
-    setCropperData(null);
-  };
+  const [cropperData, setCropperData] = useState<{ image: string } | null>(null);
 
   const [requestMsg, setRequestMsg] = useState('');
   const [requestType, setRequestType] = useState('TRANSPORT');
@@ -318,10 +305,20 @@ const CoordinatorApp = () => {
   const fetchMyCoordinators = async () => {
     if (!user) return;
     try {
+      await api.get(`/users?parent_id=${user.id}`);
+      // If we need to filter further, we do it here
+    } catch {
+      console.error("Error fetching my coordinators");
+    }
+  };
+
+  const fetchMyPadrinoStats = async () => {
+    if (!user) return;
+    try {
       const res = await api.get(`/padrino/team-stats?padrino_id=${user.id}`);
       setTeamStats(res.data);
     } catch (err) {
-      console.error("Error fetching my coordinators", err);
+      console.error("Error fetching my padrino stats", err);
     }
   };
 
@@ -334,24 +331,6 @@ const CoordinatorApp = () => {
       setShowDetailModal(true);
     } catch (err) {
       console.error("Error fetching detail", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-  const handleLookupCoordCI = async () => {
-    if (!newCoordCI) return;
-    setIsLoading(true);
-    try {
-      const res = await api.get(`/electors/${newCoordCI}`);
-      setNewCoordRealName(`${res.data.nombre} ${res.data.apellido}`);
-      setNewCoordName(newCoordCI); // Default username is CI
-      setIsCoordVerified(true);
-      setError('');
-    } catch (err) {
-      setError('Cédula no encontrada en el padrón.');
-      setIsCoordVerified(false);
     } finally {
       setIsLoading(false);
     }
@@ -395,9 +374,27 @@ const CoordinatorApp = () => {
       setNewCoordTelefono('');
       setIsCoordVerified(false);
       fetchMyCoordinators();
+      fetchMyPadrinoStats();
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al crear coordinador');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLookupCoordCI = async () => {
+    if (!newCoordCI) return;
+    setIsLoading(true);
+    try {
+      const res = await api.get(`/electors/${newCoordCI}`);
+      setNewCoordRealName(`${res.data.nombre} ${res.data.apellido}`);
+      setNewCoordName(newCoordCI); 
+      setIsCoordVerified(true);
+      setError('');
+    } catch (err) {
+      setError('Cédula no encontrada en el padrón.');
+      setIsCoordVerified(false);
     } finally {
       setIsLoading(false);
     }
@@ -475,7 +472,6 @@ const CoordinatorApp = () => {
     if (!user) return;
     try {
       const res = await api.get('/admin/requests');
-      // Filter for current coordinator if not admin
       const filtered = user.role === 'SUPERUSUARIO' || user.role === 'JEFE_CAMPANA' 
         ? res.data 
         : res.data.filter((r: any) => r.coordinator_id === user.id);
@@ -490,7 +486,6 @@ const CoordinatorApp = () => {
       if (ci.length >= 5 && activeTab === 'search') {
         try {
           setIsLoading(true);
-          // 1. Buscar en la memoria del celular primero (Offline/IndexedDB)
           const localResults = await searchElectorOffline(ci);
           if (localResults.length > 0) {
              setElector(localResults[0]);
@@ -498,12 +493,10 @@ const CoordinatorApp = () => {
              setIsLoading(false);
              return;
           }
-          
-          // 2. Si no está en el celular, buscar en el servidor
           const res = await api.get(`/electors/${ci}`);
           setElector(res.data);
           setError('');
-        } catch (err: any) {
+        } catch {
           setElector(null);
         } finally {
           setIsLoading(false);
@@ -523,14 +516,10 @@ const CoordinatorApp = () => {
     setSuccessMsg('');
     try {
       let electorData = null;
-      
-      // Try local first if query is simple CI
-      // Try local search first (IndexedDB)
       const localResults = await searchElectorOffline(ci);
       if (localResults.length > 0) {
         electorData = localResults[0];
       } else {
-        // If not found locally, try online
         const res = await api.get(`/electors/${ci}`);
         electorData = res.data;
       }
@@ -543,8 +532,7 @@ const CoordinatorApp = () => {
       } else {
         setError('Elector no encontrado en el padrón.');
       }
-    } catch (err: any) {
-      // Fallback to local search if server fails/offline
+    } catch {
       const localResults = await searchElectorOffline(ci);
       if (localResults.length > 0) {
         setElector(localResults[0]);
@@ -558,11 +546,8 @@ const CoordinatorApp = () => {
 
   const handleConfirm = () => {
     if (isReadOnly) return;
-    
-    // Si ya tenemos una ubicación reciente (menos de 2 minutos), la usamos directamente para no hacer esperar al usuario
     if (location) {
       setShowModal(true);
-      // Pero intentamos actualizarla en segundo plano
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => setLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
@@ -582,8 +567,6 @@ const CoordinatorApp = () => {
 
     setIsLoading(true);
     setError('');
-    
-    // Timeout para la geolocalización: si tarda más de 8s, bajamos la precisión para obtener algo rápido
     const geoOptions = { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 };
     
     navigator.geolocation.getCurrentPosition(
@@ -592,8 +575,7 @@ const CoordinatorApp = () => {
         setShowModal(true);
         setIsLoading(false);
       },
-      (err) => {
-        console.warn("GPS High Accuracy failed, trying low accuracy...", err);
+      () => {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -601,7 +583,7 @@ const CoordinatorApp = () => {
             setIsLoading(false);
           },
           () => {
-            setError('No se pudo obtener la ubicación GPS. Verifique los permisos de su celular.');
+            setError('No se pudo obtener la ubicación GPS.');
             setIsLoading(false);
           },
           { enableHighAccuracy: false, timeout: 5000 }
@@ -614,7 +596,6 @@ const CoordinatorApp = () => {
   const handleCapture = async (color: 'GREEN' | 'YELLOW' | 'RED' | 'PURPLE') => {
     if (!elector || isReadOnly || !user) return;
     
-    // Ensure location is at least a dummy object to prevent crashes
     const activeLocation = location || { lat: 0, lng: 0 };
     if (!telefono || telefono.length < 10) {
       setError('El número de teléfono es obligatorio para registrar al elector.');
@@ -649,7 +630,6 @@ const CoordinatorApp = () => {
       const queue = JSON.parse(localStorage.getItem('pending_captures') || '[]');
       queue.push(captureData);
       localStorage.setItem('pending_captures', JSON.stringify(queue));
-      setPendingCaptures(queue);
       
       setSuccessMsg('⚠️ Sin conexión. El registro se guardó localmente y se sincronizará pronto.');
       setShowModal(false);
@@ -664,7 +644,6 @@ const CoordinatorApp = () => {
   // Sync effect
   useEffect(() => {
     const queue = JSON.parse(localStorage.getItem('pending_captures') || '[]');
-    setPendingCaptures(queue);
 
     const syncOffline = async () => {
       if (queue.length === 0 || isSyncing) return;
@@ -678,59 +657,12 @@ const CoordinatorApp = () => {
         }
       }
       localStorage.setItem('pending_captures', JSON.stringify(remaining));
-      setPendingCaptures(remaining);
       setIsSyncing(false);
     };
 
     const interval = setInterval(syncOffline, 30000);
     return () => clearInterval(interval);
   }, [isSyncing]);
-
-  const fetchHistory = async () => {
-    if (!user) return;
-    setIsLoading(true);
-    try {
-      const res = await api.get(`/coordinators/${user.id}/history`);
-      setHistory(res.data);
-    } catch (err) {
-      console.error("Error fetching history", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'history') {
-      fetchHistory();
-    }
-    if (activeTab === 'coordinators') {
-      if (user?.role === 'PADRINO') fetchMyCoordinators();
-      if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
-    }
-  }, [activeTab, user]);
-
-  useEffect(() => {
-    if (showModal && user?.id) {
-      api.get(`/coordinators/${user.id}/stats`)
-        .then(res => {
-          setColorCounts({
-            green: res.data.green || 0,
-            yellow: res.data.yellow || 0,
-            red: res.data.red || 0,
-            purple: res.data.purple || 0
-          });
-        })
-        .catch(err => console.error('Error fetching color counts', err));
-    }
-  }, [showModal, user?.id]);
-
-  const handleEditHistory = (cap: any) => {
-    setEditingCapture(cap);
-    setNeedsTransport(!!cap.needs_transport);
-    setLocation({ lat: cap.lat, lng: cap.lng });
-    setTelefono(cap.telefono || '');
-    setShowModal(true);
-  };
 
   const handleUpdateCapture = async (color: string) => {
     if (!editingCapture) return;
@@ -760,6 +692,49 @@ const CoordinatorApp = () => {
     }
   };
 
+  useEffect(() => {
+    if (showModal && user?.id) {
+      api.get(`/coordinators/${user.id}/stats`)
+        .then(res => {
+          setColorCounts({
+            green: res.data.green || 0,
+            yellow: res.data.yellow || 0,
+            red: res.data.red || 0,
+            purple: res.data.purple || 0
+          });
+        })
+        .catch(err => console.error('Error fetching color counts', err));
+    }
+  }, [showModal, user?.id]);
+
+  useEffect(() => {
+    if (activeTab === 'coordinators') {
+      if (user?.role === 'PADRINO') fetchMyCoordinators();
+      if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
+    }
+  }, [activeTab, user]);
+
+  const fetchHistory = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      const res = await api.get(`/coordinators/${user.id}/history`);
+      setHistory(res.data);
+    } catch (err) {
+      console.error("Error fetching history", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditHistory = (cap: any) => {
+    setEditingCapture(cap);
+    setNeedsTransport(!!cap.needs_transport);
+    setLocation({ lat: cap.lat, lng: cap.lng });
+    setTelefono(cap.telefono || '');
+    setShowModal(true);
+  };
+
   const handleDeleteCapture = async (id: number) => {
     if (!confirm('¿Seguro que desea eliminar este registro?')) return;
     try {
@@ -787,23 +762,16 @@ const CoordinatorApp = () => {
     
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: 'Datos Electorales',
-          text: text
-        });
+        await navigator.share({ title: 'Datos Electorales', text: text });
       } catch (err) { console.log('Share error:', err); }
     } else {
-      // Fallback: Copy to clipboard
       navigator.clipboard.writeText(text);
       alert('Datos copiados al portapapeles');
     }
   };
 
-
-
   if (loading) return null;
 
-  /* ─── render ──────────────────────────────────────────── */
   return (
     <MainLayout 
       title={isReadOnly ? "Consulta de Padrón" : "Gestión de Campo"} 
@@ -850,87 +818,15 @@ const CoordinatorApp = () => {
           background: 'var(--surface-light)',
           width: '100%',
         }}>
-          <button
-            onClick={() => setActiveTab('search')}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.25rem',
-              padding: '0.5rem 0.25rem',
-              borderRadius: '12px',
-              fontSize: '0.6rem',
-              fontWeight: 800,
-              background: activeTab === 'search' ? 'var(--plra-500)' : 'transparent',
-              color: activeTab === 'search' ? 'var(--white)' : 'var(--text-2)',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              fontFamily: 'var(--font-display)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}
-          >
-            <Search size={16} />
-            <span>Consulta</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.25rem',
-              padding: '0.5rem 0.25rem',
-              borderRadius: '12px',
-              fontSize: '0.6rem',
-              fontWeight: 800,
-              background: activeTab === 'history' ? 'var(--plra-500)' : 'transparent',
-              color: activeTab === 'history' ? 'var(--white)' : 'var(--text-2)',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              fontFamily: 'var(--font-display)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}
-          >
-            <History size={16} />
-            <span>Historial</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('support')}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.25rem',
-              padding: '0.5rem 0.25rem',
-              borderRadius: '12px',
-              fontSize: '0.6rem',
-              fontWeight: 800,
-              background: activeTab === 'support' ? 'var(--red)' : 'transparent',
-              color: activeTab === 'support' ? 'var(--white)' : 'var(--text-2)',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              fontFamily: 'var(--font-display)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}
-          >
-            <HelpCircle size={16} />
-            <span>Soporte</span>
-          </button>
-          {user?.role === 'PADRINO' && (
+          {[
+            { id: 'search', icon: <Search size={16} />, label: 'Consulta' },
+            { id: 'history', icon: <History size={16} />, label: 'Historial' },
+            { id: 'support', icon: <HelpCircle size={16} />, label: 'Soporte' },
+            ...((user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') ? [{ id: 'coordinators', icon: <Users size={16} />, label: user?.role === 'JEFE_CAMPANA' ? 'Padrinos' : 'Equipos' }] : [])
+          ].map((item: any) => (
             <button
-              onClick={() => setActiveTab('coordinators')}
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -942,8 +838,8 @@ const CoordinatorApp = () => {
                 borderRadius: '12px',
                 fontSize: '0.6rem',
                 fontWeight: 800,
-                background: activeTab === 'coordinators' ? 'var(--plra-500)' : 'transparent',
-                color: activeTab === 'coordinators' ? 'var(--white)' : 'var(--text-2)',
+                background: activeTab === item.id ? (item.id === 'support' ? 'var(--red)' : 'var(--plra-500)') : 'transparent',
+                color: activeTab === item.id ? 'var(--white)' : 'var(--text-2)',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -952,46 +848,14 @@ const CoordinatorApp = () => {
                 letterSpacing: '0.05em'
               }}
             >
-              <UserPlus size={16} />
-              <span>Equipos</span>
+              {item.icon}
+              <span>{item.label}</span>
             </button>
-          )}
-          {user?.role === 'JEFE_CAMPANA' && (
-            <button
-              onClick={() => setActiveTab('coordinators')}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem 0.25rem',
-                borderRadius: '12px',
-                fontSize: '0.6rem',
-                fontWeight: 800,
-                background: activeTab === 'coordinators' ? 'var(--plra-500)' : 'transparent',
-                color: activeTab === 'coordinators' ? 'var(--white)' : 'var(--text-2)',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontFamily: 'var(--font-display)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}
-            >
-              <Users size={16} />
-              <span>Padrinos</span>
-            </button>
-          )}
+          ))}
         </div>
 
         {activeTab === 'search' ? (
           <>
-
-        {/* ══════════════════════════════════════
-            OFFLINE MANAGEMENT CARD
-        ══════════════════════════════════════ */}
         <div style={{
           background: 'rgba(59, 130, 246, 0.05)',
           border: '1px solid rgba(59, 130, 246, 0.2)',
@@ -1043,9 +907,6 @@ const CoordinatorApp = () => {
           )}
         </div>
 
-        {/* ══════════════════════════════════════
-            SEARCH PANEL
-        ══════════════════════════════════════ */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1058,7 +919,6 @@ const CoordinatorApp = () => {
             boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
           }}
         >
-          {/* Overline */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <div style={{ width: '3px', height: '16px', borderRadius: '2px', background: 'var(--plra-300)', boxShadow: '0 0 8px var(--plra-300)' }} />
             <span style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
@@ -1066,7 +926,6 @@ const CoordinatorApp = () => {
             </span>
           </div>
 
-          {/* Search form */}
           <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <input
@@ -1110,7 +969,6 @@ const CoordinatorApp = () => {
             </button>
           </form>
 
-          {/* Error */}
           <AnimatePresence>
             {error && (
               <motion.div
@@ -1137,9 +995,6 @@ const CoordinatorApp = () => {
           </AnimatePresence>
         </motion.div>
 
-        {/* ══════════════════════════════════════
-            ELECTOR CARD
-        ══════════════════════════════════════ */}
         <AnimatePresence mode="wait">
           {elector && !successMsg && (
             <motion.article
@@ -1156,8 +1011,6 @@ const CoordinatorApp = () => {
                 boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
               }}
             >
-
-              {/* ── Card Header: Identity ── */}
               <div className="card-header-section" style={{
                 background: 'linear-gradient(135deg, var(--plra-700) 0%, var(--plra-900) 100%)',
                 borderBottom: '1px solid var(--border-hi)',
@@ -1165,7 +1018,6 @@ const CoordinatorApp = () => {
                 overflow: 'hidden',
                 padding: '2.5rem 1.5rem 2rem',
               }}>
-                {/* Watermark */}
                 <div style={{
                   position: 'absolute', right: '-1.5rem', bottom: '-2rem',
                   fontSize: '6rem', fontWeight: 900, color: 'rgba(59,130,246,0.05)',
@@ -1199,19 +1051,6 @@ const CoordinatorApp = () => {
                           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ADE80', animation: 'pulse-dot 2s infinite' }} />
                           ACTIVO / HABILITADO
                         </div>
-                        {elector.edad && elector.edad <= 30 && (
-                          <div className="badge" style={{ 
-                            background: 'linear-gradient(135deg, #FFD700 0%, #F59E0B 100%)', 
-                            color: '#020C1E', 
-                            border: '1px solid rgba(255,255,255,0.4)',
-                            padding: '0.25rem 0.75rem',
-                            fontSize: '0.62rem',
-                            fontWeight: 900,
-                            boxShadow: '0 4px 12px rgba(245,158,11,0.3)'
-                          }}>
-                            JLRA
-                          </div>
-                        )}
                       </div>
                       <h2 style={{
                         fontFamily: 'var(--font-display)', fontWeight: 800,
@@ -1288,7 +1127,6 @@ const CoordinatorApp = () => {
                 </div>
               </div>
 
-              {/* ── Section 1: Voting Location ── */}
               <div className="card-section" style={{ background: 'var(--surface)' }}>
                 <SectionLabel icon={<Map size={13} />} text="Local de Votación" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1300,7 +1138,6 @@ const CoordinatorApp = () => {
                 </div>
               </div>
 
-              {/* ── Section 2: Territory ── */}
               <div className="card-section" style={{ background: 'var(--surface-light)', borderBottom: 'none' }}>
                 <SectionLabel icon={<MapPin size={13} />} text="Ubicación Territorial" color="var(--green)" />
                 <div className="territory-grid">
@@ -1319,7 +1156,6 @@ const CoordinatorApp = () => {
                 </div>
               </div>
 
-              {/* ── CTA Button ── */}
               <div className="card-cta-section">
                 <button
                   onClick={handleConfirm}
@@ -1347,9 +1183,6 @@ const CoordinatorApp = () => {
             </motion.article>
           )}
 
-          {/* ══════════════════════════════════════
-              SUCCESS STATE
-          ══════════════════════════════════════ */}
           {successMsg && (
             <motion.div
               key="success"
@@ -1403,9 +1236,6 @@ const CoordinatorApp = () => {
           )}
         </AnimatePresence>
 
-        {/* ══════════════════════════════════════
-            EMPTY STATE
-        ══════════════════════════════════════ */}
         {!elector && !successMsg && !loading && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -1417,7 +1247,7 @@ const CoordinatorApp = () => {
               justifyContent: 'center',
               padding: '4rem 0',
               gap: '1rem',
-              opacity: 0.35,
+              opacity: "0.35",
             }}
           >
             <div style={{
@@ -1469,7 +1299,7 @@ const CoordinatorApp = () => {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <SectionLabel icon={<HelpCircle size={13} />} text="Solicitar Apoyo al Comando" />
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '1.5rem' }}>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.25rem' }}>Describe brevemente lo que necesitas e incluye multimedia si es necesario.</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.25rem' }}>Describe brevemente lo que necesitas.</p>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <button onClick={() => setRequestType('TRANSPORT')} style={{ padding: '0.75rem', borderRadius: '10px', background: requestType === 'TRANSPORT' ? 'var(--plra-500)' : 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logística</button>
@@ -1483,7 +1313,6 @@ const CoordinatorApp = () => {
                 style={{ width: '100%', height: '100px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem', color: 'white', fontSize: '0.9rem', outline: 'none', resize: 'none', marginBottom: '1rem' }}
               />
 
-              {/* Multimedia Controls */}
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <div style={{ flex: 1, position: 'relative' }}>
                   <input 
@@ -1501,7 +1330,7 @@ const CoordinatorApp = () => {
                     htmlFor="support-photo-input"
                     style={{ 
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                      padding: '0.75rem', borderRadius: '12px', background: supportPhoto ? 'var(--green-lt)' : 'rgba(255,255,255,0.05)',
+                      padding: '0.75rem', borderRadius: '12px', background: supportPhoto ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)',
                       border: supportPhoto ? '1px solid var(--green)' : '1px solid var(--border)',
                       color: supportPhoto ? 'var(--green)' : 'var(--text-2)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700
                     }}
@@ -1524,7 +1353,7 @@ const CoordinatorApp = () => {
                     style={{ 
                       width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                       padding: '0.75rem', borderRadius: '12px', 
-                      background: isRecording ? 'var(--red-lt)' : (supportAudio ? 'var(--plra-800)' : 'rgba(255,255,255,0.05)'),
+                      background: isRecording ? 'rgba(239,68,68,0.1)' : (supportAudio ? 'var(--plra-800)' : 'rgba(255,255,255,0.05)'),
                       border: isRecording ? '1px solid var(--red)' : (supportAudio ? '1px solid var(--plra-300)' : '1px solid var(--border)'),
                       color: isRecording ? 'var(--red)' : (supportAudio ? 'var(--plra-200)' : 'var(--text-2)'), cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700
                     }}
@@ -1553,7 +1382,6 @@ const CoordinatorApp = () => {
               </button>
             </div>
 
-            {/* List of past requests */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
               <SectionLabel icon={<History size={13} />} text="Mis Solicitudes Anteriores" />
               {requests.length === 0 ? (
@@ -1578,7 +1406,6 @@ const CoordinatorApp = () => {
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text)', margin: '0 0 1rem 0', lineHeight: '1.4' }}>{req.description}</p>
                   
-                  {/* Multimedia in CoordinatorApp */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
                     {req.photo_url && (
                       <div 
@@ -1586,7 +1413,7 @@ const CoordinatorApp = () => {
                         style={{ width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' }}
                       >
                         <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0"}>
                           <Search size={16} color="white" />
                         </div>
                       </div>
@@ -1942,15 +1769,15 @@ const CoordinatorApp = () => {
                {/* Semaphore buttons — color only */}
                <div style={{ display: 'flex', gap: '0.75rem', padding: '0 1.5rem 2rem' }}>
                  {[
-                   { color: 'GREEN',  bg: 'linear-gradient(160deg, #22C55E 0%, #15803D 100%)', glow: 'rgba(34,197,94,0.5)',  border: 'rgba(34,197,94,0.35)', count: colorCounts.green },
-                   { color: 'YELLOW', bg: 'linear-gradient(160deg, #FBBF24 0%, #D97706 100%)', glow: 'rgba(251,191,36,0.5)', border: 'rgba(251,191,36,0.35)', count: colorCounts.yellow },
-                   { color: 'RED',    bg: 'linear-gradient(160deg, #EF4444 0%, #B91C1C 100%)', glow: 'rgba(239,68,68,0.5)',  border: 'rgba(239,68,68,0.35)', count: colorCounts.red },
-                   { color: 'PURPLE', bg: 'linear-gradient(160deg, #A855F7 0%, #7E22CE 100%)', glow: 'rgba(168,85,247,0.5)', border: 'rgba(168,85,247,0.35)', count: colorCounts.purple },
-                 ].map(({ color, bg, glow, border, count }) => (
+                   { color: 'GREEN',  bg: 'linear-gradient(160deg, #22C55E 0%, #15803D 100%)', glow: 'rgba(34,197,94,0.5)',  border: 'rgba(34,197,94,0.35)', count: colorCounts.green, label: 'CASA' },
+                   { color: 'YELLOW', bg: 'linear-gradient(160deg, #FBBF24 0%, #D97706 100%)', glow: 'rgba(251,191,36,0.5)', border: 'rgba(251,191,36,0.35)', count: colorCounts.yellow, label: 'FAMILIARES' },
+                   { color: 'RED',    bg: 'linear-gradient(160deg, #EF4444 0%, #B91C1C 100%)', glow: 'rgba(239,68,68,0.5)',  border: 'rgba(239,68,68,0.35)', count: colorCounts.red, label: 'OTROS' },
+                   { color: 'PURPLE', bg: 'linear-gradient(160deg, #A855F7 0%, #7E22CE 100%)', glow: 'rgba(168,85,247,0.5)', border: 'rgba(168,85,247,0.35)', count: colorCounts.purple, label: 'VOLUNTARIO' },
+                 ].map(({ color, bg, glow, border, count, label }) => (
                     <motion.button
                       key={color}
-                      whileHover={{ scale: 1.04, y: -3 }}
-                      whileTap={{ scale: 0.94 }}
+                      whileHover={{ scale: 1.04, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => editingCapture ? handleUpdateCapture(color) : handleCapture(color as any)}
                       disabled={isLoading}
                       style={{
@@ -1970,8 +1797,8 @@ const CoordinatorApp = () => {
                     >
                       {isLoading ? <Spinner size={22} /> : (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                          {color === 'GREEN' ? <ThumbsUp size={24} /> : color === 'YELLOW' ? <HelpCircle size={24} /> : color === 'RED' ? <ThumbsDown size={24} /> : <AlertCircle size={24} />}
-                          <span style={{ fontSize: '0.5rem', fontWeight: 900 }}>{color === 'PURPLE' ? 'ATENCIÓN' : color}</span>
+                          {color === 'GREEN' ? <ThumbsUp size={24} /> : color === 'YELLOW' ? <Users size={24} /> : color === 'RED' ? <HelpCircle size={24} /> : <AlertCircle size={24} />}
+                          <span style={{ fontSize: '0.5rem', fontWeight: 900 }}>{label}</span>
                         </div>
                       )}
                       {!isLoading && (

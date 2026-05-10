@@ -325,10 +325,7 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
   );
 };
 
-const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isReadOnly, onFilter, currentFilter }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, isReadOnly: boolean, onFilter: any, currentFilter: any }) => {
-  const { isDark } = useTheme();
-  // Using variables to avoid warnings
-  const _unused = { isReadOnly, isDark };
+const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onFilter, currentFilter }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, onFilter: any, currentFilter: any }) => {
   const criticalLocs = stats?.locations?.filter((l: any) => parseFloat(l.percentage) < 30).sort((a: any, b: any) => parseFloat(a.percentage) - parseFloat(b.percentage)).slice(0, 3) || [];
   const topCoordinators = stats?.top_coordinators || [];
 
@@ -427,7 +424,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <StatCard 
-            label="Captados Favor" 
+            label="Estructura CASA" 
             value={stats?.green || 0} 
             trend="up" 
             color="var(--green)" 
@@ -436,7 +433,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, isR
             active={currentFilter === 'GREEN'}
           />
           <StatCard 
-            label="Captados Contra" 
+            label="Captados OTROS" 
             value={stats?.red || 0} 
             trend="down" 
             color="var(--red)" 
@@ -515,10 +512,6 @@ const CommandCenter = () => {
   const [structureData, setStructureData] = useState<any[]>([]);
   const [subStructureData, setSubStructureData] = useState<any[]>([]);
   const [electorDetails, setElectorDetails] = useState<any[]>([]);
-  const [globalDisputes, setGlobalDisputes] = useState<any[]>([]);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(window.innerWidth > 768);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -587,10 +580,10 @@ const CommandCenter = () => {
               <thead>
                 <tr style={{ background: '#0047AB', color: 'white' }}>
                   <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #ddd' }}>COORDINADOR</th>
-                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>TOTAL</th>
-                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>FAVOR</th>
-                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>DUDOSO</th>
-                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>CONTRA</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>CASA</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>FAMILIARES</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>OTROS</th>
+                  <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>VOLUNT.</th>
                   <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #ddd' }}>TRANS.</th>
                 </tr>
               </thead>
@@ -598,10 +591,10 @@ const CommandCenter = () => {
                 {reportData.coordinators.map((c: any) => (
                   <tr key={c.id}>
                     <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 700 }}>{c.nombre}</td>
-                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.total_electors}</td>
                     <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.green}</td>
                     <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.yellow}</td>
                     <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.red}</td>
+                    <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.purple}</td>
                     <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{c.transport_needed}</td>
                   </tr>
                 ))}
@@ -693,10 +686,7 @@ const CommandCenter = () => {
       setStructureData(structRes.data);
 
       if (authUser?.role === 'SUPERUSUARIO' && activeListId === null) {
-        const dispRes = await api.get('/admin/disputes/global');
-        setGlobalDisputes(dispRes.data);
-      } else {
-        setGlobalDisputes([]);
+        await api.get('/admin/disputes/global');
       }
     } catch (err) { console.error(err); }
   };
@@ -880,7 +870,6 @@ const CommandCenter = () => {
             conflicts={conflicts} 
             onResolve={setShowResolveModal} 
             settings={settings} 
-            isReadOnly={authUser?.role === 'COORDINADOR'} 
             onFilter={setTrafficLightFilter}
             currentFilter={trafficLightFilter}
           />
@@ -1240,7 +1229,7 @@ const CommandCenter = () => {
                       onClick={() => setTrafficLightFilter(trafficLightFilter === 'GREEN' ? null : 'GREEN')}
                       style={{ textAlign: 'center', cursor: 'pointer', opacity: !trafficLightFilter || trafficLightFilter === 'GREEN' ? 1 : 0.4 }}
                     >
-                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>A Favor</p>
+                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Casa</p>
                       <p style={{ fontSize: '1.1rem', color: 'var(--green)', fontWeight: 900 }}>{commandStats?.green || 0}</p>
                     </div>
                     <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
@@ -1253,7 +1242,7 @@ const CommandCenter = () => {
                       onClick={() => setTrafficLightFilter(trafficLightFilter === 'RED' ? null : 'RED')}
                       style={{ textAlign: 'center', cursor: 'pointer', opacity: !trafficLightFilter || trafficLightFilter === 'RED' ? 1 : 0.4 }}
                     >
-                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>En Contra</p>
+                      <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Otros</p>
                       <p style={{ fontSize: '1.1rem', color: 'var(--red)', fontWeight: 900 }}>{conflicts.length > 0 ? conflicts.length : (commandStats?.red || 0)}</p>
                     </div>
                   </div>
@@ -1269,10 +1258,10 @@ const CommandCenter = () => {
                 }}>
                   <div style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.15rem' }}>Estado del elector</div>
                   {[
-                    { id: 'GREEN',  label: 'A FAVOR',    color: '#22C55E' },
-                    { id: 'YELLOW', label: 'DUDOSO',     color: '#EAB308' },
-                    { id: 'RED',    label: 'EN CONTRA',  color: '#EF4444' },
-                    { id: 'PURPLE', label: 'NO DEFINIDO',color: '#A855F7' },
+                    { id: 'GREEN',  label: 'CASA',         color: '#22C55E' },
+                    { id: 'YELLOW', label: 'FAMILIARES',   color: '#EAB308' },
+                    { id: 'RED',    label: 'OTROS',        color: '#EF4444' },
+                    { id: 'PURPLE', label: 'VOLUNTARIO',   color: '#A855F7' },
                   ].map(item => {
                     const active = trafficLightFilter === item.id;
                     const dimmed = !!trafficLightFilter && !active;
@@ -1443,7 +1432,7 @@ const CommandCenter = () => {
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
                           <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(34,197,94,0.08)', borderRadius: '10px', border: '1px solid rgba(34,197,94,0.15)' }}>
-                            <p style={{ fontSize: '0.45rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 2px' }}>FAVOR</p>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 2px' }}>CASA</p>
                             <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.green || 0}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(234,179,8,0.08)', borderRadius: '10px', border: '1px solid rgba(234,179,8,0.15)' }}>
@@ -1451,7 +1440,7 @@ const CommandCenter = () => {
                             <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(239,68,68,0.08)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.15)' }}>
-                            <p style={{ fontSize: '0.45rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 2px' }}>CONTRA</p>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 2px' }}>OTROS</p>
                             <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
                           </div>
                           <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(168,85,247,0.08)', borderRadius: '10px', border: '1px solid rgba(168,85,247,0.15)' }}>

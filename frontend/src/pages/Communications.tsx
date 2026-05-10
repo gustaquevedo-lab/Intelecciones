@@ -134,9 +134,10 @@ const ELECTORAL_TEMPLATES = [
 ];
 
 const TRAFFIC_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  VERDE:    { bg: 'rgba(34,197,94,0.15)',  text: '#22c55e', label: 'Verde' },
-  AMARILLO: { bg: 'rgba(234,179,8,0.15)',  text: '#eab308', label: 'Amarillo' },
-  ROJO:     { bg: 'rgba(239,68,68,0.15)',  text: '#ef4444', label: 'Rojo' },
+  GREEN:    { bg: 'rgba(34,197,94,0.15)',  text: '#22c55e', label: 'CASA' },
+  YELLOW:   { bg: 'rgba(234,179,8,0.15)',  text: '#eab308', label: 'FAMILIARES' },
+  RED:      { bg: 'rgba(239,68,68,0.15)',  text: '#ef4444', label: 'OTROS' },
+  PURPLE:   { bg: 'rgba(168,85,247,0.15)', text: '#a855f7', label: 'VOLUNTARIO' },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

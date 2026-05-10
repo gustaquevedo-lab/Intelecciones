@@ -187,7 +187,12 @@ const TerritoryMap: React.FC = () => {
                                                        e.traffic_light === 'PURPLE' ? '#7c3aed' : 
                                                        e.traffic_light === 'RED' ? 'var(--red)' : '#64748b',
                                                 fontWeight: 800
-                                            }}>{e.traffic_light ? `CAPTADO (${e.traffic_light})` : e.tenant_status || 'Pendiente'}</span></p>
+                                            }}>{e.traffic_light ? (
+                                                e.traffic_light === 'GREEN' ? 'CASA' :
+                                                e.traffic_light === 'YELLOW' ? 'FAMILIARES' :
+                                                e.traffic_light === 'RED' ? 'OTROS' :
+                                                e.traffic_light === 'PURPLE' ? 'VOLUNTARIO' : e.traffic_light
+                                            ) : e.tenant_status || 'Pendiente'}</span></p>
                                         </div>
                                         
                                         <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>

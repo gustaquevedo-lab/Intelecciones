@@ -1005,7 +1005,7 @@ const SuperAdmin = () => {
         />
         <StatCard 
           icon={CheckCircle2} 
-          label="Electores Únicos" 
+          label="Electores CASA" 
           value={selectedCampaignId === 'all' ? (stats?.electors || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'GREEN').length} 
           color="var(--green)" 
         />

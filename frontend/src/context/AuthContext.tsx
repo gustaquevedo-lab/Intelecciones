@@ -4,10 +4,11 @@ import api from '../services/api';
 interface User {
     id: number;
     username: string;
-    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR';
+    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR' | 'CANDIDATO';
     nombre: string;
     party?: string;
     assigned_list_id?: number;
+    assigned_campaign_id?: number;
     photo_url?: string;
     enabled_modules?: string[];
 }
