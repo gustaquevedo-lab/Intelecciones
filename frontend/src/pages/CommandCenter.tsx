@@ -1601,32 +1601,34 @@ const CommandCenter = () => {
             </div>
           )}
         </AnimatePresence>
+        <style>
+          {`
+            @media print {
+              .no-print, .sidebar, .map-container, button, .tabs-container {
+                display: none !important;
+              }
+              .main-content {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+              }
+              .hierarchy-container {
+                display: block !important;
+              }
+              .card {
+                break-inside: avoid;
+                border: 1px solid #eee !important;
+                box-shadow: none !important;
+                background: white !important;
+                color: black !important;
+              }
+              .text-white { color: black !important; }
+            }
+          `}
+        </style>
       </div>
     </MainLayout>
   );
 };
-
-/* Print Styles */
-@media print {
-  .no-print, .sidebar, .map-container, button, .tabs-container {
-    display: none !important;
-  }
-  .main-content {
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-  }
-  .hierarchy-container {
-    display: block !important;
-  }
-  .card {
-    break-inside: avoid;
-    border: 1px solid #eee !important;
-    box-shadow: none !important;
-    background: white !important;
-    color: black !important;
-  }
-  .text-white { color: black !important; }
-}
 
 export default CommandCenter;
