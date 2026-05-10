@@ -294,29 +294,45 @@ addColumnIfNotExists("users", "enabled_modules", "TEXT");
 addColumnIfNotExists("users", "parent_id", "INTEGER");
 addColumnIfNotExists("users", "telefono", "TEXT");
 
-runMigration(`
-  UPDATE users 
-  SET assigned_list_id = (SELECT id FROM lists WHERE list_number = '3' AND (option_number = '3' OR candidate_alias LIKE '%Lourdes%') LIMIT 1),
-      assigned_campaign_id = 3
-  WHERE (assigned_list_id = 1 OR assigned_list_id IS NULL)
-    AND role != 'SUPERUSUARIO' 
-    AND username NOT IN ('4500001', 'admin', '3657834')
-`);
-runMigration("UPDATE users SET assigned_list_id = NULL WHERE username = '4500001' OR ci = '4500001'");
-console.log("DB: Executed mandatory list reset for user 4500001.");
-
-
+// 🛠️ HEAVY ONE-TIME MIGRATIONS
 try {
-  console.log('MIGRATION: Normalizando distritos a MAYÚSCULAS...');
-  db.exec(`
-    UPDATE electors SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
-    UPDATE voting_locations SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
-    UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
-    UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
-    UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
-    UPDATE users SET distrito = 'PEDRO JUAN CABALLERO' WHERE (distrito IS NULL OR TRIM(distrito) = '') AND role != 'SUPERUSUARIO';
-  `);
-} catch (e) {}
+  const needsNormalization = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v2_done'").get();
+  
+  if (!needsNormalization) {
+    console.log('MIGRATION: Ejecutando normalización pesada de datos (Solo una vez)...');
+    
+    db.transaction(() => {
+      // Normalización de usuarios
+      db.prepare(`
+        UPDATE users 
+        SET assigned_list_id = (SELECT id FROM lists WHERE list_number = '3' AND (option_number = '3' OR candidate_alias LIKE '%Lourdes%') LIMIT 1),
+            assigned_campaign_id = 3
+        WHERE (assigned_list_id = 1 OR assigned_list_id IS NULL)
+          AND role != 'SUPERUSUARIO' 
+          AND username NOT IN ('4500001', 'admin', '3657834')
+      `).run();
+      
+      db.prepare("UPDATE users SET assigned_list_id = NULL WHERE username = '4500001' OR ci = '4500001'").run();
+      
+      // Normalización de tablas geográficas (ELECTORS ES LA MÁS PESADA)
+      console.log('MIGRATION: Normalizando tabla Electores (esto puede tardar)...');
+      db.exec(`
+        UPDATE electors SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
+        UPDATE voting_locations SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+        UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
+        UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+        UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+        UPDATE users SET distrito = 'PEDRO JUAN CABALLERO' WHERE (distrito IS NULL OR TRIM(distrito) = '') AND role != 'SUPERUSUARIO';
+      `);
+      
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v2_done', 'true')").run();
+    })();
+    
+    console.log('MIGRATION: Normalización pesada completada con éxito.');
+  }
+} catch (e: any) {
+  console.error('MIGRATION ERROR during heavy normalization:', e.message);
+}
 
 addColumnIfNotExists("whatsapp_templates", "lat", "REAL");
 addColumnIfNotExists("whatsapp_templates", "lng", "REAL");
@@ -339,6 +355,7 @@ db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captur
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_campaign ON elector_captures(campaign_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number)").run();
 

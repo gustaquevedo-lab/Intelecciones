@@ -1054,15 +1054,29 @@ app.get('/api/activities', (req, res) => {
 
 app.get('/api/captures', (req, res) => {
   const role = getRole(req);
-  const local_id = req.query.localId;
+  const local_id = (req.query.localId as string) || '';
+  const list_id = getListId(req);
   const sec = getSecurityFilter(req, 'e');
 
   try {
-    const list_id = getListId(req);
-    const listFilter = (role === 'SUPERUSUARIO' && !list_id) ? '' : `AND ec.list_id = ${list_id || 'NULL'}`;
-    const localFilter = (local_id && local_id !== 'undefined' && local_id !== 'null') ? `AND e.cod_local = '${local_id}'` : '';
+    const params = [...(sec.params || [])];
+    
+    let listFilter = '';
+    if (role !== 'SUPERUSUARIO' || (list_id && !isNaN(list_id))) {
+      if (list_id) {
+        listFilter = `AND ec.list_id = ?`;
+        params.push(list_id);
+      } else {
+        listFilter = `AND ec.list_id IS NULL`;
+      }
+    }
 
-    const params = sec.params || [];
+    let localFilter = '';
+    if (local_id && local_id !== 'undefined' && local_id !== 'null' && local_id !== '') {
+      localFilter = `AND e.local_votacion = (SELECT nombre FROM voting_locations WHERE cod_local = ?)`;
+      params.push(local_id);
+    }
+
     const captures = db.prepare(`
       SELECT 
         ec.*, 
@@ -1077,10 +1091,11 @@ app.get('/api/captures', (req, res) => {
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
       WHERE 1=1 ${sec.sql} ${listFilter} ${localFilter}
-      ORDER BY ec.timestamp DESC
+      ORDER BY ec.timestamp DESC LIMIT 1000
     `).all(...params);
     res.json(captures);
   } catch (err: any) {
+    console.error('[CAPTURES ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });

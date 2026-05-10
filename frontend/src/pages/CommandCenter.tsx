@@ -665,39 +665,51 @@ const CommandCenter = () => {
       if (selectedLocal) params.append('localId', selectedLocal);
       if (activeDistrict) params.append('district', activeDistrict);
 
-      // CRITICAL: Fetch core stats first to show something to the user immediately
-      const statRes = await api.get(`/stats/command?${params.toString()}`);
-      setCommandStats(statRes.data);
+      const queryStr = params.toString();
 
-      // NON-CRITICAL: Fetch everything else in parallel without blocking the main stats
-      const fetchSafe = (url: string) => api.get(url).catch(err => {
-        console.warn(`Silently failed fetch for ${url}:`, err);
-        return { data: [] };
-      });
+      // 1. CRITICAL & LIGHT: Fetch core stats and locations first
+      // These are essential for the dashboard shell
+      api.get(`/stats/command?${queryStr}`).then(res => setCommandStats(res.data)).catch(() => {});
+      api.get('/voting-locations').then(res => setLocales(res.data)).catch(() => {});
 
-      const [locRes, capRes, confRes, reqRes, actRes, vehRes, coordRes, structRes] = await Promise.all([
-        fetchSafe('/voting-locations'),
-        fetchSafe(`/captures?${params.toString()}`),
-        fetchSafe(`/admin/conflicts?${params.toString()}`),
-        fetchSafe(`/admin/requests?${params.toString()}`),
-        fetchSafe(`/admin/activity?${params.toString()}`),
-        fetchSafe(`/vehicles?${params.toString()}`),
-        fetchSafe(`/users?${params.toString()}`),
-        fetchSafe(`/structure/padrinos?${params.toString()}`)
-      ]);
+      // Helper for independent state updates
+      const fetchToState = async (url: string, setter: (data: any) => void) => {
+        try {
+          const res = await api.get(url);
+          setter(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+          console.warn(`Fetch failed for ${url}:`, err);
+        }
+      };
 
-      setLocales(Array.isArray(locRes.data) ? locRes.data : []);
-      setCaptures(Array.isArray(capRes.data) ? capRes.data : []);
-      setConflicts(Array.isArray(confRes.data) ? confRes.data : []);
-      setRequests(Array.isArray(reqRes.data) ? reqRes.data : []);
-      setActivities(Array.isArray(actRes.data) ? actRes.data : []);
-      setVehicles(Array.isArray(vehRes.data) ? vehRes.data : []);
-      setCoordinators(Array.isArray(coordRes.data) ? coordRes.data.filter((u: any) => u.role === 'COORDINADOR') : []);
-      setStructureData(Array.isArray(structRes.data) ? structRes.data : []);
+      // 2. TACTICAL DATA: Always fetch captures (for the map) but prioritize based on tab
+      // On mobile, we might want to skip some non-essential fetches if the connection is slow
+      fetchToState(`/captures?${queryStr}`, setCaptures);
 
-      if (authUser?.role === 'SUPERUSUARIO' && activeListId === null) {
-        fetchSafe('/admin/disputes/global');
+      // 3. TAB-SPECIFIC PRIORITY: Only fetch heavy detail data if the tab is active
+      if (activeTab === 'overview' || !isMobile) {
+        fetchToState(`/admin/activity?${queryStr}`, setActivities);
       }
+      
+      if (activeTab === 'structure' || !isMobile) {
+        fetchToState(`/users?${queryStr}`, (data) => setCoordinators(data.filter((u: any) => u.role === 'COORDINADOR')));
+        fetchToState(`/structure/padrinos?${queryStr}`, setStructureData);
+      }
+
+      if (activeTab === 'logistics' || !isMobile) {
+        fetchToState(`/vehicles?${queryStr}`, setVehicles);
+      }
+
+      if (activeTab === 'alerts' || !isMobile) {
+        fetchToState(`/admin/conflicts?${queryStr}`, setConflicts);
+        fetchToState(`/admin/requests?${queryStr}`, setRequests);
+      }
+
+      // Special global check for SuperAdmin
+      if (authUser?.role === 'SUPERUSUARIO' && activeListId === null && (activeTab === 'alerts' || !isMobile)) {
+        api.get('/admin/disputes/global').catch(() => {});
+      }
+
     } catch (err) { 
       console.error("Critical error in loadData:", err); 
     }
