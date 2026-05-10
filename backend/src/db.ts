@@ -81,7 +81,8 @@ db.exec(`
     lng REAL,
     direccion TEXT,
     icon TEXT DEFAULT 'Landmark',
-    distrito TEXT DEFAULT ''
+    distrito TEXT DEFAULT '',
+    ciudad TEXT DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS electors (
@@ -317,8 +318,8 @@ try {
       // Normalización de tablas geográficas (ELECTORS ES LA MÁS PESADA)
       console.log('MIGRATION: Normalizando tabla Electores (esto puede tardar)...');
       db.exec(`
-        UPDATE electors SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
-        UPDATE voting_locations SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+        UPDATE electors SET ci = TRIM(ci), ciudad = UPPER(TRIM(ciudad)) WHERE ci IS NOT NULL;
+        UPDATE voting_locations SET cod_local = TRIM(cod_local), distrito = UPPER(TRIM(distrito)), ciudad = UPPER(TRIM(distrito)) WHERE cod_local IS NOT NULL;
         UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL AND ciudad != '';
         UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
         UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';

@@ -966,12 +966,12 @@ app.get('/api/locales', (req, res) => {
 });
 
 app.post('/api/locales', (req, res) => {
-  const { cod_local, nombre, lat, lng, icon, direccion, distrito } = req.body;
+  const { cod_local, nombre, lat, lng, icon, direccion, distrito, ciudad } = req.body;
   try {
     db.prepare(`
-      INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion, distrito)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '', distrito || '');
+      INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion, distrito, ciudad)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '', distrito || ciudad || '', ciudad || distrito || '');
     
     logAction(1, 'CREATE', 'LOCALE', cod_local, `Created locale ${nombre} (${cod_local})`);
     res.json({ success: true });
@@ -981,13 +981,13 @@ app.post('/api/locales', (req, res) => {
 });
 
 app.put('/api/locales/:cod', (req, res) => {
-  const { nombre, lat, lng, icon, direccion, distrito } = req.body;
+  const { nombre, lat, lng, icon, direccion, distrito, ciudad } = req.body;
   try {
     db.prepare(`
       UPDATE voting_locations 
-      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, distrito = ?
+      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, distrito = ?, ciudad = ?
       WHERE cod_local = ?
-    `).run(nombre, lat, lng, icon, direccion || '', distrito || '', req.params.cod);
+    `).run(nombre, lat, lng, icon, direccion || '', distrito || ciudad || '', ciudad || distrito || '', req.params.cod);
     
     logAction(1, 'UPDATE', 'LOCALE', req.params.cod, `Updated locale ${nombre}`);
     res.json({ success: true });
