@@ -850,7 +850,7 @@ const SuperAdmin = () => {
 
   useEffect(() => {
     if (authUser) fetchData();
-  }, [authUser, activeTab]);
+  }, [authUser, activeTab, activeListId, activeDistrict]);
 
   if (loading) return null;
 

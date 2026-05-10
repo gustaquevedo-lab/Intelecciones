@@ -1898,9 +1898,9 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
 app.get('/api/admin/electors/stats', (req, res) => {
   try {
     const stats = db.prepare(`
-      SELECT distrito, COUNT(*) as count 
+      SELECT COALESCE(NULLIF(ciudad, ''), NULLIF(distrito, ''), 'Sin Asignar') as ciudad, COUNT(*) as count 
       FROM electors 
-      GROUP BY distrito
+      GROUP BY ciudad
     `).all();
     res.json(stats);
   } catch (err: any) {
