@@ -779,18 +779,22 @@ const SuperAdmin = () => {
   const handleCreateLocale = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const cleanLat = newLocaleLat?.toString().replace(',', '.') || '';
+      const cleanLng = newLocaleLng?.toString().replace(',', '.') || '';
+
       const payload = { 
         cod_local: newLocaleCod, 
         nombre: newLocaleNombre, 
         direccion: newLocaleDireccion, 
-        lat: newLocaleLat ? parseFloat(newLocaleLat) : null, 
-        lng: newLocaleLng ? parseFloat(newLocaleLng) : null, 
+        lat: cleanLat ? parseFloat(cleanLat) : null, 
+        lng: cleanLng ? parseFloat(cleanLng) : null, 
         icon: newLocaleIcon,
         ciudad: newLocaleCiudad,
         distrito: newLocaleCiudad
       };
+
       if (editingLocale) {
-        await api.put(`/locales/${newLocaleCod}`, payload);
+        await api.put(`/locales/${encodeURIComponent(newLocaleCod)}`, payload);
       } else {
         await api.post('/locales', payload);
       }
@@ -798,7 +802,7 @@ const SuperAdmin = () => {
       fetchData();
     } catch (err) { 
       console.error(err); 
-      alert('Error al guardar el local. Verifique el código único.');
+      alert('Error al guardar el local. Verifique el código único o el formato de las coordenadas.');
     }
   };
 
@@ -2774,70 +2778,84 @@ const SuperAdmin = () => {
               )}
 
               {showModal === 'locale' && (
-                <div style={{ width: '550px', maxWidth: '95vw' }}>
+                <div style={{ width: '600px', maxWidth: '95vw' }}>
                   <div className="modal-header-premium">
-                    <h2>{editingLocale ? 'Editar Local' : 'Nuevo Local de Votación'}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ padding: '8px', background: 'rgba(59,130,246,0.1)', borderRadius: '10px', color: 'var(--plra-300)' }}>
+                        <MapPin size={20} />
+                      </div>
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{editingLocale ? 'Editar Local' : 'Nuevo Local de Votación'}</h2>
+                        <p style={{ margin: 0, fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600 }}>Configure la ubicación táctica del centro de votación</p>
+                      </div>
+                    </div>
                     <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
                   </div>
                   <form onSubmit={handleCreateLocale}>
-                    <div className="modal-body-premium">
-                      <div className="form-group">
-                        <label>Código de Local</label>
-                        <input className="modern-input-premium-styled" value={newLocaleCod} onChange={e => setNewLocaleCod(e.target.value)} placeholder="Ej: 101" required disabled={!!editingLocale} />
-                      </div>
-                      <div className="form-group">
-                        <label>Ciudad</label>
-                        <select 
-                          className="modern-input-premium-styled" 
-                          value={newLocaleCiudad} 
-                          onChange={e => {
-                            const city = e.target.value;
-                            setNewLocaleCiudad(city);
-                            if (CIUDADES_PARAGUAY[city]) {
-                              setMapCenter([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng]);
-                              setMapZoom(CIUDADES_PARAGUAY[city].zoom);
-                            }
-                          }}
-                          required
-                        >
-                          <option value="">Seleccione una ciudad...</option>
-                          {Object.keys(CIUDADES_PARAGUAY).sort().map(c => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Nombre de la Institución</label>
-                        <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value)} placeholder="Ej: Escuela Graduada Nro 1" required />
-                      </div>
-                      <div className="form-group">
-                        <label>Dirección</label>
-                        <input className="modern-input-premium-styled" value={newLocaleDireccion} onChange={e => setNewLocaleDireccion(e.target.value)} placeholder="Ej: Calle Principal c/ Ayolas" />
-                      </div>
+                    <div className="modal-body-premium" style={{ maxHeight: 'none', overflow: 'visible' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
-                          <label>Latitud</label>
+                          <label>Código de Local</label>
+                          <input className="modern-input-premium-styled" value={newLocaleCod} onChange={e => setNewLocaleCod(e.target.value)} placeholder="Ej: 101" required disabled={!!editingLocale} />
+                        </div>
+                        <div className="form-group">
+                          <label>Ciudad / Distrito</label>
+                          <select 
+                            className="modern-input-premium-styled" 
+                            value={newLocaleCiudad} 
+                            onChange={e => {
+                              const city = e.target.value;
+                              setNewLocaleCiudad(city);
+                              if (CIUDADES_PARAGUAY[city]) {
+                                setMapCenter([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng]);
+                                setMapZoom(CIUDADES_PARAGUAY[city].zoom);
+                              }
+                            }}
+                            required
+                          >
+                            <option value="">Seleccione...</option>
+                            {Object.keys(CIUDADES_PARAGUAY).sort().map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Nombre de la Institución</label>
+                          <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value)} placeholder="Ej: Escuela Graduada Nro 1" required />
+                        </div>
+
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label>Dirección de Referencia</label>
+                          <input className="modern-input-premium-styled" value={newLocaleDireccion} onChange={e => setNewLocaleDireccion(e.target.value)} placeholder="Ej: Calle Principal c/ Ayolas" />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Latitud (Decimal)</label>
                           <input className="modern-input-premium-styled" value={newLocaleLat} onChange={e => setNewLocaleLat(e.target.value)} placeholder="-22.5447" required />
                         </div>
                         <div className="form-group">
-                          <label>Longitud</label>
+                          <label>Longitud (Decimal)</label>
                           <input className="modern-input-premium-styled" value={newLocaleLng} onChange={e => setNewLocaleLng(e.target.value)} placeholder="-55.7333" required />
                         </div>
-                      </div>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Icono del Mapa</label>
-                        <select className="modern-input-premium-styled" value={newLocaleIcon} onChange={e => setNewLocaleIcon(e.target.value)}>
-                          <option value="Landmark">Institucional (Gobierno)</option>
-                          <option value="School">Educación (Escuela/Colegio)</option>
-                          <option value="Building">Edificio Público</option>
-                          <option value="Home">Local Privado / Casa</option>
-                          <option value="MapPin">Marcador Estándar</option>
-                        </select>
+
+                        <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: 0 }}>
+                          <label>Icono Representativo</label>
+                          <select className="modern-input-premium-styled" value={newLocaleIcon} onChange={e => setNewLocaleIcon(e.target.value)}>
+                            <option value="Landmark">🏛️ Institucional (Gobierno)</option>
+                            <option value="School">🎓 Educación (Escuela/Colegio)</option>
+                            <option value="Building">🏢 Edificio Público</option>
+                            <option value="Home">🏠 Local Privado / Casa</option>
+                            <option value="MapPin">📍 Marcador Estándar</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                     <div className="modal-footer-premium-styled">
                       <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
-                      <button type="submit" className="btn-confirm-styled">{editingLocale ? 'Guardar Cambios' : 'Crear Local'} <MapPin size={18} /></button>
+                      <button type="submit" className="btn-confirm-styled" style={{ minWidth: '160px' }}>
+                        {editingLocale ? 'Guardar Cambios' : 'Crear Local'} <Save size={18} style={{ marginLeft: '8px' }} />
+                      </button>
                     </div>
                   </form>
                 </div>

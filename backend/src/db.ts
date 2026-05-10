@@ -290,6 +290,7 @@ addColumnIfNotExists("electors", "barrio", "TEXT DEFAULT ''");
 addColumnIfNotExists("participation_logs", "veedor_id", "INTEGER");
 addColumnIfNotExists("results", "veedor_id", "INTEGER");
 addColumnIfNotExists("voting_locations", "distrito", "TEXT DEFAULT ''");
+addColumnIfNotExists("voting_locations", "ciudad", "TEXT DEFAULT ''");
 addColumnIfNotExists("campaigns", "enabled_modules", "TEXT DEFAULT 'COMMAND_CENTER,REGISTRY'");
 addColumnIfNotExists("users", "enabled_modules", "TEXT");
 addColumnIfNotExists("users", "parent_id", "INTEGER");

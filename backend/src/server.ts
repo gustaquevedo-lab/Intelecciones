@@ -982,16 +982,28 @@ app.post('/api/locales', (req, res) => {
 
 app.put('/api/locales/:cod', (req, res) => {
   const { nombre, lat, lng, icon, direccion, distrito, ciudad } = req.body;
+  const { cod } = req.params;
   try {
-    db.prepare(`
+    console.log(`[DB UPDATE LOCALE] Intentando actualizar local: ${cod}`, { nombre, lat, lng, distrito, ciudad });
+    const result = db.prepare(`
       UPDATE voting_locations 
       SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, distrito = ?, ciudad = ?
       WHERE cod_local = ?
-    `).run(nombre, lat, lng, icon, direccion || '', distrito || ciudad || '', ciudad || distrito || '', req.params.cod);
+    `).run(nombre, lat, lng, icon, direccion || '', distrito || ciudad || '', ciudad || distrito || '', cod);
     
-    logAction(1, 'UPDATE', 'LOCALE', req.params.cod, `Updated locale ${nombre}`);
+    if (result.changes === 0) {
+      console.warn(`[DB UPDATE LOCALE] No se encontró el local con código: ${cod}`);
+      // Intentar una búsqueda con TRIM por si acaso
+      const retry = db.prepare('UPDATE voting_locations SET nombre=? WHERE TRIM(cod_local)=TRIM(?)').run(nombre, cod);
+      if (retry.changes === 0) {
+        throw new Error(`No se encontró ningún local con el código ${cod} para actualizar.`);
+      }
+    }
+
+    logAction(1, 'UPDATE', 'LOCALE', cod, `Updated locale ${nombre}`);
     res.json({ success: true });
   } catch (err: any) {
+    console.error('[DB UPDATE LOCALE ERROR]', err.message);
     res.status(500).json({ error: err.message });
   }
 });
