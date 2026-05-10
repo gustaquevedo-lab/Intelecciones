@@ -91,15 +91,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
               inset: 0,
               background: 'rgba(0,0,0,0.4)',
               backdropFilter: 'blur(8px)',
-              zIndex: 9990
+              zIndex: 10001
             }}
           />
         )}
       </AnimatePresence>
 
-      <motion.div 
+      <motion.div
         initial={false}
-        animate={{ 
+        animate={{
           width: sidebarWidth,
           x: (!isDesktop && !isMobileOpen) ? '-110%' : 0
         }}
@@ -118,7 +118,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
           height: !isDesktop ? '100vh' : 'calc(100vh - 80px)',
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease',
           overflow: 'visible',
-          zIndex: 9991
+          zIndex: 10002
         }}
       >
       {/* Mobile Close Button */}

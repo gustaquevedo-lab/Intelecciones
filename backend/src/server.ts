@@ -1059,7 +1059,7 @@ app.get('/api/captures', (req, res) => {
         e.nombre, e.apellido, e.local_votacion, 
         u.nombre as coordinator_name, u.role as coordinator_role, 
         p.nombre as padrino_name,
-        l.list_number, c.name as campaign_name
+        l.list_number, l.campaign_id, c.name as campaign_name
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
@@ -2104,9 +2104,13 @@ app.get('/api/structure/padrinos', (req, res) => {
 
   try {
     let sql = `
-      SELECT u.id, u.nombre, u.photo_url, u.telefono,
+      SELECT u.id, u.nombre, u.photo_url, u.telefono, u.assigned_list_id,
       (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id) as coordinator_count,
-      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id) as total_electors
+      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id) as total_electors,
+      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'GREEN') as green_total,
+      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'YELLOW') as yellow_total,
+      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'RED') as red_total,
+      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'PURPLE') as purple_total
       FROM users u
       WHERE u.role = 'PADRINO'
     `;
@@ -2134,7 +2138,10 @@ app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
     const coordinators = db.prepare(`
       SELECT u.id, u.nombre, u.photo_url, u.telefono,
       (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) as total_electors,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') as green_electors,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') as green,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') as yellow,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'RED') as red,
+      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') as purple,
       (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) as transport_needed
       FROM users u
       WHERE u.parent_id = ? AND u.role = 'COORDINADOR'

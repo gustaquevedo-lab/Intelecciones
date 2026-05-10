@@ -549,7 +549,7 @@ const CommandCenter = () => {
       if (selectedLocal) params.append('localId', selectedLocal);
       if (activeDistrict) params.append('district', activeDistrict);
 
-      const [locRes, statRes, capRes, confRes, reqRes, actRes, vehRes, coordRes] = await Promise.all([
+      const [locRes, statRes, capRes, confRes, reqRes, actRes, vehRes, coordRes, structRes] = await Promise.all([
         api.get('/voting-locations'),
         api.get(`/stats/command?${params.toString()}`),
         api.get(`/captures?${params.toString()}`),
@@ -557,7 +557,8 @@ const CommandCenter = () => {
         api.get(`/admin/requests?${params.toString()}`),
         api.get(`/admin/activity?${params.toString()}`),
         api.get(`/vehicles?${params.toString()}`),
-        api.get(`/users?${params.toString()}`) // To get coordinators for the layer filter
+        api.get(`/users?${params.toString()}`),
+        api.get(`/structure/padrinos?${params.toString()}`)
       ]);
       setLocales(locRes.data);
       setCommandStats(statRes.data);
@@ -567,6 +568,7 @@ const CommandCenter = () => {
       setActivities(actRes.data);
       setVehicles(vehRes.data);
       setCoordinators(coordRes.data.filter((u: any) => u.role === 'COORDINADOR'));
+      setStructureData(structRes.data);
 
       if (authUser?.role === 'SUPERUSUARIO' && activeListId === null) {
         const dispRes = await api.get('/admin/disputes/global');
@@ -579,9 +581,6 @@ const CommandCenter = () => {
 
   useEffect(() => {
     loadData();
-    if (activeTab === 'hierarchy') {
-       api.get(`/structure/padrinos?district=${activeDistrict || ''}&listId=${activeListId || ''}`).then(res => setStructureData(res.data));
-    }
     const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
   }, [activeListId, activeDistrict, selectedLocal, activeTab]);
@@ -1227,20 +1226,33 @@ const CommandCenter = () => {
               <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.5rem' }}>Estructura de <span style={{ color: 'var(--plra-300)' }}>Mando</span></h2>
-                    <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Navegación jerárquica de la Lista 3.</p>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.25rem' }}>Estructura de <span style={{ color: 'var(--plra-300)' }}>Mando</span></h2>
+                    <p style={{ color: 'var(--text-3)', fontSize: '0.75rem', fontWeight: 700 }}>JERARQUÍA OPERATIVA DE CAMPAÑA</p>
                   </div>
-                  {(selectedPadrino || selectedCoordDetails) && (
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <button 
-                      onClick={() => {
-                        if (selectedCoordDetails) setSelectedCoordDetails(null);
-                        else setSelectedPadrino(null);
+                      onClick={() => window.print()}
+                      style={{ 
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', 
+                        color: 'white', padding: '0.6rem 1rem', borderRadius: '12px', 
+                        cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem',
+                        display: 'flex', alignItems: 'center', gap: '0.5rem'
                       }}
-                      style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'white', padding: '0.6rem 1.2rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 800 }}
                     >
-                      ← VOLVER ATRÁS
+                      <Download size={14} /> EXPORTAR PDF
                     </button>
-                  )}
+                    {(selectedPadrino || selectedCoordDetails) && (
+                      <button 
+                        onClick={() => {
+                          if (selectedCoordDetails) setSelectedCoordDetails(null);
+                          else setSelectedPadrino(null);
+                        }}
+                        style={{ background: 'var(--plra-600)', border: 'none', color: 'white', padding: '0.6rem 1rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}
+                      >
+                        ← VOLVER
+                      </button>
+                    )}
+                  </div>
                 </header>
 
                 {structureData.length === 0 ? (
@@ -1248,61 +1260,107 @@ const CommandCenter = () => {
                     <div className="icon-pulse"><Users size={48} /></div>
                     <h3>Jerarquía de Mando Vacía</h3>
                     <p>No se han encontrado Padrinos registrados en el distrito seleccionado.</p>
-                    <p className="hint">Cree Padrinos en el panel de administración para empezar a ver su desempeño.</p>
                   </div>
                 ) : !selectedPadrino ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
                     {structureData.map(p => (
                       <motion.div 
-                        whileHover={{ y: -5 }}
+                        whileHover={{ y: -3, boxShadow: '0 12px 32px rgba(0,0,0,0.4)' }}
                         key={p.id}
                         onClick={() => setSelectedPadrino(p)}
-                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.75rem', cursor: 'pointer', boxShadow: 'var(--shadow-md)' }}
+                        style={{ 
+                          background: 'var(--surface)', border: '1px solid var(--border)', 
+                          borderRadius: '18px', padding: '1.25rem', cursor: 'pointer', 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)', transition: 'all 0.2s'
+                        }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
-                          <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 900, color: 'white' }}>{p.nombre?.charAt(0)}</div>
-                          <div>
-                            <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{p.nombre}</p>
-                            <span style={{ fontSize: '0.6rem', color: 'var(--plra-300)', fontWeight: 900 }}>PADRINO L-{p.list_number}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                          {p.photo_url ? (
+                            <img src={p.photo_url} alt="" style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover', border: '2px solid var(--plra-500)' }} />
+                          ) : (
+                            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{p.nombre?.charAt(0)}</div>
+                          )}
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</p>
+                            <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900, letterSpacing: '0.05em' }}>PADRINO L-{p.assigned_list_id || '3'}</span>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--accent-subtle)', padding: '1rem', borderRadius: '14px', border: '1px solid var(--border)' }}>
-                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)' }}>COORDINADORES</span>
-                          <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text)' }}>{p.coordinator_count}</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '0.5rem' }}>
+                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 2px' }}>COORDS</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.coordinator_count}</p>
+                          </div>
+                          <div style={{ background: 'rgba(59,130,246,0.05)', padding: '0.6rem', borderRadius: '12px', border: '1px solid rgba(59,130,246,0.1)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--plra-300)', fontWeight: 800, margin: '0 0 2px' }}>CAPTURAS</p>
+                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.total_electors || 0}</p>
+                          </div>
+                        </div>
+                        <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '1rem', display: 'flex', overflow: 'hidden' }}>
+                          {p.total_electors > 0 && (
+                            <>
+                              <div style={{ width: `${(p.green_total/p.total_electors)*100}%`, background: 'var(--green)' }} />
+                              <div style={{ width: `${(p.yellow_total/p.total_electors)*100}%`, background: 'var(--yellow)' }} />
+                              <div style={{ width: `${(p.red_total/p.total_electors)*100}%`, background: 'var(--red)' }} />
+                              <div style={{ width: `${(p.purple_total/p.total_electors)*100}%`, background: '#A855F7' }} />
+                            </>
+                          )}
                         </div>
                       </motion.div>
                     ))}
                   </div>
                 ) : !selectedCoordDetails ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
                     {subStructureData.map(c => (
                       <motion.div 
-                        whileHover={{ y: -5 }}
+                        whileHover={{ y: -3 }}
                         key={c.id}
                         onClick={() => setSelectedCoordDetails(c)}
-                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '24px', padding: '1.5rem', cursor: 'pointer', boxShadow: 'var(--shadow-md)' }}
+                        style={{ 
+                          background: 'var(--surface)', border: '1px solid var(--border)', 
+                          borderRadius: '20px', padding: '1.25rem', cursor: 'pointer', 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)' 
+                        }}
                       >
-                        <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', marginBottom: '1.25rem' }}>{c.nombre}</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '1.25rem' }}>
-                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(34,197,94,0.1)', borderRadius: '14px', border: '1px solid rgba(34,197,94,0.2)' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--green)', fontWeight: 900 }}>FAVOR</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)' }}>{c.green || 0}</p>
-                          </div>
-                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(234,179,8,0.1)', borderRadius: '14px', border: '1px solid rgba(234,179,8,0.2)' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--yellow)', fontWeight: 900 }}>DUDOSO</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)' }}>{c.yellow || 0}</p>
-                          </div>
-                          <div style={{ textAlign: 'center', padding: '0.75rem 0.5rem', background: 'rgba(239,68,68,0.1)', borderRadius: '14px', border: '1px solid rgba(239,68,68,0.2)' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 900 }}>CONTRA</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text)' }}>{c.red || 0}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                          {c.photo_url ? (
+                            <img src={c.photo_url} alt="" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
+                            <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', margin: 0, fontWeight: 700 }}>{c.total_electors || 0} CAPTURAS TOTALES</p>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.08)', padding: '0.75rem 1rem', borderRadius: '14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                            <Truck size={16} color="var(--plra-300)" />
-                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--plra-200)' }}>TRANSPORTE</span>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
+                          <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(34,197,94,0.08)', borderRadius: '10px', border: '1px solid rgba(34,197,94,0.15)' }}>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 2px' }}>FAVOR</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.green || 0}</p>
                           </div>
-                          <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>{c.needs_transport || 0}</span>
+                          <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(234,179,8,0.08)', borderRadius: '10px', border: '1px solid rgba(234,179,8,0.15)' }}>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 2px' }}>DUDOSO</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
+                          </div>
+                          <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(239,68,68,0.08)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.15)' }}>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 2px' }}>CONTRA</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
+                          </div>
+                          <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(168,85,247,0.08)', borderRadius: '10px', border: '1px solid rgba(168,85,247,0.15)' }}>
+                            <p style={{ fontSize: '0.45rem', color: '#A855F7', fontWeight: 900, margin: '0 0 2px' }}>PURPURA</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.08)', padding: '0.5rem 0.75rem', borderRadius: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <Truck size={14} color="var(--plra-300)" />
+                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-200)' }}>TRANSPORTE</span>
+                          </div>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{c.transport_needed || 0}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                         </div>
                       </motion.div>
                     ))}
@@ -1345,8 +1403,15 @@ const CommandCenter = () => {
                                 <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Mesa {e.mesa} — Orden {e.orden}</p>
                               </td>
                               <td style={{ padding: '1.25rem' }}>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: e.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', padding: '4px 10px', borderRadius: '8px' }}>
-                                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: e.traffic_light === 'GREEN' ? 'var(--green)' : 'var(--red)' }} />
+                                <div style={{ 
+                                  display: 'inline-flex', alignItems: 'center', gap: '0.5rem', 
+                                  background: e.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : e.traffic_light === 'YELLOW' ? 'rgba(234,179,8,0.1)' : e.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)', 
+                                  padding: '4px 10px', borderRadius: '8px' 
+                                }}>
+                                  <div style={{ 
+                                    width: '8px', height: '8px', borderRadius: '50%', 
+                                    background: e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : e.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)' 
+                                  }} />
                                   <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'white' }}>{e.traffic_light}</span>
                                 </div>
                               </td>

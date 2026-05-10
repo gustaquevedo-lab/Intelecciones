@@ -193,7 +193,6 @@ const SuperAdmin = () => {
   } = useAuth();
   const { settings: globalSettings, updateSettings, refreshSettings } = useSettings();
   const navigate = useNavigate();
-  console.log("SuperAdmin - authUser:", authUser, "loading:", loading);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
   const [stats, setStats] = useState<any>(null);

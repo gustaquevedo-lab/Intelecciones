@@ -15,7 +15,11 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(grep -n \"WHERE.*=.*req\\\\|WHERE.*\\\\${.*}\\\\|WHERE.*\\\\`\" \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\\\\backend\\\\src\\\\server.ts\")",
+      "Bash(npx tsc *)",
+      "Bash(./frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.json)",
+      "Bash(./node_modules/.bin/tsc --noEmit)"
     ]
   }
 }

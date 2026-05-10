@@ -6,7 +6,6 @@ baseURL = baseURL.replace(/\/$/, '');
 if (!baseURL.endsWith('/api')) {
   baseURL += '/api';
 }
-console.log('[API] Final BaseURL:', baseURL);
 
 const api = axios.create({
   baseURL,
