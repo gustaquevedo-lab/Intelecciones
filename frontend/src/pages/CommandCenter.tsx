@@ -658,44 +658,56 @@ const CommandCenter = () => {
   }, []);
 
   const loadData = async () => {
+    if (!authUser) return;
     try {
       const params = new URLSearchParams();
       if (activeListId) params.append('listId', activeListId.toString());
       if (selectedLocal) params.append('localId', selectedLocal);
       if (activeDistrict) params.append('district', activeDistrict);
 
-      const [locRes, statRes, capRes, confRes, reqRes, actRes, vehRes, coordRes, structRes] = await Promise.all([
-        api.get('/voting-locations'),
-        api.get(`/stats/command?${params.toString()}`),
-        api.get(`/captures?${params.toString()}`),
-        api.get(`/admin/conflicts?${params.toString()}`),
-        api.get(`/admin/requests?${params.toString()}`),
-        api.get(`/admin/activity?${params.toString()}`),
-        api.get(`/vehicles?${params.toString()}`),
-        api.get(`/users?${params.toString()}`),
-        api.get(`/structure/padrinos?${params.toString()}`)
-      ]);
-      setLocales(locRes.data);
+      // CRITICAL: Fetch core stats first to show something to the user immediately
+      const statRes = await api.get(`/stats/command?${params.toString()}`);
       setCommandStats(statRes.data);
-      setCaptures(capRes.data);
-      setConflicts(confRes.data);
-      setRequests(reqRes.data);
-      setActivities(actRes.data);
-      setVehicles(vehRes.data);
-      setCoordinators(coordRes.data.filter((u: any) => u.role === 'COORDINADOR'));
-      setStructureData(structRes.data);
+
+      // NON-CRITICAL: Fetch everything else in parallel without blocking the main stats
+      const fetchSafe = (url: string) => api.get(url).catch(err => {
+        console.warn(`Silently failed fetch for ${url}:`, err);
+        return { data: [] };
+      });
+
+      const [locRes, capRes, confRes, reqRes, actRes, vehRes, coordRes, structRes] = await Promise.all([
+        fetchSafe('/voting-locations'),
+        fetchSafe(`/captures?${params.toString()}`),
+        fetchSafe(`/admin/conflicts?${params.toString()}`),
+        fetchSafe(`/admin/requests?${params.toString()}`),
+        fetchSafe(`/admin/activity?${params.toString()}`),
+        fetchSafe(`/vehicles?${params.toString()}`),
+        fetchSafe(`/users?${params.toString()}`),
+        fetchSafe(`/structure/padrinos?${params.toString()}`)
+      ]);
+
+      setLocales(Array.isArray(locRes.data) ? locRes.data : []);
+      setCaptures(Array.isArray(capRes.data) ? capRes.data : []);
+      setConflicts(Array.isArray(confRes.data) ? confRes.data : []);
+      setRequests(Array.isArray(reqRes.data) ? reqRes.data : []);
+      setActivities(Array.isArray(actRes.data) ? actRes.data : []);
+      setVehicles(Array.isArray(vehRes.data) ? vehRes.data : []);
+      setCoordinators(Array.isArray(coordRes.data) ? coordRes.data.filter((u: any) => u.role === 'COORDINADOR') : []);
+      setStructureData(Array.isArray(structRes.data) ? structRes.data : []);
 
       if (authUser?.role === 'SUPERUSUARIO' && activeListId === null) {
-        await api.get('/admin/disputes/global');
+        fetchSafe('/admin/disputes/global');
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error("Critical error in loadData:", err); 
+    }
   };
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
-  }, [activeListId, activeDistrict, selectedLocal, activeTab]);
+  }, [activeListId, activeDistrict, selectedLocal, activeTab, authUser]);
 
   useEffect(() => {
     if (selectedPadrino) {
