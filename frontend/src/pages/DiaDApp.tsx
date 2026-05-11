@@ -9,7 +9,7 @@ import {
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import api from '../services/api';
+import api, { getImageUrl } from '../services/api';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
@@ -353,7 +353,7 @@ const DiaDApp: React.FC = () => {
   ] as const;
 
   return (
-    <MainLayout title="Día D — Centro de Resultados" userName={user?.nombre || ''} userPhoto={user?.photo_url}>
+    <MainLayout title="Día D — Centro de Resultados" userName={user?.nombre || ''} userPhoto={getImageUrl(user?.photo_url) || ''}>
       
       {/* ── Standby Banner ── */}
       {(new Date().getFullYear() !== 2026 || new Date().getMonth() !== 5 || new Date().getDate() !== 7) && (
@@ -1198,7 +1198,7 @@ const DiaDApp: React.FC = () => {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {candidatePreview?.photo_url ? (
-                    <img src={candidatePreview.photo_url} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getImageUrl(candidatePreview.photo_url) || ''} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <Users size={32} style={{ color: 'var(--plra-300)' }} />
                   )}

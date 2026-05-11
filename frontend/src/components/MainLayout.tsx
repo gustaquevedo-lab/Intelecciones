@@ -7,7 +7,7 @@ import { ModuleSwitcher } from './ModuleSwitcher';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
-import api from '../services/api';
+import api, { getImageUrl } from '../services/api';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -146,7 +146,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
             {/* Avatar */}
             <div className="header-avatar">
               {userPhoto
-                ? <img src={userPhoto} alt={userName} />
+                ? <img src={getImageUrl(userPhoto) || ''} alt={userName} />
                 : <span>{initials}</span>}
             </div>
 

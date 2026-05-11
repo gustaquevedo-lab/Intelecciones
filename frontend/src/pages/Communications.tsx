@@ -15,7 +15,7 @@ import {
   ArrowLeft, Clock, TrendingUp, Wifi, WifiOff, Edit3,
   Copy, Play, Pause, CornerDownLeft
 } from 'lucide-react';
-import api from '../services/api';
+import api, { getImageUrl } from '../services/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1757,7 +1757,7 @@ const Communications: React.FC = () => {
     <MainLayout
       title="Centro de Comunicaciones"
       userName={user?.nombre || user?.username || 'Usuario'}
-      userPhoto={user?.photo_url}
+      userPhoto={getImageUrl(user?.photo_url) || ''}
     >
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 102px)', overflow: 'hidden' }}>
         {/* Header bar */}

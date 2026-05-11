@@ -180,13 +180,13 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
           {req.photo_url && (
             <div 
-              onClick={() => window.open(req.photo_url, '_blank')}
+              onClick={() => window.open(getImageUrl(req.photo_url) || '', '_blank')}
               style={{ 
                 width: '100%', height: '140px', borderRadius: '12px', 
                 overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' 
               }}
             >
-              <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={getImageUrl(req.photo_url) || ''} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: '0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
                 <Search size={20} color="white" />
               </div>
@@ -774,7 +774,7 @@ const CommandCenter = () => {
     <MainLayout 
       title="Comando Central" 
       userName={authUser?.nombre || "Director"} 
-      userPhoto={authUser?.photo_url}
+      userPhoto={getImageUrl(authUser?.photo_url) || ''}
     >
       <div style={{ 
         padding: isMobile ? '1.5rem 1rem 1rem' : '1.5rem 2rem',

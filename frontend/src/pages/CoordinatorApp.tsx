@@ -14,7 +14,7 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import api from '../services/api';
+import api, { getImageUrl } from '../services/api';
 import { savePadronOffline, searchElectorOffline, getOfflineStats } from '../services/offlineDb';
 
 const formatWhatsApp = (phone: string) => {
@@ -776,7 +776,7 @@ const CoordinatorApp = () => {
     <MainLayout 
       title={isReadOnly ? "Consulta de Padrón" : "Gestión de Campo"} 
       userName={user?.nombre || "Coordinador"} 
-      userPhoto={user?.photo_url}
+      userPhoto={getImageUrl(user?.photo_url) || ''}
     >
       {isReadOnly && (
         <div style={{
@@ -1412,10 +1412,10 @@ const CoordinatorApp = () => {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
                     {req.photo_url && (
                       <div 
-                        onClick={() => window.open(req.photo_url, '_blank')}
+                        onClick={() => window.open(getImageUrl(req.photo_url) || '', '_blank')}
                         style={{ width: '80px', height: '80px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' }}
                       >
-                        <img src={req.photo_url} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={getImageUrl(req.photo_url) || ''} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = "1"} onMouseLeave={e => e.currentTarget.style.opacity = "0"}>
                           <Search size={16} color="white" />
                         </div>
@@ -1492,7 +1492,7 @@ const CoordinatorApp = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                       <div style={{ width: '50px', height: '50px', borderRadius: '14px', overflow: 'hidden', border: '2px solid var(--border)', flexShrink: 0 }}>
                         {c.photo_url ? (
-                          <img src={c.photo_url} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={getImageUrl(c.photo_url) || ''} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', background: 'var(--surface-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Users size={22} style={{ color: 'var(--text-3)' }} />
