@@ -268,12 +268,13 @@ app.get('/api/me', (req, res) => {
     const user = db.prepare(`
       SELECT u.id, u.username, u.role, u.nombre, u.photo_url, u.ci, u.telefono,
              u.assigned_list_id, u.assigned_campaign_id, u.distrito, u.status,
-             u.needs_password_change, u.enabled_modules,
+             u.needs_password_change, u.enabled_modules as user_modules,
+             c.enabled_modules as campaign_modules,
              COALESCE(l.ciudad, c.distrito) as effective_distrito,
              l.list_number, l.campaign_id
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      LEFT JOIN campaigns c ON (u.assigned_campaign_id = c.id OR l.campaign_id = c.id)
       WHERE u.id = ?
     `).get(userId) as any;
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
@@ -294,11 +295,14 @@ app.get('/api/me', (req, res) => {
       assigned_campaign_id: user.assigned_campaign_id,
       distrito: user.effective_distrito || user.distrito,
       needs_password_change: !!user.needs_password_change,
-      enabled_modules: user.enabled_modules
-        ? user.enabled_modules.split(',')
-        : (['SUPERUSUARIO', 'JEFE_CAMPANA'].includes(user.role)
-            ? ['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP', 'DAY_D', 'COMMUNICATIONS']
-            : ['REGISTRY']),
+      enabled_modules: (() => {
+        if (user.role === 'SUPERUSUARIO') return ['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP', 'DAY_D', 'COMMUNICATIONS', 'SUPER_ADMIN'];
+        
+        const campMods = user.campaign_modules ? user.campaign_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY'];
+        const userMods = user.user_modules ? user.user_modules.split(',') : campMods;
+        
+        return userMods.filter((m: string) => campMods.includes(m));
+      })(),
       v: "1.0.6"
     });
   } catch (err: any) {
@@ -554,10 +558,10 @@ app.post('/api/login', (req, res) => {
 
   if (!user) {
     user = db.prepare(`
-      SELECT u.*, c.enabled_modules, c.distrito, l.campaign_id
+      SELECT u.*, c.enabled_modules as campaign_modules, c.distrito, COALESCE(u.assigned_campaign_id, l.campaign_id) as final_campaign_id
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      LEFT JOIN campaigns c ON (u.assigned_campaign_id = c.id OR l.campaign_id = c.id)
       WHERE u.username = ? OR u.ci = ? OR u.username = ? OR u.ci = ?
          OR REPLACE(u.username, '.', '') = ? OR REPLACE(u.ci, '.', '') = ?
     `).get(username.trim(), username.trim(), cleanUsername, cleanUsername, cleanUsername, cleanUsername) as any;
@@ -597,10 +601,14 @@ app.post('/api/login', (req, res) => {
       photo_url: user.photo_url,
       ci: user.ci,
       distrito: user.distrito,
-      enabled_modules: user.enabled_modules ? user.enabled_modules.split(',') : 
-        (['SUPERUSUARIO', 'JEFE_CAMPANA'].includes(user.role) 
-          ? ['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP'] 
-          : ['REGISTRY']),
+      enabled_modules: (() => {
+        if (user.role === 'SUPERUSUARIO') return ['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP', 'DAY_D', 'COMMUNICATIONS', 'SUPER_ADMIN'];
+        
+        const campMods = user.campaign_modules ? user.campaign_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY'];
+        const userMods = user.enabled_modules ? user.enabled_modules.split(',') : campMods;
+        
+        return userMods.filter((m: string) => campMods.includes(m));
+      })(),
       needs_password_change: !!user.needs_password_change,
       v: "1.0.5"
     });
@@ -852,6 +860,47 @@ app.post('/api/voting-locations/:cod/icon', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.post('/api/admin/locales/sync-from-padron', (req, res) => {
+  try {
+    const rawLocales = db.prepare(`
+      SELECT DISTINCT 
+        UPPER(TRIM(local_votacion)) as nombre, 
+        UPPER(TRIM(COALESCE(NULLIF(ciudad, ''), NULLIF(distrito, ''), 'SIN ASIGNAR'))) as ciudad
+      FROM electors 
+      WHERE local_votacion IS NOT NULL AND local_votacion != ''
+    `).all();
+
+    let added = 0;
+    const insertStmt = db.prepare(`
+      INSERT OR IGNORE INTO voting_locations (cod_local, nombre, ciudad, distrito)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const transaction = db.transaction((locales) => {
+      for (const loc of locales) {
+        const cod = loc.nombre.substring(0, 15).replace(/[^A-Z0-9]/g, '') + '_' + Math.abs(hashCode(loc.nombre)).toString(36).substring(0, 4);
+        const result = insertStmt.run(cod, loc.nombre, loc.ciudad, loc.ciudad);
+        if (result.changes > 0) added++;
+      }
+    });
+
+    transaction(rawLocales);
+    res.json({ success: true, added });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function hashCode(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return hash;
+}
 
 // Campaign Management
 app.get('/api/campaigns', (req, res) => {
@@ -2138,6 +2187,8 @@ app.get('/api/districts/global', (req, res) => {
       SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM voting_locations WHERE distrito IS NOT NULL AND distrito != ''
       UNION
       SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM electors WHERE ciudad IS NOT NULL AND ciudad != ''
+      UNION
+      SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM electors WHERE distrito IS NOT NULL AND distrito != ''
     `).all();
     res.json(districts.map((d: any) => d.name).sort());
   } catch (err: any) {

@@ -175,6 +175,8 @@ const SuperAdmin = () => {
   const { refreshSettings } = useSettings();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [localeSearchTerm, setLocaleSearchTerm] = useState('');
+  const [localeCityFilter, setLocaleCityFilter] = useState('');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
   const [stats, setStats] = useState<any>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -833,6 +835,17 @@ Status: ${error.response?.status || 'N/A'}
   }, [authUser, activeTab, activeListId, activeDistrict]);
 
   if (loading) return null;
+
+  const handleSyncLocales = async () => {
+    try {
+      const res = await api.post('/admin/locales/sync-from-padron');
+      alert(`Sincronización completada. Se agregaron ${res.data.added} nuevos locales.`);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Error al sincronizar locales.');
+    }
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -1526,21 +1539,57 @@ Status: ${error.response?.status || 'N/A'}
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Locales de Votación</h2>
-        <button className="action-btn-primary" onClick={() => {
-          setEditingLocale(null);
-          setNewLocaleCod('');
-          setNewLocaleNombre('');
-          setNewLocaleDireccion('');
-          setNewLocaleLat('');
-          setNewLocaleLng('');
-          setNewLocaleIcon('Landmark');
-          setNewLocaleCiudad('');
-          setShowModal('locale');
-        }}>
-          <Plus size={18} /> Registrar Local
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="action-btn-secondary" onClick={handleSyncLocales}>
+            <Activity size={18} /> Sincronizar desde Padrón
+          </button>
+          <button className="action-btn-primary" onClick={() => {
+            setEditingLocale(null);
+            setNewLocaleCod('');
+            setNewLocaleNombre('');
+            setNewLocaleDireccion('');
+            setNewLocaleLat('');
+            setNewLocaleLng('');
+            setNewLocaleIcon('Landmark');
+            setNewLocaleCiudad('');
+            setShowModal('locale');
+          }}>
+            <Plus size={18} /> Registrar Local
+          </button>
+        </div>
       </div>
       
+      <div className="filter-bar-premium">
+        <div className="search-input-wrapper-premium" style={{ maxWidth: '300px' }}>
+          <Search size={18} />
+          <input 
+            className="modern-input-premium-styled" 
+            placeholder="Buscar local por nombre..." 
+            value={localeSearchTerm} 
+            onChange={e => setLocaleSearchTerm(e.target.value)} 
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+        <select 
+          className="modern-input-premium-styled" 
+          style={{ width: '200px', marginBottom: 0 }}
+          value={localeCityFilter} 
+          onChange={e => setLocaleCityFilter(e.target.value)}
+        >
+          <option value="">Todas las Ciudades</option>
+          {cities.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        {(localeSearchTerm || localeCityFilter) && (
+          <button 
+            className="icon-btn" 
+            onClick={() => { setLocaleSearchTerm(''); setLocaleCityFilter(''); }}
+            style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)' }}
+          >
+            <X size={18} />
+          </button>
+        )}
+      </div>
+
       <ManagementTable 
         isLoading={isLoading}
         columns={[
@@ -1595,7 +1644,11 @@ Status: ${error.response?.status || 'N/A'}
             )
           }
         ]}
-        data={locales}
+        data={locales.filter(l => {
+          const matchesSearch = l.nombre.toLowerCase().includes(localeSearchTerm.toLowerCase());
+          const matchesCity = !localeCityFilter || l.ciudad === localeCityFilter || l.distrito === localeCityFilter;
+          return matchesSearch && matchesCity;
+        })}
       />
 
       <div style={{ height: '400px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
