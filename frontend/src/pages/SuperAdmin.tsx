@@ -210,6 +210,12 @@ const SuperAdmin = () => {
   const [isVehicleDriverVerified, setIsVehicleDriverVerified] = useState(false);
   const [apiError, setApiError] = useState<{ message: string; details?: string } | null>(null);
 
+  const cities = Array.from(new Set([
+    ...lists.map(l => l.ciudad),
+    ...locales.map(l => l.ciudad || l.distrito),
+    ...campaigns.map(c => c.distrito)
+  ].filter(Boolean))).sort();
+
   const handleCopyDiagnostic = (error: any) => {
     const report = `--- API ERROR REPORT ---
 URL: ${window.location.href}
@@ -1258,7 +1264,7 @@ Status: ${error.response?.status || 'N/A'}
       return matchesSearch && matchesCity && matchesType;
     });
 
-    const cities = Array.from(new Set(lists.map(l => l.ciudad).filter(Boolean))).sort();
+
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
