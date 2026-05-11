@@ -473,7 +473,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   }
 
   // 4. Strict Hierarchy Isolation (for users/lists)
-  if (tableAlias === 'u' || tableAlias === 'l') {
+  if ((tableAlias === 'u' || tableAlias === 'l') && role !== 'JEFE_CAMPANA') {
     if (user.assigned_list_id) {
        if (tableAlias === 'l') sql += ` AND ${tableAlias}.id = ?`;
        else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_list_id = ?`;
@@ -1163,7 +1163,7 @@ app.get('/api/captures', (req, res) => {
     const params = [...(sec.params || [])];
     
     let listFilter = '';
-    if (role !== 'SUPERUSUARIO' || (list_id && !isNaN(list_id))) {
+    if ((role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') && list_id && !isNaN(list_id)) {
       if (list_id) {
         listFilter = `AND ec.list_id = ?`;
         params.push(list_id);
@@ -2128,7 +2128,7 @@ app.get('/api/stats/command', (req, res) => {
     // --- Parameterized list filter (avoids = NULL bug and SQL injection) ---
     let listFilterSql = '';
     const listFilterParams: any[] = [];
-    if (list_id && !isNaN(list_id)) {
+    if (list_id && !isNaN(list_id) && role !== 'JEFE_CAMPANA') {
       listFilterSql = 'AND ec.list_id = ?';
       listFilterParams.push(list_id);
     }
@@ -2307,7 +2307,7 @@ app.get('/api/structure/padrinos', (req, res) => {
       sql += " AND UPPER(u.distrito) = UPPER(?)";
       params.push(district);
     }
-    if (list_id) {
+    if (list_id && role !== 'JEFE_CAMPANA') {
       sql += " AND u.assigned_list_id = ?";
       params.push(list_id);
     }
@@ -2330,14 +2330,30 @@ app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
              COUNT(CASE WHEN ec.traffic_light='YELLOW' THEN 1 END) AS yellow,
              COUNT(CASE WHEN ec.traffic_light='RED'    THEN 1 END) AS red,
              COUNT(CASE WHEN ec.traffic_light='PURPLE' THEN 1 END) AS purple,
-             COUNT(CASE WHEN ec.needs_transport=1      THEN 1 END) AS needs_transport
+             COUNT(CASE WHEN ec.needs_transport=1      THEN 1 END) AS transport_needed
       FROM users u
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
       GROUP BY u.id
       ORDER BY u.nombre
     `).all(id);
-    res.json(coordinators);
+
+    const padrinoCaptures = db.prepare(`
+      SELECT 
+             COUNT(id)                                           AS total_electors,
+             COUNT(CASE WHEN traffic_light='GREEN'  THEN 1 END) AS green,
+             COUNT(CASE WHEN traffic_light='YELLOW' THEN 1 END) AS yellow,
+             COUNT(CASE WHEN traffic_light='RED'    THEN 1 END) AS red,
+             COUNT(CASE WHEN traffic_light='PURPLE' THEN 1 END) AS purple,
+             COUNT(CASE WHEN needs_transport=1      THEN 1 END) AS transport_needed
+      FROM elector_captures
+      WHERE coordinator_id = ?
+    `).get(id);
+
+    res.json({
+      coordinators,
+      padrino_captures: padrinoCaptures
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
