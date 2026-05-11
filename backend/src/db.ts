@@ -352,6 +352,13 @@ addColumnIfNotExists("whatsapp_templates", "lng", "REAL");
 addColumnIfNotExists("whatsapp_templates", "contact_name", "TEXT");
 addColumnIfNotExists("whatsapp_templates", "contact_phone", "TEXT");
 
+// Migrations for tables that existed before these columns were added to the CREATE TABLE schema
+addColumnIfNotExists("whatsapp_messages", "terminal_id", "TEXT DEFAULT 'default'");
+addColumnIfNotExists("whatsapp_messages", "contact_name", "TEXT");
+addColumnIfNotExists("whatsapp_messages", "type", "TEXT DEFAULT 'chat'");
+addColumnIfNotExists("whatsapp_messages", "media_url", "TEXT");
+addColumnIfNotExists("whatsapp_broadcast_logs", "terminal_id", "TEXT DEFAULT 'default'");
+
 // 🧹 MAINTENANCE (Disabled on startup to avoid locking)
 try {
   // Only checkpointing WAL to keep the file size manageable without full VACUUM
