@@ -2294,7 +2294,8 @@ app.get('/api/structure/padrinos', (req, res) => {
              COUNT(DISTINCT CASE WHEN ec.traffic_light='GREEN'  THEN ec.id END) AS green_total,
              COUNT(DISTINCT CASE WHEN ec.traffic_light='YELLOW' THEN ec.id END) AS yellow_total,
              COUNT(DISTINCT CASE WHEN ec.traffic_light='RED'    THEN ec.id END) AS red_total,
-             COUNT(DISTINCT CASE WHEN ec.traffic_light='PURPLE' THEN ec.id END) AS purple_total
+             COUNT(DISTINCT CASE WHEN ec.traffic_light='PURPLE' THEN ec.id END) AS purple_total,
+             COUNT(DISTINCT CASE WHEN ec.needs_transport=1      THEN ec.id END) AS transport_total
       FROM users u
       LEFT JOIN lists l           ON u.assigned_list_id = l.id
       LEFT JOIN users u2          ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'

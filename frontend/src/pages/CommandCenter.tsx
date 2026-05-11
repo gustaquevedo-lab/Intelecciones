@@ -1461,14 +1461,18 @@ const CommandCenter = () => {
                             </span>
                           </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '0.5rem' }}>
-                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 2px' }}>COORDS</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.coordinator_count}</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
+                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 1px' }}>COORDS</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.coordinator_count}</p>
                           </div>
-                          <div style={{ background: 'rgba(59,130,246,0.05)', padding: '0.6rem', borderRadius: '12px', border: '1px solid rgba(59,130,246,0.1)', textAlign: 'center' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--plra-300)', fontWeight: 800, margin: '0 0 2px' }}>CAPTURAS</p>
-                            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.total_electors || 0}</p>
+                          <div style={{ background: 'rgba(59,130,246,0.05)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.1)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--plra-300)', fontWeight: 800, margin: '0 0 1px' }}>CAPTADOS</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.total_electors || 0}</p>
+                          </div>
+                          <div style={{ background: 'rgba(251,191,36,0.05)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid rgba(251,191,36,0.1)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.45rem', color: 'var(--yellow)', fontWeight: 800, margin: '0 0 1px' }}>LOGÍSTICA</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.transport_total || 0}</p>
                           </div>
                         </div>
                         <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '1rem', display: 'flex', overflow: 'hidden' }}>
@@ -1557,34 +1561,39 @@ const CommandCenter = () => {
                                )}
                                <div style={{ flex: 1, minWidth: 0 }}>
                                  <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
-                                 <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', margin: 0, fontWeight: 700 }}>{c.total_electors || 0} CAPTURAS TOTALES</p>
+                                 <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', margin: 0, fontWeight: 800 }}>COORDINADOR OPERATIVO</p>
                                </div>
                              </div>
 
-                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
-                               <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(34,197,94,0.08)', borderRadius: '10px', border: '1px solid rgba(34,197,94,0.15)' }}>
-                                 <p style={{ fontSize: '0.45rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 2px' }}>CASA</p>
-                                 <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.green || 0}</p>
+                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '14px', border: '1px solid var(--border)', textAlign: 'center', marginBottom: '0.75rem' }}>
+                               <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 2px', textTransform: 'uppercase' }}>Total Captados</p>
+                               <p style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>{c.total_electors || 0}</p>
+                             </div>
+
+                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', marginBottom: '0.75rem' }}>
+                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(34,197,94,0.08)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.15)' }}>
+                                 <p style={{ fontSize: '0.4rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 1px' }}>CASA</p>
+                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.green || 0}</p>
                                </div>
-                               <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(234,179,8,0.08)', borderRadius: '10px', border: '1px solid rgba(234,179,8,0.15)' }}>
-                                 <p style={{ fontSize: '0.45rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 2px' }}>FAMILIARES</p>
-                                 <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
+                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(234,179,8,0.08)', borderRadius: '8px', border: '1px solid rgba(234,179,8,0.15)' }}>
+                                 <p style={{ fontSize: '0.4rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 1px' }}>FAMILIARES</p>
+                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
                                </div>
-                               <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(239,68,68,0.08)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.15)' }}>
-                                 <p style={{ fontSize: '0.45rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 2px' }}>OTROS</p>
-                                 <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
+                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.15)' }}>
+                                 <p style={{ fontSize: '0.4rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 1px' }}>OTROS</p>
+                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
                                </div>
-                               <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(168,85,247,0.08)', borderRadius: '10px', border: '1px solid rgba(168,85,247,0.15)' }}>
-                                 <p style={{ fontSize: '0.45rem', color: '#A855F7', fontWeight: 900, margin: '0 0 2px' }}>VOLUNTARIO</p>
-                                 <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
+                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(168,85,247,0.08)', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.15)' }}>
+                                 <p style={{ fontSize: '0.4rem', color: '#A855F7', fontWeight: 900, margin: '0 0 1px' }}>VOLUNTARIO</p>
+                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
                                </div>
                              </div>
-                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.08)', padding: '0.5rem 0.75rem', borderRadius: '12px' }}>
+                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.1)', padding: '0.5rem 0.75rem', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.15)' }}>
                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                 <Truck size={14} color="var(--plra-300)" />
-                                 <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-200)' }}>TRANSPORTE</span>
+                                 <Truck size={12} color="var(--plra-300)" />
+                                 <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-200)', textTransform: 'uppercase' }}>Logística</span>
                                </div>
-                               <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{c.transport_needed || 0}</span>
+                               <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.transport_needed || 0}</span>
                              </div>
                            </motion.div>
                          ))}
