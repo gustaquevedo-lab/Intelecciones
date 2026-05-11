@@ -31,6 +31,9 @@ export const API_BASE = baseURL;
 export const getImageUrl = (url?: string) => {
   if (!url) return null;
   
+  // If it's already a full data URL (base64), return as is
+  if (url.startsWith('data:')) return url;
+  
   let finalUrl = url;
   
   // 1. If the URL is a full URL but contains /uploads/, extract the relative path

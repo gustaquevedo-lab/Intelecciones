@@ -968,44 +968,43 @@ const CommandCenter = () => {
                 <button 
                   onClick={() => setShowVehicles(!showVehicles)}
                   style={{ 
-                    padding: '0.6rem 1rem', borderRadius: '10px', 
-                    background: showVehicles ? 'var(--plra-300)' : 'var(--surface)', 
-                    color: showVehicles ? 'white' : 'var(--text-3)',
-                    border: '1px solid var(--border)', fontSize: '0.7rem', fontWeight: 800,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                    padding: '0.45rem 0.8rem', borderRadius: '8px', 
+                    background: showVehicles ? 'var(--plra-500)' : 'rgba(8, 14, 28, 0.85)', 
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.62rem', fontWeight: 900,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)'
                   }}
                 >
-                  <Radio size={14} /> Logística: {showVehicles ? 'ON' : 'OFF'}
+                  <Radio size={12} style={{ color: showVehicles ? 'white' : 'var(--plra-300)' }} /> Logística: {showVehicles ? 'ON' : 'OFF'}
                 </button>
 
                 <button 
                   onClick={() => setIsClusteringEnabled(!isClusteringEnabled)}
                   style={{ 
-                    padding: '0.6rem 1rem', borderRadius: '10px', 
-                    background: isClusteringEnabled ? 'var(--plra-300)' : 'rgba(255,255,255,0.05)', 
+                    padding: '0.45rem 0.8rem', borderRadius: '8px', 
+                    background: isClusteringEnabled ? 'var(--plra-500)' : 'rgba(8, 14, 28, 0.85)', 
                     color: 'white',
-                    border: '1px solid var(--border)', fontSize: '0.7rem', fontWeight: 800,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                    backdropFilter: 'blur(8px)'
+                    border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.62rem', fontWeight: 900,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)'
                   }}
                 >
-                  <Target size={14} /> Agrupar: {isClusteringEnabled ? 'SI' : 'NO'}
+                  <Target size={12} style={{ color: isClusteringEnabled ? 'white' : 'var(--plra-300)' }} /> Agrupar: {isClusteringEnabled ? 'SI' : 'NO'}
                 </button>
                 
                 <div style={{ position: 'relative' }}>
                   <button
                     onClick={() => setShowLayerSelector(!showLayerSelector)}
                     style={{
-                      padding: '0.6rem 1rem', borderRadius: '10px',
-                      background: (selectedPadrinoLayers.length > 0 || selectedCoordLayers.length > 0) ? 'var(--plra-400)' : 'rgba(255,255,255,0.07)',
-                      color: 'white', border: '1px solid var(--border)', fontSize: '0.7rem', fontWeight: 800,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)', width: '100%'
+                      padding: '0.45rem 0.8rem', borderRadius: '8px',
+                      background: (selectedPadrinoLayers.length > 0 || selectedCoordLayers.length > 0) ? 'var(--plra-500)' : 'rgba(8, 14, 28, 0.85)',
+                      color: 'white', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.62rem', fontWeight: 900,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', width: '100%'
                     }}
                   >
-                    <Users size={14} />
+                    <Users size={12} style={{ color: (selectedPadrinoLayers.length > 0 || selectedCoordLayers.length > 0) ? 'white' : 'var(--plra-300)' }} />
                     Capas: {selectedPadrinoLayers.length === 0 && selectedCoordLayers.length === 0 ? 'Global' : `${selectedPadrinoLayers.length}P ${selectedCoordLayers.length}C`}
                   </button>
                   {showLayerSelector && (
