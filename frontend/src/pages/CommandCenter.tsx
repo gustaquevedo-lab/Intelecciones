@@ -10,6 +10,7 @@ import {
   Download, MapPin, Activity, Bell, X, Search,
   AlertCircle, ChevronRight, Truck, Target, MessageSquare, Mic, Clock
 } from 'lucide-react';
+import TeamPanel from './TeamPanel';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -823,6 +824,7 @@ const CommandCenter = () => {
         {([
           { id: 'map',       icon: MapPin,  label: 'Mapa Táctico',    badge: null },
           { id: 'hierarchy', icon: Shield,  label: 'Jerarquía',       badge: null },
+          { id: 'team',      icon: Users,   label: 'Mi Equipo',       badge: null },
           { id: 'requests',  icon: Bell,    label: 'Solicitudes',     badge: requests.filter(r => r.status === 'PENDING').length || null },
         ] as const).map(tab => (
           <button
@@ -1545,6 +1547,11 @@ const CommandCenter = () => {
                   </div>
                 )}
               </div>
+            </div>
+          ) : activeTab === 'team' ? (
+            /* ── Mi Equipo tab ── */
+            <div style={{ height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
+              <TeamPanel />
             </div>
           ) : (
             /* ── Solicitudes tab ── */

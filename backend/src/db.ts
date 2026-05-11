@@ -359,6 +359,15 @@ addColumnIfNotExists("whatsapp_messages", "type", "TEXT DEFAULT 'chat'");
 addColumnIfNotExists("whatsapp_messages", "media_url", "TEXT");
 addColumnIfNotExists("whatsapp_broadcast_logs", "terminal_id", "TEXT DEFAULT 'default'");
 
+// ── MULTI-TENANT ISOLATION MIGRATIONS ────────────────────────────────────────
+// campaign_id on electors: each tenant loads their own padron
+addColumnIfNotExists("electors", "campaign_id", "INTEGER");
+// campaign_id on whatsapp resources: each tenant sees only their terminals/messages
+addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
+addColumnIfNotExists("whatsapp_messages", "campaign_id", "INTEGER");
+// campaign_id on voting_locations: optional isolation (useful when tenants share a city)
+addColumnIfNotExists("voting_locations", "campaign_id", "INTEGER");
+
 // 🧹 MAINTENANCE (Disabled on startup to avoid locking)
 try {
   // Only checkpointing WAL to keep the file size manageable without full VACUUM
@@ -386,6 +395,8 @@ db.prepare("CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id
 db.prepare("CREATE INDEX IF NOT EXISTS idx_field_requests_status ON field_requests(status, timestamp DESC)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_campaign ON electors(campaign_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_terminals_campaign ON whatsapp_terminals(campaign_id)").run();
 
 
 export default db;

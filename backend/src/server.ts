@@ -370,7 +370,7 @@ const getRole = (req: express.Request) => (req.headers['x-user-role'] as string)
 // ── User district cache ────────────────────────────────────────────────────
 // Avoids a DB JOIN query on every single API request for non-SUPERUSUARIO users.
 // Cache TTL: 2 minutes. Cleared on user updates.
-interface CachedUser { assigned_list_id: number|null; assigned_campaign_id: number|null; distrito: string|null; ts: number; }
+interface CachedUser { assigned_list_id: number|null; assigned_campaign_id: number|null; distrito: string|null; campaign_id: number|null; ts: number; }
 const _userCache = new Map<string, CachedUser>();
 const USER_CACHE_TTL = 120_000;
 
@@ -380,18 +380,28 @@ const getCachedUserInfo = (user_id: string): CachedUser | null => {
   if (hit && now - hit.ts < USER_CACHE_TTL) return hit;
   const user = db.prepare(`
     SELECT u.assigned_list_id, u.assigned_campaign_id,
-           COALESCE(l.ciudad, c.distrito) as distrito
+           COALESCE(l.ciudad, c.distrito) as distrito,
+           COALESCE(l.campaign_id, u.assigned_campaign_id) as campaign_id
     FROM users u
     LEFT JOIN lists l ON u.assigned_list_id = l.id
     LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
     WHERE u.id = ?
   `).get(user_id) as any;
   if (!user) return null;
-  const entry: CachedUser = { assigned_list_id: user.assigned_list_id, assigned_campaign_id: user.assigned_campaign_id, distrito: user.distrito, ts: now };
+  const entry: CachedUser = { assigned_list_id: user.assigned_list_id, assigned_campaign_id: user.assigned_campaign_id, distrito: user.distrito, campaign_id: user.campaign_id ?? null, ts: now };
   _userCache.set(user_id, entry);
   return entry;
 };
 const clearUserCache = (user_id: string | number) => _userCache.delete(String(user_id));
+
+// ── Role-based access middleware ────────────────────────────────────────────
+const requireRole = (...roles: string[]) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const role = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+  if (!roles.map(r => r.toUpperCase()).includes(role)) {
+    return res.status(403).json({ error: 'Acceso denegado. Rol insuficiente.' });
+  }
+  next();
+};
 // ────────────────────────────────────────────────────────────────────────────
 
 const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
@@ -448,6 +458,12 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
   let sql = ` AND UPPER(${targetAlias}.${targetCol}) = UPPER(?)`;
   let params: any[] = [user.distrito];
+
+  // Electors: also filter by campaign_id when the tenant has one set — prevents cross-tenant elector leakage
+  if ((tableAlias === 'e') && user.campaign_id) {
+    sql += ` AND (${targetAlias}.campaign_id = ? OR ${targetAlias}.campaign_id IS NULL)`;
+    params.push(user.campaign_id);
+  }
 
   // 4. Strict Hierarchy Isolation (for users/lists)
   if (tableAlias === 'u' || tableAlias === 'l') {
@@ -1303,11 +1319,40 @@ app.get('/api/coordinators/:id/history', (req, res) => {
 });
 
 app.post('/api/users', (req, res) => {
+  const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+  const requesterId   = req.headers['x-user-id'] as string;
+
   const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
-  
+
   if (!username || !password || !role || !nombre) {
     return res.status(400).json({ error: 'Faltan campos obligatorios: Usuario, Contraseña, Rol y Nombre son requeridos.' });
   }
+
+  // ── Authorization: who can create whom ──────────────────────────────────
+  const ALLOWED_ROLES_TO_CREATE: Record<string, string[]> = {
+    SUPERUSUARIO: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','COORDINADOR','MIEMBRO_DE_MESA','CANDIDATO'],
+    JEFE_CAMPANA: ['PADRINO','COORDINADOR','MIEMBRO_DE_MESA'],
+    PADRINO:      ['COORDINADOR','MIEMBRO_DE_MESA'],
+  };
+  const allowed = ALLOWED_ROLES_TO_CREATE[requesterRole] || [];
+  if (!allowed.includes(role.toUpperCase())) {
+    return res.status(403).json({ error: `Tu rol (${requesterRole}) no puede crear usuarios con el rol ${role}.` });
+  }
+
+  // JEFE_CAMPANA/PADRINO: force campaign_id to their own, prevent cross-tenant creation
+  let forcedCampaignId: number | null = null;
+  if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
+    const requesterInfo = getCachedUserInfo(requesterId);
+    if (!requesterInfo?.campaign_id) {
+      return res.status(403).json({ error: 'No tienes una campaña asignada. Contacta al administrador.' });
+    }
+    forcedCampaignId = requesterInfo.campaign_id;
+    const bodyAssigned = assigned_campaign_id || campaign_id;
+    if (bodyAssigned && parseInt(bodyAssigned) !== forcedCampaignId) {
+      return res.status(403).json({ error: 'No puedes crear usuarios en otra campaña.' });
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const rawCI = ci || username; // Fallback to username if CI is not provided explicitly
   const cleanCI = rawCI ? rawCI.toString().replace(/\./g, '') : null;
@@ -1322,12 +1367,13 @@ app.post('/api/users', (req, res) => {
       }
     }
 
+    const effectiveCampaignId = forcedCampaignId ?? (assigned_campaign_id || campaign_id || null);
+
     let distrito = req.body.distrito;
-    if (!distrito && (assigned_campaign_id || campaign_id || assigned_list_id || list_id)) {
-      const campId = assigned_campaign_id || campaign_id;
+    if (!distrito && (effectiveCampaignId || assigned_list_id || list_id)) {
       const lstId = assigned_list_id || list_id;
-      const origin = campId 
-        ? db.prepare('SELECT distrito FROM campaigns WHERE id = ?').get(campId) 
+      const origin = effectiveCampaignId
+        ? db.prepare('SELECT distrito FROM campaigns WHERE id = ?').get(effectiveCampaignId)
         : db.prepare('SELECT ciudad as distrito FROM lists WHERE id = ?').get(lstId);
       distrito = (origin as any)?.distrito;
     }
@@ -1336,17 +1382,17 @@ app.post('/api/users', (req, res) => {
       INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci, needs_password_change, distrito)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `).run(
-      finalUsername, 
-      finalPassword, 
-      role, 
-      assigned_list_id || list_id || null, 
-      assigned_campaign_id || campaign_id || null, 
-      req.body.assigned_local || null, 
-      req.body.assigned_mesa || null, 
-      nombre, 
-      photo_url || null, 
-      parent_id || null, 
-      telefono || null, 
+      finalUsername,
+      finalPassword,
+      role,
+      assigned_list_id || list_id || null,
+      effectiveCampaignId,
+      req.body.assigned_local || null,
+      req.body.assigned_mesa || null,
+      nombre,
+      photo_url || null,
+      parent_id || null,
+      telefono || null,
       cleanCI,
       distrito || null
     );
@@ -1464,6 +1510,18 @@ app.post('/api/users/change-p', (req, res) => {
 });
 
 app.put('/api/users/:id', (req, res) => {
+  const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+  const requesterId   = req.headers['x-user-id'] as string;
+
+  // JEFE_CAMPANA / PADRINO: only edit users within their own campaign
+  if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
+    const requesterInfo = getCachedUserInfo(requesterId);
+    const targetUser = db.prepare('SELECT assigned_campaign_id FROM users WHERE id = ?').get(req.params.id) as any;
+    if (targetUser && requesterInfo?.campaign_id && targetUser.assigned_campaign_id !== requesterInfo.campaign_id) {
+      return res.status(403).json({ error: 'No puedes editar usuarios de otra campaña.' });
+    }
+  }
+
   const { role, assigned_list_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
   const cleanCI = ci ? ci.toString().replace(/\./g, '') : null;
   try {
@@ -1968,11 +2026,26 @@ app.get('/api/admin/verify-phone/:phone', (req, res) => {
 });
 
 app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo" });
+  if (!req.file) return res.status(400).json({ error: 'No se subió ningún archivo' });
+
+  const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+  const requesterId   = req.headers['x-user-id'] as string;
+
+  if (!['SUPERUSUARIO','JEFE_CAMPANA'].includes(requesterRole)) {
+    if (req.file) try { fs.unlinkSync(req.file.path); } catch {}
+    return res.status(403).json({ error: 'Solo el Superusuario o Jefe de Campaña puede importar padrones.' });
+  }
+
   const { distrito, ciudad } = req.body;
   const finalDistrito = distrito || ciudad;
-  if (!finalDistrito) return res.status(400).json({ error: "Debe especificar el distrito para este padrón" });
-  const distritoVal = finalDistrito; // Alias for use in mapping
+  if (!finalDistrito) return res.status(400).json({ error: 'Debe especificar el distrito para este padrón' });
+
+  // campaign_id: JEFE_CAMPANA forced to their own; SUPERUSUARIO can pass explicitly
+  let effectiveCampaignId: number | null = parseInt(req.body.campaign_id) || null;
+  if (requesterRole === 'JEFE_CAMPANA' && requesterId) {
+    const info = getCachedUserInfo(requesterId);
+    effectiveCampaignId = info?.campaign_id ?? null;
+  }
 
   try {
     const workbook = XLSX.readFile(req.file.path);
@@ -1981,24 +2054,22 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     const data: any[] = XLSX.utils.sheet_to_json(sheet);
 
     if (data.length === 0) {
-      return res.status(400).json({ error: "El archivo está vacío o tiene un formato incorrecto" });
+      return res.status(400).json({ error: 'El archivo está vacío o tiene un formato incorrecto' });
     }
 
     const insertStmt = db.prepare(`
-      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, distrito)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, distrito, campaign_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const transaction = db.transaction((rows) => {
       for (const row of rows) {
-        // Normalizar los encabezados para evitar problemas con espacios, tildes o mayúsculas
         const normalizedRow: any = {};
         for (const key in row) {
-          const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, "_").replace(/\./g, "");
+          const cleanKey = key.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim().replace(/\s+/g, "_").replace(/\./g, "");
           normalizedRow[cleanKey] = row[key];
         }
 
-        // Mapeo Inteligente basado en claves normalizadas
         const ci = normalizedRow['CEDULA'] || normalizedRow['CI'] || normalizedRow['DOCUMENTO'] || normalizedRow['NRO_CEDULA'] || normalizedRow['CEDULA_DE_IDENTIDAD'];
         const nombre = normalizedRow['NOMBRE'] || normalizedRow['NOMBRES'];
         const apellido = normalizedRow['APELLIDO'] || normalizedRow['APELLIDOS'];
@@ -2007,20 +2078,19 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
         const orden = normalizedRow['ORD_MESA'] || normalizedRow['ORDEN'] || normalizedRow['ORDEN_MESA'] || normalizedRow['NRO_ORDEN'] || 0;
 
         if (ci && (nombre || apellido)) {
-          insertStmt.run(ci.toString().trim(), nombre || '', apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito);
+          insertStmt.run(ci.toString().trim(), nombre || '', apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito, effectiveCampaignId);
         }
       }
     });
 
     transaction(data);
-    
-    // Cleanup
     fs.unlinkSync(req.file.path);
 
-    logAction(1, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para el distrito: ${finalDistrito}`);
-    res.json({ success: true, count: data.length });
+    const actorId = requesterId ? parseInt(requesterId) : 1;
+    logAction(actorId, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para ${finalDistrito} (campaign_id: ${effectiveCampaignId ?? 'global'})`);
+    res.json({ success: true, count: data.length, campaign_id: effectiveCampaignId });
   } catch (err: any) {
-    if (req.file) fs.unlinkSync(req.file.path);
+    if (req.file) try { fs.unlinkSync(req.file.path); } catch {}
     res.status(500).json({ error: err.message });
   }
 });
@@ -2464,6 +2534,111 @@ app.get('/api/admin/activity', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── MY TEAM — JEFE_CAMPANA / PADRINO self-service team management ────────────
+
+// GET /api/my-team — full hierarchy for the logged-in user's campaign
+app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (req, res) => {
+  const requesterId = req.headers['x-user-id'] as string;
+  const role = getRole(req);
+
+  try {
+    const info = getCachedUserInfo(requesterId);
+    const campaignId = info?.campaign_id;
+
+    // PADRINO: only sees their own coordinadores
+    if (role === 'PADRINO') {
+      const coordinators = db.prepare(`
+        SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
+               COUNT(ec.id) AS total_captures,
+               SUM(CASE WHEN ec.traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
+               SUM(CASE WHEN ec.traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
+               SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red
+        FROM users u
+        LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
+        WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')
+        GROUP BY u.id ORDER BY u.nombre
+      `).all(requesterId);
+      return res.json({ role: 'PADRINO', padrinos: [], coordinators });
+    }
+
+    // JEFE_CAMPANA / SUPERUSUARIO: full tree
+    const padrinos = db.prepare(`
+      SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
+             u.assigned_list_id, l.list_number, l.candidate_alias,
+             COUNT(DISTINCT u2.id) AS coordinator_count,
+             COUNT(DISTINCT ec.id) AS total_captures
+      FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'
+      LEFT JOIN elector_captures ec ON ec.coordinator_id = u2.id
+      WHERE u.role = 'PADRINO'
+        ${campaignId && role !== 'SUPERUSUARIO' ? 'AND u.assigned_campaign_id = ?' : ''}
+      GROUP BY u.id ORDER BY u.nombre
+    `).all(...(campaignId && role !== 'SUPERUSUARIO' ? [campaignId] : []));
+
+    res.json({ role, padrinos, coordinators: [] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/my-team/padrino/:id/coordinators
+app.get('/api/my-team/padrino/:id/coordinators', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (req, res) => {
+  const requesterId = req.headers['x-user-id'] as string;
+  const role = getRole(req);
+  const padrinoId = req.params.id;
+
+  // PADRINO can only view their own coordinators
+  if (role === 'PADRINO' && padrinoId !== requesterId) {
+    return res.status(403).json({ error: 'Solo puedes ver tu propio equipo.' });
+  }
+
+  try {
+    const coordinators = db.prepare(`
+      SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
+             COUNT(ec.id) AS total_captures,
+             SUM(CASE WHEN ec.traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
+             SUM(CASE WHEN ec.traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
+             SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red,
+             SUM(CASE WHEN ec.needs_transport=1      THEN 1 ELSE 0 END) AS needs_transport
+      FROM users u
+      LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
+      WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')
+      GROUP BY u.id ORDER BY u.nombre
+    `).all(padrinoId);
+    res.json(coordinators);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/campaigns/mine — campaigns the logged-in JEFE_CAMPANA owns
+app.get('/api/campaigns/mine', requireRole('SUPERUSUARIO','JEFE_CAMPANA'), (req, res) => {
+  const requesterId = req.headers['x-user-id'] as string;
+  const role = getRole(req);
+  try {
+    let campaigns;
+    if (role === 'SUPERUSUARIO') {
+      campaigns = db.prepare('SELECT * FROM campaigns ORDER BY name').all();
+    } else {
+      const info = getCachedUserInfo(requesterId);
+      campaigns = info?.campaign_id
+        ? db.prepare('SELECT * FROM campaigns WHERE id = ?').all(info.campaign_id)
+        : [];
+    }
+    // Also return the lists for each campaign
+    const result = (campaigns as any[]).map(c => ({
+      ...c,
+      lists: db.prepare('SELECT * FROM lists WHERE campaign_id = ?').all(c.id)
+    }));
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 // WhatsApp Endpoints
 app.get('/api/whatsapp/terminals', async (req, res) => {
