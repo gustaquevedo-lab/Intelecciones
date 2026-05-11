@@ -19,7 +19,10 @@
       "Bash(grep -n \"WHERE.*=.*req\\\\|WHERE.*\\\\${.*}\\\\|WHERE.*\\\\`\" \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\\\\backend\\\\src\\\\server.ts\")",
       "Bash(npx tsc *)",
       "Bash(./frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.json)",
-      "Bash(./node_modules/.bin/tsc --noEmit)"
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(git commit -m 'Fix: crash en startup — migrar columna terminal_id en whatsapp_messages antes de crear índice *)",
+      "Bash(python3)",
+      "Bash(node_modules/.bin/tsc --noEmit)"
     ]
   }
 }

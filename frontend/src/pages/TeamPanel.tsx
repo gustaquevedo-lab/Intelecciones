@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, Image as ImageIcon } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 interface TeamUser {
   id: number;
@@ -61,25 +62,82 @@ const CreateUserModal = ({
   campaigns: Campaign[];
 }) => {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
-    nombre: '', ci: '', telefono: '', password: '',
+    nombre: '', ci: '', telefono: '',
     role: defaultRole,
     assigned_list_id: '',
     parent_id: defaultParentId?.toString() || '',
     assigned_campaign_id: '',
+    photo_url: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [padrinos, setPadrinos] = useState<TeamUser[]>([]);
+  const [cropperData, setCropperData] = useState<{ image: string } | null>(null);
 
   // Load padrinos for assigning coordinators
   useEffect(() => {
-    if (defaultRole === 'COORDINADOR') {
+    if (form.role === 'COORDINADOR') {
       api.get('/my-team').then(r => setPadrinos(r.data.padrinos || [])).catch(() => {});
     }
-  }, [defaultRole]);
+  }, [form.role]);
 
-  const allLists = campaigns.flatMap(c => c.lists.map((l: any) => ({ ...l, campaign_name: c.name })));
+  // C.I. Lookup Autocomplete
+  useEffect(() => {
+    const lookup = async () => {
+      const cleanCI = form.ci.replace(/\./g, '');
+      if (cleanCI.length >= 6) {
+        try {
+          const res = await api.get(`/admin/verify-user/${cleanCI}`);
+          if (res.data) {
+            setForm(f => ({
+              ...f,
+              nombre: `${res.data.nombre} ${res.data.apellido}`.trim(),
+              photo_url: res.data.photo_url || f.photo_url
+            }));
+          }
+        } catch {}
+      }
+    };
+    const timer = setTimeout(lookup, 600);
+    return () => clearTimeout(timer);
+  }, [form.ci]);
+
+  const formatPhone = (val: string) => {
+    const clean = val.replace(/\D/g, '');
+    if (clean.length <= 4) return clean;
+    if (clean.length <= 7) return `${clean.slice(0, 4)} ${clean.slice(4)}`;
+    return `${clean.slice(0, 4)} ${clean.slice(4, 7)} ${clean.slice(7, 10)}`;
+  };
+
+  // Filter lists by user district
+  const allLists = campaigns
+    .filter(c => !user?.distrito || c.distrito === user.distrito)
+    .flatMap(c => c.lists.map((l: any) => ({ ...l, campaign_name: c.name })));
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperData({ image: reader.result as string });
+      e.target.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = async (croppedBlob: Blob) => {
+    setCropperData(null);
+    try {
+      const formData = new FormData();
+      formData.append('photo', croppedBlob, 'profile.jpg');
+      const res = await api.post('/upload-photo', formData);
+      setForm(f => ({ ...f, photo_url: res.data.photo_url }));
+    } catch (err) {
+      setError('Error al subir la foto');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,14 +150,15 @@ const CreateUserModal = ({
     try {
       const payload = {
         username: form.ci.replace(/\./g, ''),
-        password: form.password || form.ci.replace(/\./g, ''),
+        password: form.ci.replace(/\./g, ''), // Default to CI
         role: form.role,
         nombre: form.nombre.trim(),
         ci: form.ci.replace(/\./g, ''),
-        telefono: form.telefono || null,
+        telefono: form.telefono.replace(/\s/g, '') || null,
         assigned_list_id: form.assigned_list_id ? parseInt(form.assigned_list_id) : null,
         assigned_campaign_id: form.assigned_campaign_id ? parseInt(form.assigned_campaign_id) : (user?.assigned_campaign_id || null),
         parent_id: form.parent_id ? parseInt(form.parent_id) : null,
+        photo_url: form.photo_url || null,
       };
       await api.post('/users', payload);
       onCreated();
@@ -124,69 +183,137 @@ const CreateUserModal = ({
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-      zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+      zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', 
+      padding: '1rem', paddingTop: '80px', overflowY: 'auto'
     }}>
       <div style={{
-        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '20px',
-        width: '100%', maxWidth: '480px', padding: '2rem', position: 'relative',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.6)'
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '24px',
+        width: '100%', maxWidth: '520px', padding: '2rem', position: 'relative',
+        boxShadow: '0 25px 60px rgba(0,0,0,0.8)', marginBottom: '2rem'
       }}>
         <button onClick={onClose} style={{
-          position: 'absolute', top: '1rem', right: '1rem',
+          position: 'absolute', top: '1.25rem', right: '1.25rem',
           background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)',
-          borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)'
-        }}>
-          <X size={16} />
+          borderRadius: '10px', width: '36px', height: '36px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)',
+          transition: 'all 0.2s'
+        }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}>
+          <X size={18} />
         </button>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', marginBottom: '0.3rem' }}>
-            Nuevo {form.role === 'PADRINO' ? 'Padrino' : form.role === 'COORDINADOR' ? 'Coordinador' : 'Miembro de Mesa'}
+        <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+          <div style={{ position: 'relative', width: '90px', height: '90px', margin: '0 auto 1.5rem' }}>
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: '100%', height: '100%', borderRadius: '30px',
+                background: form.photo_url ? `url(${form.photo_url}) center/cover` : 'rgba(255,255,255,0.03)',
+                border: '2px dashed rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', overflow: 'hidden', transition: 'all 0.3s'
+              }}
+            >
+              {!form.photo_url && <Camera size={32} style={{ color: 'rgba(255,255,255,0.2)' }} />}
+            </div>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                position: 'absolute', bottom: '-5px', right: '-5px',
+                width: '32px', height: '32px', borderRadius: '10px',
+                background: 'var(--plra-300)', border: '3px solid var(--surface)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+                cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+              }}
+            >
+              <Plus size={16} />
+            </button>
+            <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
+          </div>
+
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginBottom: '0.4rem' }}>
+            Nuevo Miembro de Equipo
           </h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
-            La cédula será el usuario. La contraseña inicial es la cédula (el usuario la cambia al primer ingreso).
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', maxWidth: '300px', margin: '0 auto' }}>
+            Completa los datos para integrar un nuevo integrante a tu estructura.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div>
-              <label style={labelStyle}>Nombre completo *</label>
-              <input style={inputStyle} placeholder="Ej: Juan Pérez" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
-            </div>
-            <div>
-              <label style={labelStyle}>Cédula *</label>
-              <input style={inputStyle} placeholder="Sin puntos" value={form.ci} onChange={e => setForm(f => ({ ...f, ci: e.target.value }))} required />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div>
-              <label style={labelStyle}>Teléfono</label>
-              <input style={inputStyle} placeholder="0981..." value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
-            </div>
-            <div>
-              <label style={labelStyle}>Contraseña (opcional)</label>
-              <input style={inputStyle} type="password" placeholder="Default: cédula" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <label style={labelStyle}>Cédula de Identidad *</label>
+            <div style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+              <input 
+                style={{ ...inputStyle, paddingLeft: '2.5rem' }} 
+                placeholder="Sin puntos" 
+                value={form.ci} 
+                onChange={e => setForm(f => ({ ...f, ci: e.target.value.replace(/\D/g, '') }))} 
+                required 
+              />
             </div>
           </div>
 
           <div>
-            <label style={labelStyle}>Rol</label>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as any }))}>
-              {user?.role === 'SUPERUSUARIO' && <option value="JEFE_CAMPANA">Jefe de Campaña</option>}
-              {(user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA') && <option value="PADRINO">Padrino</option>}
-              <option value="COORDINADOR">Coordinador</option>
-              <option value="MIEMBRO_DE_MESA">Miembro de Mesa</option>
-            </select>
+            <label style={labelStyle}>Nombre Completo *</label>
+            <input 
+              style={inputStyle} 
+              placeholder="Ej: Juan Pérez" 
+              value={form.nombre} 
+              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} 
+              required 
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+            <div>
+              <label style={labelStyle}>Teléfono WhatsApp</label>
+              <div style={{ position: 'relative' }}>
+                <Phone size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                <input 
+                  style={{ ...inputStyle, paddingLeft: '2.5rem' }} 
+                  placeholder="0981 123 456" 
+                  value={form.telefono} 
+                  onChange={e => setForm(f => ({ ...f, telefono: formatPhone(e.target.value) }))} 
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Rol en el Equipo</label>
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+              {[
+                { id: 'PADRINO', label: 'Padrino', color: '#A855F7' },
+                { id: 'COORDINADOR', label: 'Coordinador', color: '#3B82F6' },
+                { id: 'MIEMBRO_DE_MESA', label: 'Mesa', color: '#F59E0B' }
+              ].map(r => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, role: r.id as any }))}
+                  style={{
+                    padding: '0.7rem 1.2rem', borderRadius: '14px', fontSize: '0.72rem', fontWeight: 900,
+                    cursor: 'pointer', transition: 'all 0.25s',
+                    background: form.role === r.id ? `${r.color}20` : 'rgba(255,255,255,0.03)',
+                    color: form.role === r.id ? r.color : 'rgba(255,255,255,0.4)',
+                    border: `1px solid ${form.role === r.id ? `${r.color}60` : 'rgba(255,255,255,0.08)'}`,
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    boxShadow: form.role === r.id ? `0 4px 12px ${r.color}20` : 'none'
+                  }}
+                >
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: form.role === r.id ? r.color : 'rgba(255,255,255,0.2)' }} />
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Lista asignada */}
           {allLists.length > 0 && (
             <div>
-              <label style={labelStyle}>Lista asignada</label>
+              <label style={labelStyle}>Lista Electoral</label>
               <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.assigned_list_id} onChange={e => {
                 const listId = e.target.value;
                 const list = allLists.find(l => l.id.toString() === listId);
@@ -207,13 +334,23 @@ const CreateUserModal = ({
           )}
 
           {/* Padrino superior (para coordinadores) */}
-          {form.role === 'COORDINADOR' && padrinos.length > 0 && !defaultParentId && (
+          {form.role === 'COORDINADOR' && (
             <div>
-              <label style={labelStyle}>Padrino responsable</label>
-              <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}>
-                <option value="">Sin padrino asignado</option>
-                {padrinos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+              <label style={labelStyle}>Padrino Responsable</label>
+              {defaultParentId ? (
+                <div style={{ 
+                  ...inputStyle, background: 'rgba(168,85,247,0.08)', color: '#A855F7', 
+                  border: '1px solid rgba(168,85,247,0.2)', display: 'flex', alignItems: 'center', gap: '0.6rem' 
+                }}>
+                  <UserCheck size={16} />
+                  <span style={{ fontWeight: 800 }}>{padrinos.find(p => p.id === defaultParentId)?.nombre || 'Padrino Asignado'}</span>
+                </div>
+              ) : (
+                <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}>
+                  <option value="">Seleccionar Padrino...</option>
+                  {padrinos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              )}
             </div>
           )}
 
@@ -221,24 +358,32 @@ const CreateUserModal = ({
             <div style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem',
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '10px', padding: '0.65rem 0.9rem'
+              borderRadius: '12px', padding: '0.8rem'
             }}>
-              <AlertCircle size={16} style={{ color: 'var(--red)', flexShrink: 0 }} />
+              <AlertCircle size={18} style={{ color: 'var(--red)', flexShrink: 0 }} />
               <span style={{ fontSize: '0.8rem', color: 'var(--red)', fontWeight: 700 }}>{error}</span>
             </div>
           )}
 
           <button type="submit" disabled={loading} style={{
-            padding: '0.85rem', borderRadius: '12px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-            background: loading ? 'rgba(255,255,255,0.08)' : 'var(--plra-300)',
-            color: loading ? 'var(--text-3)' : 'white', fontWeight: 900, fontSize: '0.9rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-            transition: 'all 0.2s'
-          }}>
-            {loading ? <><Loader size={16} className="spin" /> Creando...</> : <><CheckCircle size={16} /> Crear Usuario</>}
+            padding: '1rem', borderRadius: '14px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+            background: loading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, var(--plra-300), var(--plra-500))',
+            color: 'white', fontWeight: 900, fontSize: '0.95rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+            transition: 'all 0.3s', boxShadow: loading ? 'none' : '0 10px 20px rgba(59,130,246,0.3)'
+          }} onMouseEnter={e => !loading && (e.currentTarget.style.transform = 'translateY(-2px)')} onMouseLeave={e => !loading && (e.currentTarget.style.transform = 'translateY(0)')}>
+            {loading ? <><Loader size={20} className="spin" /> Procesando...</> : <><CheckCircle size={20} /> Confirmar Alta</>}
           </button>
         </form>
       </div>
+
+      {cropperData && (
+        <ImageCropperModal
+          image={cropperData.image}
+          onCropComplete={onCropComplete}
+          onClose={() => setCropperData(null)}
+        />
+      )}
     </div>
   );
 };
