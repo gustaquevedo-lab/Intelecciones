@@ -372,7 +372,7 @@ const getDistrict = (req: express.Request) => {
   return (d && d !== 'null' && d !== 'undefined' && d !== '') ? d as string : null;
 };
 
-const getRole = (req: express.Request) => (req.headers['x-user-role'] as string) || 'GUEST';
+const getRole = (req: express.Request) => (req.headers['x-user-role'] as string || 'GUEST').toUpperCase().trim();
 
 // ── User district cache ────────────────────────────────────────────────────
 // Avoids a DB JOIN query on every single API request for non-SUPERUSUARIO users.
@@ -1329,7 +1329,8 @@ app.post('/api/users', (req, res) => {
   const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
   const requesterId   = req.headers['x-user-id'] as string;
 
-  const { username, password, role, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
+  const { username, password, role: rawRole, assigned_list_id, list_id, assigned_campaign_id, campaign_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
+  const role = (rawRole || '').toUpperCase().trim();
 
   if (!username || !password || !role || !nombre) {
     return res.status(400).json({ error: 'Faltan campos obligatorios: Usuario, Contraseña, Rol y Nombre son requeridos.' });

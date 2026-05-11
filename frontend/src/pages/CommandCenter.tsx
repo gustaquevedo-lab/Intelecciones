@@ -17,7 +17,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CountdownCard } from '../components/CountdownCard';
-import api from '../services/api';
+import api, { getImageUrl } from '../services/api';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
@@ -1397,7 +1397,7 @@ const CommandCenter = () => {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                           {p.photo_url ? (
-                            <img src={p.photo_url} alt="" style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover', border: '2px solid var(--plra-500)' }} />
+                            <img src={getImageUrl(p.photo_url)} alt="" style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover', border: '2px solid var(--plra-500)' }} />
                           ) : (
                             <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{p.nombre?.charAt(0)}</div>
                           )}
@@ -1446,7 +1446,7 @@ const CommandCenter = () => {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                           {c.photo_url ? (
-                            <img src={c.photo_url} alt="" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
+                            <img src={getImageUrl(c.photo_url)} alt="" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
                           ) : (
                             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
                           )}

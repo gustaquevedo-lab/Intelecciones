@@ -79,9 +79,13 @@ const CreateUserModal = ({
   // Load padrinos for assigning coordinators
   useEffect(() => {
     if (form.role === 'COORDINADOR') {
-      api.get('/my-team').then(r => setPadrinos(r.data.padrinos || [])).catch(() => {});
+      if (user?.role === 'PADRINO') {
+        setPadrinos([user as any]);
+      } else {
+        api.get('/my-team').then(r => setPadrinos(r.data.padrinos || [])).catch(() => {});
+      }
     }
-  }, [form.role]);
+  }, [form.role, user]);
 
   // C.I. Lookup Autocomplete
   useEffect(() => {
@@ -430,7 +434,7 @@ const PadrinoRow = ({
       }} onClick={toggle}>
         <div style={{
           width: '40px', height: '40px', borderRadius: '50%',
-          background: padrino.photo_url ? `url(${padrino.photo_url}) center/cover` : 'rgba(168,85,247,0.2)',
+          background: padrino.photo_url ? `url(${getImageUrl(padrino.photo_url)}) center/cover` : 'rgba(168,85,247,0.2)',
           border: '2px solid rgba(168,85,247,0.4)', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem'
         }}>
@@ -500,7 +504,7 @@ const PadrinoRow = ({
             }}>
               <div style={{
                 width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-                background: c.photo_url ? `url(${c.photo_url}) center/cover` : 'rgba(59,130,246,0.2)',
+                background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
                 border: '2px solid rgba(59,130,246,0.3)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem'
               }}>
@@ -685,7 +689,7 @@ const TeamPanel = () => {
               }}>
                 <div style={{
                   width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
-                  background: c.photo_url ? `url(${c.photo_url}) center/cover` : 'rgba(59,130,246,0.2)',
+                  background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
                   border: '2px solid rgba(59,130,246,0.3)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
@@ -719,6 +723,7 @@ const TeamPanel = () => {
       {showCreatePadrino && (
         <CreateUserModal
           defaultRole={isPadrino ? 'COORDINADOR' : 'PADRINO'}
+          defaultParentId={isPadrino ? user?.id : undefined}
           campaigns={campaigns}
           onClose={() => setShowCreatePadrino(false)}
           onCreated={load}
