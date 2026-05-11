@@ -56,31 +56,38 @@ class WhatsAppManager {
   private clearChromiumLocks(userDataDir: string) {
     // These files are created by Chromium to prevent multiple instances.
     // On Railway container restarts the process is killed but files remain → next launch fails.
-    const lockFiles = ['SingletonLock', 'SingletonSocket', 'SingletonCookie'];
-    for (const f of lockFiles) {
-      const p = path.join(userDataDir, f);
-      try { if (fs.existsSync(p)) { fs.unlinkSync(p); console.log(`[WHATSAPP] Removed stale lock: ${p}`); } } catch {}
-    }
-    // Also clear inside Default/ profile dir (Chrome sometimes puts locks there)
-    const defaultDir = path.join(userDataDir, 'Default');
-    if (fs.existsSync(defaultDir)) {
-      for (const f of lockFiles) {
-        const p = path.join(defaultDir, f);
-        try { if (fs.existsSync(p)) { fs.unlinkSync(p); } } catch {}
-      }
-    }
-    // LocalAuth stores session inside a WWebJS subfolder
-    const wwebjsDir = path.join(userDataDir, '.wwebjs_auth');
-    if (fs.existsSync(wwebjsDir)) {
+    // We search recursively for these files because Chromium/Puppeteer/LocalAuth 
+    // nested structures can be complex.
+    const lockFiles = ['SingletonLock', 'SingletonSocket', 'SingletonCookie', 'lockfile'];
+    
+    const cleanup = (dir: string) => {
+      if (!fs.existsSync(dir)) return;
       try {
-        const entries = fs.readdirSync(wwebjsDir);
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const entry of entries) {
-          for (const f of lockFiles) {
-            const p = path.join(wwebjsDir, entry, f);
-            try { if (fs.existsSync(p)) { fs.unlinkSync(p); } } catch {}
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            cleanup(fullPath);
+          } else if (lockFiles.includes(entry.name)) {
+            try {
+              fs.unlinkSync(fullPath);
+              console.log(`[WHATSAPP] Removed stale lock: ${fullPath}`);
+            } catch (e) {
+              console.error(`[WHATSAPP] Failed to remove lock ${fullPath}:`, e);
+            }
           }
         }
-      } catch {}
+      } catch (err) {
+        console.error(`[WHATSAPP] Error during lock cleanup in ${dir}:`, err);
+      }
+    };
+
+    cleanup(userDataDir);
+    
+    // Also specifically target the LocalAuth internal folders which are notorious for this
+    const wwebjsDir = path.join(userDataDir, '.wwebjs_auth');
+    if (fs.existsSync(wwebjsDir)) {
+      cleanup(wwebjsDir);
     }
   }
 

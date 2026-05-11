@@ -27,4 +27,24 @@ api.interceptors.request.use((config) => {
 });
 
 export const API_BASE = baseURL;
+
+export const getImageUrl = (url?: string) => {
+  if (!url) return null;
+  
+  let finalUrl = url;
+  
+  // If it's a relative path, prepend the base API URL (without /api)
+  if (!url.startsWith('http')) {
+    const base = API_BASE.replace('/api', '');
+    finalUrl = `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+  
+  // Upgrade HTTP to HTTPS if the current page is HTTPS to avoid Mixed Content warnings
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && finalUrl.startsWith('http://')) {
+    finalUrl = finalUrl.replace('http://', 'https://');
+  }
+  
+  return finalUrl;
+};
+
 export default api;

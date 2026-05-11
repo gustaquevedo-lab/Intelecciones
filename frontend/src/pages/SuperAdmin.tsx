@@ -42,13 +42,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api, { API_BASE } from '../services/api';
-const getImageUrl = (url?: string) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  const base = API_BASE.replace('/api', '');
-  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
-};
+import api, { API_BASE, getImageUrl } from '../services/api';
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;

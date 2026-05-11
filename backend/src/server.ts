@@ -209,8 +209,15 @@ const logAction = (user_id: number | null, action: string, entity: string, entit
 
 app.post('/api/upload-photo', upload.single('photo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const host = req.get('host');
+  
+  const host = req.get('host') || '';
+  let protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+  
+  // Force HTTPS in production or for specific domains like railway.app
+  if (process.env.NODE_ENV === 'production' || host.includes('railway.app') || host.includes('vercel.app')) {
+    protocol = 'https';
+  }
+
   const baseUrl = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : `${protocol}://${host}`;
   const photoUrl = `${baseUrl}/uploads/${req.file.filename}`;
   res.json({ photo_url: photoUrl });

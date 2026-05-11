@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, Image as ImageIcon } from 'lucide-react';
-import api from '../services/api';
+import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
@@ -208,7 +208,7 @@ const CreateUserModal = ({
               onClick={() => fileInputRef.current?.click()}
               style={{
                 width: '100%', height: '100%', borderRadius: '30px',
-                background: form.photo_url ? `url(${form.photo_url}) center/cover` : 'rgba(255,255,255,0.03)',
+                background: form.photo_url ? `url(${getImageUrl(form.photo_url)}) center/cover` : 'rgba(255,255,255,0.03)',
                 border: '2px dashed rgba(255,255,255,0.15)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', overflow: 'hidden', transition: 'all 0.3s'
