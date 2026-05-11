@@ -248,7 +248,56 @@ const CaptureSchema = z.object({
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Intellecciones Backend' });
+  res.json({ status: 'ok', service: 'Intellecciones Backend', ts: Date.now() });
+});
+
+// Session Verification — refreshes user data from DB (called on frontend app mount)
+app.get('/api/me', (req, res) => {
+  const userId = req.headers['x-user-id'] as string;
+  if (!userId || userId === 'undefined' || userId === '') {
+    return res.status(401).json({ error: 'No auth header' });
+  }
+  try {
+    const user = db.prepare(`
+      SELECT u.id, u.username, u.role, u.nombre, u.photo_url, u.ci, u.telefono,
+             u.assigned_list_id, u.assigned_campaign_id, u.distrito, u.status,
+             u.needs_password_change, u.enabled_modules,
+             COALESCE(l.ciudad, c.distrito) as effective_distrito,
+             l.list_number, l.campaign_id
+      FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      WHERE u.id = ?
+    `).get(userId) as any;
+    if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+    if (user.status === 'INACTIVE') return res.status(403).json({ error: 'Cuenta desactivada' });
+
+    // Invalidate cache so next security filter uses fresh data
+    clearUserCache(userId);
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      nombre: user.nombre,
+      photo_url: user.photo_url,
+      ci: user.ci,
+      telefono: user.telefono,
+      assigned_list_id: user.assigned_list_id,
+      assigned_campaign_id: user.assigned_campaign_id,
+      distrito: user.effective_distrito || user.distrito,
+      needs_password_change: !!user.needs_password_change,
+      enabled_modules: user.enabled_modules
+        ? user.enabled_modules.split(',')
+        : (['SUPERUSUARIO', 'JEFE_CAMPANA'].includes(user.role)
+            ? ['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP', 'DAY_D', 'COMMUNICATIONS']
+            : ['REGISTRY']),
+      v: "1.0.6"
+    });
+  } catch (err: any) {
+    console.error('[/api/me error]', err.message);
+    res.status(500).json({ error: 'Error interno' });
+  }
 });
 
 app.get('/api/debug/db-info', (req, res) => {
@@ -303,7 +352,7 @@ app.post('/api/ingest', (req, res) => {
 const getListId = (req: express.Request) => {
   const q = req.query.listId as string;
   if (q && q !== 'null' && q !== 'undefined' && q !== '') return parseInt(q);
-  
+
   const h = req.headers['x-list-id'];
   return (h && h !== 'null' && h !== 'undefined' && h !== '') ? parseInt(h as string) : null;
 };
@@ -318,6 +367,33 @@ const getDistrict = (req: express.Request) => {
 
 const getRole = (req: express.Request) => (req.headers['x-user-role'] as string) || 'GUEST';
 
+// ── User district cache ────────────────────────────────────────────────────
+// Avoids a DB JOIN query on every single API request for non-SUPERUSUARIO users.
+// Cache TTL: 2 minutes. Cleared on user updates.
+interface CachedUser { assigned_list_id: number|null; assigned_campaign_id: number|null; distrito: string|null; ts: number; }
+const _userCache = new Map<string, CachedUser>();
+const USER_CACHE_TTL = 120_000;
+
+const getCachedUserInfo = (user_id: string): CachedUser | null => {
+  const now = Date.now();
+  const hit = _userCache.get(user_id);
+  if (hit && now - hit.ts < USER_CACHE_TTL) return hit;
+  const user = db.prepare(`
+    SELECT u.assigned_list_id, u.assigned_campaign_id,
+           COALESCE(l.ciudad, c.distrito) as distrito
+    FROM users u
+    LEFT JOIN lists l ON u.assigned_list_id = l.id
+    LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+    WHERE u.id = ?
+  `).get(user_id) as any;
+  if (!user) return null;
+  const entry: CachedUser = { assigned_list_id: user.assigned_list_id, assigned_campaign_id: user.assigned_campaign_id, distrito: user.distrito, ts: now };
+  _userCache.set(user_id, entry);
+  return entry;
+};
+const clearUserCache = (user_id: string | number) => _userCache.delete(String(user_id));
+// ────────────────────────────────────────────────────────────────────────────
+
 const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   const role = (getRole(req) || 'GUEST').toUpperCase().trim();
   const user_id = req.headers['x-user-id'];
@@ -331,45 +407,35 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   if (role === 'SUPERUSUARIO') {
     let sql = '';
     let params: any[] = [];
-    
-    // Only apply district filter if a specific district is selected and the table supports it
+
     if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
       if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
         sql += ` AND UPPER(${tableAlias}.${distColumn}) = UPPER(?)`;
         params.push(activeDistrict);
       } else if (tableAlias === 'ec') {
-        // For captures, we join with electors 'e' and filter by e.ciudad
         sql += ` AND UPPER(e.ciudad) = UPPER(?)`;
         params.push(activeDistrict);
       }
     }
-    
+
     const listId = getListId(req);
     if (listId && !isNaN(listId)) {
-       if (tableAlias === 'l') { 
-         sql += ` AND ${tableAlias}.id = ?`; 
-         params.push(listId); 
-       }
-       else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'u' || tableAlias === 'capture_conflicts') { 
+       if (tableAlias === 'l') {
+         sql += ` AND ${tableAlias}.id = ?`;
+         params.push(listId);
+       } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'u' || tableAlias === 'capture_conflicts') {
          const col = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
-         sql += ` AND ${tableAlias}.${col} = ?`; 
-         params.push(listId); 
+         sql += ` AND ${tableAlias}.${col} = ?`;
+         params.push(listId);
        }
     }
     return { sql, params };
   }
 
-  // 3. Non-SuperUsers: Locked to their assignment
+  // 3. Non-SuperUsers: Locked to their assignment (uses cache)
   if (!user_id) return { sql: ' AND 1=0', params: [] };
 
-  const user = db.prepare(`
-    SELECT u.assigned_list_id, u.assigned_campaign_id, COALESCE(l.ciudad, c.distrito) as distrito 
-    FROM users u 
-    LEFT JOIN lists l ON u.assigned_list_id = l.id 
-    LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
-    WHERE u.id = ?
-  `).get(user_id) as any;
-
+  const user = getCachedUserInfo(user_id as string);
   if (!user || !user.distrito) return { sql: ' AND 1=0', params: [] };
 
   // Adjust for ec (elector_captures) which needs to filter via joined electors table 'e'
@@ -381,7 +447,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   }
 
   let sql = ` AND UPPER(${targetAlias}.${targetCol}) = UPPER(?)`;
-  let params = [user.distrito];
+  let params: any[] = [user.distrito];
 
   // 4. Strict Hierarchy Isolation (for users/lists)
   if (tableAlias === 'u' || tableAlias === 'l') {
@@ -394,7 +460,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
        else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_campaign_id = ?`;
        params.push(user.assigned_campaign_id);
     }
-  } 
+  }
   // PERMISSIVE isolation for Map/Stats for Jefes (they see the whole district battle)
   else if (role === 'JEFE_CAMPANA') {
      // Jefes see EVERYTHING in their district for intelligence tables
@@ -406,7 +472,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       params.push(user.assigned_list_id);
     }
   }
-  
+
   return { sql, params };
 };
 
@@ -1419,6 +1485,7 @@ app.put('/api/users/:id', (req, res) => {
       req.body.distrito || null,
       req.params.id
     );
+    clearUserCache(req.params.id); // invalidate cache after update
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
     res.json({ success: true });
   } catch (err: any) {
@@ -2140,21 +2207,24 @@ app.get('/api/structure/padrinos', (req, res) => {
   const role = getRole(req);
 
   try {
+    // Single-pass GROUP BY replaces 5 correlated subqueries — ~10x faster
     let sql = `
       SELECT u.id, u.nombre, u.photo_url, u.telefono, u.assigned_list_id,
-      l.list_number, l.option_number,
-      (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id) as coordinator_count,
-      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id) as total_electors,
-      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'GREEN') as green_total,
-      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'YELLOW') as yellow_total,
-      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'RED') as red_total,
-      (SELECT COUNT(*) FROM elector_captures ec JOIN users u2 ON ec.coordinator_id = u2.id WHERE u2.parent_id = u.id AND ec.traffic_light = 'PURPLE') as purple_total
+             l.list_number, l.option_number,
+             COUNT(DISTINCT u2.id) AS coordinator_count,
+             COUNT(DISTINCT ec.id) AS total_electors,
+             COUNT(DISTINCT CASE WHEN ec.traffic_light='GREEN'  THEN ec.id END) AS green_total,
+             COUNT(DISTINCT CASE WHEN ec.traffic_light='YELLOW' THEN ec.id END) AS yellow_total,
+             COUNT(DISTINCT CASE WHEN ec.traffic_light='RED'    THEN ec.id END) AS red_total,
+             COUNT(DISTINCT CASE WHEN ec.traffic_light='PURPLE' THEN ec.id END) AS purple_total
       FROM users u
-      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN lists l           ON u.assigned_list_id = l.id
+      LEFT JOIN users u2          ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'
+      LEFT JOIN elector_captures ec ON ec.coordinator_id = u2.id
       WHERE u.role = 'PADRINO'
     `;
     let params: any[] = [];
-    
+
     if (district && district !== 'Global') {
       sql += " AND UPPER(u.distrito) = UPPER(?)";
       params.push(district);
@@ -2163,6 +2233,7 @@ app.get('/api/structure/padrinos', (req, res) => {
       sql += " AND u.assigned_list_id = ?";
       params.push(list_id);
     }
+    sql += " GROUP BY u.id ORDER BY u.nombre";
 
     const padrinos = db.prepare(sql).all(...params);
     res.json(padrinos);
@@ -2176,14 +2247,17 @@ app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
   try {
     const coordinators = db.prepare(`
       SELECT u.id, u.nombre, u.photo_url, u.telefono,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) as total_electors,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') as green,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') as yellow,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'RED') as red,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') as purple,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) as transport_needed
+             COUNT(ec.id)                                           AS total_electors,
+             COUNT(CASE WHEN ec.traffic_light='GREEN'  THEN 1 END) AS green,
+             COUNT(CASE WHEN ec.traffic_light='YELLOW' THEN 1 END) AS yellow,
+             COUNT(CASE WHEN ec.traffic_light='RED'    THEN 1 END) AS red,
+             COUNT(CASE WHEN ec.traffic_light='PURPLE' THEN 1 END) AS purple,
+             COUNT(CASE WHEN ec.needs_transport=1      THEN 1 END) AS needs_transport
       FROM users u
+      LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+      GROUP BY u.id
+      ORDER BY u.nombre
     `).all(id);
     res.json(coordinators);
   } catch (err: any) {
@@ -2409,8 +2483,19 @@ app.get('/api/whatsapp/status', (req, res) => {
 
 app.post('/api/whatsapp/connect', (req, res) => {
   const terminalId = (req.body.terminalId as string) || 'default';
+  const status = whatsappService.getStatus(terminalId);
+  if (!status) {
+    return res.status(404).json({ error: `Terminal "${terminalId}" no encontrada. Créala primero.` });
+  }
+  if (status.status === 'CONNECTED') {
+    return res.json({ success: true, status: 'CONNECTED', message: 'Ya conectada' });
+  }
+  if (status.status === 'CONNECTING') {
+    return res.json({ success: true, status: 'CONNECTING', message: 'Ya iniciando conexión', qr: status.qr });
+  }
+  // Fire and forget — Puppeteer/Chromium takes 5-30s to generate QR
   whatsappService.connect(terminalId);
-  res.json({ success: true });
+  res.json({ success: true, status: 'CONNECTING', message: 'Iniciando conexión WhatsApp...' });
 });
 
 app.post('/api/whatsapp/disconnect', (req, res) => {

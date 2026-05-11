@@ -1145,6 +1145,62 @@ select option:active {
   .header-row1 { padding: 0 0.75rem; gap: 0.35rem; }
 }
 
+/* ── Header Row 3 — mobile-only compact filter bar ─────────── */
+.header-row3 {
+  display: none; /* hidden by default — shown only on mobile */
+}
+
+@media (max-width: 767px) {
+  .header-row3 {
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem 0.5rem;
+    gap: 0;
+    background: transparent;
+  }
+  .header-row3-group {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .header-row3-label {
+    font-size: 0.5rem;
+    font-weight: 900;
+    color: var(--plra-300);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .header-row3-select {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header-row3-select:focus { border-color: var(--plra-300); }
+  .header-row3-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 0.5rem;
+    flex-shrink: 0;
+  }
+}
+
 /* Mobile: show labels under module icons, expand touch target */
 @media (max-width: 639px) {
   .module-btn { width: 42px; height: 42px; }

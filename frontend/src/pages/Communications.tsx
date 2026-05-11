@@ -1504,37 +1504,68 @@ const TemplatesTab: React.FC = () => {
 // ─── Lines Tab ────────────────────────────────────────────────────────────────
 
 const LinesTab: React.FC = () => {
-  const [terminals, setTerminals] = useState<Terminal[]>([]);
-  const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
+  const [terminals, setTerminals] = useState<(Terminal & { qr?: string; lastError?: string })[]>([]);
   const [newId, setNewId] = useState('');
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
+  const [connectingSet, setConnectingSet] = useState<Set<string>>(new Set());
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Single call to /terminals — status+qr included
   const loadTerminals = useCallback(async () => {
     try {
       const r = await api.get('/whatsapp/terminals');
-      setTerminals(r.data);
-      for (const t of r.data) {
-        const s = await api.get(`/whatsapp/status?terminalId=${t.id}`);
-        setTerminals(prev => prev.map(p => p.id === t.id ? { ...p, status: s.data.status } : p));
-        if (s.data.qr) setQrCodes(prev => ({ ...prev, [t.id]: s.data.qr }));
-      }
+      const list = r.data as any[];
+      // Fetch status (with QR) for each terminal in parallel
+      const statuses = await Promise.all(
+        list.map(t => api.get(`/whatsapp/status?terminalId=${t.id}`).then(s => ({ id: t.id, ...s.data })).catch(() => ({ id: t.id, status: 'DISCONNECTED', qr: null, lastError: null })))
+      );
+      setTerminals(list.map(t => {
+        const s = statuses.find(x => x.id === t.id) || {};
+        return { ...t, status: s.status || t.status, qr: s.qr || null, lastError: s.lastError || null };
+      }));
+      // Auto-clear connecting state when terminal reaches final status
+      setConnectingSet(prev => {
+        const next = new Set(prev);
+        statuses.forEach(s => { if (s.status === 'CONNECTED' || (s.status === 'DISCONNECTED' && s.lastError)) next.delete(s.id); });
+        return next;
+      });
     } catch {}
   }, []);
 
+  // Smart polling: faster (3s) when any terminal is CONNECTING, else 8s
   useEffect(() => {
     loadTerminals();
-    const t = setInterval(loadTerminals, 8000);
+    const hasConnecting = terminals.some(t => t.status === 'CONNECTING') || connectingSet.size > 0;
+    const interval = hasConnecting ? 3000 : 8000;
+    const t = setInterval(loadTerminals, interval);
     return () => clearInterval(t);
-  }, [loadTerminals]);
+  }, [loadTerminals, terminals.length, connectingSet.size]);
 
   const connect = async (id: string) => {
-    await api.post('/whatsapp/connect', { terminalId: id });
-    setTimeout(loadTerminals, 2000);
+    setConnectingSet(prev => new Set(prev).add(id));
+    setErrors(prev => { const n = { ...prev }; delete n[id]; return n; });
+    try {
+      const r = await api.post('/whatsapp/connect', { terminalId: id });
+      if (r.data.qr) {
+        setTerminals(prev => prev.map(t => t.id === id ? { ...t, status: 'CONNECTING', qr: r.data.qr } : t));
+      }
+      // Start fast polling
+      setTimeout(loadTerminals, 2000);
+      setTimeout(loadTerminals, 5000);
+      setTimeout(loadTerminals, 10000);
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || 'Error al conectar';
+      setErrors(prev => ({ ...prev, [id]: msg }));
+      setConnectingSet(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }
   };
 
   const disconnect = async (id: string) => {
-    await api.post('/whatsapp/disconnect', { terminalId: id });
+    try {
+      await api.post('/whatsapp/disconnect', { terminalId: id });
+      setTerminals(prev => prev.map(t => t.id === id ? { ...t, status: 'DISCONNECTED', qr: null } : t));
+    } catch {}
     setTimeout(loadTerminals, 1000);
   };
 
@@ -1552,7 +1583,10 @@ const LinesTab: React.FC = () => {
   return (
     <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-        <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>Líneas WhatsApp</h3>
+        <div>
+          <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>Líneas WhatsApp</h3>
+          <p style={{ fontSize: '0.62rem', color: 'var(--text-3)', margin: '0.15rem 0 0 0' }}>Cada línea necesita un teléfono con WhatsApp activo</p>
+        </div>
         <button onClick={loadTerminals}
           style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.4rem', cursor: 'pointer', color: 'var(--text-2)', display: 'flex' }}>
           <RefreshCw size={14} />
@@ -1560,42 +1594,77 @@ const LinesTab: React.FC = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {terminals.map(terminal => (
+        {terminals.map(terminal => {
+          const isBusy = connectingSet.has(terminal.id) || terminal.status === 'CONNECTING';
+          const errMsg = errors[terminal.id] || terminal.lastError;
+          return (
           <div key={terminal.id} style={{
             padding: '1.25rem', borderRadius: '14px',
-            background: 'var(--surface)', border: `1px solid ${terminal.status === 'CONNECTED' ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
-            boxShadow: terminal.status === 'CONNECTED' ? '0 0 20px rgba(34,197,94,0.06)' : 'none'
+            background: 'var(--surface)',
+            border: `1px solid ${terminal.status === 'CONNECTED' ? 'rgba(34,197,94,0.35)' : isBusy ? 'rgba(59,130,246,0.3)' : 'var(--border)'}`,
+            boxShadow: terminal.status === 'CONNECTED' ? '0 0 20px rgba(34,197,94,0.07)' : isBusy ? '0 0 16px rgba(59,130,246,0.07)' : 'none',
+            transition: 'border-color 0.3s, box-shadow 0.3s'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
               <div style={{
                 width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
-                background: 'rgba(37,211,102,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                background: terminal.status === 'CONNECTED' ? 'rgba(34,197,94,0.12)' : isBusy ? 'rgba(59,130,246,0.12)' : 'rgba(37,211,102,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                <Smartphone size={20} style={{ color: '#25d366' }} />
+                {isBusy ? <Loader2 size={20} style={{ color: '#3B82F6', animation: 'spin 1s linear infinite' }} />
+                         : <Smartphone size={20} style={{ color: terminal.status === 'CONNECTED' ? '#25d366' : 'var(--text-3)' }} />}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)' }}>{terminal.name}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
                   <StatusDot status={terminal.status} />
-                  <span style={{ fontSize: '0.62rem', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 700 }}>{terminal.status}</span>
+                  <span style={{ fontSize: '0.62rem', color: isBusy ? '#93C5FD' : 'var(--text-3)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    {isBusy ? 'ESPERANDO QR...' : terminal.status}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {terminal.status === 'CONNECTING' && qrCodes[terminal.id] && (
-              <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: '0.5rem', fontWeight: 700 }}>Escanea con tu WhatsApp</div>
-                <img src={qrCodes[terminal.id]} alt="QR" style={{ width: '160px', height: '160px', borderRadius: '8px' }} />
+            {/* QR Code — show when connecting AND qr available */}
+            {terminal.qr && terminal.status !== 'CONNECTED' && (
+              <div style={{ textAlign: 'center', marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.65rem', color: '#93C5FD', marginBottom: '0.5rem', fontWeight: 800, letterSpacing: '0.05em' }}>📱 ABRE WHATSAPP → DISPOSITIVOS VINCULADOS → ESCANEAR QR</div>
+                <img src={terminal.qr} alt="QR" style={{ width: '172px', height: '172px', borderRadius: '10px', display: 'block', margin: '0 auto' }} />
+                <div style={{ fontSize: '0.58rem', color: 'var(--text-3)', marginTop: '0.4rem' }}>El QR se renueva cada ~60 segundos</div>
+              </div>
+            )}
+
+            {/* Waiting for QR */}
+            {isBusy && !terminal.qr && (
+              <div style={{ textAlign: 'center', marginBottom: '1rem', padding: '0.75rem', background: 'rgba(59,130,246,0.05)', borderRadius: '10px', border: '1px dashed rgba(59,130,246,0.2)' }}>
+                <Loader2 size={24} style={{ color: '#3B82F6', animation: 'spin 1s linear infinite', margin: '0 auto 0.4rem' }} />
+                <div style={{ fontSize: '0.62rem', color: '#93C5FD', fontWeight: 700 }}>Iniciando navegador seguro...</div>
+                <div style={{ fontSize: '0.58rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>Puede tardar 10-30 segundos</div>
+              </div>
+            )}
+
+            {/* Error display */}
+            {errMsg && !isBusy && (
+              <div style={{ marginBottom: '0.75rem', padding: '0.5rem 0.6rem', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <p style={{ fontSize: '0.6rem', color: '#FCA5A5', margin: 0, fontWeight: 700 }}>⚠ {errMsg}</p>
               </div>
             )}
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {terminal.status !== 'CONNECTED' ? (
-                <button onClick={() => connect(terminal.id)} style={{
-                  flex: 1, padding: '0.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                  background: 'rgba(37,211,102,0.15)', color: '#25d366', fontSize: '0.72rem', fontWeight: 700
-                }}>
-                  Conectar
+                <button
+                  onClick={() => connect(terminal.id)}
+                  disabled={isBusy}
+                  style={{
+                    flex: 1, padding: '0.5rem', borderRadius: '8px', border: 'none',
+                    cursor: isBusy ? 'not-allowed' : 'pointer',
+                    background: isBusy ? 'rgba(59,130,246,0.12)' : 'rgba(37,211,102,0.15)',
+                    color: isBusy ? '#93C5FD' : '#25d366',
+                    fontSize: '0.72rem', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                    opacity: isBusy ? 0.7 : 1
+                  }}>
+                  {isBusy ? <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Conectando...</> : 'Conectar'}
                 </button>
               ) : (
                 <button onClick={() => disconnect(terminal.id)} style={{
@@ -1607,7 +1676,8 @@ const LinesTab: React.FC = () => {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {/* Add new line card */}
         <div style={{

@@ -4,13 +4,16 @@ import api from '../services/api';
 interface User {
     id: number;
     username: string;
-    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR' | 'CANDIDATO';
+    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR' | 'CANDIDATO' | 'MIEMBRO_DE_MESA';
     nombre: string;
     party?: string;
     assigned_list_id?: number;
     assigned_campaign_id?: number;
     photo_url?: string;
     enabled_modules?: string[];
+    distrito?: string;
+    ci?: string;
+    telefono?: string;
 }
 
 interface AuthContextType {
@@ -28,7 +31,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    console.log('Rendering AuthProvider');
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeListId, setActiveListId] = useState<number | null>(null);
@@ -38,22 +40,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('auth_user');
         const savedListId = localStorage.getItem('active_list_id');
         const savedDistrict = localStorage.getItem('active_district');
+
         if (savedUser) {
-            let parsed = JSON.parse(savedUser);
-            // Legacy mapping
-            if (parsed.role === 'SUPER_ADMIN') parsed.role = 'SUPERUSUARIO';
-            if (parsed.role === 'COORDINATOR') parsed.role = 'COORDINADOR';
-            if (parsed.role === 'CANDIDATE') parsed.role = 'JEFE_CAMPANA';
-            
+            let parsed: User;
+            try { parsed = JSON.parse(savedUser); } catch { localStorage.removeItem('auth_user'); setLoading(false); return; }
+
+            // Legacy role mapping
+            if ((parsed as any).role === 'SUPER_ADMIN') parsed.role = 'SUPERUSUARIO';
+            if ((parsed as any).role === 'COORDINATOR') parsed.role = 'COORDINADOR';
+            if ((parsed as any).role === 'CANDIDATE') parsed.role = 'JEFE_CAMPANA';
+
+            // Set immediately from cache (instant UI)
             setUser(parsed);
-            
-            // For non-superadmins, force their assigned_list_id
             if (parsed.role !== 'SUPERUSUARIO') {
-                setActiveListId(parsed.assigned_list_id);
+                setActiveListId(parsed.assigned_list_id ?? null);
             } else {
                 if (savedListId) setActiveListId(savedListId === 'null' ? null : parseInt(savedListId));
                 if (savedDistrict) setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);
             }
+
+            // Background refresh — re-fetch user data from server to catch any changes
+            api.get('/me').then(res => {
+                const fresh: User = res.data;
+                setUser(fresh);
+                localStorage.setItem('auth_user', JSON.stringify(fresh));
+                // Refresh list if it changed server-side
+                if (fresh.role !== 'SUPERUSUARIO' && fresh.assigned_list_id !== parsed.assigned_list_id) {
+                    setActiveListId(fresh.assigned_list_id ?? null);
+                }
+            }).catch(() => {
+                // Server unavailable (cold start, offline) — keep cached user, don't logout
+            });
         }
         setLoading(false);
     }, []);

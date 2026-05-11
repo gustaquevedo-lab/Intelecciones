@@ -21,7 +21,14 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 console.log("Initializing database at:", dbPath);
 const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+
+// ⚡ PERFORMANCE PRAGMAS — must run before any query
+db.pragma('journal_mode = WAL');       // concurrent reads + writes
+db.pragma('synchronous = NORMAL');     // safe with WAL, 3x faster than FULL
+db.pragma('cache_size = -65536');      // 64 MB page cache (default is 2 MB)
+db.pragma('temp_store = MEMORY');      // temp tables & indexes in RAM
+db.pragma('mmap_size = 134217728');    // 128 MB memory-mapped I/O
+db.pragma('busy_timeout = 5000');      // wait up to 5s before SQLITE_BUSY
 
 // 🏗️ SCHEMA CONSOLIDATION
 db.exec(`
@@ -354,16 +361,24 @@ try {
 /* OPTIMIZATION INDEXES */
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors (ciudad)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_nombre ON electors (nombre, apellido)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_ci ON users (ci)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_users_username ON users (username)").run();  // critical for login
+db.prepare("CREATE INDEX IF NOT EXISTS idx_users_role ON users (role, assigned_list_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_users_distrito ON users (distrito)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_users_list ON users (assigned_list_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captures(elector_ci)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_campaign ON elector_captures(campaign_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_traffic ON elector_captures(traffic_light)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_transport ON elector_captures(needs_transport)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_field_requests_status ON field_requests(status, timestamp DESC)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC)").run();
 
 
 export default db;

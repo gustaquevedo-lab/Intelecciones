@@ -172,6 +172,46 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
             <span className="header-module-title-text">{title}</span>
           </motion.div>
         </div>
+
+        {/* ── ROW 3 ── Mobile-only compact filter bar */}
+        {showDistrictSelector && (
+          <div className="header-row3">
+            <div className="header-row3-group">
+              <span className="header-row3-label">DIST</span>
+              <select
+                value={activeDistrict ?? 'null'}
+                onChange={e => {
+                  setActiveDistrict(e.target.value === 'null' ? null : e.target.value);
+                  setActiveListId(null);
+                }}
+                className="header-row3-select"
+              >
+                <option value="null">🌎 Todos</option>
+                {districts.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <div className="header-row3-divider" />
+            <div className="header-row3-group">
+              <span className="header-row3-label">LISTA</span>
+              <select
+                value={activeListId === null ? 'null' : activeListId}
+                onChange={e => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
+                className="header-row3-select"
+              >
+                <option value="null">📋 Todas</option>
+                {lists
+                  .filter(l => !activeDistrict || l.ciudad === activeDistrict || l.campaign_distrito === activeDistrict)
+                  .map((l: any) => (
+                    <option key={l.id} value={l.id}>
+                      L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        )}
       </header>
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', position: 'relative' }}>
