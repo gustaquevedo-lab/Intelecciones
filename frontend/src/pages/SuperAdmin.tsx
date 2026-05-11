@@ -770,7 +770,7 @@ Status: ${error.response?.status || 'N/A'}
       };
 
       if (editingLocale) {
-        await api.put(`/locales/${encodeURIComponent(newLocaleCod)}`, payload);
+        await api.put(`/locales/${encodeURIComponent(editingLocale.cod_local)}`, payload);
       } else {
         await api.post('/locales', payload);
       }
@@ -2230,11 +2230,11 @@ Status: ${error.response?.status || 'N/A'}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label>Nombre de la Campaña</label>
-                          <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value)} required />
+                          <input autoFocus className="modern-input-premium-styled" value={newCampaignName} onChange={e => setNewCampaignName(e.target.value.toUpperCase())} required />
                         </div>
                         <div className="form-group">
                           <label>Eslogan</label>
-                          <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value)} />
+                          <input className="modern-input-premium-styled" value={newCampaignSlogan} onChange={e => setNewCampaignSlogan(e.target.value.toUpperCase())} />
                         </div>
                       </div>
 
@@ -2245,9 +2245,19 @@ Status: ${error.response?.status || 'N/A'}
                         </div>
                         <div className="form-group">
                           <label>Distrito</label>
-                          <input className="modern-input-premium-styled" value={newCampaignDistrito} onChange={e => setNewCampaignDistrito(e.target.value.toUpperCase())} placeholder="Ej: ASUNCION" />
+                          <input 
+                            className="modern-input-premium-styled" 
+                            value={newCampaignDistrito} 
+                            onChange={e => setNewCampaignDistrito(e.target.value.toUpperCase())} 
+                            placeholder="Ej: ASUNCION" 
+                            list="districts-list"
+                          />
                         </div>
                       </div>
+
+                      <datalist id="districts-list">
+                        {cities.map(c => <option key={c} value={c} />)}
+                      </datalist>
 
                       <div style={{ marginTop: '1.5rem' }}>
                         <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -2667,7 +2677,14 @@ Status: ${error.response?.status || 'N/A'}
                       <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Ciudad / Distrito</label>
-                          <input className="modern-input-premium-styled" placeholder="Ej: Pedro Juan Caballero" value={newListCiudad} onChange={e => setNewListCiudad(e.target.value.toUpperCase())} required />
+                          <input 
+                            className="modern-input-premium-styled" 
+                            placeholder="Ej: PEDRO JUAN CABALLERO" 
+                            value={newListCiudad} 
+                            onChange={e => setNewListCiudad(e.target.value.toUpperCase())} 
+                            list="districts-list"
+                            required 
+                          />
                         </div>
 
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
@@ -2688,7 +2705,7 @@ Status: ${error.response?.status || 'N/A'}
 
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Alias del Candidato</label>
-                          <input className="modern-input-premium-styled" placeholder="Ej: El Líder" value={newListAlias} onChange={e => setNewListAlias(e.target.value)} />
+                          <input className="modern-input-premium-styled" placeholder="Ej: EL LIDER" value={newListAlias} onChange={e => setNewListAlias(e.target.value.toUpperCase())} />
                         </div>
 
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
@@ -2830,15 +2847,23 @@ Status: ${error.response?.status || 'N/A'}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label>Código de Local</label>
-                          <input className="modern-input-premium-styled" value={newLocaleCod} onChange={e => setNewLocaleCod(e.target.value)} placeholder="Ej: 101" required disabled={!!editingLocale} />
+                          <input 
+                            className="modern-input-premium-styled" 
+                            value={newLocaleCod} 
+                            onChange={e => setNewLocaleCod(e.target.value.toUpperCase())} 
+                            placeholder="Ej: 101" 
+                            required 
+                          />
                         </div>
                         <div className="form-group">
                           <label>Ciudad / Distrito</label>
-                          <select 
+                          <input 
                             className="modern-input-premium-styled" 
                             value={newLocaleCiudad} 
+                            placeholder="Ej: ASUNCION"
+                            list="districts-list"
                             onChange={e => {
-                              const city = e.target.value;
+                              const city = e.target.value.toUpperCase();
                               setNewLocaleCiudad(city);
                               if (CIUDADES_PARAGUAY[city]) {
                                 setMapCenter([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng]);
@@ -2846,17 +2871,12 @@ Status: ${error.response?.status || 'N/A'}
                               }
                             }}
                             required
-                          >
-                            <option value="">Seleccione...</option>
-                            {Object.keys(CIUDADES_PARAGUAY).sort().map(c => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
+                          />
                         </div>
                         
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Nombre de la Institución</label>
-                          <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value)} placeholder="Ej: Escuela Graduada Nro 1" required />
+                          <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value.toUpperCase())} placeholder="Ej: ESCUELA GRADUADA NRO 1" required />
                         </div>
 
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>

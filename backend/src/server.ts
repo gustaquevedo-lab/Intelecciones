@@ -920,8 +920,14 @@ app.post('/api/campaigns', (req, res) => {
   const { name, status, slogan, photo_url, enabled_modules, goal, distrito } = req.body;
   try {
     const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : (enabled_modules || 'COMMAND_CENTER,REGISTRY');
-    const result = db.prepare('INSERT INTO campaigns (name, status, slogan, photo_url, enabled_modules, goal, distrito) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr, goal || 1000, distrito || null);
+    const finalDist = distrito ? distrito.toString().toUpperCase().trim() : '';
+    const finalName = name ? name.toString().toUpperCase().trim() : '';
+    const finalSlogan = slogan ? slogan.toString().toUpperCase().trim() : '';
+
+    const result = db.prepare(`
+      INSERT INTO campaigns (name, status, slogan, photo_url, enabled_modules, goal, distrito)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(finalName, status || 'ACTIVE', finalSlogan, photo_url || null, modulesStr, goal || 1000, finalDist);
     
     logAction(1, 'CREATE', 'CAMPAIGN', Number(result.lastInsertRowid), `Created campaign ${name}`);
     res.json({ id: result.lastInsertRowid });
@@ -935,8 +941,12 @@ app.put('/api/campaigns/:id', (req, res) => {
   const { name, status, slogan, photo_url, enabled_modules, goal, distrito } = req.body;
   try {
     const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : enabled_modules;
+    const finalDist = distrito ? distrito.toString().toUpperCase().trim() : '';
+    const finalName = name ? name.toString().toUpperCase().trim() : '';
+    const finalSlogan = slogan ? slogan.toString().toUpperCase().trim() : '';
+
     db.prepare('UPDATE campaigns SET name = ?, status = ?, slogan = ?, photo_url = ?, enabled_modules = ?, goal = ?, distrito = ? WHERE id = ?')
-      .run(name, status || 'ACTIVE', slogan || null, photo_url || null, modulesStr || 'COMMAND_CENTER,REGISTRY', goal || 1000, distrito || null, id);
+      .run(finalName, status || 'ACTIVE', finalSlogan, photo_url || null, modulesStr || 'COMMAND_CENTER,REGISTRY', goal || 1000, finalDist, id);
     
     logAction(1, 'UPDATE', 'CAMPAIGN', id, `Updated campaign ${name}`);
     res.json({ success: true });
@@ -986,16 +996,20 @@ app.post('/api/lists', (req, res) => {
 
   try {
     db.transaction(() => {
+      const finalCiudad = ciudad.toString().toUpperCase().trim();
+      const finalAlias = (candidate_alias || '').toString().toUpperCase().trim();
+      const finalNombre = (candidate_nombre || '').toString().toUpperCase().trim();
+
       const result = db.prepare(`
         INSERT INTO lists (campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, candidate_nombre, candidate_alias, ciudad);
+      `).run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, finalNombre, finalAlias, finalCiudad);
 
       if (photo_url) {
         db.prepare('UPDATE electors SET photo_url = ? WHERE ci = ?').run(photo_url, candidate_ci);
       }
       
-      logAction(1, 'CREATE', 'LIST', list_number, `Created list ${list_number} for campaign ${campaign_id} in ${ciudad}`);
+      logAction(1, 'CREATE', 'LIST', list_number, `Created list ${list_number} for campaign ${campaign_id} in ${finalCiudad}`);
     })();
     res.json({ success: true });
   } catch (err: any) {
@@ -1008,6 +1022,10 @@ app.put('/api/lists/:id', (req, res) => {
   const { id } = req.params;
   const { goal, photo_url, type, list_number, option_number, campaign_id, candidate_alias, candidate_nombre, ciudad } = req.body;
   try {
+    const finalCiudad = ciudad ? ciudad.toString().toUpperCase().trim() : '';
+    const finalAlias = candidate_alias ? candidate_alias.toString().toUpperCase().trim() : '';
+    const finalNombre = candidate_nombre ? candidate_nombre.toString().toUpperCase().trim() : '';
+
     db.prepare(`
       UPDATE lists 
       SET goal = ?, photo_url = ?, type = ?, list_number = ?, option_number = ?, campaign_id = ?, candidate_alias = ?, candidate_nombre = ?, ciudad = ?
@@ -1019,9 +1037,9 @@ app.put('/api/lists/:id', (req, res) => {
       list_number || '', 
       option_number || null, 
       campaign_id || null, 
-      candidate_alias || null, 
-      candidate_nombre || null, 
-      ciudad || '',
+      finalAlias, 
+      finalNombre, 
+      finalCiudad,
       id
     );
     
@@ -1094,6 +1112,17 @@ try { db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEF
 
 console.log("DATABASE: Esquema verificado y columnas de distrito preparadas.");
 
+// 🔄 DATA UNIFICATION: Force everything to UPPERCASE to avoid duplicates like "Pedro Juan Caballero" vs "PEDRO JUAN CABALLERO"
+try {
+  db.prepare("UPDATE campaigns SET name = UPPER(TRIM(name)), distrito = UPPER(TRIM(distrito))").run();
+  db.prepare("UPDATE lists SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
+  db.prepare("UPDATE voting_locations SET nombre = UPPER(TRIM(nombre)), ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
+  db.prepare("UPDATE electors SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)), local_votacion = UPPER(TRIM(local_votacion))").run();
+  console.log("DATABASE: Unificación de datos (UPPERCASE) completada exitosamente.");
+} catch (err: any) {
+  console.error("DATABASE: Error durante la unificación de datos:", err.message);
+}
+
 app.get('/api/locales', (req, res) => {
   try {
     const locales = db.prepare('SELECT * FROM voting_locations').all();
@@ -1119,15 +1148,15 @@ app.post('/api/locales', (req, res) => {
 });
 
 app.put('/api/locales/:cod', (req, res) => {
-  const { nombre, lat, lng, icon, direccion, distrito, ciudad } = req.body;
+  const { cod_local, nombre, lat, lng, icon, direccion, distrito, ciudad } = req.body;
   const { cod } = req.params;
   try {
-    console.log(`[DB UPDATE LOCALE] Intentando actualizar local: ${cod}`, { nombre, lat, lng, distrito, ciudad });
+    console.log(`[DB UPDATE LOCALE] Intentando actualizar local: ${cod} -> ${cod_local || cod}`, { nombre, lat, lng, distrito, ciudad });
     const result = db.prepare(`
       UPDATE voting_locations 
-      SET nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, distrito = ?, ciudad = ?
+      SET cod_local = ?, nombre = ?, lat = ?, lng = ?, icon = ?, direccion = ?, distrito = ?, ciudad = ?
       WHERE cod_local = ?
-    `).run(nombre, lat, lng, icon, direccion || '', distrito || ciudad || '', ciudad || distrito || '', cod);
+    `).run(cod_local || cod, nombre, lat, lng, icon, direccion || '', distrito || ciudad || '', ciudad || distrito || '', cod);
     
     if (result.changes === 0) {
       console.warn(`[DB UPDATE LOCALE] No se encontró el local con código: ${cod}`);
