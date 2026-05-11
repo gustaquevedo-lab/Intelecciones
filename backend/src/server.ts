@@ -372,7 +372,10 @@ const getDistrict = (req: express.Request) => {
   const q = req.query.district as string;
   const d = req.headers['x-district'];
   const val = (q && q !== 'null' && q !== 'undefined' && q !== '') ? q : (d as string);
-  return (val && val !== 'null' && val !== 'undefined' && val !== 'Global' && val !== '') ? val.toUpperCase().trim() : null;
+  if (!val) return null;
+  const normalized = val.toString().toUpperCase().trim();
+  if (['NULL', 'UNDEFINED', 'GLOBAL', 'TODOS', 'ALL', 'TODAS', ''].includes(normalized)) return null;
+  return normalized;
 };
 
 const getRole = (req: express.Request) => (req.headers['x-user-role'] as string || 'GUEST').toUpperCase().trim();
