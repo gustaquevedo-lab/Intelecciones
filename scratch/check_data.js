@@ -1,14 +1,6 @@
 const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, 'backend/intellecciones.db'));
-
-try {
-  const count = db.prepare('SELECT COUNT(*) as count FROM electors').get();
-  console.log("Total electors:", count.count);
-  if (count.count > 0) {
-    const sample = db.prepare('SELECT ci, nombre, apellido FROM electors LIMIT 5').all();
-    console.log("Samples:", sample);
-  }
-} catch (err) {
-  console.error(err.message);
-}
+const db = new Database('backend/database.sqlite');
+const rows = db.prepare('SELECT ci, nombre, ciudad, distrito FROM electors LIMIT 10').all();
+console.log(JSON.stringify(rows, null, 2));
+const campaigns = db.prepare('SELECT id, name, distrito FROM campaigns LIMIT 5').all();
+console.log(JSON.stringify(campaigns, null, 2));

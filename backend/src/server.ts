@@ -370,10 +370,9 @@ const getListId = (req: express.Request) => {
 
 const getDistrict = (req: express.Request) => {
   const q = req.query.district as string;
-  if (q && q !== 'null' && q !== 'undefined' && q !== '') return q;
-
   const d = req.headers['x-district'];
-  return (d && d !== 'null' && d !== 'undefined' && d !== '') ? d as string : null;
+  const val = (q && q !== 'null' && q !== 'undefined' && q !== '') ? q : (d as string);
+  return (val && val !== 'null' && val !== 'undefined' && val !== 'Global' && val !== '') ? val.toUpperCase().trim() : null;
 };
 
 const getRole = (req: express.Request) => (req.headers['x-user-role'] as string || 'GUEST').toUpperCase().trim();
@@ -431,11 +430,11 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
     if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
       if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
-        sql += ` AND UPPER(${tableAlias}.${distColumn}) = UPPER(?)`;
-        params.push(activeDistrict);
+        sql += ` AND (UPPER(${tableAlias}.${distColumn}) = UPPER(?) OR (CASE WHEN '${tableAlias}'='e' THEN UPPER(${tableAlias}.distrito) ELSE '' END) = UPPER(?))`;
+        params.push(activeDistrict, activeDistrict);
       } else if (tableAlias === 'ec') {
-        sql += ` AND UPPER(e.ciudad) = UPPER(?)`;
-        params.push(activeDistrict);
+        sql += ` AND (UPPER(e.ciudad) = UPPER(?) OR UPPER(e.distrito) = UPPER(?))`;
+        params.push(activeDistrict, activeDistrict);
       }
     }
 
@@ -1128,8 +1127,13 @@ try {
   db.prepare("UPDATE campaigns SET name = UPPER(TRIM(name)), distrito = UPPER(TRIM(distrito))").run();
   db.prepare("UPDATE lists SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
   db.prepare("UPDATE voting_locations SET nombre = UPPER(TRIM(nombre)), ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
+  
+  // Sync ciudad and distrito for electors to ensure filtering works regardless of which one is used
+  db.prepare("UPDATE electors SET ciudad = distrito WHERE (ciudad IS NULL OR ciudad = '') AND (distrito IS NOT NULL AND distrito != '')").run();
+  db.prepare("UPDATE electors SET distrito = ciudad WHERE (distrito IS NULL OR distrito = '') AND (ciudad IS NOT NULL AND ciudad != '')").run();
+  
   db.prepare("UPDATE electors SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)), local_votacion = UPPER(TRIM(local_votacion))").run();
-  console.log("DATABASE: Unificación de datos (UPPERCASE & CONCEPCION) completada exitosamente.");
+  console.log("DATABASE: Unificación de datos (UPPERCASE, SYNC & CONCEPCION) completada exitosamente.");
 } catch (err: any) {
   console.error("DATABASE: Error durante la unificación de datos:", err.message);
 }

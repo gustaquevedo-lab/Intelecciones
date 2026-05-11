@@ -125,32 +125,44 @@ const MapRecenter = ({ center, zoom }: { center: [number, number]; zoom: number 
 
 // Paraguayan cities with coordinates for map auto-centering
 const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
-  'Pedro Juan Caballero': { lat: -22.545, lng: -55.72, zoom: 14 },
-  'Asunción': { lat: -25.2637, lng: -57.5759, zoom: 13 },
-  'Ciudad del Este': { lat: -25.5097, lng: -54.6111, zoom: 13 },
-  'Encarnación': { lat: -27.3308, lng: -55.8667, zoom: 14 },
-  'Luque': { lat: -25.2708, lng: -57.4872, zoom: 14 },
-  'San Lorenzo': { lat: -25.3400, lng: -57.5094, zoom: 14 },
-  'Lambaré': { lat: -25.3469, lng: -57.6064, zoom: 14 },
-  'Fernando de la Mora': { lat: -25.3390, lng: -57.5230, zoom: 14 },
-  'Capiatá': { lat: -25.3556, lng: -57.4437, zoom: 14 },
-  'Itauguá': { lat: -25.3889, lng: -57.3536, zoom: 14 },
-  'Caaguazú': { lat: -25.4722, lng: -56.0178, zoom: 14 },
-  'Coronel Oviedo': { lat: -25.4492, lng: -56.4419, zoom: 14 },
-  'Villarrica': { lat: -25.7500, lng: -56.4333, zoom: 14 },
-  'Concepción': { lat: -23.4055, lng: -57.4340, zoom: 14 },
-  'Mariano Roque Alonso': { lat: -25.2017, lng: -57.5275, zoom: 14 },
-  'Ñemby': { lat: -25.3964, lng: -57.5383, zoom: 14 },
-  'Villa Elisa': { lat: -25.3750, lng: -57.5917, zoom: 14 },
-  'Limpio': { lat: -25.1667, lng: -57.4833, zoom: 14 },
-  'Areguá': { lat: -25.3130, lng: -57.3900, zoom: 14 },
-  'Pilar': { lat: -26.8625, lng: -58.3125, zoom: 14 },
-  'Salto del Guairá': { lat: -24.0611, lng: -54.3067, zoom: 14 },
-  'Hernandarias': { lat: -25.3971, lng: -54.6430, zoom: 14 },
-  'Presidente Franco': { lat: -25.5500, lng: -54.6167, zoom: 14 },
-  'Minga Guazú': { lat: -25.4833, lng: -54.7667, zoom: 14 },
-  'San Estanislao': { lat: -24.0000, lng: -56.4333, zoom: 14 },
-  'San Pedro de Ycuamandiyú': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+  'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
+  'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+  'ASUNCIÓN': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+  'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
+  'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+  'ENCARNACIÓN': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+  'LUQUE': { lat: -25.2708, lng: -57.4872, zoom: 14 },
+  'SAN LORENZO': { lat: -25.3400, lng: -57.5094, zoom: 14 },
+  'LAMBARE': { lat: -25.3469, lng: -57.6064, zoom: 14 },
+  'LAMBARÉ': { lat: -25.3469, lng: -57.6064, zoom: 14 },
+  'FERNANDO DE LA MORA': { lat: -25.3390, lng: -57.5230, zoom: 14 },
+  'CAPIATA': { lat: -25.3556, lng: -57.4437, zoom: 14 },
+  'CAPIATÁ': { lat: -25.3556, lng: -57.4437, zoom: 14 },
+  'ITAUGUA': { lat: -25.3889, lng: -57.3536, zoom: 14 },
+  'ITAUGUÁ': { lat: -25.3889, lng: -57.3536, zoom: 14 },
+  'CAAGUAZU': { lat: -25.4722, lng: -56.0178, zoom: 14 },
+  'CAAGUAZÚ': { lat: -25.4722, lng: -56.0178, zoom: 14 },
+  'CORONEL OVIEDO': { lat: -25.4492, lng: -56.4419, zoom: 14 },
+  'VILLARRICA': { lat: -25.7500, lng: -56.4333, zoom: 14 },
+  'CONCEPCION': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+  'CONCEPCIÓN': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+  'MARIANO ROQUE ALONSO': { lat: -25.2017, lng: -57.5275, zoom: 14 },
+  'ÑEMBY': { lat: -25.3964, lng: -57.5383, zoom: 14 },
+  'VILLA ELISA': { lat: -25.3750, lng: -57.5917, zoom: 14 },
+  'LIMPIO': { lat: -25.1667, lng: -57.4833, zoom: 14 },
+  'AREGUA': { lat: -25.3130, lng: -57.3900, zoom: 14 },
+  'AREGUÁ': { lat: -25.3130, lng: -57.3900, zoom: 14 },
+  'PILAR': { lat: -26.8625, lng: -58.3125, zoom: 14 },
+  'SALTO DEL GUAIRA': { lat: -24.0611, lng: -54.3067, zoom: 14 },
+  'SALTO DEL GUAIRÁ': { lat: -24.0611, lng: -54.3067, zoom: 14 },
+  'HERNANDARIAS': { lat: -25.3971, lng: -54.6430, zoom: 14 },
+  'PRESIDENTE FRANCO': { lat: -25.5500, lng: -54.6167, zoom: 14 },
+  'MINGA GUAZU': { lat: -25.4833, lng: -54.7667, zoom: 14 },
+  'MINGA GUAZÚ': { lat: -25.4833, lng: -54.7667, zoom: 14 },
+  'SAN ESTANISLAO': { lat: -24.0000, lng: -56.4333, zoom: 14 },
+  'SAN PEDRO DE YCUAMANDIYU': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+  'SAN PEDRO DE YCUAMANDIYÚ': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+  'SAN LAZARO': { lat: -22.1833, lng: -57.9333, zoom: 14 },
 };
 
 interface User {
@@ -853,6 +865,18 @@ Status: ${error.response?.status || 'N/A'}
     }
   };
 
+  useEffect(() => {
+    if (selectedCampaignId === 'all') return;
+    const campaign = campaigns.find(c => c.id.toString() === selectedCampaignId);
+    if (campaign && campaign.distrito) {
+      const city = campaign.distrito.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (CIUDADES_PARAGUAY[city]) {
+        setMapCenter([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng]);
+        setMapZoom(CIUDADES_PARAGUAY[city].zoom);
+      }
+    }
+  }, [selectedCampaignId, campaigns]);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -968,7 +992,17 @@ Status: ${error.response?.status || 'N/A'}
               className="mini-input" 
               style={{ width: '220px', background: 'rgba(255,255,255,0.05)' }}
               value={selectedCampaignId}
-              onChange={(e) => setSelectedCampaignId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedCampaignId(val);
+                if (val === 'all') {
+                  setActiveDistrict(null);
+                  setActiveListId(null);
+                } else {
+                  const camp = campaigns.find(c => c.id.toString() === val);
+                  if (camp) setActiveDistrict(camp.distrito);
+                }
+              }}
             >
               <option value="all">Todas las Campañas</option>
               {campaigns.map(c => (

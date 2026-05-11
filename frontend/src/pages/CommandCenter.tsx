@@ -102,6 +102,47 @@ const createCustomIcon = (color: string, iconName: string = 'Landmark', needsTra
   });
 };
 
+const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
+  'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
+  'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+  'ASUNCIÓN': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+  'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
+  'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+  'ENCARNACIÓN': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+  'LUQUE': { lat: -25.2708, lng: -57.4872, zoom: 14 },
+  'SAN LORENZO': { lat: -25.3400, lng: -57.5094, zoom: 14 },
+  'LAMBARE': { lat: -25.3469, lng: -57.6064, zoom: 14 },
+  'LAMBARÉ': { lat: -25.3469, lng: -57.6064, zoom: 14 },
+  'FERNANDO DE LA MORA': { lat: -25.3390, lng: -57.5230, zoom: 14 },
+  'CAPIATA': { lat: -25.3556, lng: -57.4437, zoom: 14 },
+  'CAPIATÁ': { lat: -25.3556, lng: -57.4437, zoom: 14 },
+  'ITAUGUA': { lat: -25.3889, lng: -57.3536, zoom: 14 },
+  'ITAUGUÁ': { lat: -25.3889, lng: -57.3536, zoom: 14 },
+  'CAAGUAZU': { lat: -25.4722, lng: -56.0178, zoom: 14 },
+  'CAAGUAZÚ': { lat: -25.4722, lng: -56.0178, zoom: 14 },
+  'CORONEL OVIEDO': { lat: -25.4492, lng: -56.4419, zoom: 14 },
+  'VILLARRICA': { lat: -25.7500, lng: -56.4333, zoom: 14 },
+  'CONCEPCION': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+  'CONCEPCIÓN': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+  'MARIANO ROQUE ALONSO': { lat: -25.2017, lng: -57.5275, zoom: 14 },
+  'ÑEMBY': { lat: -25.3964, lng: -57.5383, zoom: 14 },
+  'VILLA ELISA': { lat: -25.3750, lng: -57.5917, zoom: 14 },
+  'LIMPIO': { lat: -25.1667, lng: -57.4833, zoom: 14 },
+  'AREGUA': { lat: -25.3130, lng: -57.3900, zoom: 14 },
+  'AREGUÁ': { lat: -25.3130, lng: -57.3900, zoom: 14 },
+  'PILAR': { lat: -26.8625, lng: -58.3125, zoom: 14 },
+  'SALTO DEL GUAIRA': { lat: -24.0611, lng: -54.3067, zoom: 14 },
+  'SALTO DEL GUAIRÁ': { lat: -24.0611, lng: -54.3067, zoom: 14 },
+  'HERNANDARIAS': { lat: -25.3971, lng: -54.6430, zoom: 14 },
+  'PRESIDENTE FRANCO': { lat: -25.5500, lng: -54.6167, zoom: 14 },
+  'MINGA GUAZU': { lat: -25.4833, lng: -54.7667, zoom: 14 },
+  'MINGA GUAZÚ': { lat: -25.4833, lng: -54.7667, zoom: 14 },
+  'SAN ESTANISLAO': { lat: -24.0000, lng: -56.4333, zoom: 14 },
+  'SAN PEDRO DE YCUAMANDIYU': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+  'SAN PEDRO DE YCUAMANDIYÚ': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+  'SAN LAZARO': { lat: -22.1833, lng: -57.9333, zoom: 14 },
+};
+
 
 /* ─── sub-components ─────────────────────────────────── */
 
@@ -532,9 +573,10 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
   );
 };
 
-const MapHandler = ({ center, selectedLocalId }: { center: [number, number] | null, selectedLocalId: string | null }) => {
+const MapHandler = ({ center, selectedLocalId, activeDistrict }: { center: [number, number] | null, selectedLocalId: string | null, activeDistrict?: string }) => {
   const map = useMap();
   const [lastId, setLastId] = useState<string | null>(null);
+  const [lastDistrict, setLastDistrict] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedLocalId && selectedLocalId !== lastId && center) {
@@ -543,7 +585,15 @@ const MapHandler = ({ center, selectedLocalId }: { center: [number, number] | nu
     } else if (!selectedLocalId && lastId) {
       setLastId(null);
     }
-  }, [center, selectedLocalId, lastId, map]);
+
+    if (activeDistrict && activeDistrict !== lastDistrict) {
+      const city = activeDistrict.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (CIUDADES_PARAGUAY[city]) {
+        map.flyTo([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng], CIUDADES_PARAGUAY[city].zoom, { duration: 2 });
+      }
+      setLastDistrict(activeDistrict);
+    }
+  }, [center, selectedLocalId, lastId, map, activeDistrict, lastDistrict]);
   return null;
 };
 
@@ -1091,6 +1141,7 @@ const CommandCenter = () => {
                     return null;
                   })()} 
                   selectedLocalId={selectedLocal}
+                  activeDistrict={activeDistrict}
                 />
 
                 {locales.filter(l => l.lat != null && l.lng != null).map((l: any) => {
