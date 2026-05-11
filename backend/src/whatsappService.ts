@@ -52,10 +52,42 @@ class WhatsAppManager {
     return Array.from(this.terminals.values());
   }
 
+  /** Remove Chromium singleton lock files left from a crashed/killed process */
+  private clearChromiumLocks(userDataDir: string) {
+    // These files are created by Chromium to prevent multiple instances.
+    // On Railway container restarts the process is killed but files remain → next launch fails.
+    const lockFiles = ['SingletonLock', 'SingletonSocket', 'SingletonCookie'];
+    for (const f of lockFiles) {
+      const p = path.join(userDataDir, f);
+      try { if (fs.existsSync(p)) { fs.unlinkSync(p); console.log(`[WHATSAPP] Removed stale lock: ${p}`); } } catch {}
+    }
+    // Also clear inside Default/ profile dir (Chrome sometimes puts locks there)
+    const defaultDir = path.join(userDataDir, 'Default');
+    if (fs.existsSync(defaultDir)) {
+      for (const f of lockFiles) {
+        const p = path.join(defaultDir, f);
+        try { if (fs.existsSync(p)) { fs.unlinkSync(p); } } catch {}
+      }
+    }
+    // LocalAuth stores session inside a WWebJS subfolder
+    const wwebjsDir = path.join(userDataDir, '.wwebjs_auth');
+    if (fs.existsSync(wwebjsDir)) {
+      try {
+        const entries = fs.readdirSync(wwebjsDir);
+        for (const entry of entries) {
+          for (const f of lockFiles) {
+            const p = path.join(wwebjsDir, entry, f);
+            try { if (fs.existsSync(p)) { fs.unlinkSync(p); } } catch {}
+          }
+        }
+      } catch {}
+    }
+  }
+
   private initClient(terminalId: string) {
     if (this.clients.has(terminalId)) return this.clients.get(terminalId)!;
 
-    const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+    const sessionPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
       ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, `whatsapp_session_${terminalId}`)
       : (process.env.NODE_ENV === 'production'
         ? `/app/data/whatsapp_session_${terminalId}`
@@ -64,6 +96,9 @@ class WhatsAppManager {
     if (!fs.existsSync(sessionPath)) {
       fs.mkdirSync(sessionPath, { recursive: true });
     }
+
+    // Clear stale Chromium lock files before every launch (Railway restart safety)
+    this.clearChromiumLocks(sessionPath);
 
     const client = new Client({
       authStrategy: new LocalAuth({ dataPath: sessionPath }),
@@ -83,8 +118,9 @@ class WhatsAppManager {
           '--disable-extensions',
           '--disable-software-rasterizer',
           '--disable-web-security',
-          '--disable-features=IsolateOrigins,site-per-process',
-          '--aggressive-cache-discard'
+          '--disable-features=IsolateOrigins,site-per-process,TranslateUI',
+          '--aggressive-cache-discard',
+          '--ignore-certificate-errors',
         ],
         headless: true
       },
