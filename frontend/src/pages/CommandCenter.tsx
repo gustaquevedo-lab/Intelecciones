@@ -743,22 +743,20 @@ const CommandCenter = () => {
       fetchToState(`/captures?${queryStr}`, setCaptures);
 
       // 3. TAB-SPECIFIC PRIORITY: Only fetch heavy detail data if the tab is active
-      if (activeTab === 'overview' || !isMobile) {
-        fetchToState(`/admin/activity?${queryStr}`, setActivities);
-      }
-      
-      if (activeTab === 'structure' || !isMobile) {
+      // 'hierarchy' replaces old 'structure'
+      if (activeTab === 'hierarchy' || activeTab === 'team' || !isMobile) {
         fetchToState(`/users?${queryStr}`, (data) => setCoordinators(data.filter((u: any) => u.role === 'COORDINADOR')));
         fetchToState(`/structure/padrinos?${queryStr}`, setStructureData);
       }
 
-      if (activeTab === 'logistics' || !isMobile) {
-        fetchToState(`/vehicles?${queryStr}`, setVehicles);
-      }
-
-      if (activeTab === 'alerts' || !isMobile) {
+      if (activeTab === 'requests' || !isMobile) {
         fetchToState(`/admin/conflicts?${queryStr}`, setConflicts);
         fetchToState(`/admin/requests?${queryStr}`, setRequests);
+        fetchToState(`/admin/activity?${queryStr}`, setActivities);
+      }
+
+      if (showVehicles || !isMobile) {
+        fetchToState(`/vehicles?${queryStr}`, setVehicles);
       }
 
       // Special global check for SuperAdmin
@@ -1421,9 +1419,16 @@ const CommandCenter = () => {
                           if (selectedCoordDetails) setSelectedCoordDetails(null);
                           else setSelectedPadrino(null);
                         }}
-                        style={{ background: 'var(--plra-600)', border: 'none', color: 'white', padding: '0.6rem 1rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem' }}
+                        style={{ 
+                          background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border)', 
+                          color: 'white', padding: '0.75rem 1.25rem', borderRadius: '16px', 
+                          cursor: 'pointer', fontWeight: 900, fontSize: '0.75rem',
+                          display: 'flex', alignItems: 'center', gap: '0.6rem',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
                       >
-                        ← VOLVER
+                        <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} /> 
+                        VOLVER A {selectedCoordDetails ? 'LISTA COORDINADORES' : 'LISTA PADRINOS'}
                       </button>
                     )}
                   </div>
@@ -1533,7 +1538,7 @@ const CommandCenter = () => {
                                <Truck size={14} color="var(--plra-200)" />
                                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-100)' }}>TRANSPORTE</span>
                              </div>
-                             <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{padrinoCaptures.transport_needed || 0}</span>
+                             <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{padrinoCaptures.transport_total || 0}</span>
                            </div>
                          </motion.div>
                        </div>
@@ -1553,11 +1558,11 @@ const CommandCenter = () => {
                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)' 
                              }}
                            >
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                                {c.photo_url ? (
-                                 <img src={getImageUrl(c.photo_url)} alt="" style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} />
+                                 <img src={getImageUrl(c.photo_url)} alt="" style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.1)' }} />
                                ) : (
-                                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
+                                 <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
                                )}
                                <div style={{ flex: 1, minWidth: 0 }}>
                                  <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
@@ -1593,7 +1598,7 @@ const CommandCenter = () => {
                                  <Truck size={12} color="var(--plra-300)" />
                                  <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-200)', textTransform: 'uppercase' }}>Logística</span>
                                </div>
-                               <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.transport_needed || 0}</span>
+                               <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.transport_total || 0}</span>
                              </div>
                            </motion.div>
                          ))}

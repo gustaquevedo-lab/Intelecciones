@@ -293,6 +293,7 @@ addColumnIfNotExists("elector_captures", "campaign_id", "INTEGER");
 addColumnIfNotExists("elector_captures", "list_id", "INTEGER");
 addColumnIfNotExists("elector_captures", "assigned_vehicle_id", "INTEGER");
 addColumnIfNotExists("electors", "ciudad", "TEXT DEFAULT ''");
+addColumnIfNotExists("electors", "distrito", "TEXT DEFAULT ''");
 addColumnIfNotExists("electors", "barrio", "TEXT DEFAULT ''");
 addColumnIfNotExists("participation_logs", "veedor_id", "INTEGER");
 addColumnIfNotExists("results", "veedor_id", "INTEGER");

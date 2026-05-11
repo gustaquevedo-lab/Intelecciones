@@ -21,9 +21,10 @@ interface TeamUser {
   yellow?: number;
   red?: number;
   needs_transport?: number;
+  transport_total?: number;
 }
 
-interface Campaign { id: number; name: string; lists: any[]; }
+interface Campaign { id: number; name: string; distrito?: string; lists: any[]; }
 
 const ROLE_COLORS: Record<string, string> = {
   PADRINO:      '#A855F7',
@@ -385,7 +386,7 @@ const CreateUserModal = ({
         <ImageCropperModal
           image={cropperData.image}
           onCropComplete={onCropComplete}
-          onClose={() => setCropperData(null)}
+          onCancel={() => setCropperData(null)}
         />
       )}
     </div>
@@ -507,10 +508,10 @@ const PadrinoRow = ({
               borderRadius: '10px', marginBottom: '0.35rem'
             }}>
               <div style={{
-                width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+                width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
                 background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
                 border: '2px solid rgba(59,130,246,0.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem'
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem'
               }}>
                 {!c.photo_url && '👤'}
               </div>
@@ -530,11 +531,15 @@ const PadrinoRow = ({
                   )}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.55rem', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                  <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.total_captures ?? 0}</div>
+                </div>
                 <StatDot count={c.green || 0} color="#22C55E" />
                 <StatDot count={c.yellow || 0} color="#EAB308" />
                 <StatDot count={c.red || 0} color="#EF4444" />
-                <StatDot count={c.needs_transport || 0} color="var(--plra-300)" />
+                <StatDot count={c.transport_total || 0} color="var(--plra-300)" />
               </div>
             </div>
           ))}
@@ -681,7 +686,8 @@ const TeamPanel = () => {
           </div>
 
           {myCoordinators.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
+              <Users size={32} style={{ color: 'var(--text-3)', opacity: 0.3, marginBottom: '1rem' }} />
               <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No tienes coordinadores asignados todavía.</p>
             </div>
           ) : (
@@ -693,10 +699,10 @@ const TeamPanel = () => {
                 borderRadius: '12px', marginBottom: '0.4rem'
               }}>
                 <div style={{
-                  width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+                  width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
                   background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
                   border: '2px solid rgba(59,130,246,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem'
                 }}>
                   {!c.photo_url && '👤'}
                 </div>
@@ -713,11 +719,15 @@ const TeamPanel = () => {
                     </a>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: '0.6rem', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                  <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                    <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{c.total_captures ?? 0}</div>
+                  </div>
                   <StatDot count={c.green || 0} color="#22C55E" />
                   <StatDot count={c.yellow || 0} color="#EAB308" />
                   <StatDot count={c.red || 0} color="#EF4444" />
-                  <StatDot count={c.needs_transport || 0} color="var(--plra-300)" />
+                  <StatDot count={c.transport_total || 0} color="var(--plra-300)" />
                 </div>
               </div>
             ))

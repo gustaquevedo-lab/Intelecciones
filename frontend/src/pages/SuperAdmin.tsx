@@ -7,7 +7,7 @@ import {
   UserPlus, 
   Flag, 
   Users as UsersIcon, 
-  ListOrdered, 
+  Database, 
   Activity,
   CheckCircle2,
   X,
@@ -42,7 +42,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api, { API_BASE, getImageUrl } from '../services/api';
+import api, { getImageUrl } from '../services/api';
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -963,7 +963,13 @@ Status: ${error.response?.status || 'N/A'}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+        <StatCard 
+          icon={Database} 
+          label="Padrón Total" 
+          value={selectedCampaignId === 'all' ? (stats?.electors || 0) : '—'} 
+          color="var(--text-3)" 
+        />
         <StatCard 
           icon={UsersIcon} 
           label="Usuarios Activos" 
@@ -971,22 +977,22 @@ Status: ${error.response?.status || 'N/A'}
           color="var(--plra-300)" 
         />
         <StatCard 
-          icon={ListOrdered} 
-          label="Listas en Campaña" 
-          value={selectedCampaignId === 'all' ? (stats?.lists || 0) : lists.filter(l => l.campaign_id?.toString() === selectedCampaignId).length} 
-          color="var(--plra-400)" 
-        />
-        <StatCard 
           icon={Activity} 
-          label="Capturas de Campo" 
+          label="Capturas Totales" 
           value={selectedCampaignId === 'all' ? (stats?.captures || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId).length} 
           color="var(--plra-100)" 
         />
         <StatCard 
           icon={CheckCircle2} 
           label="Electores CASA" 
-          value={selectedCampaignId === 'all' ? (stats?.electors || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'GREEN').length} 
+          value={selectedCampaignId === 'all' ? (stats?.green || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'GREEN').length} 
           color="var(--green)" 
+        />
+        <StatCard 
+          icon={Flag} 
+          label="Familiares" 
+          value={selectedCampaignId === 'all' ? (stats?.yellow || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'YELLOW').length} 
+          color="var(--yellow)" 
         />
       </div>
 

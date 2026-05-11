@@ -1640,6 +1640,11 @@ app.get('/api/stats/summary', (req, res) => {
     const transportNeeded = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 ${sec.sql}`).get(...params) as any;
     const transportAssigned = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NOT NULL ${sec.sql}`).get(...params) as any;
 
+    const greenCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'GREEN' ${sec.sql}`).get(...params) as any;
+    const yellowCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'YELLOW' ${sec.sql}`).get(...params) as any;
+    const redCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'RED' ${sec.sql}`).get(...params) as any;
+    const purpleCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'PURPLE' ${sec.sql}`).get(...params) as any;
+
     res.json({
       users: usersCount.count,
       campaigns: campaignsCount.count,
@@ -1647,7 +1652,11 @@ app.get('/api/stats/summary', (req, res) => {
       electors: electorsCount.count,
       captures: capturesCount.count,
       transportNeeded: transportNeeded.count,
-      transportAssigned: transportAssigned.count
+      transportAssigned: transportAssigned.count,
+      green: greenCount.count,
+      yellow: yellowCount.count,
+      red: redCount.count,
+      purple: purpleCount.count
     });
   } catch (err: any) {
     console.error('[STATS ERROR]', err);
@@ -2066,8 +2075,8 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     }
 
     const insertStmt = db.prepare(`
-      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, distrito, campaign_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, distrito, ciudad, campaign_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const transaction = db.transaction((rows) => {
@@ -2086,7 +2095,7 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
         const orden = normalizedRow['ORD_MESA'] || normalizedRow['ORDEN'] || normalizedRow['ORDEN_MESA'] || normalizedRow['NRO_ORDEN'] || 0;
 
         if (ci && (nombre || apellido)) {
-          insertStmt.run(ci.toString().trim(), nombre || '', apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito, effectiveCampaignId);
+          insertStmt.run(ci.toString().trim(), nombre || '', apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito, finalDistrito, effectiveCampaignId);
         }
       }
     });
@@ -2106,11 +2115,31 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
 app.get('/api/admin/electors/stats', (req, res) => {
   try {
     const stats = db.prepare(`
-      SELECT COALESCE(NULLIF(ciudad, ''), NULLIF(distrito, ''), 'Sin Asignar') as ciudad, COUNT(*) as count 
+      SELECT 
+        UPPER(TRIM(COALESCE(NULLIF(ciudad, ''), NULLIF(distrito, ''), 'Sin Asignar'))) as ciudad, 
+        COUNT(*) as count 
       FROM electors 
-      GROUP BY ciudad
+      GROUP BY 1
+      ORDER BY 2 DESC
     `).all();
     res.json(stats);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/districts/global', (req, res) => {
+  try {
+    const districts = db.prepare(`
+      SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM campaigns WHERE distrito IS NOT NULL AND distrito != ''
+      UNION
+      SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM lists WHERE ciudad IS NOT NULL AND ciudad != ''
+      UNION
+      SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM voting_locations WHERE distrito IS NOT NULL AND distrito != ''
+      UNION
+      SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM electors WHERE ciudad IS NOT NULL AND ciudad != ''
+    `).all();
+    res.json(districts.map((d: any) => d.name).sort());
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -2331,7 +2360,7 @@ app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
              COUNT(CASE WHEN ec.traffic_light='YELLOW' THEN 1 END) AS yellow,
              COUNT(CASE WHEN ec.traffic_light='RED'    THEN 1 END) AS red,
              COUNT(CASE WHEN ec.traffic_light='PURPLE' THEN 1 END) AS purple,
-             COUNT(CASE WHEN ec.needs_transport=1      THEN 1 END) AS transport_needed
+             COUNT(CASE WHEN ec.needs_transport=1      THEN 1 END) AS transport_total
       FROM users u
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
@@ -2346,7 +2375,7 @@ app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
              COUNT(CASE WHEN traffic_light='YELLOW' THEN 1 END) AS yellow,
              COUNT(CASE WHEN traffic_light='RED'    THEN 1 END) AS red,
              COUNT(CASE WHEN traffic_light='PURPLE' THEN 1 END) AS purple,
-             COUNT(CASE WHEN needs_transport=1      THEN 1 END) AS transport_needed
+             COUNT(CASE WHEN needs_transport=1      THEN 1 END) AS transport_total
       FROM elector_captures
       WHERE coordinator_id = ?
     `).get(id);
@@ -2627,7 +2656,7 @@ app.get('/api/my-team/padrino/:id/coordinators', requireRole('SUPERUSUARIO','JEF
              SUM(CASE WHEN ec.traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
              SUM(CASE WHEN ec.traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
              SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red,
-             SUM(CASE WHEN ec.needs_transport=1      THEN 1 ELSE 0 END) AS needs_transport
+             SUM(CASE WHEN ec.needs_transport=1      THEN 1 ELSE 0 END) AS transport_total
       FROM users u
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')

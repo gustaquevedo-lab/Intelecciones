@@ -19,7 +19,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, userPhoto }) => {
   const navigate = useNavigate();
   const { user, activeListId, setActiveListId, activeDistrict, setActiveDistrict } = useAuth();
-  const { theme, setTheme, isDark } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { settings } = useSettings();
   const [lists, setLists] = useState<any[]>([]);
 
@@ -41,10 +41,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const currentRoleLabel = user ? (roleLabels[user.role] ?? 'Usuario') : 'Usuario';
 
   const showDistrictSelector = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
-  const districts = [...new Set([
-    ...lists.map(l => l.ciudad).filter(Boolean),
-    ...lists.map(l => l.campaign_distrito).filter(Boolean)
-  ])].sort();
+  const [districts, setDistricts] = useState<string[]>([]);
+  
+  useEffect(() => {
+    api.get('/districts/global').then(res => setDistricts(res.data)).catch(err => console.error(err));
+  }, []);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -100,7 +101,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
                   >
                     <option value="null">📋 TODAS</option>
                     {lists
-                      .filter(l => !activeDistrict || l.ciudad === activeDistrict || l.campaign_distrito === activeDistrict)
+                      .filter(l => !activeDistrict || (l.ciudad?.toUpperCase().trim() === activeDistrict) || (l.campaign_distrito?.toUpperCase().trim() === activeDistrict))
                       .map((l: any) => (
                         <option key={l.id} value={l.id}>
                           L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
@@ -202,7 +203,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
               >
                 <option value="null">📋 Todas</option>
                 {lists
-                  .filter(l => !activeDistrict || l.ciudad === activeDistrict || l.campaign_distrito === activeDistrict)
+                  .filter(l => !activeDistrict || (l.ciudad?.toUpperCase().trim() === activeDistrict) || (l.campaign_distrito?.toUpperCase().trim() === activeDistrict))
                   .map((l: any) => (
                     <option key={l.id} value={l.id}>
                       L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
