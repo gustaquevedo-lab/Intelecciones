@@ -378,7 +378,13 @@ const getDistrict = (req: express.Request) => {
   return normalized;
 };
 
-const getRole = (req: express.Request) => (req.headers['x-user-role'] as string || 'GUEST').toUpperCase().trim();
+const getRole = (req: express.Request) => {
+  const role = (req.headers['x-user-role'] as string || 'GUEST').toUpperCase().trim();
+  if (role === 'SUPER_ADMIN' || role === 'SUPERUSUARIO') return 'SUPERUSUARIO';
+  if (role === 'CANDIDATE' || role === 'JEFE_CAMPANA') return 'JEFE_CAMPANA';
+  if (role === 'COORDINATOR' || role === 'COORDINADOR') return 'COORDINADOR';
+  return role;
+};
 
 // ── User district cache ────────────────────────────────────────────────────
 // Avoids a DB JOIN query on every single API request for non-SUPERUSUARIO users.
@@ -1136,7 +1142,11 @@ try {
   db.prepare("UPDATE electors SET distrito = ciudad WHERE (distrito IS NULL OR distrito = '') AND (ciudad IS NOT NULL AND ciudad != '')").run();
   
   db.prepare("UPDATE electors SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)), local_votacion = UPPER(TRIM(local_votacion))").run();
-  console.log("DATABASE: Unificación de datos (UPPERCASE, SYNC & CONCEPCION) completada exitosamente.");
+  
+  // Normalize users district as well
+  db.prepare("UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != ''").run();
+  
+  console.log("DATABASE: Unificación de datos (UPPERCASE, SYNC, USERS & CONCEPCION) completada exitosamente.");
 } catch (err: any) {
   console.error("DATABASE: Error durante la unificación de datos:", err.message);
 }

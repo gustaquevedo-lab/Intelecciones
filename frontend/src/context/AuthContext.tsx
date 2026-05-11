@@ -150,7 +150,7 @@ export const apiFetch = (url: string, options: any = {}) => {
     const headers = {
         ...options.headers,
         'Content-Type': 'application/json',
-        'x-list-id': activeListId === 'null' ? '' : (activeListId || user?.assigned_list_id?.toString() || ''),
+        'x-list-id': (activeListId === null || activeListId === 'null') ? '' : activeListId.toString(),
         'x-user-role': user?.role || '',
         'x-district': activeDistrict === 'null' ? '' : (activeDistrict || '')
     };

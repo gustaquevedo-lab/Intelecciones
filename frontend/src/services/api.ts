@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
   const activeDistrict = localStorage.getItem('active_district');
   if (userStr) {
     const user = JSON.parse(userStr);
-    config.headers['x-list-id'] = activeListId === 'null' ? '' : (activeListId || user.assigned_list_id || '');
+    config.headers['x-list-id'] = (activeListId === null || activeListId === 'null') ? '' : activeListId;
     config.headers['x-user-role'] = user.role || '';
     config.headers['x-user-id'] = user.id || '';
     config.headers['x-district'] = activeDistrict === 'null' ? '' : (activeDistrict || '');
