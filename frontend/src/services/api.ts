@@ -33,13 +33,24 @@ export const getImageUrl = (url?: string) => {
   
   let finalUrl = url;
   
-  // If it's a relative path, prepend the base API URL (without /api)
-  if (!url.startsWith('http')) {
+  // 1. If the URL is a full URL but contains /uploads/, extract the relative path
+  // This fixes cases where localhost or old dev IPs were saved in the DB
+  if (url.includes('/uploads/')) {
+    const parts = url.split('/uploads/');
+    finalUrl = '/uploads/' + parts[parts.length - 1];
+  }
+  // 2. If it's just a filename (no slash and no http), assume it's in /uploads/
+  else if (!url.startsWith('http') && !url.includes('/')) {
+    finalUrl = `/uploads/${url}`;
+  }
+
+  // 3. If it's a relative path, prepend the current base API URL (without /api)
+  if (!finalUrl.startsWith('http')) {
     const base = API_BASE.replace('/api', '');
-    finalUrl = `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+    finalUrl = `${base}${finalUrl.startsWith('/') ? '' : '/'}${finalUrl}`;
   }
   
-  // Upgrade HTTP to HTTPS if the current page is HTTPS to avoid Mixed Content warnings
+  // 4. Upgrade HTTP to HTTPS if needed
   if (typeof window !== 'undefined' && window.location.protocol === 'https:' && finalUrl.startsWith('http://')) {
     finalUrl = finalUrl.replace('http://', 'https://');
   }

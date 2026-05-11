@@ -464,9 +464,12 @@ const CoordinatorApp = () => {
 
   useEffect(() => {
     if (activeTab === 'history') fetchHistory();
-    if (activeTab === 'coordinators') fetchMyCoordinators();
+    if (activeTab === 'coordinators') {
+      if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
+      else if (user?.role === 'PADRINO') fetchMyPadrinoStats();
+    }
     if (activeTab === 'support') fetchRequests();
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   const fetchRequests = async () => {
     if (!user) return;

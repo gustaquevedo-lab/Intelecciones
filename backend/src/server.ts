@@ -2261,12 +2261,12 @@ app.get('/api/padrino/team-stats', (req, res) => {
     const stats = db.prepare(`
       SELECT 
         u.id, u.nombre, u.username, u.photo_url, u.telefono,
-        COUNT(ec.id) as total_captures,
-        SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
-        SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
-        SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
-        SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
-        SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as transport_needed
+        COUNT(ec.id) as total_electors,
+        COALESCE(SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END), 0) as green,
+        COALESCE(SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END), 0) as yellow,
+        COALESCE(SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END), 0) as red,
+        COALESCE(SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END), 0) as purple,
+        COALESCE(SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END), 0) as transport_needed
       FROM users u
       LEFT JOIN elector_captures ec ON u.id = ec.coordinator_id
       WHERE ${whereClause}

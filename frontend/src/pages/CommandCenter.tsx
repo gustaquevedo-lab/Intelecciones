@@ -7,7 +7,7 @@ import L from 'leaflet';
 import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
   TrendingUp, TrendingDown, ChevronDown,
-  Download, MapPin, Activity, Bell, X, Search,
+  Download, MapPin, Map as MapIcon, Activity, Bell, X, Search,
   AlertCircle, ChevronRight, Truck, Target, MessageSquare, Mic, Clock
 } from 'lucide-react';
 import TeamPanel from './TeamPanel';
@@ -505,7 +505,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
       {stats?.locations?.length > 0 && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <Map size={14} style={{ color: 'var(--plra-300)' }} />
+            <MapIcon size={14} style={{ color: 'var(--plra-300)' }} />
             <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
               COBERTURA POR LOCAL
             </span>
@@ -1081,7 +1081,10 @@ const CommandCenter = () => {
               </div>
 
               <MapContainer center={[-22.5422, -55.7336]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                <TileLayer 
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
                 <ZoomControl position="bottomright" />
                 <MapHandler 
                   center={selectedLocal ? (locales.find(l => l.cod_local === selectedLocal) ? [locales.find(l => l.cod_local === selectedLocal).lat, locales.find(l => l.cod_local === selectedLocal).lng] : null) : null} 
@@ -1766,7 +1769,10 @@ const CommandCenter = () => {
                             doubleClickZoom={false}
                             attributionControl={false}
                           >
-                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                            <TileLayer 
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
                             <Marker position={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} icon={createCustomIcon('var(--plra-500)', 'MapPin')} />
                           </MapContainer>
                         </div>
@@ -1811,7 +1817,10 @@ const CommandCenter = () => {
                             doubleClickZoom={false}
                             attributionControl={false}
                           >
-                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                            <TileLayer 
+                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            />
                             <Marker position={[showResolveModal.capture_lat, showResolveModal.capture_lng]} icon={createCustomIcon('var(--red)', 'MapPin')} />
                           </MapContainer>
                         </div>
