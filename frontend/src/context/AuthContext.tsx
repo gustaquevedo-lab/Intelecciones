@@ -59,18 +59,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (savedDistrict) setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);
             }
 
-            // Background refresh — re-fetch user data from server to catch any changes
-            api.get('/me').then(res => {
-                const fresh: User = res.data;
-                setUser(fresh);
-                localStorage.setItem('auth_user', JSON.stringify(fresh));
-                // Refresh list if it changed server-side
-                if (fresh.role !== 'SUPERUSUARIO' && fresh.assigned_list_id !== parsed.assigned_list_id) {
-                    setActiveListId(fresh.assigned_list_id ?? null);
-                }
-            }).catch(() => {
-                // Server unavailable (cold start, offline) — keep cached user, don't logout
-            });
+            // Background refresh — re-fetch user data from server silently
+            // Delay 2s to avoid hammering a cold-starting Railway container on page load
+            setTimeout(() => {
+                api.get('/me').then(res => {
+                    const fresh: User = res.data;
+                    setUser(fresh);
+                    localStorage.setItem('auth_user', JSON.stringify(fresh));
+                    if (fresh.role !== 'SUPERUSUARIO' && fresh.assigned_list_id !== parsed.assigned_list_id) {
+                        setActiveListId(fresh.assigned_list_id ?? null);
+                    }
+                }).catch(() => {
+                    // Server sleeping/offline — keep cached session silently
+                });
+            }, 2000);
         }
         setLoading(false);
     }, []);
