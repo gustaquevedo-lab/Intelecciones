@@ -1114,11 +1114,22 @@ console.log("DATABASE: Esquema verificado y columnas de distrito preparadas.");
 
 // 🔄 DATA UNIFICATION: Force everything to UPPERCASE to avoid duplicates like "Pedro Juan Caballero" vs "PEDRO JUAN CABALLERO"
 try {
+  // Fix specific variations for CONCEPCION
+  const fixCon = (table: string, col: string) => {
+    db.prepare(`UPDATE ${table} SET ${col} = 'CONCEPCION' WHERE UPPER(TRIM(${col})) IN ('CONCEPCION', 'CONCEPCIÓN')`).run();
+  };
+  fixCon('campaigns', 'distrito');
+  fixCon('lists', 'ciudad');
+  fixCon('voting_locations', 'ciudad');
+  fixCon('voting_locations', 'distrito');
+  fixCon('electors', 'ciudad');
+  fixCon('electors', 'distrito');
+
   db.prepare("UPDATE campaigns SET name = UPPER(TRIM(name)), distrito = UPPER(TRIM(distrito))").run();
   db.prepare("UPDATE lists SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
   db.prepare("UPDATE voting_locations SET nombre = UPPER(TRIM(nombre)), ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
   db.prepare("UPDATE electors SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)), local_votacion = UPPER(TRIM(local_votacion))").run();
-  console.log("DATABASE: Unificación de datos (UPPERCASE) completada exitosamente.");
+  console.log("DATABASE: Unificación de datos (UPPERCASE & CONCEPCION) completada exitosamente.");
 } catch (err: any) {
   console.error("DATABASE: Error durante la unificación de datos:", err.message);
 }

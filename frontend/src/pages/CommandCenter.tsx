@@ -1084,11 +1084,16 @@ const CommandCenter = () => {
                 />
                 <ZoomControl position="bottomright" />
                 <MapHandler 
-                  center={selectedLocal ? (locales.find(l => l.cod_local === selectedLocal) ? [locales.find(l => l.cod_local === selectedLocal).lat, locales.find(l => l.cod_local === selectedLocal).lng] : null) : null} 
+                  center={(() => {
+                    if (!selectedLocal) return null;
+                    const l = locales.find(l => l.cod_local === selectedLocal);
+                    if (l && l.lat != null && l.lng != null) return [l.lat, l.lng];
+                    return null;
+                  })()} 
                   selectedLocalId={selectedLocal}
                 />
 
-                {locales.map((l: any) => {
+                {locales.filter(l => l.lat != null && l.lng != null).map((l: any) => {
                   const locStat = commandStats?.locations?.find((s: any) => s.cod_local === l.cod_local);
                   const color = locStat?.percentage > 70 ? 'var(--green)' : locStat?.percentage > 30 ? 'var(--yellow)' : 'var(--red)';
                   const isSelected = selectedLocal === l.cod_local;
@@ -1121,6 +1126,7 @@ const CommandCenter = () => {
                 {isClusteringEnabled ? (
                   <MarkerClusterGroup disableClusteringAtZoom={15} maxClusterRadius={40}>
                     {captures
+                      .filter(cap => cap.lat != null && cap.lng != null)
                       .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
                       .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
                       .filter(cap => !needsTransportFilter || cap.needs_transport === 1)
@@ -1203,6 +1209,7 @@ const CommandCenter = () => {
                   </MarkerClusterGroup>
                 ) : (
                   captures
+                    .filter(cap => cap.lat != null && cap.lng != null)
                     .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
                     .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
                     .filter(cap => !needsTransportFilter || cap.needs_transport === 1)
@@ -1283,7 +1290,7 @@ const CommandCenter = () => {
                     );
                   })
                 )}
-                {showVehicles && vehicles.map((v) => (
+                {showVehicles && vehicles.filter(v => v.lat != null && v.lng != null).map((v) => (
                   <Marker key={`veh-${v.id}`} position={[v.lat, v.lng]} icon={createCustomIcon('var(--plra-300)', 'Car')}>
                     <Popup>
                       <div style={{ padding: '0.5rem' }}>
@@ -1773,7 +1780,7 @@ const CommandCenter = () => {
                         {/* Mini Map Thumbnail */}
                         <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
                           <MapContainer 
-                            center={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} 
+                            center={[showResolveModal.original_capture_lat || -22.54, showResolveModal.original_capture_lng || -55.73]} 
                             zoom={15} 
                             style={{ height: '100%', width: '100%' }}
                             zoomControl={false}
@@ -1786,7 +1793,9 @@ const CommandCenter = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
-                            <Marker position={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} icon={createCustomIcon('var(--plra-500)', 'MapPin')} />
+                            {showResolveModal.original_capture_lat != null && showResolveModal.original_capture_lng != null && (
+                              <Marker position={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} icon={createCustomIcon('var(--plra-500)', 'MapPin')} />
+                            )}
                           </MapContainer>
                         </div>
                       </div>
@@ -1821,7 +1830,7 @@ const CommandCenter = () => {
                         {/* Mini Map Thumbnail */}
                         <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
                           <MapContainer 
-                            center={[showResolveModal.capture_lat, showResolveModal.capture_lng]} 
+                            center={[showResolveModal.capture_lat || -22.54, showResolveModal.capture_lng || -55.73]} 
                             zoom={15} 
                             style={{ height: '100%', width: '100%' }}
                             zoomControl={false}
@@ -1834,7 +1843,9 @@ const CommandCenter = () => {
                               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
                               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             />
-                            <Marker position={[showResolveModal.capture_lat, showResolveModal.capture_lng]} icon={createCustomIcon('var(--red)', 'MapPin')} />
+                            {showResolveModal.capture_lat != null && showResolveModal.capture_lng != null && (
+                              <Marker position={[showResolveModal.capture_lat, showResolveModal.capture_lng]} icon={createCustomIcon('var(--red)', 'MapPin')} />
+                            )}
                           </MapContainer>
                         </div>
                       </div>
