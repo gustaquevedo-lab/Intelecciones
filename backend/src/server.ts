@@ -2592,7 +2592,8 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (r
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
              u.assigned_list_id, l.list_number, l.candidate_alias,
              COUNT(DISTINCT u2.id) AS coordinator_count,
-             COUNT(DISTINCT ec.id) AS total_captures
+             COUNT(DISTINCT ec.id) AS total_captures,
+             SUM(CASE WHEN ec.needs_transport=1 THEN 1 ELSE 0 END) AS needs_transport
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'

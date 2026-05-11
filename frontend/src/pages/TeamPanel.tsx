@@ -454,16 +454,20 @@ const PadrinoRow = ({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexShrink: 0 }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700 }}>Coordinadores</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#A855F7' }}>{padrino.coordinator_count ?? 0}</div>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 700 }}>Coords</div>
+            <div style={{ fontSize: '1rem', fontWeight: 900, color: '#A855F7' }}>{padrino.coordinator_count ?? 0}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700 }}>Capturas</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--green)' }}>{padrino.total_captures ?? 0}</div>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 700 }}>Captados</div>
+            <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--green)' }}>{padrino.total_captures ?? 0}</div>
           </div>
-          {expanded ? <ChevronDown size={18} style={{ color: 'var(--text-3)' }} /> : <ChevronRight size={18} style={{ color: 'var(--text-3)' }} />}
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 700 }}>Logística</div>
+            <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--yellow)' }}>{padrino.needs_transport ?? 0}</div>
+          </div>
+          {expanded ? <ChevronDown size={16} style={{ color: 'var(--text-3)' }} /> : <ChevronRight size={16} style={{ color: 'var(--text-3)' }} />}
         </div>
       </div>
 
@@ -526,10 +530,11 @@ const PadrinoRow = ({
                   )}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.6rem', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: '0.55rem', flexShrink: 0 }}>
                 <StatDot count={c.green || 0} color="#22C55E" />
                 <StatDot count={c.yellow || 0} color="#EAB308" />
                 <StatDot count={c.red || 0} color="#EF4444" />
+                <StatDot count={c.needs_transport || 0} color="var(--plra-300)" />
               </div>
             </div>
           ))}
@@ -708,10 +713,11 @@ const TeamPanel = () => {
                     </a>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: '0.6rem', flexShrink: 0 }}>
                   <StatDot count={c.green || 0} color="#22C55E" />
                   <StatDot count={c.yellow || 0} color="#EAB308" />
                   <StatDot count={c.red || 0} color="#EF4444" />
+                  <StatDot count={c.needs_transport || 0} color="var(--plra-300)" />
                 </div>
               </div>
             ))
