@@ -37,77 +37,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [activeDistrict, setActiveDistrict] = useState<string | null>(null);
 
     useEffect(() => {
-        const savedUser = localStorage.getItem('auth_user');
-        const savedListId = localStorage.getItem('active_list_id');
-        const savedDistrict = localStorage.getItem('active_district');
+        try {
+            const savedUser = localStorage.getItem('auth_user');
+            const savedListId = localStorage.getItem('active_list_id');
+            const savedDistrict = localStorage.getItem('active_district');
 
-        if (savedUser) {
-            let parsed: User;
-            try { parsed = JSON.parse(savedUser); } catch { localStorage.removeItem('auth_user'); setLoading(false); return; }
+            if (savedUser) {
+                let parsed: User;
+                try { parsed = JSON.parse(savedUser); } catch { localStorage.removeItem('auth_user'); setLoading(false); return; }
 
-            // Legacy role mapping
-            if ((parsed as any).role === 'SUPER_ADMIN') parsed.role = 'SUPERUSUARIO';
-            if ((parsed as any).role === 'COORDINATOR') parsed.role = 'COORDINADOR';
-            if ((parsed as any).role === 'CANDIDATE') parsed.role = 'JEFE_CAMPANA';
+                if ((parsed as any).role === 'SUPER_ADMIN') parsed.role = 'SUPERUSUARIO';
+                if ((parsed as any).role === 'COORDINATOR') parsed.role = 'COORDINADOR';
+                if ((parsed as any).role === 'CANDIDATE') parsed.role = 'JEFE_CAMPANA';
 
-            // Set immediately from cache (instant UI)
-            setUser(parsed);
-            if (parsed.role !== 'SUPERUSUARIO') {
-                setActiveListId(parsed.assigned_list_id ?? null);
-            } else {
-                if (savedListId) setActiveListId(savedListId === 'null' ? null : parseInt(savedListId));
-                if (savedDistrict) setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);
+                setUser(parsed);
+                if (parsed.role !== 'SUPERUSUARIO') {
+                    setActiveListId(parsed.assigned_list_id ?? null);
+                } else {
+                    if (savedListId) setActiveListId(savedListId === 'null' ? null : parseInt(savedListId));
+                    if (savedDistrict) setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);
+                }
+
+                setTimeout(() => {
+                    api.get('/me').then(res => {
+                        const fresh: User = res.data;
+                        setUser(fresh);
+                        try { localStorage.setItem('auth_user', JSON.stringify(fresh)); } catch(e) {}
+                    }).catch(() => {});
+                }, 2000);
             }
-
-            // Background refresh — re-fetch user data from server silently
-            // Delay 2s to avoid hammering a cold-starting Railway container on page load
-            setTimeout(() => {
-                api.get('/me').then(res => {
-                    const fresh: User = res.data;
-                    setUser(fresh);
-                    localStorage.setItem('auth_user', JSON.stringify(fresh));
-                    if (fresh.role !== 'SUPERUSUARIO' && fresh.assigned_list_id !== parsed.assigned_list_id) {
-                        setActiveListId(fresh.assigned_list_id ?? null);
-                    }
-                }).catch(() => {
-                    // Server sleeping/offline — keep cached session silently
-                });
-            }, 2000);
+        } catch (err) {
+            console.warn("Storage access denied in this environment.");
         }
         setLoading(false);
     }, []);
 
     useEffect(() => {
         if (activeListId !== undefined) {
-            localStorage.setItem('active_list_id', activeListId === null ? 'null' : activeListId.toString());
+            try { localStorage.setItem('active_list_id', activeListId === null ? 'null' : activeListId.toString()); } catch(e) {}
         }
     }, [activeListId]);
 
     useEffect(() => {
         if (activeDistrict !== undefined) {
-            localStorage.setItem('active_district', activeDistrict === null ? 'null' : activeDistrict);
+            try { localStorage.setItem('active_district', activeDistrict === null ? 'null' : activeDistrict); } catch(e) {}
         }
     }, [activeDistrict]);
 
     useEffect(() => {
-        if (user) {
-            localStorage.setItem('auth_user', JSON.stringify(user));
-        } else {
-            localStorage.removeItem('auth_user');
-        }
+        try {
+            if (user) {
+                localStorage.setItem('auth_user', JSON.stringify(user));
+            } else {
+                localStorage.removeItem('auth_user');
+            }
+        } catch(e) {}
     }, [user]);
 
     const login = async (credentials: any) => {
         const { data } = await api.post('/login', credentials);
         setUser(data);
-        localStorage.setItem('auth_user', JSON.stringify(data));
+        try { localStorage.setItem('auth_user', JSON.stringify(data)); } catch(e) {}
         
-        // Clear global filters on SuperAdmin login to ensure visibility
         if (data.role === 'SUPERUSUARIO') {
             setActiveListId(null);
             setActiveDistrict(null);
-            localStorage.setItem('active_list_id', 'null');
-            localStorage.setItem('active_district', 'null');
+            try {
+                localStorage.setItem('active_list_id', 'null');
+                localStorage.setItem('active_district', 'null');
+            } catch(e) {}
         }
         
         return data;

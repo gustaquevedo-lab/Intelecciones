@@ -6,39 +6,43 @@ const SYNC_STORE = 'pending_sync';
 
 export const initOfflineDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
-    console.log(`[DB] Opening IndexedDB: ${DB_NAME} v${DB_VERSION}`);
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    try {
+      console.log(`[DB] Opening IndexedDB: ${DB_NAME} v${DB_VERSION}`);
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => {
-      console.error("[DB] Error opening IndexedDB:", request.error);
-      reject(request.error);
-    };
-    
-    request.onsuccess = () => {
-      const db = request.result;
-      // Defensive check: if for some reason onupgradeneeded didn't run or failed
-      if (!db.objectStoreNames.contains(SYNC_STORE)) {
-        console.warn(`[DB] Store ${SYNC_STORE} missing in v${db.version}. This should not happen.`);
-      }
-      resolve(db);
-    };
-
-    request.onupgradeneeded = (event: any) => {
-      const db = event.target.result;
+      request.onerror = () => {
+        console.error("[DB] Error opening IndexedDB:", request.error);
+        reject(request.error);
+      };
       
-      // Store for Electors (Padron)
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'ci' });
-        store.createIndex('nombre', 'nombre', { unique: false });
-        store.createIndex('apellido', 'apellido', { unique: false });
-        store.createIndex('full_name', ['nombre', 'apellido'], { unique: false });
-      }
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(SYNC_STORE)) {
+          console.warn(`[DB] Store ${SYNC_STORE} missing in v${db.version}.`);
+        }
+        resolve(db);
+      };
 
-      // Store for Pending Sync Actions (Captures, Votes, etc.)
-      if (!db.objectStoreNames.contains(SYNC_STORE)) {
-        db.createObjectStore(SYNC_STORE, { keyPath: 'id', autoIncrement: true });
-      }
-    };
+      request.onupgradeneeded = (event: any) => {
+        const db = event.target.result;
+        
+        // Store for Electors (Padron)
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'ci' });
+          store.createIndex('nombre', 'nombre', { unique: false });
+          store.createIndex('apellido', 'apellido', { unique: false });
+          store.createIndex('full_name', ['nombre', 'apellido'], { unique: false });
+        }
+
+        // Store for Pending Sync Actions (Captures, Votes, etc.)
+        if (!db.objectStoreNames.contains(SYNC_STORE)) {
+          db.createObjectStore(SYNC_STORE, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+    } catch (e) {
+      console.error("[DB] Critical security error opening DB:", e);
+      reject(e);
+    }
   });
 };
 
