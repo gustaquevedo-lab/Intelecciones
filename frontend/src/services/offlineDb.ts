@@ -6,10 +6,22 @@ const SYNC_STORE = 'pending_sync';
 
 export const initOfflineDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
+    console.log(`[DB] Opening IndexedDB: ${DB_NAME} v${DB_VERSION}`);
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => {
+      console.error("[DB] Error opening IndexedDB:", request.error);
+      reject(request.error);
+    };
+    
+    request.onsuccess = () => {
+      const db = request.result;
+      // Defensive check: if for some reason onupgradeneeded didn't run or failed
+      if (!db.objectStoreNames.contains(SYNC_STORE)) {
+        console.warn(`[DB] Store ${SYNC_STORE} missing in v${db.version}. This should not happen.`);
+      }
+      resolve(db);
+    };
 
     request.onupgradeneeded = (event: any) => {
       const db = event.target.result;
