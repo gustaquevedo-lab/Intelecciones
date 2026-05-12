@@ -15,6 +15,20 @@ import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UpdatePrompt from './components/UpdatePrompt';
 import './services/syncService'; // Initialize sync listeners
+import { useAuth } from './context/AuthContext';
+
+const RootRedirect = () => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return null;
+  
+  if (!user) return <Navigate to="/login" replace />;
+  
+  if (user.role === 'SUPERUSUARIO') return <Navigate to="/admin" replace />;
+  if (user.role === 'JEFE_CAMPANA' || user.role === 'CANDIDATO') return <Navigate to="/comando" replace />;
+  if (user.role === 'MIEMBRO_DE_MESA') return <Navigate to="/veedor" replace />;
+  return <Navigate to="/coordinador" replace />;
+};
 
 function App() {
   console.log('App Rendering Real V2');
@@ -37,6 +51,8 @@ function App() {
               </div>
             }>
               <Routes>
+                <Route path="/" element={<RootRedirect />} />
+                <Route path="/app.html" element={<RootRedirect />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/coordinador" element={<CoordinatorApp />} />
                 <Route path="/comando" element={<CommandCenter />} />
