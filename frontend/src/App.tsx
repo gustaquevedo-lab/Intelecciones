@@ -20,13 +20,25 @@ import { useAuth } from './context/AuthContext';
 const RootRedirect = () => {
   const { user, loading } = useAuth();
   
-  if (loading) return null;
+  console.log('[Root] Checking redirection...', { user: !!user, loading });
+
+  if (loading) return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--plra-900)' }}>
+      <div className="spinner" style={{ width: '40px', height: '40px' }} />
+    </div>
+  );
   
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    console.log('[Root] No user found, redirecting to /login');
+    return <Navigate to="/login" replace />;
+  }
   
-  if (user.role === 'SUPERUSUARIO') return <Navigate to="/admin" replace />;
-  if (user.role === 'JEFE_CAMPANA' || user.role === 'CANDIDATO') return <Navigate to="/comando" replace />;
-  if (user.role === 'MIEMBRO_DE_MESA') return <Navigate to="/veedor" replace />;
+  const role = user.role;
+  console.log('[Root] User authenticated, role:', role);
+
+  if (role === 'SUPERUSUARIO') return <Navigate to="/admin" replace />;
+  if (role === 'JEFE_CAMPANA' || role === 'CANDIDATO') return <Navigate to="/comando" replace />;
+  if (role === 'MIEMBRO_DE_MESA') return <Navigate to="/veedor" replace />;
   return <Navigate to="/coordinador" replace />;
 };
 
