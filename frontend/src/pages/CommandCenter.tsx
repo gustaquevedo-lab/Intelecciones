@@ -276,28 +276,77 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
 
         <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
           {[
-            { key: 'GREEN', color: 'var(--green)', label: 'Casa' },
-            { key: 'YELLOW', color: 'var(--yellow)', label: 'Fam.' },
-            { key: 'RED', color: 'var(--red)', label: 'Otros' },
-            { key: 'PURPLE', color: 'var(--purple)', label: 'Vol.' }
+            { key: 'GREEN', color: '#22C55E', label: 'Casa', icon: '🏠' },
+            { key: 'YELLOW', color: '#EAB308', label: 'Familia', icon: '👨‍👩‍👧' },
+            { key: 'RED', color: '#EF4444', label: 'Otros', icon: '📍' },
+            { key: 'PURPLE', color: '#A855F7', label: 'Volunt.', icon: '✨' }
           ].map(f => (
             <button
               key={f.key}
               onClick={() => onFilter(currentFilter === f.key ? null : f.key)}
               style={{
-                flex: 1, padding: '0.4rem', borderRadius: '10px',
+                flex: 1, padding: '0.6rem 0.4rem', borderRadius: '14px',
                 background: currentFilter === f.key ? f.color : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${currentFilter === f.key ? f.color : 'rgba(255,255,255,0.08)'}`,
-                cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem',
-                transition: 'all 0.2s'
+                border: `1px solid ${currentFilter === f.key ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: currentFilter === f.key ? `0 4px 12px ${f.color}40` : 'none',
+                transform: currentFilter === f.key ? 'scale(1.05)' : 'scale(1)'
               }}
             >
-              <span style={{ fontSize: '0.75rem', fontWeight: 900, color: currentFilter === f.key ? 'white' : 'white' }}>
+              <span style={{ fontSize: '0.9rem', marginBottom: '2px' }}>{f.icon}</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 900, color: currentFilter === f.key ? 'white' : 'white' }}>
                 {f.key === 'GREEN' ? stats?.green : f.key === 'YELLOW' ? stats?.yellow : f.key === 'RED' ? stats?.red : stats?.purple}
               </span>
-              <span style={{ fontSize: '0.45rem', fontWeight: 800, color: currentFilter === f.key ? 'rgba(255,255,255,0.8)' : 'var(--text-3)', textTransform: 'uppercase' }}>{f.label}</span>
+              <span style={{ fontSize: '0.42rem', fontWeight: 900, color: currentFilter === f.key ? 'rgba(255,255,255,0.9)' : 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{f.label}</span>
             </button>
           ))}
+        </div>
+
+        {/* Rendimiento por Local (NUEVO) */}
+        <div style={{ marginTop: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h4 style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Rendimiento por Local</h4>
+            <div style={{ padding: '2px 8px', borderRadius: '100px', background: 'rgba(59,130,246,0.1)', color: 'var(--plra-300)', fontSize: '0.55rem', fontWeight: 900 }}>{stats?.locations?.length || 0} LOCALES</div>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '380px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+            {stats?.locations?.sort((a: any, b: any) => b.percentage - a.percentage).map((loc: any) => (
+              <div 
+                key={loc.cod_local}
+                style={{ 
+                  background: 'rgba(255,255,255,0.02)', 
+                  border: '1px solid rgba(255,255,255,0.06)', 
+                  borderRadius: '14px', 
+                  padding: '0.75rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.nombre}</p>
+                    <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, margin: '1px 0 0' }}>{loc.total_captures} / {loc.total_electors} ELECTORES</p>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 950, color: loc.percentage > 70 ? 'var(--green)' : loc.percentage > 30 ? 'var(--yellow)' : 'var(--red)' }}>
+                      {Math.round(loc.percentage)}%
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Progress Bar Mini */}
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${loc.percentage}%`, 
+                    height: '100%', 
+                    background: loc.percentage > 70 ? 'var(--green)' : loc.percentage > 30 ? 'var(--yellow)' : 'var(--red)',
+                    boxShadow: `0 0 8px ${loc.percentage > 70 ? 'var(--green)40' : loc.percentage > 30 ? 'var(--yellow)40' : 'var(--red)40'}`,
+                    transition: 'width 1s ease-out'
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
