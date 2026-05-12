@@ -21,11 +21,11 @@ import api, { getImageUrl } from '../services/api';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
-  let clean = phone.replace(/\D/g, ''); 
+  let clean = phone.replace(/\D/g, '');
   if (clean.startsWith('595')) {
     clean = clean.substring(3);
   }
-  const normalized = clean.replace(/^0/, ''); 
+  const normalized = clean.replace(/^0/, '');
   return `595${normalized}`;
 };
 
@@ -46,9 +46,9 @@ const ICON_SVGS: Record<string, string> = {
 };
 
 const TRAFFIC_COLORS: Record<string, string> = {
-  GREEN:  '#22C55E',
+  GREEN: '#22C55E',
   YELLOW: '#EAB308',
-  RED:    '#EF4444',
+  RED: '#EF4444',
   PURPLE: '#A855F7',
 };
 
@@ -60,17 +60,17 @@ const createCustomIcon = (color: string, iconName: string = 'Landmark', needsTra
   // Resolve CSS variable colors to hex for use inside SVG/shadow
   const resolvedColor = color.startsWith('var(') ? (
     color.includes('green') ? '#22C55E' :
-    color.includes('yellow') ? '#EAB308' :
-    color.includes('red') ? '#EF4444' :
-    color.includes('plra-300') ? '#3B82F6' :
-    color.includes('plra-500') ? '#0047AB' : '#3B82F6'
+      color.includes('yellow') ? '#EAB308' :
+        color.includes('red') ? '#EF4444' :
+          color.includes('plra-300') ? '#3B82F6' :
+            color.includes('plra-500') ? '#0047AB' : '#3B82F6'
   ) : color;
 
   return L.divIcon({
     html: `
       <div style="position:relative;width:${sz}px;height:${totalH}px;filter:drop-shadow(0 4px 8px ${resolvedColor}60);">
         <div style="
-          width:${sz}px;height:${sz}px;border-radius:${sz/2}px ${sz/2}px ${sz*0.35}px ${sz*0.35}px;
+          width:${sz}px;height:${sz}px;border-radius:${sz / 2}px ${sz / 2}px ${sz * 0.35}px ${sz * 0.35}px;
           background:${resolvedColor};
           border:2.5px solid rgba(255,255,255,0.9);
           box-shadow:0 0 0 3px ${resolvedColor}40,inset 0 2px 4px rgba(255,255,255,0.25);
@@ -89,8 +89,8 @@ const createCustomIcon = (color: string, iconName: string = 'Landmark', needsTra
         <div style="
           position:absolute;bottom:0;left:50%;transform:translateX(-50%);
           width:0;height:0;
-          border-left:${sz*0.22}px solid transparent;
-          border-right:${sz*0.22}px solid transparent;
+          border-left:${sz * 0.22}px solid transparent;
+          border-right:${sz * 0.22}px solid transparent;
           border-top:${tailH}px solid ${resolvedColor};
         "></div>
       </div>
@@ -147,15 +147,15 @@ const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number
 /* ─── sub-components ─────────────────────────────────── */
 
 const StatCard = ({ label, value, trend, color, isTactical, onClick, active, percentage }: any) => (
-  <div 
+  <div
     onClick={onClick}
     style={{
-      background: active ? `${color}20` : (isTactical ? 'rgba(0,0,0,0.3)' : 'var(--surface)'), 
+      background: active ? `${color}20` : (isTactical ? 'rgba(0,0,0,0.3)' : 'var(--surface)'),
       border: `1px solid ${active ? color : (isTactical ? 'rgba(255,255,255,0.05)' : 'var(--border)')}`,
-      borderRadius: '16px', 
+      borderRadius: '16px',
       padding: '1.1rem 1.25rem',
-      display: 'flex', 
-      alignItems: 'center', 
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'space-between',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       position: 'relative',
@@ -165,20 +165,20 @@ const StatCard = ({ label, value, trend, color, isTactical, onClick, active, per
       opacity: active || !onClick ? 1 : 0.5
     }}
   >
-    <div style={{ 
-      position: 'absolute', left: 0, top: '25%', bottom: '25%', 
+    <div style={{
+      position: 'absolute', left: 0, top: '25%', bottom: '25%',
       width: '3px', background: color, borderRadius: '0 4px 4px 0',
       opacity: 0.8
     }} />
     <div style={{ minWidth: 0 }}>
-      <span style={{ 
-        fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.12em', 
-        textTransform: 'uppercase', color: isTactical ? 'var(--text-3)' : 'var(--text-3)', fontFamily: 'var(--font-display)' 
+      <span style={{
+        fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.12em',
+        textTransform: 'uppercase', color: isTactical ? 'var(--text-3)' : 'var(--text-3)', fontFamily: 'var(--font-display)'
       }}>
         {label}
       </span>
-      <div style={{ 
-        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem', 
+      <div style={{
+        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem',
         color: isTactical ? 'white' : 'var(--text)', lineHeight: 1, marginTop: '0.35rem',
         display: 'flex', alignItems: 'baseline', gap: '0.5rem'
       }}>
@@ -188,15 +188,15 @@ const StatCard = ({ label, value, trend, color, isTactical, onClick, active, per
         )}
       </div>
     </div>
-    <div style={{ 
-      width: '40px', height: '40px', borderRadius: '12px', 
-      background: `${color}15`, border: `1px solid ${color}30`, 
+    <div style={{
+      width: '40px', height: '40px', borderRadius: '12px',
+      background: `${color}15`, border: `1px solid ${color}30`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0
     }}>
-      {trend === 'up'   && <TrendingUp  size={20} style={{ color }} />}
+      {trend === 'up' && <TrendingUp size={20} style={{ color }} />}
       {trend === 'down' && <TrendingDown size={20} style={{ color }} />}
-      {!trend           && <Activity    size={20} style={{ color: isTactical ? 'var(--text-3)' : 'var(--text-3)' }} />}
+      {!trend && <Activity size={20} style={{ color: isTactical ? 'var(--text-3)' : 'var(--text-3)' }} />}
     </div>
   </div>
 );
@@ -216,19 +216,19 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
         </div>
         <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600 }}>{new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
-      
+
       <p style={{ fontSize: '1rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>{req.type}</p>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '1.25rem', lineHeight: '1.5', wordBreak: 'break-word' }}>{req.description}</p>
-      
+
       {/* Multimedia Display (Premium) */}
       {(req.photo_url || req.audio_url) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
           {req.photo_url && (
-            <div 
+            <div
               onClick={() => window.open(getImageUrl(req.photo_url) || '', '_blank')}
-              style={{ 
-                width: '100%', height: '140px', borderRadius: '12px', 
-                overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative' 
+              style={{
+                width: '100%', height: '140px', borderRadius: '12px',
+                overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative'
               }}
             >
               <img src={getImageUrl(req.photo_url) || ''} alt="Evidencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -237,7 +237,7 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
               </div>
             </div>
           )}
-          
+
           {req.audio_url && (
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -266,14 +266,14 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {req.coordinator_phone && (
-          <a 
+          <a
             href={`https://wa.me/${formatWhatsApp(req.coordinator_phone)}`}
             target="_blank"
             rel="noreferrer"
-            style={{ 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', 
-              background: '#25D366', color: 'white', padding: '0.6rem', 
-              borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800, 
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+              background: '#25D366', color: 'white', padding: '0.6rem',
+              borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800,
               textDecoration: 'none'
             }}
           >
@@ -307,8 +307,8 @@ const ActivityFeed = ({ activities }: { activities: any[] }) => (
     {activities.map((act, i) => (
       <div key={i} style={{ display: 'flex', gap: '0.75rem', position: 'relative' }}>
         {i < activities.length - 1 && <div style={{ position: 'absolute', left: '11px', top: '24px', bottom: '-12px', width: '2px', background: 'var(--border)' }} />}
-        <div style={{ 
-          width: '24px', height: '24px', borderRadius: '50%', 
+        <div style={{
+          width: '24px', height: '24px', borderRadius: '50%',
           background: act.type === 'CAPTURE' ? 'var(--green)' : act.type === 'CONFLICT' ? 'var(--red)' : 'var(--plra-500)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1
         }}>
@@ -333,11 +333,11 @@ const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
   const startTime = new Date();
   startTime.setHours(7, 0, 0);
   const now = new Date();
-  
+
   let elapsedHours = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
   if (elapsedHours <= 0) elapsedHours = 0.5;
   if (elapsedHours > 10) elapsedHours = 10;
-  
+
   const speed = currentCount / elapsedHours;
   const projection = Math.round(speed * 10);
 
@@ -377,16 +377,16 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
 
   return (
     <div className="tactical-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.25rem', minHeight: '100%' }}>
-      <CountdownCard 
-        targetDate={settings.election_date} 
-        title="OPERATIVO DÍA D" 
+      <CountdownCard
+        targetDate={settings.election_date}
+        title="OPERATIVO DÍA D"
         isSidebar={true}
       />
 
       <div style={{ position: 'relative', marginTop: '0.5rem' }}>
         <Search size={14} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-        <input 
-          type="text" 
+        <input
+          type="text"
           placeholder="Rastreo de Elector..."
           onKeyDown={(e) => e.key === 'Enter' && (window as any).handleStrategicSearch((e.target as HTMLInputElement).value)}
           style={{
@@ -469,53 +469,53 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
           </span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <StatCard 
-            label="Estructura CASA" 
-            value={stats?.green || 0} 
+          <StatCard
+            label="Estructura CASA"
+            value={stats?.green || 0}
             percentage={stats?.total_captures > 0 ? Math.round((stats.green / stats.total_captures) * 100) : 0}
-            trend="up" 
-            color="var(--green)" 
-            isTactical 
+            trend="up"
+            color="var(--green)"
+            isTactical
             onClick={() => onFilter(currentFilter === 'GREEN' ? null : 'GREEN')}
             active={currentFilter === 'GREEN'}
           />
-          <StatCard 
-            label="Vínculo FAMILIARES" 
-            value={stats?.yellow || 0} 
+          <StatCard
+            label="Vínculo FAMILIARES"
+            value={stats?.yellow || 0}
             percentage={stats?.total_captures > 0 ? Math.round((stats.yellow / stats.total_captures) * 100) : 0}
-            trend="up" 
-            color="var(--yellow)" 
-            isTactical 
+            trend="up"
+            color="var(--yellow)"
+            isTactical
             onClick={() => onFilter(currentFilter === 'YELLOW' ? null : 'YELLOW')}
             active={currentFilter === 'YELLOW'}
           />
-          <StatCard 
-            label="Mando VOLUNTARIO" 
-            value={stats?.purple || 0} 
+          <StatCard
+            label="Mando VOLUNTARIO"
+            value={stats?.purple || 0}
             percentage={stats?.total_captures > 0 ? Math.round((stats.purple / stats.total_captures) * 100) : 0}
-            trend="up" 
-            color="#A855F7" 
-            isTactical 
+            trend="up"
+            color="#A855F7"
+            isTactical
             onClick={() => onFilter(currentFilter === 'PURPLE' ? null : 'PURPLE')}
             active={currentFilter === 'PURPLE'}
           />
-          <StatCard 
-            label="Captados OTROS" 
-            value={stats?.red || 0} 
+          <StatCard
+            label="Captados OTROS"
+            value={stats?.red || 0}
             percentage={stats?.total_captures > 0 ? Math.round((stats.red / stats.total_captures) * 100) : 0}
-            trend="down" 
-            color="var(--red)" 
-            isTactical 
+            trend="down"
+            color="var(--red)"
+            isTactical
             onClick={() => onFilter(currentFilter === 'RED' ? null : 'RED')}
             active={currentFilter === 'RED'}
           />
-          <StatCard 
-            label="Electores Pendientes" 
-            value={(stats?.total_electors - stats?.total_captures) || 0} 
+          <StatCard
+            label="Electores Pendientes"
+            value={(stats?.total_electors - stats?.total_captures) || 0}
             percentage={stats?.total_electors > 0 ? Math.round(((stats.total_electors - stats.total_captures) / stats.total_electors) * 100) : 0}
-            trend={null} 
-            color="var(--plra-300)" 
-            isTactical 
+            trend={null}
+            color="var(--plra-300)"
+            isTactical
           />
         </div>
         <ProjectionCard currentCount={stats?.total_captures || 0} />
@@ -775,8 +775,8 @@ const CommandCenter = () => {
 
       // 1. CRITICAL & LIGHT: Fetch core stats and locations first
       // These are essential for the dashboard shell
-      api.get(`/stats/command?${queryStr}`).then(res => setCommandStats(res.data)).catch(() => {});
-      api.get('/voting-locations').then(res => setLocales(res.data)).catch(() => {});
+      api.get(`/stats/command?${queryStr}`).then(res => setCommandStats(res.data)).catch(() => { });
+      api.get('/voting-locations').then(res => setLocales(res.data)).catch(() => { });
 
       // Helper for independent state updates
       const fetchToState = async (url: string, setter: (data: any) => void) => {
@@ -811,11 +811,11 @@ const CommandCenter = () => {
 
       // Special global check for SuperAdmin
       if (authUser?.role === 'SUPERUSUARIO' && activeListId === null && (activeTab === 'alerts' || !isMobile)) {
-        api.get('/admin/disputes/global').catch(() => {});
+        api.get('/admin/disputes/global').catch(() => { });
       }
 
-    } catch (err) { 
-      console.error("Critical error in loadData:", err); 
+    } catch (err) {
+      console.error("Critical error in loadData:", err);
     }
   };
 
@@ -877,12 +877,12 @@ const CommandCenter = () => {
   if (loading) return null;
 
   return (
-    <MainLayout 
-      title="Comando Central" 
-      userName={authUser?.nombre || "Director"} 
+    <MainLayout
+      title="Comando Central"
+      userName={authUser?.nombre || "Director"}
       userPhoto={getImageUrl(authUser?.photo_url) || ''}
     >
-      <div style={{ 
+      <div style={{
         padding: isMobile ? '1.5rem 1rem 1rem' : '1.5rem 2rem',
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
@@ -893,10 +893,10 @@ const CommandCenter = () => {
         gap: isMobile ? '1rem' : '1.25rem',
         textAlign: isMobile ? 'center' : 'left'
       }}>
-        <div style={{ 
-          width: isMobile ? '42px' : '52px', 
-          height: isMobile ? '42px' : '52px', 
-          borderRadius: '16px', 
+        <div style={{
+          width: isMobile ? '42px' : '52px',
+          height: isMobile ? '42px' : '52px',
+          borderRadius: '16px',
           background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: 'white',
@@ -906,18 +906,18 @@ const CommandCenter = () => {
           <Target size={isMobile ? 22 : 28} />
         </div>
         <div>
-          <h1 style={{ 
-            fontSize: isMobile ? '1.1rem' : '1.75rem', 
-            fontWeight: 900, 
-            letterSpacing: '-0.02em', 
+          <h1 style={{
+            fontSize: isMobile ? '1.1rem' : '1.75rem',
+            fontWeight: 900,
+            letterSpacing: '-0.02em',
             color: 'var(--text)',
             lineHeight: 1.1
           }}>
             Centro de Decisiones <span style={{ color: 'var(--plra-300)' }}>Estratégicas</span>
           </h1>
-          <p style={{ 
-            fontSize: isMobile ? '0.6rem' : '0.85rem', 
-            color: 'var(--text-3)', 
+          <p style={{
+            fontSize: isMobile ? '0.6rem' : '0.85rem',
+            color: 'var(--text-3)',
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
@@ -928,10 +928,10 @@ const CommandCenter = () => {
 
       <div style={{ padding: '0 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '0', alignItems: 'center', background: 'rgba(255,255,255,0.01)', overflowX: 'auto' }}>
         {([
-          { id: 'map',       icon: MapPin,  label: 'Mapa Táctico',    badge: null },
-          { id: 'hierarchy', icon: Shield,  label: 'Jerarquía',       badge: null },
-          { id: 'team',      icon: Users,   label: 'Mi Equipo',       badge: null },
-          { id: 'requests',  icon: Bell,    label: 'Solicitudes',     badge: requests.filter(r => r.status === 'PENDING').length || null },
+          { id: 'map', icon: MapPin, label: 'Mapa Táctico', badge: null },
+          { id: 'hierarchy', icon: Shield, label: 'Jerarquía', badge: null },
+          { id: 'team', icon: Users, label: 'Mi Equipo', badge: null },
+          { id: 'requests', icon: Bell, label: 'Solicitudes', badge: requests.filter(r => r.status === 'PENDING').length || null },
         ] as const).map(tab => (
           <button
             key={tab.id}
@@ -940,7 +940,7 @@ const CommandCenter = () => {
               display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer',
               padding: '0.85rem 1.25rem',
               color: activeTab === tab.id ? 'var(--plra-300)' : 'var(--text-3)',
-              background: 'none', border: 'none', 
+              background: 'none', border: 'none',
               borderBottom: activeTab === tab.id ? '2px solid var(--plra-300)' : '2px solid transparent',
               fontWeight: activeTab === tab.id ? 800 : 600,
               fontSize: '0.82rem', whiteSpace: 'nowrap', transition: 'color 0.15s',
@@ -958,17 +958,17 @@ const CommandCenter = () => {
         ))}
       </div>
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '320px 1fr' : '0px 1fr'), 
-        height: isMobile ? 'calc(100vh - 110px)' : 'calc(100vh - 110px)', 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : (showSidebar ? '320px 1fr' : '0px 1fr'),
+        height: isMobile ? 'calc(100vh - 110px)' : 'calc(100vh - 110px)',
         overflow: 'hidden',
         position: 'relative',
         transition: 'grid-template-columns 0.3s ease'
       }}>
         {/* Toggle Sidebar Button for Mobile/Tablet - ONLY ON MAP */}
         {(isMobile || !showSidebar) && activeTab === 'map' && (
-          <button 
+          <button
             onClick={() => setShowSidebar(!showSidebar)}
             style={{
               position: 'absolute', top: '1rem', left: '1rem', zIndex: 1100,
@@ -982,8 +982,8 @@ const CommandCenter = () => {
           </button>
         )}
 
-        <aside style={{ 
-          overflowY: 'auto', 
+        <aside style={{
+          overflowY: 'auto',
           overflowX: 'hidden',
           background: isDark ? 'rgba(10, 20, 40, 0.6)' : 'rgba(255, 255, 255, 0.4)',
           backdropFilter: 'blur(20px)',
@@ -996,12 +996,12 @@ const CommandCenter = () => {
           transition: 'left 0.3s ease',
           boxShadow: isMobile && showSidebar ? '20px 0 50px rgba(0,0,0,0.5)' : 'none'
         }}>
-          <SidebarContent 
-            stats={commandStats} 
-            activities={activities} 
-            conflicts={conflicts} 
-            onResolve={setShowResolveModal} 
-            settings={settings} 
+          <SidebarContent
+            stats={commandStats}
+            activities={activities}
+            conflicts={conflicts}
+            onResolve={setShowResolveModal}
+            settings={settings}
             onFilter={setTrafficLightFilter}
             currentFilter={trafficLightFilter}
           />
@@ -1009,15 +1009,15 @@ const CommandCenter = () => {
         <div style={{ position: 'relative', minWidth: 0, minHeight: 0, background: 'var(--surface-light)' }}>
           {activeTab === 'map' ? (
             <div style={{ height: '100%', position: 'relative' }}>
-              <div style={{ 
-                position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000, 
-                display: 'flex', flexDirection: 'column', gap: '0.5rem' 
+              <div style={{
+                position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000,
+                display: 'flex', flexDirection: 'column', gap: '0.5rem'
               }}>
-                <button 
+                <button
                   onClick={() => setShowVehicles(!showVehicles)}
-                  style={{ 
-                    padding: '0.45rem 0.8rem', borderRadius: '8px', 
-                    background: showVehicles ? 'var(--plra-500)' : 'rgba(8, 14, 28, 0.85)', 
+                  style={{
+                    padding: '0.45rem 0.8rem', borderRadius: '8px',
+                    background: showVehicles ? 'var(--plra-500)' : 'rgba(8, 14, 28, 0.85)',
                     color: 'white',
                     border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.62rem', fontWeight: 900,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
@@ -1027,11 +1027,11 @@ const CommandCenter = () => {
                   <Radio size={12} style={{ color: showVehicles ? 'white' : 'var(--plra-300)' }} /> Logística: {showVehicles ? 'ON' : 'OFF'}
                 </button>
 
-                <button 
+                <button
                   onClick={() => setIsClusteringEnabled(!isClusteringEnabled)}
-                  style={{ 
-                    padding: '0.45rem 0.8rem', borderRadius: '8px', 
-                    background: isClusteringEnabled ? 'var(--plra-500)' : 'rgba(8, 14, 28, 0.85)', 
+                  style={{
+                    padding: '0.45rem 0.8rem', borderRadius: '8px',
+                    background: isClusteringEnabled ? 'var(--plra-500)' : 'rgba(8, 14, 28, 0.85)',
                     color: 'white',
                     border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.62rem', fontWeight: 900,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
@@ -1040,7 +1040,7 @@ const CommandCenter = () => {
                 >
                   <Target size={12} style={{ color: isClusteringEnabled ? 'white' : 'var(--plra-300)' }} /> Agrupar: {isClusteringEnabled ? 'SI' : 'NO'}
                 </button>
-                
+
                 <div style={{ position: 'relative' }}>
                   <button
                     onClick={() => setShowLayerSelector(!showLayerSelector)}
@@ -1103,12 +1103,12 @@ const CommandCenter = () => {
                 </div>
 
                 {selectedLocal && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    style={{ 
-                      padding: '0.6rem 1rem', borderRadius: '10px', 
-                      background: 'var(--accent-subtle)', 
+                    style={{
+                      padding: '0.6rem 1rem', borderRadius: '10px',
+                      background: 'var(--accent-subtle)',
                       color: 'var(--plra-200)',
                       border: '1px solid var(--plra-300)', fontSize: '0.7rem', fontWeight: 800,
                       display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -1117,7 +1117,7 @@ const CommandCenter = () => {
                     }}
                   >
                     <MapPin size={14} /> FILTRO: {locales.find(l => l.cod_local === selectedLocal)?.nombre}
-                    <button 
+                    <button
                       onClick={clearLocalFilter}
                       style={{ background: 'var(--plra-500)', border: 'none', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800 }}
                     >
@@ -1128,18 +1128,18 @@ const CommandCenter = () => {
               </div>
 
               <MapContainer center={[-22.5422, -55.7336]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-                <TileLayer 
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 <ZoomControl position="bottomright" />
-                <MapHandler 
+                <MapHandler
                   center={(() => {
                     if (!selectedLocal) return null;
                     const l = locales.find(l => l.cod_local === selectedLocal);
                     if (l && l.lat != null && l.lng != null) return [l.lat, l.lng];
                     return null;
-                  })()} 
+                  })()}
                   selectedLocalId={selectedLocal}
                   activeDistrict={activeDistrict}
                 />
@@ -1148,11 +1148,11 @@ const CommandCenter = () => {
                   const locStat = commandStats?.locations?.find((s: any) => s.cod_local === l.cod_local);
                   const color = locStat?.percentage > 70 ? 'var(--green)' : locStat?.percentage > 30 ? 'var(--yellow)' : 'var(--red)';
                   const isSelected = selectedLocal === l.cod_local;
-                  
+
                   return (
-                    <Marker 
-                      key={l.cod_local} 
-                      position={[l.lat, l.lng]} 
+                    <Marker
+                      key={l.cod_local}
+                      position={[l.lat, l.lng]}
                       icon={createCustomIcon(isSelected ? 'white' : color, l.icon, isSelected)}
                       eventHandlers={{
                         click: () => handleLocalClick(l.cod_local)
@@ -1163,7 +1163,7 @@ const CommandCenter = () => {
                           <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.25rem' }}>{l.nombre}</p>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Progreso: <strong>{locStat?.percentage || 0}%</strong></p>
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{locStat?.total_captures || 0} / {locStat?.total_electors || 0} captados</p>
-                          <button 
+                          <button
                             onClick={() => handleLocalClick(l.cod_local)}
                             style={{ width: '100%', marginTop: '0.5rem', padding: '0.3rem', borderRadius: '4px', background: 'var(--plra-500)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}
                           >
@@ -1189,20 +1189,104 @@ const CommandCenter = () => {
                         return false;
                       })
                       .map((cap, idx) => {
+                        const jitter = 0.00003 * Math.sqrt(idx);
+                        const angle = idx * 137.5;
+                        const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
+                        const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
+
+                        return (
+                          <Marker
+                            key={`cap-${cap.id}`}
+                            position={[lat, lng]}
+                            icon={createCustomIcon(
+                              cap.traffic_light === 'GREEN' ? 'var(--green)' :
+                                cap.traffic_light === 'YELLOW' ? 'var(--yellow)' :
+                                  cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)',
+                              'MapPin',
+                              cap.needs_transport === 1
+                            )}
+                          >
+                            <Popup className="premium-popup">
+                              <div style={{ minWidth: '230px', maxWidth: '265px' }}>
+                                <div style={{ padding: '0.75rem 0.9rem 0.55rem', background: 'linear-gradient(135deg,#081526,#0d1f3c)', borderBottom: '1px solid rgba(59,130,246,0.18)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginBottom: '0.35rem' }}>
+                                    <div style={{
+                                      width: '10px', height: '10px', borderRadius: '50%', marginTop: '3px', flexShrink: 0,
+                                      background: cap.traffic_light === 'GREEN' ? '#22C55E' : cap.traffic_light === 'YELLOW' ? '#EAB308' : cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444',
+                                      boxShadow: `0 0 8px ${cap.traffic_light === 'GREEN' ? '#22C55E80' : cap.traffic_light === 'YELLOW' ? '#EAB30880' : cap.traffic_light === 'PURPLE' ? '#A855F780' : '#EF444480'}`
+                                    }} />
+                                    <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.15, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                      {cap.nombre} {cap.apellido}
+                                    </p>
+                                  </div>
+                                  <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px', background: '#0047AB', color: 'white', letterSpacing: '0.06em', marginLeft: '1.5rem' }}>
+                                    L-{cap.list_number}
+                                  </span>
+                                </div>
+                                <div style={{ padding: '0.6rem 0.9rem 0.75rem', background: '#0a1525' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#3B82F6', flexShrink: 0 }}>
+                                      {cap.coordinator_name?.charAt(0) || '?'}
+                                    </div>
+                                    <div>
+                                      <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>CAPTADO POR</p>
+                                      <p style={{ fontSize: '0.72rem', color: 'white', margin: 0, fontWeight: 800 }}>{cap.coordinator_name}</p>
+                                    </div>
+                                  </div>
+                                  {(cap.padrino_name || cap.parent_name) && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                                      <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#A855F7', flexShrink: 0 }}>
+                                        {(cap.padrino_name || cap.parent_name)?.charAt(0) || '?'}
+                                      </div>
+                                      <div>
+                                        <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>SUPERIOR</p>
+                                        <p style={{ fontSize: '0.72rem', color: '#A855F7', margin: 0, fontWeight: 800 }}>{cap.padrino_name || cap.parent_name}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div style={{ padding: '0.4rem 0.55rem', background: 'rgba(255,255,255,0.03)', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.06)', marginTop: '0.15rem' }}>
+                                    <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.3 }}>{cap.local_votacion}</p>
+                                    {cap.needs_transport === 1 && (
+                                      <span style={{ display: 'inline-block', marginTop: '0.3rem', fontSize: '0.52rem', color: '#93C5FD', fontWeight: 900, background: 'rgba(59,130,246,0.15)', padding: '1px 6px', borderRadius: '4px' }}>
+                                        🚌 REQUIERE TRANSPORTE
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        );
+                      })}
+                  </MarkerClusterGroup>
+                ) : (
+                  captures
+                    .filter(cap => cap.lat != null && cap.lng != null)
+                    .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
+                    .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
+                    .filter(cap => !needsTransportFilter || cap.needs_transport === 1)
+                    .filter(cap => {
+                      if (selectedPadrinoLayers.length === 0 && selectedCoordLayers.length === 0) return true;
+                      const coord = coordinators.find((c: any) => c.id === cap.coordinator_id);
+                      if (selectedCoordLayers.includes(cap.coordinator_id)) return true;
+                      if (coord?.parent_id && selectedPadrinoLayers.includes(coord.parent_id)) return true;
+                      return false;
+                    })
+                    .map((cap, idx) => {
                       const jitter = 0.00003 * Math.sqrt(idx);
                       const angle = idx * 137.5;
                       const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
                       const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
-                      
+
                       return (
-                        <Marker 
-                          key={`cap-${cap.id}`} 
-                          position={[lat, lng]} 
+                        <Marker
+                          key={`cap-raw-${cap.id}`}
+                          position={[lat, lng]}
                           icon={createCustomIcon(
-                            cap.traffic_light === 'GREEN' ? 'var(--green)' : 
-                            cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : 
-                            cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', 
-                            'MapPin', 
+                            cap.traffic_light === 'GREEN' ? 'var(--green)' :
+                              cap.traffic_light === 'YELLOW' ? 'var(--yellow)' :
+                                cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)',
+                            'MapPin',
                             cap.needs_transport === 1
                           )}
                         >
@@ -1210,7 +1294,8 @@ const CommandCenter = () => {
                             <div style={{ minWidth: '230px', maxWidth: '265px' }}>
                               <div style={{ padding: '0.75rem 0.9rem 0.55rem', background: 'linear-gradient(135deg,#081526,#0d1f3c)', borderBottom: '1px solid rgba(59,130,246,0.18)' }}>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginBottom: '0.35rem' }}>
-                                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', marginTop: '3px', flexShrink: 0,
+                                  <div style={{
+                                    width: '10px', height: '10px', borderRadius: '50%', marginTop: '3px', flexShrink: 0,
                                     background: cap.traffic_light === 'GREEN' ? '#22C55E' : cap.traffic_light === 'YELLOW' ? '#EAB308' : cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444',
                                     boxShadow: `0 0 8px ${cap.traffic_light === 'GREEN' ? '#22C55E80' : cap.traffic_light === 'YELLOW' ? '#EAB30880' : cap.traffic_light === 'PURPLE' ? '#A855F780' : '#EF444480'}`
                                   }} />
@@ -1256,90 +1341,7 @@ const CommandCenter = () => {
                           </Popup>
                         </Marker>
                       );
-                    })}
-                  </MarkerClusterGroup>
-                ) : (
-                  captures
-                    .filter(cap => cap.lat != null && cap.lng != null)
-                    .filter(cap => !selectedLocal || cap.local_votacion === locales.find(l => l.cod_local === selectedLocal)?.nombre)
-                    .filter(cap => !trafficLightFilter || cap.traffic_light === trafficLightFilter)
-                    .filter(cap => !needsTransportFilter || cap.needs_transport === 1)
-                    .filter(cap => {
-                      if (selectedPadrinoLayers.length === 0 && selectedCoordLayers.length === 0) return true;
-                      const coord = coordinators.find((c: any) => c.id === cap.coordinator_id);
-                      if (selectedCoordLayers.includes(cap.coordinator_id)) return true;
-                      if (coord?.parent_id && selectedPadrinoLayers.includes(coord.parent_id)) return true;
-                      return false;
                     })
-                    .map((cap, idx) => {
-                    const jitter = 0.00003 * Math.sqrt(idx);
-                    const angle = idx * 137.5;
-                    const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
-                    const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
-                    
-                    return (
-                      <Marker 
-                        key={`cap-raw-${cap.id}`} 
-                        position={[lat, lng]} 
-                        icon={createCustomIcon(
-                          cap.traffic_light === 'GREEN' ? 'var(--green)' : 
-                          cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : 
-                          cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', 
-                          'MapPin', 
-                          cap.needs_transport === 1
-                        )}
-                      >
-                        <Popup className="premium-popup">
-                          <div style={{ minWidth: '230px', maxWidth: '265px' }}>
-                            <div style={{ padding: '0.75rem 0.9rem 0.55rem', background: 'linear-gradient(135deg,#081526,#0d1f3c)', borderBottom: '1px solid rgba(59,130,246,0.18)' }}>
-                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', marginBottom: '0.35rem' }}>
-                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', marginTop: '3px', flexShrink: 0,
-                                  background: cap.traffic_light === 'GREEN' ? '#22C55E' : cap.traffic_light === 'YELLOW' ? '#EAB308' : cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444',
-                                  boxShadow: `0 0 8px ${cap.traffic_light === 'GREEN' ? '#22C55E80' : cap.traffic_light === 'YELLOW' ? '#EAB30880' : cap.traffic_light === 'PURPLE' ? '#A855F780' : '#EF444480'}`
-                                }} />
-                                <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.15, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                                  {cap.nombre} {cap.apellido}
-                                </p>
-                              </div>
-                              <span style={{ fontSize: '0.55rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px', background: '#0047AB', color: 'white', letterSpacing: '0.06em', marginLeft: '1.5rem' }}>
-                                L-{cap.list_number}
-                              </span>
-                            </div>
-                            <div style={{ padding: '0.6rem 0.9rem 0.75rem', background: '#0a1525' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                                <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#3B82F6', flexShrink: 0 }}>
-                                  {cap.coordinator_name?.charAt(0) || '?'}
-                                </div>
-                                <div>
-                                  <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>CAPTADO POR</p>
-                                  <p style={{ fontSize: '0.72rem', color: 'white', margin: 0, fontWeight: 800 }}>{cap.coordinator_name}</p>
-                                </div>
-                              </div>
-                              {(cap.padrino_name || cap.parent_name) && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                                  <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: '#A855F7', flexShrink: 0 }}>
-                                    {(cap.padrino_name || cap.parent_name)?.charAt(0) || '?'}
-                                  </div>
-                                  <div>
-                                    <p style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em' }}>SUPERIOR</p>
-                                    <p style={{ fontSize: '0.72rem', color: '#A855F7', margin: 0, fontWeight: 800 }}>{cap.padrino_name || cap.parent_name}</p>
-                                  </div>
-                                </div>
-                              )}
-                              <div style={{ padding: '0.4rem 0.55rem', background: 'rgba(255,255,255,0.03)', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.06)', marginTop: '0.15rem' }}>
-                                <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.3 }}>{cap.local_votacion}</p>
-                                {cap.needs_transport === 1 && (
-                                  <span style={{ display: 'inline-block', marginTop: '0.3rem', fontSize: '0.52rem', color: '#93C5FD', fontWeight: 900, background: 'rgba(59,130,246,0.15)', padding: '1px 6px', borderRadius: '4px' }}>
-                                    🚌 REQUIERE TRANSPORTE
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    );
-                  })
                 )}
                 {showVehicles && vehicles.filter(v => v.lat != null && v.lng != null).map((v) => (
                   <Marker key={`veh-${v.id}`} position={[v.lat, v.lng]} icon={createCustomIcon('var(--plra-300)', 'Car')}>
@@ -1361,7 +1363,7 @@ const CommandCenter = () => {
                     display: 'flex', justifyContent: 'space-around', alignItems: 'center',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
                   }}>
-                    <div 
+                    <div
                       onClick={() => setTrafficLightFilter(trafficLightFilter === 'GREEN' ? null : 'GREEN')}
                       style={{ textAlign: 'center', cursor: 'pointer', opacity: !trafficLightFilter || trafficLightFilter === 'GREEN' ? 1 : 0.4 }}
                     >
@@ -1374,7 +1376,7 @@ const CommandCenter = () => {
                       <p style={{ fontSize: '1.1rem', color: 'white', fontWeight: 900 }}>{commandStats?.percentage || 0}%</p>
                     </div>
                     <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
-                    <div 
+                    <div
                       onClick={() => setTrafficLightFilter(trafficLightFilter === 'RED' ? null : 'RED')}
                       style={{ textAlign: 'center', cursor: 'pointer', opacity: !trafficLightFilter || trafficLightFilter === 'RED' ? 1 : 0.4 }}
                     >
@@ -1393,10 +1395,10 @@ const CommandCenter = () => {
                 }}>
                   <div style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.15rem' }}>Estado del elector</div>
                   {[
-                    { id: 'GREEN',  label: 'CASA',         color: '#22C55E' },
-                    { id: 'YELLOW', label: 'FAMILIARES',   color: '#EAB308' },
-                    { id: 'RED',    label: 'OTROS',        color: '#EF4444' },
-                    { id: 'PURPLE', label: 'VOLUNTARIO',   color: '#A855F7' },
+                    { id: 'GREEN', label: 'CASA', color: '#22C55E' },
+                    { id: 'YELLOW', label: 'FAMILIARES', color: '#EAB308' },
+                    { id: 'RED', label: 'OTROS', color: '#EF4444' },
+                    { id: 'PURPLE', label: 'VOLUNTARIO', color: '#A855F7' },
                   ].map(item => {
                     const active = trafficLightFilter === item.id;
                     const dimmed = !!trafficLightFilter && !active;
@@ -1458,12 +1460,12 @@ const CommandCenter = () => {
                   </div>
                   <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     {selectedPadrino && !selectedCoordDetails && (
-                      <button 
+                      <button
                         disabled={isGeneratingReport}
                         onClick={() => handleExportReport(selectedPadrino.id)}
-                        style={{ 
-                          background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', 
-                          color: 'var(--plra-300)', padding: '0.6rem 1rem', borderRadius: '12px', 
+                        style={{
+                          background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)',
+                          color: 'var(--plra-300)', padding: '0.6rem 1rem', borderRadius: '12px',
                           cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem',
                           display: 'flex', alignItems: 'center', gap: '0.5rem'
                         }}
@@ -1472,20 +1474,20 @@ const CommandCenter = () => {
                       </button>
                     )}
                     {(selectedPadrino || selectedCoordDetails) && (
-                      <button 
+                      <button
                         onClick={() => {
                           if (selectedCoordDetails) setSelectedCoordDetails(null);
                           else setSelectedPadrino(null);
                         }}
-                        style={{ 
-                          background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border)', 
-                          color: 'white', padding: '0.75rem 1.25rem', borderRadius: '16px', 
+                        style={{
+                          background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border)',
+                          color: 'white', padding: '0.75rem 1.25rem', borderRadius: '16px',
                           cursor: 'pointer', fontWeight: 900, fontSize: '0.75rem',
                           display: 'flex', alignItems: 'center', gap: '0.6rem',
                           boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                         }}
                       >
-                        <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} /> 
+                        <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} />
                         VOLVER A {selectedCoordDetails ? 'LISTA COORDINADORES' : 'LISTA PADRINOS'}
                       </button>
                     )}
@@ -1501,13 +1503,13 @@ const CommandCenter = () => {
                 ) : !selectedPadrino ? (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                     {structureData.map(p => (
-                      <motion.div 
+                      <motion.div
                         whileHover={{ y: -3, boxShadow: '0 12px 32px rgba(0,0,0,0.4)' }}
                         key={p.id}
                         onClick={() => setSelectedPadrino(p)}
-                        style={{ 
-                          background: 'var(--surface)', border: '1px solid var(--border)', 
-                          borderRadius: '18px', padding: '1.25rem', cursor: 'pointer', 
+                        style={{
+                          background: 'var(--surface)', border: '1px solid var(--border)',
+                          borderRadius: '18px', padding: '1.25rem', cursor: 'pointer',
                           boxShadow: '0 4px 12px rgba(0,0,0,0.2)', transition: 'all 0.2s'
                         }}
                       >
@@ -1541,10 +1543,10 @@ const CommandCenter = () => {
                         <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '1rem', display: 'flex', overflow: 'hidden' }}>
                           {p.total_electors > 0 && (
                             <>
-                              <div style={{ width: `${(p.green_total/p.total_electors)*100}%`, background: 'var(--green)' }} />
-                              <div style={{ width: `${(p.yellow_total/p.total_electors)*100}%`, background: 'var(--yellow)' }} />
-                              <div style={{ width: `${(p.red_total/p.total_electors)*100}%`, background: 'var(--red)' }} />
-                              <div style={{ width: `${(p.purple_total/p.total_electors)*100}%`, background: '#A855F7' }} />
+                              <div style={{ width: `${(p.green_total / p.total_electors) * 100}%`, background: 'var(--green)' }} />
+                              <div style={{ width: `${(p.yellow_total / p.total_electors) * 100}%`, background: 'var(--yellow)' }} />
+                              <div style={{ width: `${(p.red_total / p.total_electors) * 100}%`, background: 'var(--red)' }} />
+                              <div style={{ width: `${(p.purple_total / p.total_electors) * 100}%`, background: '#A855F7' }} />
                             </>
                           )}
                         </div>
@@ -1552,117 +1554,117 @@ const CommandCenter = () => {
                     ))}
                   </div>
                 ) : !selectedCoordDetails ? (
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                     {padrinoCaptures && padrinoCaptures.total_electors > 0 && (
-                       <div>
-                         <p style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.15em', marginBottom: '1rem', textTransform: 'uppercase' }}>Mis Capturas Directas (Padrino)</p>
-                         <motion.div 
-                           whileHover={{ y: -3 }}
-                           onClick={() => setSelectedCoordDetails({ ...selectedPadrino, role: 'PADRINO_DIRECT' })}
-                           style={{ 
-                             background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.05))', 
-                             border: '1px solid rgba(59,130,246,0.2)', 
-                             borderRadius: '20px', padding: '1.25rem', cursor: 'pointer', 
-                             boxShadow: '0 8px 24px rgba(0,0,0,0.2)' 
-                           }}
-                         >
-                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--plra-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>★</div>
-                             <div style={{ flex: 1, minWidth: 0 }}>
-                               <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>Gestión Directa de Padrino</p>
-                               <p style={{ fontSize: '0.65rem', color: 'var(--plra-200)', margin: 0, fontWeight: 700 }}>{padrinoCaptures.total_electors} CAPTURAS PROPIAS</p>
-                             </div>
-                           </div>
-                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
-                             <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(34,197,94,0.08)', borderRadius: '10px', border: '1px solid rgba(34,197,94,0.15)' }}>
-                               <p style={{ fontSize: '0.45rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 2px' }}>CASA</p>
-                               <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.green || 0}</p>
-                             </div>
-                             <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(234,179,8,0.08)', borderRadius: '10px', border: '1px solid rgba(234,179,8,0.15)' }}>
-                               <p style={{ fontSize: '0.45rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 2px' }}>FAMILIARES</p>
-                               <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.yellow || 0}</p>
-                             </div>
-                             <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(239,68,68,0.08)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.15)' }}>
-                               <p style={{ fontSize: '0.45rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 2px' }}>OTROS</p>
-                               <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.red || 0}</p>
-                             </div>
-                             <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(168,85,247,0.08)', borderRadius: '10px', border: '1px solid rgba(168,85,247,0.15)' }}>
-                               <p style={{ fontSize: '0.45rem', color: '#A855F7', fontWeight: 900, margin: '0 0 2px' }}>VOLUNTARIO</p>
-                               <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.purple || 0}</p>
-                             </div>
-                           </div>
-                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.15)', padding: '0.5rem 0.75rem', borderRadius: '12px' }}>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                               <Truck size={14} color="var(--plra-200)" />
-                               <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-100)' }}>TRANSPORTE</span>
-                             </div>
-                             <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{padrinoCaptures.transport_total || 0}</span>
-                           </div>
-                         </motion.div>
-                       </div>
-                     )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {padrinoCaptures && padrinoCaptures.total_electors > 0 && (
+                      <div>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.15em', marginBottom: '1rem', textTransform: 'uppercase' }}>Mis Capturas Directas (Padrino)</p>
+                        <motion.div
+                          whileHover={{ y: -3 }}
+                          onClick={() => setSelectedCoordDetails({ ...selectedPadrino, role: 'PADRINO_DIRECT' })}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.05))',
+                            border: '1px solid rgba(59,130,246,0.2)',
+                            borderRadius: '20px', padding: '1.25rem', cursor: 'pointer',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--plra-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>★</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>Gestión Directa de Padrino</p>
+                              <p style={{ fontSize: '0.65rem', color: 'var(--plra-200)', margin: 0, fontWeight: 700 }}>{padrinoCaptures.total_electors} CAPTURAS PROPIAS</p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '1rem' }}>
+                            <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(34,197,94,0.08)', borderRadius: '10px', border: '1px solid rgba(34,197,94,0.15)' }}>
+                              <p style={{ fontSize: '0.45rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 2px' }}>CASA</p>
+                              <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.green || 0}</p>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(234,179,8,0.08)', borderRadius: '10px', border: '1px solid rgba(234,179,8,0.15)' }}>
+                              <p style={{ fontSize: '0.45rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 2px' }}>FAMILIARES</p>
+                              <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.yellow || 0}</p>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(239,68,68,0.08)', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.15)' }}>
+                              <p style={{ fontSize: '0.45rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 2px' }}>OTROS</p>
+                              <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.red || 0}</p>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '0.5rem 0.2rem', background: 'rgba(168,85,247,0.08)', borderRadius: '10px', border: '1px solid rgba(168,85,247,0.15)' }}>
+                              <p style={{ fontSize: '0.45rem', color: '#A855F7', fontWeight: 900, margin: '0 0 2px' }}>VOLUNTARIO</p>
+                              <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{padrinoCaptures.purple || 0}</p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.15)', padding: '0.5rem 0.75rem', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <Truck size={14} color="var(--plra-200)" />
+                              <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-100)' }}>TRANSPORTE</span>
+                            </div>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{padrinoCaptures.transport_total || 0}</span>
+                          </div>
+                        </motion.div>
+                      </div>
+                    )}
 
-                     <div>
-                       <p style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-3)', letterSpacing: '0.15em', marginBottom: '1rem', textTransform: 'uppercase' }}>Estructura de Coordinadores</p>
-                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
-                         {subStructureData.map(c => (
-                           <motion.div 
-                             whileHover={{ y: -3 }}
-                             key={c.id}
-                             onClick={() => setSelectedCoordDetails(c)}
-                             style={{ 
-                               background: 'var(--surface)', border: '1px solid var(--border)', 
-                               borderRadius: '20px', padding: '1.25rem', cursor: 'pointer', 
-                               boxShadow: '0 4px 12px rgba(0,0,0,0.15)' 
-                             }}
-                           >
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                               {c.photo_url ? (
-                                 <img src={getImageUrl(c.photo_url)} alt="" style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.1)' }} />
-                               ) : (
-                                 <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
-                               )}
-                               <div style={{ flex: 1, minWidth: 0 }}>
-                                 <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
-                                 <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', margin: 0, fontWeight: 800 }}>COORDINADOR OPERATIVO</p>
-                               </div>
-                             </div>
+                    <div>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-3)', letterSpacing: '0.15em', marginBottom: '1rem', textTransform: 'uppercase' }}>Estructura de Coordinadores</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+                        {subStructureData.map(c => (
+                          <motion.div
+                            whileHover={{ y: -3 }}
+                            key={c.id}
+                            onClick={() => setSelectedCoordDetails(c)}
+                            style={{
+                              background: 'var(--surface)', border: '1px solid var(--border)',
+                              borderRadius: '20px', padding: '1.25rem', cursor: 'pointer',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                              {c.photo_url ? (
+                                <img src={getImageUrl(c.photo_url)} alt="" style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.1)' }} />
+                              ) : (
+                                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
+                                <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', margin: 0, fontWeight: 800 }}>COORDINADOR OPERATIVO</p>
+                              </div>
+                            </div>
 
-                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '14px', border: '1px solid var(--border)', textAlign: 'center', marginBottom: '0.75rem' }}>
-                               <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 2px', textTransform: 'uppercase' }}>Total Captados</p>
-                               <p style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>{c.total_electors || 0}</p>
-                             </div>
+                            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '14px', border: '1px solid var(--border)', textAlign: 'center', marginBottom: '0.75rem' }}>
+                              <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 2px', textTransform: 'uppercase' }}>Total Captados</p>
+                              <p style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>{c.total_electors || 0}</p>
+                            </div>
 
-                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', marginBottom: '0.75rem' }}>
-                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(34,197,94,0.08)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.15)' }}>
-                                 <p style={{ fontSize: '0.4rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 1px' }}>CASA</p>
-                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.green || 0}</p>
-                               </div>
-                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(234,179,8,0.08)', borderRadius: '8px', border: '1px solid rgba(234,179,8,0.15)' }}>
-                                 <p style={{ fontSize: '0.4rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 1px' }}>FAMILIARES</p>
-                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
-                               </div>
-                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.15)' }}>
-                                 <p style={{ fontSize: '0.4rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 1px' }}>OTROS</p>
-                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
-                               </div>
-                               <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(168,85,247,0.08)', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.15)' }}>
-                                 <p style={{ fontSize: '0.4rem', color: '#A855F7', fontWeight: 900, margin: '0 0 1px' }}>VOLUNTARIO</p>
-                                 <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
-                               </div>
-                             </div>
-                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.1)', padding: '0.5rem 0.75rem', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.15)' }}>
-                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                 <Truck size={12} color="var(--plra-300)" />
-                                 <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-200)', textTransform: 'uppercase' }}>Logística</span>
-                               </div>
-                               <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.transport_total || 0}</span>
-                             </div>
-                           </motion.div>
-                         ))}
-                       </div>
-                     </div>
-                   </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', marginBottom: '0.75rem' }}>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(34,197,94,0.08)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.15)' }}>
+                                <p style={{ fontSize: '0.4rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 1px' }}>CASA</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.green || 0}</p>
+                              </div>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(234,179,8,0.08)', borderRadius: '8px', border: '1px solid rgba(234,179,8,0.15)' }}>
+                                <p style={{ fontSize: '0.4rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 1px' }}>FAMILIARES</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
+                              </div>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.15)' }}>
+                                <p style={{ fontSize: '0.4rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 1px' }}>OTROS</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
+                              </div>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(168,85,247,0.08)', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.15)' }}>
+                                <p style={{ fontSize: '0.4rem', color: '#A855F7', fontWeight: 900, margin: '0 0 1px' }}>VOLUNTARIO</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.1)', padding: '0.5rem 0.75rem', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.15)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <Truck size={12} color="var(--plra-300)" />
+                                <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-200)', textTransform: 'uppercase' }}>Logística</span>
+                              </div>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.transport_total || 0}</span>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '28px', overflow: 'hidden' }}>
                     <div style={{ padding: '1.75rem', background: 'rgba(59,130,246,0.1)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1701,14 +1703,14 @@ const CommandCenter = () => {
                                 <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Mesa {e.mesa} — Orden {e.orden}</p>
                               </td>
                               <td style={{ padding: '1.25rem' }}>
-                                <div style={{ 
-                                  display: 'inline-flex', alignItems: 'center', gap: '0.5rem', 
-                                  background: e.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : e.traffic_light === 'YELLOW' ? 'rgba(234,179,8,0.1)' : e.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)', 
-                                  padding: '4px 10px', borderRadius: '8px' 
+                                <div style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                                  background: e.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : e.traffic_light === 'YELLOW' ? 'rgba(234,179,8,0.1)' : e.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)',
+                                  padding: '4px 10px', borderRadius: '8px'
                                 }}>
-                                  <div style={{ 
-                                    width: '8px', height: '8px', borderRadius: '50%', 
-                                    background: e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : e.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)' 
+                                  <div style={{
+                                    width: '8px', height: '8px', borderRadius: '50%',
+                                    background: e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : e.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)'
                                   }} />
                                   <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'white' }}>{e.traffic_light}</span>
                                 </div>
@@ -1789,7 +1791,7 @@ const CommandCenter = () => {
         <AnimatePresence>
           {showResolveModal && (
             <div className="modal-overlay" onClick={() => setShowResolveModal(null)}>
-              <motion.div 
+              <motion.div
                 className="modal-content"
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -1803,113 +1805,113 @@ const CommandCenter = () => {
                     Conflicto de Captura
                   </h3>
                 </div>
-                
+
                 <div style={{ padding: '2rem' }}>
                   <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '0.9rem' }}>
-                    Se ha detectado una disputa por <strong>{showResolveModal.elector_nombre} {showResolveModal.elector_apellido}</strong>. 
+                    Se ha detectado una disputa por <strong>{showResolveModal.elector_nombre} {showResolveModal.elector_apellido}</strong>.
                     Compara los detalles para decidir a quién adjudicar el elector:
                   </p>
-                  
-                    {/* Party 1: Original */}
-                    <div style={{ 
-                      padding: '1.25rem', borderRadius: '16px', background: 'var(--accent-subtle)', 
-                      border: '1px solid var(--border)', position: 'relative', overflow: 'hidden' 
-                    }}>
-                      <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--plra-500)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>CAPTURA ORIGINAL</div>
-                      
-                      <div style={{ display: 'flex', gap: '1rem' }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.original_coordinator_name}</p>
-                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.original_parent_name || 'Mando Directo'}</span></p>
-                          
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
-                            <Clock size={12} />
-                            {new Date(showResolveModal.original_capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
 
-                        {/* Mini Map Thumbnail */}
-                        <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
-                          <MapContainer 
-                            center={[showResolveModal.original_capture_lat || -22.54, showResolveModal.original_capture_lng || -55.73]} 
-                            zoom={15} 
-                            style={{ height: '100%', width: '100%' }}
-                            zoomControl={false}
-                            dragging={false}
-                            scrollWheelZoom={false}
-                            doubleClickZoom={false}
-                            attributionControl={false}
-                          >
-                            <TileLayer 
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                            {showResolveModal.original_capture_lat != null && showResolveModal.original_capture_lng != null && (
-                              <Marker position={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} icon={createCustomIcon('var(--plra-500)', 'MapPin')} />
-                            )}
-                          </MapContainer>
+                  {/* Party 1: Original */}
+                  <div style={{
+                    padding: '1.25rem', borderRadius: '16px', background: 'var(--accent-subtle)',
+                    border: '1px solid var(--border)', position: 'relative', overflow: 'hidden'
+                  }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--plra-500)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>CAPTURA ORIGINAL</div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.original_coordinator_name}</p>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.original_parent_name || 'Mando Directo'}</span></p>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
+                          <Clock size={12} />
+                          {new Date(showResolveModal.original_capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
 
-                      <button 
-                        onClick={() => handleResolve(showResolveModal.original_capture_id)}
-                        className="btn-confirm-styled" 
-                        style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--plra-600)' }}
-                      >
-                        ADJUDICAR A ORIGINAL
-                      </button>
-                    </div>
-
-                    {/* Party 2: New Conflict */}
-                    <div style={{ 
-                      padding: '1.25rem', borderRadius: '16px', background: 'rgba(239,68,68,0.05)', 
-                      border: '1px solid rgba(239,68,68,0.2)', position: 'relative', overflow: 'hidden' 
-                    }}>
-                      <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>NUEVA DISPUTA</div>
-                      
-                      <div style={{ display: 'flex', gap: '1rem' }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coordinator_name}</p>
-                          <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.parent_name || 'Mando Directo'}</span></p>
-                          
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
-                            <Clock size={12} />
-                            {new Date(showResolveModal.capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-
-                        {/* Mini Map Thumbnail */}
-                        <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
-                          <MapContainer 
-                            center={[showResolveModal.capture_lat || -22.54, showResolveModal.capture_lng || -55.73]} 
-                            zoom={15} 
-                            style={{ height: '100%', width: '100%' }}
-                            zoomControl={false}
-                            dragging={false}
-                            scrollWheelZoom={false}
-                            doubleClickZoom={false}
-                            attributionControl={false}
-                          >
-                            <TileLayer 
-                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-                              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            />
-                            {showResolveModal.capture_lat != null && showResolveModal.capture_lng != null && (
-                              <Marker position={[showResolveModal.capture_lat, showResolveModal.capture_lng]} icon={createCustomIcon('var(--red)', 'MapPin')} />
-                            )}
-                          </MapContainer>
-                        </div>
+                      {/* Mini Map Thumbnail */}
+                      <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                        <MapContainer
+                          center={[showResolveModal.original_capture_lat || -22.54, showResolveModal.original_capture_lng || -55.73]}
+                          zoom={15}
+                          style={{ height: '100%', width: '100%' }}
+                          zoomControl={false}
+                          dragging={false}
+                          scrollWheelZoom={false}
+                          doubleClickZoom={false}
+                          attributionControl={false}
+                        >
+                          <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          />
+                          {showResolveModal.original_capture_lat != null && showResolveModal.original_capture_lng != null && (
+                            <Marker position={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} icon={createCustomIcon('var(--plra-500)', 'MapPin')} />
+                          )}
+                        </MapContainer>
                       </div>
-
-                      <button 
-                        onClick={() => handleResolve(showResolveModal.capture_id)}
-                        className="btn-confirm-styled" 
-                        style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--red)' }}
-                      >
-                        ADJUDICAR A NUEVO
-                      </button>
                     </div>
+
+                    <button
+                      onClick={() => handleResolve(showResolveModal.original_capture_id)}
+                      className="btn-confirm-styled"
+                      style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--plra-600)' }}
+                    >
+                      ADJUDICAR A ORIGINAL
+                    </button>
                   </div>
+
+                  {/* Party 2: New Conflict */}
+                  <div style={{
+                    padding: '1.25rem', borderRadius: '16px', background: 'rgba(239,68,68,0.05)',
+                    border: '1px solid rgba(239,68,68,0.2)', position: 'relative', overflow: 'hidden'
+                  }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>NUEVA DISPUTA</div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coordinator_name}</p>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.parent_name || 'Mando Directo'}</span></p>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
+                          <Clock size={12} />
+                          {new Date(showResolveModal.capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+
+                      {/* Mini Map Thumbnail */}
+                      <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                        <MapContainer
+                          center={[showResolveModal.capture_lat || -22.54, showResolveModal.capture_lng || -55.73]}
+                          zoom={15}
+                          style={{ height: '100%', width: '100%' }}
+                          zoomControl={false}
+                          dragging={false}
+                          scrollWheelZoom={false}
+                          doubleClickZoom={false}
+                          attributionControl={false}
+                        >
+                          <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          />
+                          {showResolveModal.capture_lat != null && showResolveModal.capture_lng != null && (
+                            <Marker position={[showResolveModal.capture_lat, showResolveModal.capture_lng]} icon={createCustomIcon('var(--red)', 'MapPin')} />
+                          )}
+                        </MapContainer>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleResolve(showResolveModal.capture_id)}
+                      className="btn-confirm-styled"
+                      style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--red)' }}
+                    >
+                      ADJUDICAR A NUEVO
+                    </button>
+                  </div>
+                </div>
 
                 <div className="modal-footer-premium-styled">
                   <button onClick={() => setShowResolveModal(null)} className="btn-cancel-styled" style={{ width: '100%' }}>Cerrar sin cambios</button>

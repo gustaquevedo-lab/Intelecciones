@@ -8,13 +8,12 @@ import {
   Settings,
   ShieldCheck,
   MapPin,
-  Truck,
   ChevronLeft,
   ChevronRight,
-  Menu,
   MessageSquare,
   X,
-  FileText
+  FileText,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';

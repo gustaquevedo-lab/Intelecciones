@@ -29,7 +29,8 @@ import {
   TrendingUp,
   TrendingDown,
   User,
-  Copy
+  Copy,
+  RefreshCw
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
