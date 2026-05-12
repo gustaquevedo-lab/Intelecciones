@@ -280,27 +280,31 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
             { key: 'YELLOW', color: '#EAB308', label: 'Familia', icon: '👨‍👩‍👧' },
             { key: 'RED', color: '#EF4444', label: 'Otros', icon: '📍' },
             { key: 'PURPLE', color: '#A855F7', label: 'Volunt.', icon: '✨' }
-          ].map(f => (
-            <button
-              key={f.key}
-              onClick={() => onFilter(currentFilter === f.key ? null : f.key)}
-              style={{
-                flex: 1, padding: '0.6rem 0.4rem', borderRadius: '14px',
-                background: currentFilter === f.key ? f.color : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${currentFilter === f.key ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: currentFilter === f.key ? `0 4px 12px ${f.color}40` : 'none',
-                transform: currentFilter === f.key ? 'scale(1.05)' : 'scale(1)'
-              }}
-            >
-              <span style={{ fontSize: '0.9rem', marginBottom: '2px' }}>{f.icon}</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 900, color: currentFilter === f.key ? 'white' : 'white' }}>
-                {f.key === 'GREEN' ? stats?.green : f.key === 'YELLOW' ? stats?.yellow : f.key === 'RED' ? stats?.red : stats?.purple}
-              </span>
-              <span style={{ fontSize: '0.42rem', fontWeight: 900, color: currentFilter === f.key ? 'rgba(255,255,255,0.9)' : 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{f.label}</span>
-            </button>
-          ))}
+          ].map(f => {
+            const active = currentFilter === f.key;
+            return (
+              <button
+                key={f.key}
+                onClick={() => onFilter(active ? null : f.key)}
+                style={{
+                  flex: 1, padding: '0.65rem 0.4rem', borderRadius: '16px',
+                  background: active ? `${f.color}35` : `${f.color}12`,
+                  backdropFilter: 'blur(10px)',
+                  border: `1px solid ${active ? `${f.color}80` : `${f.color}25`}`,
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: active ? `0 8px 24px ${f.color}30` : 'none',
+                  transform: active ? 'scale(1.05) translateY(-2px)' : 'scale(1) translateY(0)',
+                }}
+              >
+                <span style={{ fontSize: '0.9rem', marginBottom: '2px', filter: active ? 'drop-shadow(0 0 4px rgba(255,255,255,0.5))' : 'none' }}>{f.icon}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 950, color: active ? 'white' : 'rgba(255,255,255,0.9)' }}>
+                  {f.key === 'GREEN' ? stats?.green : f.key === 'YELLOW' ? stats?.yellow : f.key === 'RED' ? stats?.red : stats?.purple}
+                </span>
+                <span style={{ fontSize: '0.42rem', fontWeight: 900, color: active ? 'white' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Rendimiento por Local (NUEVO) */}
