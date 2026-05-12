@@ -37,14 +37,14 @@ export default defineConfig({
         orientation: 'portrait',
         icons: [
           {
-            src: 'https://intelecciones.vercel.app/logo192.png',
+            src: '/favicon.svg',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/svg+xml'
           },
           {
-            src: 'https://intelecciones.vercel.app/logo512.png',
+            src: '/favicon.svg',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/svg+xml'
           }
         ]
       }

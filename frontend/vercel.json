@@ -1,6 +1,12 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/((?!assets|index|favicon).*)", "destination": "/app.html" }
+    { "source": "/login", "destination": "/app.html" },
+    { "source": "/coordinador", "destination": "/app.html" },
+    { "source": "/comando", "destination": "/app.html" },
+    { "source": "/veedor", "destination": "/app.html" },
+    { "source": "/admin", "destination": "/app.html" },
+    { "source": "/logistica", "destination": "/app.html" },
+    { "source": "/comunicaciones", "destination": "/app.html" },
+    { "source": "/diad", "destination": "/app.html" }
   ]
 }
