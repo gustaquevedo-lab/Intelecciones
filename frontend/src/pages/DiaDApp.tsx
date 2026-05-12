@@ -12,6 +12,7 @@ import { useSettings } from '../context/SettingsContext';
 import api, { getImageUrl } from '../services/api';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
+import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
@@ -98,8 +99,7 @@ const DiaDApp: React.FC = () => {
   const { user } = useAuth();
   const { settings } = useSettings();
 
-  const [activeTab, setActiveTab] = useState<'cobertura' | 'resultados' | 'dhondt' | 'actas'>('cobertura');
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'cobertura' | 'resultados' | 'dhondt' | 'actas' | 'miembros'>('cobertura');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
 
@@ -148,6 +148,7 @@ const DiaDApp: React.FC = () => {
   const [newListGoal, setNewListGoal] = useState(1000);
   const [takenOptions, setTakenOptions] = useState<number[]>([]);
   const [cropperData, setCropperData] = useState<{ image: string, type: string } | null>(null);
+  const [expandedActa, setExpandedActa] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleLocal = (id: string) => {
@@ -308,8 +309,6 @@ const DiaDApp: React.FC = () => {
       setLastRefresh(new Date());
     } catch (err) {
       console.error('DiaDApp fetch error:', err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -318,8 +317,6 @@ const DiaDApp: React.FC = () => {
     const isElectionDay = now.getFullYear() === 2026 && now.getMonth() === 5 && now.getDate() === 7;
     if (isElectionDay) {
       fetchData();
-    } else {
-      setLoading(false); // No cargamos datos innecesarios ahora
     }
   }, [fetchData]);
 
@@ -668,7 +665,10 @@ const DiaDApp: React.FC = () => {
                       {coverage.mesas.map(mesa => (
                         <Marker 
                           key={`mesa-${mesa.local}-${mesa.numero}`}
-                          position={[parseFloat(mesa.lat || "-22.5447"), parseFloat(mesa.lng || "-55.7333")]}
+                          position={[
+                            typeof mesa.lat === 'string' ? parseFloat(mesa.lat) : (mesa.lat || -22.5447), 
+                            typeof mesa.lng === 'string' ? parseFloat(mesa.lng) : (mesa.lng || -55.7333)
+                          ]}
                           icon={L.divIcon({
                             className: 'custom-div-icon',
                             html: `

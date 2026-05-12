@@ -68,9 +68,9 @@ export const getPendingActions = async (): Promise<any[]> => {
   });
 };
 
-export const removePendingAction = async (id: number) => {
+export const removePendingAction = async (id: number): Promise<void> => {
   const db = await initOfflineDB();
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(SYNC_STORE, 'readwrite');
     const store = transaction.objectStore(SYNC_STORE);
     const request = store.delete(id);

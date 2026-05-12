@@ -161,6 +161,7 @@ db.exec(`
     coordinator_id INTEGER,
     list_id INTEGER,
     type TEXT NOT NULL,
+    priority TEXT DEFAULT 'NORMAL', -- Added priority
     description TEXT,
     photo_url TEXT,
     audio_url TEXT,
@@ -307,6 +308,7 @@ addColumnIfNotExists("campaigns", "enabled_modules", "TEXT DEFAULT 'COMMAND_CENT
 addColumnIfNotExists("users", "enabled_modules", "TEXT");
 addColumnIfNotExists("users", "parent_id", "INTEGER");
 addColumnIfNotExists("users", "telefono", "TEXT");
+addColumnIfNotExists("field_requests", "priority", "TEXT DEFAULT 'NORMAL'");
 
 // 🛠️ HEAVY ONE-TIME MIGRATIONS
 try {

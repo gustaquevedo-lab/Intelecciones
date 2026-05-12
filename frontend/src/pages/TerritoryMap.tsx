@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Filter, Users, MapPin, Search } from 'lucide-react';
+import { MapPin, Search, Truck } from 'lucide-react';
 
 // Fix for default marker icon in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -23,7 +23,6 @@ import { useAuth, apiFetch } from '../context/AuthContext';
 const TerritoryMap: React.FC = () => {
     const { user } = useAuth();
     const [electors, setElectors] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'visited' | 'pending'>('all');
     const [filterTransport, setFilterTransport] = useState(false);
@@ -33,7 +32,6 @@ const TerritoryMap: React.FC = () => {
             .then(res => res.json())
             .then(data => {
                 setElectors(data.filter((e: any) => e.lat && e.lng));
-                setLoading(false);
             })
             .catch(err => console.error(err));
     }, []);
@@ -233,8 +231,9 @@ const TerritoryMap: React.FC = () => {
 // Helper to re-center map
 const MapController = ({ center }: { center: [number, number] }) => {
     const map = useMap();
-    // Only re-center if we have a valid point and want to zoom to it
-    // For now we just stay at the default
+    useEffect(() => {
+        if (center) map.setView(center);
+    }, [center, map]);
     return null;
 };
 

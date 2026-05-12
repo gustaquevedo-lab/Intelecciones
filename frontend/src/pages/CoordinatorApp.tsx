@@ -148,7 +148,7 @@ const NumberBadge = ({ label, value }: { label: string; value: React.ReactNode }
 );
 
 const CoordinatorApp = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, activeDistrict } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const [ci, setCi] = useState('');
@@ -165,8 +165,7 @@ const CoordinatorApp = () => {
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [telefono, setTelefono] = useState('');
   const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
-  const [isSyncing, setIsSyncing] = useState(false);
-  
+
   const [showCoordModal, setShowCoordModal] = useState(false);
   const [newCoordCI, setNewCoordCI] = useState('');
   const [newCoordName, setNewCoordName] = useState('');
@@ -182,7 +181,12 @@ const CoordinatorApp = () => {
   }, []);
 
   const handleDownloadPadron = async () => {
-    if (!window.confirm('¿Desea descargar el padrón completo para uso offline? Esto puede tardar unos minutos.')) return;
+    const targetDistrict = activeDistrict || user?.distrito;
+    const confirmMsg = targetDistrict 
+      ? `¿Desea descargar el padrón de ${targetDistrict.toUpperCase()} para uso offline?\n\nEsto optimizará el espacio en su móvil.`
+      : '¿Desea descargar el padrón COMPLETO para uso offline?\n\nADVERTENCIA: Esto puede tardar varios minutos y consumir mucho espacio.';
+
+    if (!window.confirm(confirmMsg)) return;
     setIsDownloading(true);
     setDownloadProgress(10);
     try {

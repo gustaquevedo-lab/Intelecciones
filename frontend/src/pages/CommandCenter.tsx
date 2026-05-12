@@ -6,9 +6,10 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import {
   Users, AlertTriangle, Shield, BarChart3, Radio,
-  TrendingUp, TrendingDown, ChevronDown,
-  Download, MapPin, Map as MapIcon, Activity, Bell, X, Search,
-  AlertCircle, ChevronRight, Truck, Target, MessageSquare, Mic, Clock
+  ChevronDown,
+  Download, MapPin, Bell, X, Search,
+  ChevronRight, Truck, Target, MessageSquare, Mic, Clock,
+  RefreshCw, CheckCircle, Plus
 } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import MainLayout from '../components/MainLayout';
@@ -16,7 +17,6 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CountdownCard } from '../components/CountdownCard';
 import api, { getImageUrl } from '../services/api';
 
 const formatWhatsApp = (phone: string) => {
@@ -146,60 +146,6 @@ const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number
 
 /* ─── sub-components ─────────────────────────────────── */
 
-const StatCard = ({ label, value, trend, color, isTactical, onClick, active, percentage }: any) => (
-  <div
-    onClick={onClick}
-    style={{
-      background: active ? `${color}20` : (isTactical ? 'rgba(0,0,0,0.3)' : 'var(--surface)'),
-      border: `1px solid ${active ? color : (isTactical ? 'rgba(255,255,255,0.05)' : 'var(--border)')}`,
-      borderRadius: '16px',
-      padding: '1.1rem 1.25rem',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      position: 'relative',
-      overflow: 'hidden',
-      boxShadow: isTactical ? 'none' : 'var(--shadow-sm)',
-      cursor: onClick ? 'pointer' : 'default',
-      opacity: active || !onClick ? 1 : 0.5
-    }}
-  >
-    <div style={{
-      position: 'absolute', left: 0, top: '25%', bottom: '25%',
-      width: '3px', background: color, borderRadius: '0 4px 4px 0',
-      opacity: 0.8
-    }} />
-    <div style={{ minWidth: 0 }}>
-      <span style={{
-        fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.12em',
-        textTransform: 'uppercase', color: isTactical ? 'var(--text-3)' : 'var(--text-3)', fontFamily: 'var(--font-display)'
-      }}>
-        {label}
-      </span>
-      <div style={{
-        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.75rem',
-        color: isTactical ? 'white' : 'var(--text)', lineHeight: 1, marginTop: '0.35rem',
-        display: 'flex', alignItems: 'baseline', gap: '0.5rem'
-      }}>
-        {value}
-        {percentage !== undefined && (
-          <span style={{ fontSize: '0.8rem', opacity: 0.4, fontWeight: 700 }}>{percentage}%</span>
-        )}
-      </div>
-    </div>
-    <div style={{
-      width: '40px', height: '40px', borderRadius: '12px',
-      background: `${color}15`, border: `1px solid ${color}30`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0
-    }}>
-      {trend === 'up' && <TrendingUp size={20} style={{ color }} />}
-      {trend === 'down' && <TrendingDown size={20} style={{ color }} />}
-      {!trend && <Activity size={20} style={{ color: isTactical ? 'var(--text-3)' : 'var(--text-3)' }} />}
-    </div>
-  </div>
-);
 
 const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (status: string) => void, isReadOnly: boolean }) => {
   const priorityColors = {
@@ -302,275 +248,139 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
   );
 };
 
-const ActivityFeed = ({ activities }: { activities: any[] }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-    {activities.map((act, i) => (
-      <div key={i} style={{ display: 'flex', gap: '0.75rem', position: 'relative' }}>
-        {i < activities.length - 1 && <div style={{ position: 'absolute', left: '11px', top: '24px', bottom: '-12px', width: '2px', background: 'var(--border)' }} />}
-        <div style={{
-          width: '24px', height: '24px', borderRadius: '50%',
-          background: act.type === 'CAPTURE' ? 'var(--green)' : act.type === 'CONFLICT' ? 'var(--red)' : 'var(--plra-500)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1
-        }}>
-          {act.type === 'CAPTURE' ? <MapPin size={12} color="white" /> : act.type === 'CONFLICT' ? <AlertTriangle size={12} color="white" /> : <Bell size={12} color="white" />}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)' }}>{act.user_name}</span>
-            <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>
-            <span style={{ color: 'var(--text-2)' }}>{act.type === 'CAPTURE' ? 'Captó a ' : act.type === 'CONFLICT' ? 'Generó conflicto: ' : 'Solicitó: '}</span>
-            <span style={{ color: 'var(--text)', fontWeight: 600 }}>{act.entity_name}</span>
-          </p>
-        </div>
-      </div>
-    ))}
-  </div>
-);
 
-const ProjectionCard = ({ currentCount }: { currentCount: number }) => {
-  const startTime = new Date();
-  startTime.setHours(7, 0, 0);
-  const now = new Date();
 
-  let elapsedHours = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-  if (elapsedHours <= 0) elapsedHours = 0.5;
-  if (elapsedHours > 10) elapsedHours = 10;
-
-  const speed = currentCount / elapsedHours;
-  const projection = Math.round(speed * 10);
+const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onFilter, currentFilter }: any) => {
+  const { user } = useAuth();
+  const isPadrino = user?.role === 'PADRINO';
 
   return (
-    <div style={{
-      padding: '1rem',
-      background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.05))',
-      border: '1px solid rgba(59,130,246,0.3)',
-      borderRadius: '16px',
-      marginTop: '1rem',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <Activity size={14} style={{ color: 'var(--plra-300)', marginRight: '0.25rem' }} />
-        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-200)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          Análisis Predictivo
-        </span>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>
-            {projection.toLocaleString()}
-          </div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>
-            Proyección Final Estimada
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Resumen de Mando */}
+      <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid var(--border)' }}>
+        <h4 style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>Estatus Operativo</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <StatMiniCard 
+            label="Capturas" 
+            value={stats?.total_captures || 0} 
+            color="var(--plra-300)" 
+            icon={<Target size={14} />} 
+          />
+          <StatMiniCard 
+            label="Meta" 
+            value={settings?.campaign_goal || 1500} 
+            color="var(--text-2)" 
+            icon={<Shield size={14} />} 
+          />
         </div>
+
+        <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
+          {[
+            { key: 'GREEN', color: 'var(--green)', label: 'Casa' },
+            { key: 'YELLOW', color: 'var(--yellow)', label: 'Fam.' },
+            { key: 'RED', color: 'var(--red)', label: 'Otros' },
+            { key: 'PURPLE', color: 'var(--purple)', label: 'Vol.' }
+          ].map(f => (
+            <button
+              key={f.key}
+              onClick={() => onFilter(currentFilter === f.key ? null : f.key)}
+              style={{
+                flex: 1, padding: '0.4rem', borderRadius: '10px',
+                background: currentFilter === f.key ? f.color : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${currentFilter === f.key ? f.color : 'rgba(255,255,255,0.08)'}`,
+                cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem',
+                transition: 'all 0.2s'
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', fontWeight: 900, color: currentFilter === f.key ? 'white' : 'white' }}>
+                {f.key === 'GREEN' ? stats?.green : f.key === 'YELLOW' ? stats?.yellow : f.key === 'RED' ? stats?.red : stats?.purple}
+              </span>
+              <span style={{ fontSize: '0.45rem', fontWeight: 800, color: currentFilter === f.key ? 'rgba(255,255,255,0.8)' : 'var(--text-3)', textTransform: 'uppercase' }}>{f.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+        {/* Active Conflicts List */}
+        {!isPadrino && conflicts.length > 0 && (
+          <section style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h4 style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Disputas Activas</h4>
+              <span style={{ background: 'var(--red)', color: 'white', fontSize: '0.6rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px' }}>{conflicts.length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {conflicts.slice(0, 3).map((c: any) => (
+                <div key={c.conflict_id} onClick={() => onResolve(c)} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '14px', padding: '0.75rem', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>{c.elector_nombre} {c.elector_apellido}</span>
+                    <AlertTriangle size={12} style={{ color: 'var(--red)' }} />
+                  </div>
+                  <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', margin: 0 }}>En disputa por <span style={{ color: 'white', fontWeight: 700 }}>{c.coordinator_name}</span></p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recent Activity */}
+        <section>
+          <h4 style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>Actividad Reciente</h4>
+          {activities.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Sin actividad registrada</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {activities.map((a: any) => (
+                <div key={a.id} style={{ display: 'flex', gap: '0.75rem', position: 'relative' }}>
+                  <div style={{ width: '2px', background: 'var(--border)', position: 'absolute', top: '1.5rem', bottom: '-1rem', left: '15px' }} />
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1 }}>
+                    <ActivityIcon action={a.action} />
+                  </div>
+                  <div style={{ paddingBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'white', fontWeight: 700, margin: '0 0 0.2rem' }}>
+                      <span style={{ color: 'var(--plra-300)' }}>{a.user_name || 'Sistema'}</span> {formatAction(a.action)}
+                    </p>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>{new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {a.entity}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 };
 
-const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onFilter, currentFilter }: { stats: any, activities: any[], conflicts: any[], onResolve: (c: any) => void, settings: any, onFilter: any, currentFilter: any }) => {
-  const criticalLocs = stats?.locations?.filter((l: any) => parseFloat(l.percentage) < 30).sort((a: any, b: any) => parseFloat(a.percentage) - parseFloat(b.percentage)).slice(0, 3) || [];
-  const topCoordinators = stats?.top_coordinators || [];
-
-  return (
-    <div className="tactical-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.25rem', minHeight: '100%' }}>
-      <CountdownCard
-        targetDate={settings.election_date}
-        title="OPERATIVO DÍA D"
-        isSidebar={true}
-      />
-
-      <div style={{ position: 'relative', marginTop: '0.5rem' }}>
-        <Search size={14} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-        <input
-          type="text"
-          placeholder="Rastreo de Elector..."
-          onKeyDown={(e) => e.key === 'Enter' && (window as any).handleStrategicSearch((e.target as HTMLInputElement).value)}
-          style={{
-            width: '100%', padding: '0.85rem 1rem 0.85rem 2.5rem',
-            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '14px', color: 'white', fontSize: '0.85rem',
-            outline: 'none', transition: 'all 0.2s'
-          }}
-        />
-      </div>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <Activity size={14} style={{ color: 'var(--plra-300)' }} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
-            INTELIGENCIA EN VIVO
-          </span>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <ActivityFeed activities={activities} />
-        </div>
-      </div>
-
-      {criticalLocs.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <AlertCircle size={14} style={{ color: 'var(--red)' }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--red)', fontFamily: 'var(--font-display)' }}>
-              ALERTAS TÁCTICAS
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {criticalLocs.map((l: any) => (
-              <div key={l.cod_local} style={{ padding: '0.85rem', borderRadius: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'white', fontWeight: 800 }}>{l.nombre}</span>
-                  <span style={{ color: 'var(--red)', fontWeight: 900 }}>{l.percentage}%</span>
-                </div>
-                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
-                  <div style={{ width: `${l.percentage}%`, height: '100%', background: 'var(--red)', boxShadow: '0 0 10px var(--red)' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {topCoordinators.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <TrendingUp size={14} style={{ color: 'var(--yellow)' }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
-              TOP RENDIMIENTO
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {topCoordinators.map((c: any, i: number) => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: i === 0 ? 'var(--yellow)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 900, color: i === 0 ? 'black' : 'white' }}>
-                  {i + 1}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</div>
-                  <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.05)', marginTop: '4px', borderRadius: '2px' }}>
-                    <div style={{ width: `${(c.capture_count / (topCoordinators[0].capture_count || 1)) * 100}%`, height: '100%', background: i === 0 ? 'var(--yellow)' : 'var(--plra-400)', boxShadow: i === 0 ? '0 0 10px var(--yellow)' : 'none' }} />
-                  </div>
-                </div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--plra-200)' }}>{c.capture_count}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <BarChart3 size={14} style={{ color: 'var(--plra-300)' }} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
-            MÉTRICAS DE CAMPAÑA
-          </span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <StatCard
-            label="Estructura CASA"
-            value={stats?.green || 0}
-            percentage={stats?.total_captures > 0 ? Math.round((stats.green / stats.total_captures) * 100) : 0}
-            trend="up"
-            color="var(--green)"
-            isTactical
-            onClick={() => onFilter(currentFilter === 'GREEN' ? null : 'GREEN')}
-            active={currentFilter === 'GREEN'}
-          />
-          <StatCard
-            label="Vínculo FAMILIARES"
-            value={stats?.yellow || 0}
-            percentage={stats?.total_captures > 0 ? Math.round((stats.yellow / stats.total_captures) * 100) : 0}
-            trend="up"
-            color="var(--yellow)"
-            isTactical
-            onClick={() => onFilter(currentFilter === 'YELLOW' ? null : 'YELLOW')}
-            active={currentFilter === 'YELLOW'}
-          />
-          <StatCard
-            label="Mando VOLUNTARIO"
-            value={stats?.purple || 0}
-            percentage={stats?.total_captures > 0 ? Math.round((stats.purple / stats.total_captures) * 100) : 0}
-            trend="up"
-            color="#A855F7"
-            isTactical
-            onClick={() => onFilter(currentFilter === 'PURPLE' ? null : 'PURPLE')}
-            active={currentFilter === 'PURPLE'}
-          />
-          <StatCard
-            label="Captados OTROS"
-            value={stats?.red || 0}
-            percentage={stats?.total_captures > 0 ? Math.round((stats.red / stats.total_captures) * 100) : 0}
-            trend="down"
-            color="var(--red)"
-            isTactical
-            onClick={() => onFilter(currentFilter === 'RED' ? null : 'RED')}
-            active={currentFilter === 'RED'}
-          />
-          <StatCard
-            label="Electores Pendientes"
-            value={(stats?.total_electors - stats?.total_captures) || 0}
-            percentage={stats?.total_electors > 0 ? Math.round(((stats.total_electors - stats.total_captures) / stats.total_electors) * 100) : 0}
-            trend={null}
-            color="var(--plra-300)"
-            isTactical
-          />
-        </div>
-        <ProjectionCard currentCount={stats?.total_captures || 0} />
-      </div>
-
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertTriangle size={14} style={{ color: 'var(--red)' }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
-              INCIDENCIAS
-            </span>
-          </div>
-          <span style={{ background: conflicts.length > 0 ? 'var(--red)' : 'var(--green)', color: '#fff', fontSize: '0.65rem', fontWeight: 900, padding: '0.2rem 0.6rem', borderRadius: '8px' }}>
-            {conflicts.length}
-          </span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {conflicts.slice(0, 3).map(c => (
-            <div key={c.conflict_id} onClick={() => onResolve(c)} style={{ padding: '1rem', borderRadius: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', transition: 'all 0.2s' }}>
-              <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>{c.elector_nombre}</p>
-              <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Doble captura detectada • Acción requerida</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {stats?.locations?.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <MapIcon size={14} style={{ color: 'var(--plra-300)' }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-display)' }}>
-              COBERTURA POR LOCAL
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {stats.locations.map((l: any) => (
-              <div key={l.cod_local} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>{l.nombre}</span>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--plra-300)' }}>{l.percentage}%</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.4rem' }}>
-                  <span>{l.total_captures} / {l.total_electors} CAPTURAS</span>
-                </div>
-                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div style={{ width: `${l.percentage}%`, height: '100%', background: 'var(--plra-400)', borderRadius: '2px' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+const StatMiniCard = ({ label, value, color, icon }: any) => (
+  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '0.75rem', borderRadius: '16px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-3)', marginBottom: '0.4rem' }}>
+      {icon}
+      <span style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
     </div>
-  );
+    <div style={{ fontSize: '1.25rem', fontWeight: 900, color }}>{value}</div>
+  </div>
+);
+
+const ActivityIcon = ({ action }: { action: string }) => {
+  if (action.includes('CREATE')) return <Plus size={14} style={{ color: 'var(--green)' }} />;
+  if (action.includes('UPDATE')) return <RefreshCw size={14} style={{ color: 'var(--plra-300)' }} />;
+  if (action.includes('RESOLVE')) return <CheckCircle size={14} style={{ color: 'var(--green)' }} />;
+  if (action.includes('DISPUTE')) return <AlertTriangle size={14} style={{ color: 'var(--red)' }} />;
+  return <Bell size={14} style={{ color: 'var(--text-3)' }} />;
+};
+
+const formatAction = (action: string) => {
+  const map: any = {
+    'CREATE_CAPTURE': 'registró una captura',
+    'RESOLVE_CONFLICT': 'resolvió una disputa',
+    'CREATE_USER': 'añadió un integrante',
+    'UPDATE_PASSWORD': 'cambió su contraseña',
+    'RESOLVE_REQUEST': 'gestionó una solicitud'
+  };
+  return map[action] || action.toLowerCase().replace('_', ' ');
 };
 
 const MapHandler = ({ center, selectedLocalId, activeDistrict }: { center: [number, number] | null, selectedLocalId: string | null, activeDistrict?: string }) => {
@@ -931,6 +741,7 @@ const CommandCenter = () => {
           { id: 'map', icon: MapPin, label: 'Mapa Táctico', badge: null },
           { id: 'hierarchy', icon: Shield, label: 'Jerarquía', badge: null },
           { id: 'team', icon: Users, label: 'Mi Equipo', badge: null },
+          { id: 'disputes', icon: AlertTriangle, label: 'Disputas', badge: conflicts.length || null },
           { id: 'requests', icon: Bell, label: 'Solicitudes', badge: requests.filter(r => r.status === 'PENDING').length || null },
         ] as const).map(tab => (
           <button
@@ -1734,37 +1545,153 @@ const CommandCenter = () => {
             <div style={{ height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
               <TeamPanel />
             </div>
+          ) : activeTab === 'disputes' ? (
+            /* ── Disputas tab ── */
+            <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
+              <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', marginBottom: '0.3rem' }}>
+                      Panel de <span style={{ color: 'var(--red)' }}>Disputas</span>
+                    </h2>
+                    <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', fontWeight: 700 }}>RESOLUCIÓN TÁCTICA DE CONFLICTOS DE CAPTACIÓN</p>
+                  </div>
+                  <div style={{ background: 'rgba(239,68,68,0.1)', padding: '0.6rem 1.25rem', borderRadius: '14px', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--red)', fontWeight: 900, fontSize: '0.8rem' }}>
+                    {conflicts.length} ACTIVAS
+                  </div>
+                </header>
+
+                {/* Active Disputes Grid */}
+                {conflicts.length === 0 ? (
+                  <div style={{ padding: '4rem', textAlign: 'center', background: 'var(--surface)', borderRadius: '24px', border: '1px dashed var(--border)' }}>
+                    <CheckCircle size={48} style={{ color: 'var(--green)', marginBottom: '1.5rem', opacity: 0.5 }} />
+                    <h3 style={{ color: 'white', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Territorio Controlado</h3>
+                    <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>No hay disputas vigentes en este distrito.</p>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)', 
+                    gap: '1rem',
+                    marginBottom: '3rem'
+                  }}>
+                    {conflicts.slice(0, 10).map((conf: any) => (
+                      <motion.div
+                        whileHover={{ y: -5, scale: 1.02 }}
+                        key={conf.conflict_id}
+                        onClick={() => setShowResolveModal(conf)}
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(8,14,28,0.8))',
+                          border: '1px solid rgba(239,68,68,0.25)',
+                          borderRadius: '20px',
+                          padding: '1.5rem',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                        }}
+                      >
+                        <div style={{ position: 'absolute', top: 0, right: 0, padding: '4px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 900, borderRadius: '0 0 0 10px' }}>DISPUTA</div>
+                        <div style={{ marginBottom: '1rem' }}>
+                          <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{conf.elector_nombre}</p>
+                          <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>{conf.elector_apellido}</p>
+                          <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.2rem' }}>CI: {conf.elector_ci}</p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Original</p>
+                            <p style={{ fontSize: '0.72rem', color: 'var(--plra-200)', fontWeight: 800, margin: 0 }}>{conf.original_coordinator_name}</p>
+                          </div>
+                          <div style={{ background: 'rgba(239,68,68,0.05)', padding: '0.5rem', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.1)' }}>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase' }}>Disputante</p>
+                            <p style={{ fontSize: '0.72rem', color: 'white', fontWeight: 800, margin: 0 }}>{conf.coordinator_name}</p>
+                          </div>
+                        </div>
+                        <button style={{ width: '100%', marginTop: '1rem', padding: '0.5rem', borderRadius: '10px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}>RESOLVER AHORA</button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {/* History Log with Advanced Filters */}
+                <div style={{ background: 'var(--surface)', borderRadius: '28px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                  <div style={{ padding: '1.5rem 2rem', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>Historial de Resoluciones</h3>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+                        <input type="text" placeholder="Buscar elector..." style={{ padding: '0.5rem 1rem 0.5rem 2.25rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem', width: '200px' }} />
+                      </div>
+                      <select style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem' }}>
+                        <option>Todos los locales</option>
+                        {locales.map(l => <option key={l.cod_local}>{l.nombre}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border)' }}>
+                          <th style={{ padding: '1rem 2rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Elector</th>
+                          <th style={{ padding: '1rem 2rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Local / Mesa</th>
+                          <th style={{ padding: '1rem 2rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Adjudicado a</th>
+                          <th style={{ padding: '1rem 2rem', fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase' }}>Fecha</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                          <td style={{ padding: '1rem 2rem' }}>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>GUSTAVO QUEVEDO</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: 3657834</p>
+                          </td>
+                          <td style={{ padding: '1rem 2rem' }}>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', margin: 0 }}>ESC. BAS. CARLOS ANTONIO LOPEZ</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Mesa 5</p>
+                          </td>
+                          <td style={{ padding: '1rem 2rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900 }}>A</div>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>Alcides Vazquez</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem 2rem', fontSize: '0.75rem', color: 'var(--text-3)' }}>Hoy, 14:30</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             /* ── Solicitudes tab ── */
             <div style={{ padding: 'clamp(1rem, 3vw, 2rem)', height: '100%', overflowY: 'auto', background: 'var(--bg)' }}>
-              <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
                   <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.3rem' }}>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.4rem' }}>
                       Solicitudes <span style={{ color: 'var(--plra-300)' }}>de Campo</span>
                     </h2>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Conflictos, incidentes y requerimientos reportados por coordinadores.</p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 600 }}>MONITOREO DE INCIDENTES Y REQUERIMIENTOS</p>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     {requests.filter(r => r.status === 'PENDING').length > 0 && (
-                      <div style={{ padding: '0.4rem 0.9rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', color: 'var(--red)', fontSize: '0.72rem', fontWeight: 900 }}>
+                      <div style={{ padding: '0.6rem 1.25rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '14px', color: 'var(--red)', fontSize: '0.75rem', fontWeight: 900, boxShadow: '0 4px 15px rgba(239,68,68,0.2)' }}>
                         {requests.filter(r => r.status === 'PENDING').length} PENDIENTES
                       </div>
                     )}
-                    <div style={{ padding: '0.4rem 0.9rem', background: 'var(--accent-subtle)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--plra-300)', fontSize: '0.72rem', fontWeight: 800 }}>
-                      {requests.length} TOTAL
-                    </div>
                   </div>
                 </div>
 
                 {requests.length === 0 ? (
-                  <div className="empty-state-card">
-                    <div className="icon-pulse"><Bell size={48} /></div>
-                    <h3>Sin Solicitudes Activas</h3>
-                    <p>No hay incidentes ni solicitudes de campo reportadas en este momento.</p>
+                  <div className="empty-state-card" style={{ padding: '5rem 2rem', background: 'var(--surface)', borderRadius: '32px', border: '1px solid var(--border)' }}>
+                    <div className="icon-pulse" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--plra-300)', width: '80px', height: '80px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
+                      <Bell size={40} />
+                    </div>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>Sin Solicitudes Activas</h3>
+                    <p style={{ color: 'var(--text-3)', fontSize: '1rem' }}>No hay incidentes ni solicitudes de campo reportadas en este momento.</p>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(420px, 1fr))', gap: '1.5rem' }}>
                     {requests
                       .sort((a: any, b: any) => {
                         const order = { CRITICAL: 0, HIGH: 1, NORMAL: 2 };

@@ -6,6 +6,7 @@ interface Settings {
   election_end_time: string;
   app_name: string;
   app_logo_url: string;
+  campaign_slogan?: string;
   global_goal: string;
   master_key: string;
   share_message: string;
@@ -19,8 +20,6 @@ interface SettingsContextType {
   refreshSettings: () => Promise<void>;
 }
 
-const API_BASE = 'http://localhost:5000/api';
-
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,6 +29,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     election_end_time: '17:00',
     app_name: 'INTELECCIONES 2026',
     app_logo_url: '',
+    campaign_slogan: '¡Hacia la Victoria!',
     global_goal: '10000',
     master_key: '',
     share_message: 'Hola! Te comparto los datos de este elector consultado en la plataforma Intellecciones PLRA:',

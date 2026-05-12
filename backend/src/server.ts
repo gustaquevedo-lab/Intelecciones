@@ -147,39 +147,45 @@ const upload = multer({
 app.get('/api/offline/padron', (req, res) => {
   const user_id = req.headers['x-user-id'];
   const role = req.headers['x-user-role'];
+  const headerDistrict = getDistrict(req);
 
   try {
     let query = 'SELECT ci, nombre, apellido, local_votacion, mesa, orden FROM electors';
     let params: any[] = [];
+    let activeDistrito = headerDistrict;
 
-    // Filter by district for everyone except SuperUser
-    if (role !== 'SUPERUSUARIO' && user_id) {
+    // If no district in header, try to find user's assigned district
+    if (!activeDistrito && user_id) {
       const user = db.prepare(`
-        SELECT COALESCE(l.ciudad, c.distrito) as distrito 
+        SELECT COALESCE(l.ciudad, c.distrito, u.distrito) as distrito 
         FROM users u 
         LEFT JOIN lists l ON u.assigned_list_id = l.id 
         LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
         WHERE u.id = ?
       `).get(user_id) as any;
-      
-      if (user?.distrito) {
-        // Safe check for columns
-        const columns = db.prepare('PRAGMA table_info(electors)').all() as any[];
-        const hasCiudad = columns.some(c => c.name === 'ciudad');
-        const hasDistrito = columns.some(c => c.name === 'distrito');
+      activeDistrito = user?.distrito;
+    }
 
-        if (hasDistrito && hasCiudad) {
-          query += " WHERE distrito = ? OR ciudad = ?";
-          params = [user.distrito, user.distrito];
-        } else if (hasDistrito) {
-          query += " WHERE distrito = ?";
-          params = [user.distrito];
-        } else if (hasCiudad) {
-          query += " WHERE ciudad = ?";
-          params = [user.distrito];
-        }
-        console.log(`[OFFLINE] Filtrando padrón para distrito: ${user.distrito}`);
+    // Filter by district if we found one
+    if (activeDistrito) {
+      const columns = db.prepare('PRAGMA table_info(electors)').all() as any[];
+      const hasCiudad = columns.some(c => c.name === 'ciudad');
+      const hasDistrito = columns.some(c => c.name === 'distrito');
+
+      if (hasDistrito && hasCiudad) {
+        query += " WHERE UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?)";
+        params = [activeDistrito, activeDistrito];
+      } else if (hasDistrito) {
+        query += " WHERE UPPER(distrito) = UPPER(?)";
+        params = [activeDistrito];
+      } else if (hasCiudad) {
+        query += " WHERE UPPER(ciudad) = UPPER(?)";
+        params = [activeDistrito];
       }
+      console.log(`[OFFLINE] Filtrando padrón para distrito: ${activeDistrito}`);
+    } else if (role !== 'SUPERUSUARIO') {
+      // If NOT SuperUser and NO district found, return empty to prevent data leak/overload
+      return res.json([]);
     }
 
     const electors = db.prepare(query).all(...params);
@@ -449,10 +455,10 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
       if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
         if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
-          sql += ` AND (UPPER(${tableAlias}.${distColumn}) = UPPER(?) OR (CASE WHEN '${tableAlias}'='e' THEN UPPER(${tableAlias}.distrito) ELSE '' END) = UPPER(?))`;
+          sql += ` AND (UPPER(TRIM(${tableAlias}.${distColumn})) = UPPER(TRIM(?)) OR (CASE WHEN '${tableAlias}'='e' THEN UPPER(TRIM(${tableAlias}.distrito)) ELSE '' END) = UPPER(TRIM(?)))`;
           params.push(activeDistrict, activeDistrict);
         } else if (tableAlias === 'ec') {
-          sql += ` AND (UPPER(e.ciudad) = UPPER(?) OR UPPER(e.distrito) = UPPER(?))`;
+          sql += ` AND (UPPER(TRIM(e.ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(e.distrito)) = UPPER(TRIM(?)))`;
           params.push(activeDistrict, activeDistrict);
         }
       }
@@ -2204,6 +2210,49 @@ app.post('/api/admin/conflicts/resolve', (req, res) => {
   }
 });
 
+app.get('/api/admin/requests', (req, res) => {
+  const sec = getSecurityFilter(req, 'u');
+  try {
+    const requests = db.prepare(`
+      SELECT fr.*, u.nombre as coordinator_name, u.photo_url as coordinator_photo
+      FROM field_requests fr
+      JOIN users u ON fr.coordinator_id = u.id
+      WHERE 1=1 ${sec.sql}
+      ORDER BY fr.timestamp DESC
+    `).all(...sec.params);
+    res.json(requests);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/requests/:id/resolve', (req, res) => {
+  const { status, resolved_by_id } = req.body;
+  try {
+    db.prepare('UPDATE field_requests SET status = ? WHERE id = ?').run(status, req.params.id);
+    logAction(resolved_by_id, 'RESOLVE_REQUEST', 'FIELD_REQUEST', req.params.id, `Status updated to ${status}`);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/activity', (req, res) => {
+  const sec = getSecurityFilter(req, 'u');
+  try {
+    const activities = db.prepare(`
+      SELECT al.*, u.nombre as user_name, u.photo_url as user_photo
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      WHERE 1=1 ${sec.sql}
+      ORDER BY al.timestamp DESC LIMIT 50
+    `).all(...sec.params);
+    res.json(activities);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/admin/electors/search', (req, res) => {
   const { q } = req.query;
   const user_id = req.headers['x-user-id'];
@@ -2569,7 +2618,7 @@ app.get('/api/structure/padrinos', (req, res) => {
     let params: any[] = [];
 
     if (district && district !== 'Global') {
-      sql += " AND UPPER(u.distrito) = UPPER(?)";
+      sql += " AND UPPER(TRIM(u.distrito)) = UPPER(TRIM(?))";
       params.push(district);
     }
     if (list_id && role !== 'JEFE_CAMPANA') {
@@ -2852,6 +2901,7 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (r
     }
 
     // JEFE_CAMPANA / SUPERUSUARIO: full tree
+    const filter = getSecurityFilter(req, 'u');
     const padrinos = db.prepare(`
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
              u.assigned_list_id, l.list_number, l.candidate_alias,
@@ -2862,10 +2912,9 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (r
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u2.id
-      WHERE u.role = 'PADRINO'
-        ${campaignId && role !== 'SUPERUSUARIO' ? 'AND u.assigned_campaign_id = ?' : ''}
+      WHERE u.role = 'PADRINO' ${filter.sql}
       GROUP BY u.id ORDER BY u.nombre
-    `).all(...(campaignId && role !== 'SUPERUSUARIO' ? [campaignId] : []));
+    `).all(...filter.params);
 
     res.json({ role, padrinos, coordinators: [] });
   } catch (err: any) {

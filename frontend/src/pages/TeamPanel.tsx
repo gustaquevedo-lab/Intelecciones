@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, Image as ImageIcon } from 'lucide-react';
+import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
@@ -561,7 +561,7 @@ const PadrinoRow = ({
 
 // ── Main TeamPanel ────────────────────────────────────────────────────────────
 const TeamPanel = () => {
-  const { user } = useAuth();
+  const { user, activeDistrict } = useAuth(); // Added activeDistrict
   const [padrinos, setPadrinos] = useState<TeamUser[]>([]);
   const [myCoordinators, setMyCoordinators] = useState<TeamUser[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -583,11 +583,10 @@ const TeamPanel = () => {
       setCampaigns(campaignsRes.data || []);
     } catch {}
     setLoading(false);
-  }, []);
+  }, [activeDistrict]); // Now depends on activeDistrict
 
   useEffect(() => { load(); }, [load]);
 
-  const allLists = campaigns.flatMap(c => c.lists.map((l: any) => ({ ...l, campaign_name: c.name })));
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', flexDirection: 'column', gap: '1rem' }}>

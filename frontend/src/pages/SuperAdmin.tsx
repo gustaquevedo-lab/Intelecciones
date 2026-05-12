@@ -30,7 +30,8 @@ import {
   TrendingDown,
   User,
   Copy,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
@@ -1964,88 +1965,168 @@ Status: ${error.response?.status || 'N/A'}
   );
 
   const renderSystem = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white' }}>Estado del Sistema</h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>Métricas de rendimiento y salud de la plataforma en tiempo real.</p>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Estado del Sistema</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 500 }}>Métricas de rendimiento y salud de la plataforma en tiempo real.</p>
         </div>
-        <button className="action-btn-primary" onClick={fetchSystemHealth}>
-          <RefreshCw size={18} /> Actualizar Diagnóstico
+        <button 
+          className="btn-primary" 
+          onClick={fetchSystemHealth}
+          style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.8rem' }}
+        >
+          <RefreshCw size={16} /> Actualizar Diagnóstico
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-        <div className="card-premium-styled" style={{ borderLeft: '4px solid var(--plra-400)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.75rem' }}>
+        <div className="card-premium-styled" style={{ 
+          padding: '1.75rem', 
+          borderLeft: '5px solid var(--plra-400)',
+          background: 'linear-gradient(145deg, var(--surface), rgba(59, 130, 246, 0.05))'
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Base de Datos</p>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{systemStats?.database?.electors?.toLocaleString() || '---'}</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem' }}>Electores en padrón</p>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>Infraestructura DB</p>
+              <h3 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'white' }}>
+                {systemStats?.database?.electors?.toLocaleString() || '---'}
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-2)', fontWeight: 500 }}>Electores en padrón total</p>
             </div>
-            <Database size={28} style={{ color: 'var(--plra-300)', opacity: 0.5 }} />
+            <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--plra-400)' }}>
+              <Database size={24} />
+            </div>
           </div>
-          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div>
-              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>CAPTURES</p>
-              <p style={{ fontWeight: 800 }}>{systemStats?.database?.captures?.toLocaleString()}</p>
+              <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, letterSpacing: '0.05em' }}>CAPTURES</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--plra-200)' }}>{systemStats?.database?.captures?.toLocaleString()}</p>
             </div>
             <div>
-              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>USUARIOS</p>
-              <p style={{ fontWeight: 800 }}>{systemStats?.database?.users?.toLocaleString()}</p>
+              <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, letterSpacing: '0.05em' }}>USUARIOS</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--plra-200)' }}>{systemStats?.database?.users?.toLocaleString()}</p>
             </div>
           </div>
         </div>
 
-        <div className="card-premium-styled" style={{ borderLeft: '4px solid var(--green)' }}>
+        <div className="card-premium-styled" style={{ 
+          padding: '1.75rem', 
+          borderLeft: '5px solid var(--green)',
+          background: 'linear-gradient(145deg, var(--surface), rgba(34, 197, 94, 0.05))'
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Servidor (Node.js)</p>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{systemStats?.system?.status || 'Online'}</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem' }}>Uptime: {Math.floor((systemStats?.system?.uptime || 0) / 3600)}h {Math.floor(((systemStats?.system?.uptime || 0) % 3600) / 60)}m</p>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>Entorno de Ejecución</p>
+              <h3 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'white' }}>
+                {systemStats?.system?.status || 'Online'}
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-2)', fontWeight: 500 }}>
+                Uptime: {Math.floor((systemStats?.system?.uptime || 0) / 3600)}h {Math.floor(((systemStats?.system?.uptime || 0) % 3600) / 60)}m
+              </p>
             </div>
-            <Activity size={28} style={{ color: 'var(--green)', opacity: 0.5 }} />
+            <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.1)', color: 'var(--green)' }}>
+              <Activity size={24} />
+            </div>
           </div>
-          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div>
-              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>MEMORIA</p>
-              <p style={{ fontWeight: 800 }}>{systemStats?.system?.memory || '---'}</p>
+              <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, letterSpacing: '0.05em' }}>MEMORIA</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#86efac' }}>{systemStats?.system?.memory || '---'}</p>
             </div>
             <div>
-              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>VERSIÓN</p>
-              <p style={{ fontWeight: 800 }}>{systemStats?.system?.node || '---'}</p>
+              <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, letterSpacing: '0.05em' }}>NODE.JS</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#86efac' }}>{systemStats?.system?.node || '---'}</p>
             </div>
           </div>
         </div>
 
-        <div className="card-premium-styled" style={{ borderLeft: '4px solid var(--yellow)' }}>
+        <div className="card-premium-styled" style={{ 
+          padding: '1.75rem', 
+          borderLeft: '5px solid var(--yellow)',
+          background: 'linear-gradient(145deg, var(--surface), rgba(245, 158, 11, 0.05))'
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Seguridad</p>
-              <h3 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{systemStats?.database?.logs?.toLocaleString() || '0'}</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem' }}>Eventos auditados</p>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--yellow)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>Centro de Auditoría</p>
+              <h3 style={{ fontSize: '2.2rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'white' }}>
+                {systemStats?.database?.logs?.toLocaleString() || '0'}
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-2)', fontWeight: 500 }}>Eventos de seguridad registrados</p>
             </div>
-            <Shield size={28} style={{ color: 'var(--yellow)', opacity: 0.5 }} />
+            <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--yellow)' }}>
+              <Shield size={24} />
+            </div>
           </div>
-          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-            <button className="icon-btn" style={{ width: '100%', gap: '0.5rem' }} onClick={() => setActiveTab('audit')}>
-              Ver Logs Detallados <FileText size={14} />
+          <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+            <button 
+              className="btn" 
+              style={{ 
+                width: '100%', 
+                gap: '0.5rem', 
+                background: 'rgba(245, 158, 11, 0.1)', 
+                color: 'var(--yellow)',
+                border: '1px solid rgba(245, 158, 11, 0.2)',
+                borderRadius: '10px',
+                padding: '0.7rem'
+              }} 
+              onClick={() => setActiveTab('audit')}
+            >
+              Consultar Logs Forenses <FileText size={14} />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="card-premium-styled" style={{ padding: '2rem', textAlign: 'center', background: 'rgba(59,130,246,0.03)' }}>
-        <h4 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Mantenimiento de Datos</h4>
-        <p style={{ color: 'var(--text-3)', maxWidth: '600px', margin: '0 auto 1.5rem' }}>
-          Realiza limpiezas preventivas o reseteos controlados de la información de campo antes del inicio de una nueva jornada electoral.
+      <div className="card-premium-styled" style={{ 
+        padding: '3rem 2rem', 
+        textAlign: 'center', 
+        background: 'linear-gradient(180deg, rgba(59, 130, 246, 0.03) 0%, rgba(2, 12, 30, 0.5) 100%)',
+        border: '1px solid rgba(59, 130, 246, 0.1)'
+      }}>
+        <div style={{ 
+          width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-400)',
+          margin: '0 auto 1.5rem'
+        }}>
+          <ShieldCheck size={32} />
+        </div>
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '0.75rem', color: 'white' }}>Operaciones de Mantenimiento</h3>
+        <p style={{ color: 'var(--text-2)', maxWidth: '640px', margin: '0 auto 2.5rem', lineHeight: 1.7, fontSize: '0.95rem' }}>
+          Realiza limpiezas preventivas o reseteos controlados de la información de campo antes del inicio de una nueva jornada electoral para asegurar la integridad de los datos.
         </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-          <button className="action-btn-danger" onClick={handleWipeCaptures}>
-            <Trash2 size={18} /> Purgar Datos de Campo (RESET)
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+          <button 
+            className="btn" 
+            onClick={handleWipeCaptures}
+            style={{ 
+              background: 'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)',
+              color: 'white',
+              padding: '0.9rem 2rem',
+              borderRadius: '12px',
+              boxShadow: '0 8px 20px rgba(239, 68, 68, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}
+          >
+            <Trash2 size={20} /> Purgar Datos (RESET)
           </button>
-          <button className="action-btn-secondary" onClick={() => setActiveTab('padrones')}>
-            <Database size={18} /> Gestionar Padrones
+          <button 
+            className="btn" 
+            onClick={() => setActiveTab('padrones')}
+            style={{ 
+              background: 'linear-gradient(135deg, var(--plra-500) 0%, var(--plra-700) 100%)',
+              color: 'white',
+              padding: '0.9rem 2rem',
+              borderRadius: '12px',
+              boxShadow: '0 8px 20px rgba(0, 71, 171, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}
+          >
+            <Database size={20} /> Gestionar Padrones
           </button>
         </div>
       </div>

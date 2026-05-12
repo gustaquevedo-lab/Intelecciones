@@ -1,4 +1,3 @@
-import React, { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const UpdatePrompt = () => {
   const {
     offlineReady: offlineReadyState,
-    needUpdate: needUpdateState,
+    needRefresh: needUpdateState,
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {

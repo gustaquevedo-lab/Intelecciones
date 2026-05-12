@@ -4,16 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare, QrCode, Send, Users, FileText,
-  CheckCircle2, AlertCircle, RefreshCw, Smartphone,
+  MessageSquare, Send, Users, FileText,
+  CheckCircle2, RefreshCw, Smartphone,
   Search, Plus, Trash2, Image as ImageIcon, Video,
   Mic, MapPin, X, Loader2, ChevronRight, ChevronDown,
-  BarChart3, Paperclip, MoreVertical, Phone, Info,
-  User, Tag, Hash, Calendar, ExternalLink, ChevronLeft,
-  Star, Flag, Zap, Radio, Target, Eye, EyeOff,
-  CheckSquare, Square, UserCheck, Users2, Volume2,
-  ArrowLeft, Clock, TrendingUp, Wifi, WifiOff, Edit3,
-  Copy, Play, Pause, CornerDownLeft
+  Paperclip, Info, Tag, Hash, Star, Radio, Eye, 
+  UserCheck, Edit3, CornerDownLeft
 } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
 
