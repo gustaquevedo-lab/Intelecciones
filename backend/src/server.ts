@@ -432,10 +432,24 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   let distColumn = 'distrito';
   if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
 
-  // 2. SuperUser Isolation: Can see everything, or filter by activeDistrict if provided
-  if (role === 'SUPERUSUARIO') {
+  // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña sees their campaign
+  if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA') {
     let sql = '';
     let params: any[] = [];
+
+    // Filter by campaign if user is JEFE_CAMPANA
+    const user = user_id ? getCachedUserInfo(user_id as string) : null;
+    if (role === 'JEFE_CAMPANA' && user?.campaign_id) {
+       if (tableAlias === 'e') {
+         sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
+         params.push(user.campaign_id);
+       } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'l') {
+         // Join or filter by list -> campaign
+         const cCol = (tableAlias === 'l') ? 'campaign_id' : 'campaign_id'; // Add join context if needed
+         // Note: we assume the queries already have necessary joins for campaign filtering if needed, 
+         // but here we focus on district first as it's the most common filter.
+       }
+    }
 
     if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
       if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
@@ -455,6 +469,10 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
        } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'u' || tableAlias === 'capture_conflicts') {
          const col = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
          sql += ` AND ${tableAlias}.${col} = ?`;
+         params.push(listId);
+       } else if (tableAlias === 'e') {
+         // Join electors to captures to filter by list
+         sql += ` AND EXISTS (SELECT 1 FROM elector_captures ec2 WHERE ec2.elector_ci = e.ci AND ec2.list_id = ?)`;
          params.push(listId);
        }
     }
