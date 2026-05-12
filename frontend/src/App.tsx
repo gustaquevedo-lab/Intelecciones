@@ -9,6 +9,11 @@ const LogisticsApp = React.lazy(() => import('./pages/LogisticsApp'));
 const Communications = React.lazy(() => import('./pages/Communications'));
 const DiaDApp = React.lazy(() => import('./pages/DiaDApp'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const Logout = () => {
+  const { logout } = useAuth();
+  React.useEffect(() => { logout(); }, [logout]);
+  return null;
+};
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -47,6 +52,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={user ? <RootRedirect /> : <LandingPage />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/logout" element={<Logout />} />
       <Route path="/coordinador" element={<CoordinatorApp />} />
       <Route path="/comando" element={<CommandCenter />} />
       <Route path="/veedor" element={<VeedorApp />} />

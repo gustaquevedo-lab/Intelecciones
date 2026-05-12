@@ -625,8 +625,15 @@ const CommandCenter = () => {
       setIsMobile(mobile);
       if (!mobile) setShowSidebar(true);
     };
+    const handleToggle = () => setShowSidebar(prev => !prev);
+    
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    document.addEventListener('toggle-sidebar', handleToggle);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('toggle-sidebar', handleToggle);
+    };
   }, []);
 
   const loadData = async () => {

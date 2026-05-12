@@ -44,7 +44,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (savedUser) {
                 let parsed: User;
-                try { parsed = JSON.parse(savedUser); } catch { localStorage.removeItem('auth_user'); setLoading(false); return; }
+                try { 
+                    parsed = JSON.parse(savedUser); 
+                } catch { 
+                    localStorage.removeItem('auth_user'); 
+                    setLoading(false); 
+                    return; 
+                }
 
                 if ((parsed as any).role === 'SUPER_ADMIN') parsed.role = 'SUPERUSUARIO';
                 if ((parsed as any).role === 'COORDINATOR') parsed.role = 'COORDINADOR';
@@ -57,14 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (savedListId) setActiveListId(savedListId === 'null' ? null : parseInt(savedListId));
                     if (savedDistrict) setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);
                 }
-
-                setTimeout(() => {
-                    api.get('/me').then(res => {
-                        const fresh: User = res.data;
-                        setUser(fresh);
-                        try { localStorage.setItem('auth_user', JSON.stringify(fresh)); } catch(e) {}
-                    }).catch(() => {});
-                }, 2000);
             }
         } catch (err) {
             console.warn("Storage access denied in this environment.");

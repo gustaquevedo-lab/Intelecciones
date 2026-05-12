@@ -165,6 +165,7 @@ const CoordinatorApp = () => {
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [telefono, setTelefono] = useState('');
   const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
+  const [locationStats, setLocationStats] = useState<any[]>([]);
 
   const [showCoordModal, setShowCoordModal] = useState(false);
   const [newCoordCI, setNewCoordCI] = useState('');
@@ -680,19 +681,10 @@ const CoordinatorApp = () => {
   };
 
   useEffect(() => {
-    if (showModal && user?.id) {
-      api.get(`/coordinators/${user.id}/stats`)
-        .then(res => {
-          setColorCounts({
-            green: res.data.green || 0,
-            yellow: res.data.yellow || 0,
-            red: res.data.red || 0,
-            purple: res.data.purple || 0
-          });
-        })
-        .catch(err => console.error('Error fetching color counts', err));
-    }
-  }, [showModal, user?.id]);
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   useEffect(() => {
     if (activeTab === 'coordinators') {
@@ -705,8 +697,25 @@ const CoordinatorApp = () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await api.get(`/coordinators/${user.id}/history`);
-      setHistory(res.data);
+      const res = await api.get(`/coordinator/${user.id}/captures`);
+      const data = res.data;
+      setHistory(data);
+      
+      // Calculate real stats from history
+      const stats = { green: 0, yellow: 0, red: 0, purple: 0 };
+      data.forEach((c: any) => {
+        if (c.traffic_light === 'GREEN') stats.green++;
+        else if (c.traffic_light === 'YELLOW') stats.yellow++;
+        else if (c.traffic_light === 'RED') stats.red++;
+        else if (c.traffic_light === 'PURPLE') stats.purple++;
+      });
+      setColorCounts(stats);
+
+      // Fetch location stats
+      const statsRes = await api.get('/stats/command');
+      if (statsRes.data.locations) {
+        setLocationStats(statsRes.data.locations);
+      }
     } catch (err) {
       console.error("Error fetching history", err);
     } finally {
@@ -843,6 +852,87 @@ const CoordinatorApp = () => {
 
         {activeTab === 'search' ? (
           <>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '0.75rem',
+          marginBottom: '1rem'
+        }}>
+          {[
+            { label: 'Casa', val: colorCounts.green, color: 'var(--green)', bg: 'rgba(34,197,94,0.15)', icon: '🏠' },
+            { label: 'Familia', val: colorCounts.yellow, color: 'var(--yellow)', bg: 'rgba(234,179,8,0.12)', icon: '👨‍👩‍👧' },
+            { label: 'Otros', val: colorCounts.red, color: 'var(--red)', bg: 'rgba(239,68,68,0.12)', icon: '📍' },
+            { label: 'Voluntarios', val: colorCounts.purple, color: '#A855F7', bg: 'rgba(168,85,247,0.15)', icon: '✨' },
+          ].map(stat => (
+            <div key={stat.label} style={{
+              background: stat.bg,
+              border: `1px solid ${stat.color}25`,
+              borderRadius: '20px',
+              padding: '1rem 0.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.4rem',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              boxShadow: `0 4px 15px -3px ${stat.color}15`,
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Subtle glow effect */}
+              <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '40%', height: '40%', background: stat.color, filter: 'blur(20px)', opacity: 0.15 }} />
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
+                  {stat.icon}
+                </div>
+                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{stat.val}</span>
+              </div>
+              <span style={{ fontSize: '0.6rem', fontWeight: 800, color: stat.color, textTransform: 'uppercase', letterSpacing: '0.12em', position: 'relative', zIndex: 1 }}>{stat.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <SectionLabel icon={<MapPin size={13} />} text="Avance por Local" />
+          <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', margin: '0 -0.25rem' }} className="no-scrollbar">
+            {locationStats.filter(loc => loc.total_captures > 0).map((loc: any) => (
+              <div key={loc.cod_local} style={{
+                minWidth: '180px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '16px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem'
+              }}>
+                <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.nombre}</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div>
+                    <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--plra-300)', margin: 0 }}>{loc.total_captures}</p>
+                    <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Captados</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-2)', margin: 0 }}>{loc.percentage}%</p>
+                    <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Meta</p>
+                  </div>
+                </div>
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ width: `${loc.percentage}%`, height: '100%', background: 'var(--plra-500)', boxShadow: '0 0 10px var(--plra-500)' }} />
+                </div>
+                <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 600, margin: 0, textAlign: 'center' }}>
+                  Total Local: {loc.total_electors.toLocaleString('es-PY')}
+                </p>
+              </div>
+            ))}
+            {locationStats.filter(loc => loc.total_captures > 0).length === 0 && (
+              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)', borderRadius: '12px', width: '100%', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 600 }}>Inicia una captura para ver estadísticas.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div style={{
           background: 'rgba(59, 130, 246, 0.05)',
           border: '1px solid rgba(59, 130, 246, 0.2)',

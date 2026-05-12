@@ -2500,6 +2500,12 @@ app.get('/api/stats/command', (req, res) => {
         hierarchyFilterSql = 'AND (u.parent_id = ? OR u.id = ?)';
         hierarchyFilterParams.push(userId, userId);
       }
+    } else if (role === 'COORDINADOR') {
+      const userId = parseInt(req.headers['x-user-id'] as string);
+      if (!isNaN(userId)) {
+        hierarchyFilterSql = 'AND ec.coordinator_id = ?';
+        hierarchyFilterParams.push(userId);
+      }
     }
 
     // Combined params in order matching SQL placeholders
