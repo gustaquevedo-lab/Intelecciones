@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const UpdatePrompt = () => {
   const {
-    offlineReady: [offlineReady, setOfflineReady],
-    needUpdate: [needUpdate, setNeedUpdate],
+    offlineReady: offlineReadyState,
+    needUpdate: needUpdateState,
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
@@ -16,6 +16,9 @@ const UpdatePrompt = () => {
       console.log('SW registration error', error);
     },
   });
+
+  const [offlineReady, setOfflineReady] = offlineReadyState || [false, () => {}];
+  const [needUpdate, setNeedUpdate] = needUpdateState || [false, () => {}];
 
   const close = () => {
     setOfflineReady(false);
