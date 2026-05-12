@@ -619,8 +619,15 @@ const CoordinatorApp = () => {
 
     setIsLoading(true);
     try {
-      await api.post('/captures', captureData);
-      setSuccessMsg('¡Captura guardada correctamente!');
+      const { safePost } = await import('../services/syncService');
+      const res = await safePost('CAPTURE', '/captures', captureData);
+      
+      if (res.data.offline) {
+        setSuccessMsg('⚠️ Sin conexión. El registro se guardó localmente y se sincronizará pronto.');
+      } else {
+        setSuccessMsg('¡Captura guardada correctamente!');
+      }
+      
       setShowModal(false);
       
       // Cleanup
@@ -628,44 +635,13 @@ const CoordinatorApp = () => {
         setCi(''); setElector(null); setSuccessMsg(''); setLocation(null); setNeedsTransport(false); setTelefono('');
       }, 2000);
     } catch (err: any) {
-      console.error("Error saving capture, saving to offline queue...", err);
-      // Offline fallback
-      const queue = JSON.parse(localStorage.getItem('pending_captures') || '[]');
-      queue.push(captureData);
-      localStorage.setItem('pending_captures', JSON.stringify(queue));
-      
-      setSuccessMsg('⚠️ Sin conexión. El registro se guardó localmente y se sincronizará pronto.');
-      setShowModal(false);
-      setTimeout(() => {
-        setCi(''); setElector(null); setSuccessMsg(''); setLocation(null); setNeedsTransport(false); setTelefono('');
-      }, 3000);
+      console.error("Error saving capture", err);
+      setError('Error al procesar la captura.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sync effect
-  useEffect(() => {
-    const queue = JSON.parse(localStorage.getItem('pending_captures') || '[]');
-
-    const syncOffline = async () => {
-      if (queue.length === 0 || isSyncing) return;
-      setIsSyncing(true);
-      const remaining = [];
-      for (const cap of queue) {
-        try {
-          await api.post('/captures', cap);
-        } catch (e) {
-          remaining.push(cap);
-        }
-      }
-      localStorage.setItem('pending_captures', JSON.stringify(remaining));
-      setIsSyncing(false);
-    };
-
-    const interval = setInterval(syncOffline, 30000);
-    return () => clearInterval(interval);
-  }, [isSyncing]);
 
   const handleUpdateCapture = async (color: string) => {
     if (!editingCapture) return;

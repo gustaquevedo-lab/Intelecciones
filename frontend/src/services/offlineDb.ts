@@ -2,6 +2,7 @@
 const DB_NAME = 'InteleccionesOffline';
 const DB_VERSION = 1;
 const STORE_NAME = 'electors';
+const SYNC_STORE = 'pending_sync';
 
 export const initOfflineDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -12,13 +13,53 @@ export const initOfflineDB = (): Promise<IDBDatabase> => {
 
     request.onupgradeneeded = (event: any) => {
       const db = event.target.result;
+      
+      // Store for Electors (Padron)
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'ci' });
         store.createIndex('nombre', 'nombre', { unique: false });
         store.createIndex('apellido', 'apellido', { unique: false });
         store.createIndex('full_name', ['nombre', 'apellido'], { unique: false });
       }
+
+      // Store for Pending Sync Actions (Captures, Votes, etc.)
+      if (!db.objectStoreNames.contains(SYNC_STORE)) {
+        db.createObjectStore(SYNC_STORE, { keyPath: 'id', autoIncrement: true });
+      }
     };
+  });
+};
+
+export const queuePendingAction = async (action: { type: string; url: string; method: string; data: any; timestamp: number }) => {
+  const db = await initOfflineDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SYNC_STORE, 'readwrite');
+    const store = transaction.objectStore(SYNC_STORE);
+    const request = store.add(action);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+export const getPendingActions = async (): Promise<any[]> => {
+  const db = await initOfflineDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SYNC_STORE, 'readonly');
+    const store = transaction.objectStore(SYNC_STORE);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+export const removePendingAction = async (id: number) => {
+  const db = await initOfflineDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SYNC_STORE, 'readwrite');
+    const store = transaction.objectStore(SYNC_STORE);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
   });
 };
 

@@ -71,14 +71,17 @@ const VeeduriaTab = ({ user }: { user: any }) => {
 
   const markVote = async (order: number) => {
     if (votedOrders.has(order)) return;
+    
+    // UI Feedback immediate
+    setShowSuccess(order);
+    setVotedOrders(prev => new Set(prev).add(order));
+    setTimeout(() => setShowSuccess(null), 1000);
+
     try {
-      setShowSuccess(order);
-      await api.post('/veedor/mark-vote', { order });
-      setVotedOrders(prev => new Set(prev).add(order));
-      setTimeout(() => setShowSuccess(null), 1000);
+      const { safePost } = await import('../services/syncService');
+      await safePost('MARK_VOTE', '/veedor/mark-vote', { order });
     } catch (err) {
       console.error('Error marking vote:', err);
-      setShowSuccess(null);
     }
   };
 

@@ -1162,8 +1162,10 @@ safeRun("UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT
 console.log("DATABASE: Unificación de datos completada exitosamente.");
 
 app.get('/api/locales', (req, res) => {
+  const sec = getSecurityFilter(req, 'loc'); // Note: getSecurityFilter handles 'loc' as distrito
+  const params = sec.params || [];
   try {
-    const locales = db.prepare('SELECT * FROM voting_locations').all();
+    const locales = db.prepare(`SELECT * FROM voting_locations loc WHERE 1=1 ${sec.sql}`).all(...params);
     res.json(locales);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

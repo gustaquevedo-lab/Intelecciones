@@ -13,6 +13,8 @@ import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import UpdatePrompt from './components/UpdatePrompt';
+import './services/syncService'; // Initialize sync listeners
 
 function App() {
   console.log('App Rendering Real V2');
@@ -22,6 +24,7 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <Router>
+            <UpdatePrompt />
             <React.Suspense fallback={
               <div style={{ 
                 height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
