@@ -395,7 +395,15 @@ const getRole = (req: express.Request) => {
 // ── User district cache ────────────────────────────────────────────────────
 // Avoids a DB JOIN query on every single API request for non-SUPERUSUARIO users.
 // Cache TTL: 2 minutes. Cleared on user updates.
-interface CachedUser { assigned_list_id: number|null; assigned_campaign_id: number|null; distrito: string|null; campaign_id: number|null; ts: number; }
+interface CachedUser { 
+  id: number;
+  role: string;
+  assigned_list_id: number|null; 
+  assigned_campaign_id: number|null; 
+  distrito: string|null; 
+  campaign_id: number|null; 
+  ts: number; 
+}
 const _userCache = new Map<string, CachedUser>();
 const USER_CACHE_TTL = 120_000;
 
@@ -404,7 +412,7 @@ const getCachedUserInfo = (user_id: string): CachedUser | null => {
   const hit = _userCache.get(user_id);
   if (hit && now - hit.ts < USER_CACHE_TTL) return hit;
   const user = db.prepare(`
-    SELECT u.assigned_list_id, u.assigned_campaign_id,
+    SELECT u.id, u.role, u.assigned_list_id, u.assigned_campaign_id,
            COALESCE(l.ciudad, c.distrito) as distrito,
            COALESCE(l.campaign_id, u.assigned_campaign_id) as campaign_id
     FROM users u
@@ -413,10 +421,19 @@ const getCachedUserInfo = (user_id: string): CachedUser | null => {
     WHERE u.id = ?
   `).get(user_id) as any;
   if (!user) return null;
-  const entry: CachedUser = { assigned_list_id: user.assigned_list_id, assigned_campaign_id: user.assigned_campaign_id, distrito: user.distrito, campaign_id: user.campaign_id ?? null, ts: now };
+  const entry: CachedUser = { 
+    id: user.id,
+    role: user.role,
+    assigned_list_id: user.assigned_list_id, 
+    assigned_campaign_id: user.assigned_campaign_id, 
+    distrito: user.distrito, 
+    campaign_id: user.campaign_id ?? null, 
+    ts: now 
+  };
   _userCache.set(user_id, entry);
   return entry;
 };
+
 const clearUserCache = (user_id: string | number) => _userCache.delete(String(user_id));
 
 // ── Role-based access middleware ────────────────────────────────────────────
@@ -431,21 +448,28 @@ const requireRole = (...roles: string[]) => (req: express.Request, res: express.
 
 const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
   try {
-    const role = (getRole(req) || 'GUEST').toUpperCase().trim();
-    const user_id = req.headers['x-user-id'];
+    const user_id = req.headers['x-user-id'] as string;
+    const headerRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
     const activeDistrict = getDistrict(req);
+    
+    // FETCH REAL ROLE FROM DB/CACHE IF HEADER IS MISSING OR GENERIC
+    let user: CachedUser | null = null;
+    if (user_id && user_id !== 'undefined' && user_id !== 'null' && user_id !== '') {
+      user = getCachedUserInfo(user_id);
+    }
+    
+    const role = (user?.role || headerRole || 'GUEST').toUpperCase().trim();
 
     // 1. Column name mapping: 'lists' and 'electors' use 'ciudad', others use 'distrito'
     let distColumn = 'distrito';
     if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
 
     // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña sees their campaign
-    if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA') {
+    if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA') {
       let sql = '';
       let params: any[] = [];
 
       // Filter by campaign if user is JEFE_CAMPANA
-      const user = user_id ? getCachedUserInfo(user_id as string) : null;
       if (role === 'JEFE_CAMPANA' && user?.campaign_id) {
          if (tableAlias === 'e') {
            sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
@@ -460,7 +484,6 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
       if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
         if (tableAlias === 'u') {
-          // Users: check user district OR their assigned list's city OR their campaign's district
           sql += ` AND (
             UPPER(TRIM(u.distrito)) = UPPER(TRIM(?)) OR 
             EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND UPPER(TRIM(l2.ciudad)) = UPPER(TRIM(?))) OR
@@ -494,10 +517,10 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     }
 
     // 3. Non-SuperUsers: Locked to their assignment (uses cache)
-    if (!user_id) return { sql: ' AND 1=0', params: [] };
-
-    const user = getCachedUserInfo(user_id as string);
-    if (!user || !user.distrito) return { sql: ' AND 1=0', params: [] };
+    if (!user || !user.distrito) {
+      if (role !== 'GUEST') console.warn(`[SECURITY] User ${user_id} (${role}) blocked - missing district assignment`);
+      return { sql: ' AND 1=0', params: [] };
+    }
 
     // Adjust for ec (elector_captures) which needs to filter via joined electors table 'e'
     let targetAlias = tableAlias;
@@ -510,7 +533,6 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     let sql = ` AND UPPER(${targetAlias}.${targetCol}) = UPPER(?)`;
     let params: any[] = [user.distrito];
 
-    // Electors: also filter by campaign_id when the tenant has one set — prevents cross-tenant elector leakage
     if ((tableAlias === 'e') && user.campaign_id) {
       sql += ` AND (${targetAlias}.campaign_id = ? OR ${targetAlias}.campaign_id IS NULL)`;
       params.push(user.campaign_id);
@@ -531,7 +553,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     return { sql, params };
   } catch (err: any) {
     console.error('[SECURITY FILTER ERROR]', err);
-    return { sql: '', params: [] }; // Failsafe: return empty filter on error
+    return { sql: '', params: [] }; 
   }
 };
 

@@ -66,8 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         } catch (err) {
             console.warn("Storage access denied in this environment.");
+        } finally {
+            // Small delay to ensure React state batching completes before components start fetching
+            setTimeout(() => setLoading(false), 100);
         }
-        setLoading(false);
     }, []);
 
     useEffect(() => {

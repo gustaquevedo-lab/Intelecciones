@@ -164,8 +164,9 @@ const CoordinatorApp = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [telefono, setTelefono] = useState('');
-  const [colorCounts, setColorCounts] = useState<{green: number, yellow: number, red: number, purple: number}>({green: 0, yellow: 0, red: 0, purple: 0});
+  const [colorCounts, setColorCounts] = useState<any>(null);
   const [locationStats, setLocationStats] = useState<any[]>([]);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   const [showCoordModal, setShowCoordModal] = useState(false);
   const [newCoordCI, setNewCoordCI] = useState('');
@@ -211,8 +212,10 @@ const CoordinatorApp = () => {
       const count = await getOfflineStats();
       setOfflineCount(count);
       alert(`Padrón descargado con éxito: ${count} electores disponibles offline.`);
+      setIsStatsLoading(false);
     } catch (err: any) {
       console.error('Download error:', err);
+      setIsStatsLoading(false);
       alert('Error al descargar el padrón. Verifique su conexión.');
     } finally {
       setIsDownloading(false);
@@ -483,6 +486,7 @@ const CoordinatorApp = () => {
   const fetchRequests = async () => {
     if (!user) return;
     try {
+      setIsStatsLoading(true);
       const res = await api.get('/admin/requests');
       const filtered = user.role === 'SUPERUSUARIO' || user.role === 'JEFE_CAMPANA' 
         ? res.data 
@@ -695,7 +699,7 @@ const CoordinatorApp = () => {
 
   const fetchHistory = async () => {
     if (!user) return;
-    setIsLoading(true);
+    setIsStatsLoading(true);
     try {
       const res = await api.get(`/coordinator/${user.id}/captures`);
       const data = res.data;
@@ -716,10 +720,10 @@ const CoordinatorApp = () => {
       if (statsRes.data.locations) {
         setLocationStats(statsRes.data.locations);
       }
+      setIsStatsLoading(false);
     } catch (err) {
       console.error("Error fetching history", err);
-    } finally {
-      setIsLoading(false);
+      setIsStatsLoading(false);
     }
   };
 
@@ -1278,10 +1282,10 @@ const CoordinatorApp = () => {
               marginBottom: '0.5rem'
             }}>
               {[
-                { label: 'Casa', val: colorCounts.green, color: 'var(--green)', bg: 'rgba(34,197,94,0.15)', icon: '🏠' },
-                { label: 'Familia', val: colorCounts.yellow, color: 'var(--yellow)', bg: 'rgba(234,179,8,0.12)', icon: '👨‍👩‍👧' },
-                { label: 'Otros', val: colorCounts.red, color: 'var(--red)', bg: 'rgba(239,68,68,0.12)', icon: '📍' },
-                { label: 'Voluntarios', val: colorCounts.purple, color: '#A855F7', bg: 'rgba(168,85,247,0.15)', icon: '✨' },
+                { label: 'Casa', val: colorCounts?.green, color: 'var(--green)', bg: 'rgba(34,197,94,0.15)', icon: '🏠' },
+                { label: 'Familia', val: colorCounts?.yellow, color: 'var(--yellow)', bg: 'rgba(234,179,8,0.12)', icon: '👨‍👩‍👧' },
+                { label: 'Otros', val: colorCounts?.red, color: 'var(--red)', bg: 'rgba(239,68,68,0.12)', icon: '📍' },
+                { label: 'Voluntarios', val: colorCounts?.purple, color: '#A855F7', bg: 'rgba(168,85,247,0.15)', icon: '✨' },
               ].map(stat => (
                 <div key={stat.label} style={{
                   background: stat.bg,
@@ -1302,7 +1306,16 @@ const CoordinatorApp = () => {
                     <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
                       {stat.icon}
                     </div>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{stat.val}</span>
+                    <span style={{ 
+                      fontSize: '1.25rem', 
+                      fontWeight: 900, 
+                      color: 'white', 
+                      fontFamily: 'var(--font-display)', 
+                      letterSpacing: '-0.02em',
+                      opacity: isStatsLoading ? 0.3 : 1
+                    }}>
+                      {isStatsLoading ? '...' : (stat.val ?? 0)}
+                    </span>
                   </div>
                   <span style={{ fontSize: '0.6rem', fontWeight: 800, color: stat.color, textTransform: 'uppercase', letterSpacing: '0.12em', position: 'relative', zIndex: 1 }}>{stat.label}</span>
                 </div>
