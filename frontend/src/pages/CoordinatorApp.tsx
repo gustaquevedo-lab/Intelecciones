@@ -190,7 +190,11 @@ const CoordinatorApp = () => {
     setIsDownloading(true);
     setDownloadProgress(10);
     try {
-      const res = await api.get('/offline/padron', { timeout: 300000 });
+      const targetDistrict = activeDistrict || user?.distrito;
+      const res = await api.get('/offline/padron', { 
+        params: { district: targetDistrict },
+        timeout: 300000 
+      });
       setDownloadProgress(60);
       if (!res.data || res.data.length === 0) {
         alert('No se encontraron electores para tu zona.');

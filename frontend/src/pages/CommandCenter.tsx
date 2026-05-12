@@ -418,6 +418,9 @@ const CommandCenter = () => {
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [conflictsHistory, setConflictsHistory] = useState<any[]>([]);
+  const [disputeSearch, setDisputeSearch] = useState('');
+  const [disputeLocalFilter, setDisputeLocalFilter] = useState('');
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [showVehicles, setShowVehicles] = useState(true);
   const [showResolveModal, setShowResolveModal] = useState<any>(null);
@@ -609,8 +612,9 @@ const CommandCenter = () => {
         fetchToState(`/structure/padrinos?${queryStr}`, setStructureData);
       }
 
-      if (activeTab === 'requests' || !isMobile) {
+      if (activeTab === 'requests' || activeTab === 'disputes' || !isMobile) {
         fetchToState(`/admin/conflicts?${queryStr}`, setConflicts);
+        fetchToState(`/admin/conflicts/history?${queryStr}`, setConflictsHistory);
         fetchToState(`/admin/requests?${queryStr}`, setRequests);
         fetchToState(`/admin/activity?${queryStr}`, setActivities);
       }
@@ -1620,11 +1624,21 @@ const CommandCenter = () => {
                     <div style={{ display: 'flex', gap: '1rem' }}>
                       <div style={{ position: 'relative' }}>
                         <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
-                        <input type="text" placeholder="Buscar elector..." style={{ padding: '0.5rem 1rem 0.5rem 2.25rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem', width: '200px' }} />
+                        <input 
+                          type="text" 
+                          placeholder="Buscar elector..." 
+                          value={disputeSearch}
+                          onChange={(e) => setDisputeSearch(e.target.value)}
+                          style={{ padding: '0.5rem 1rem 0.5rem 2.25rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem', width: '200px' }} 
+                        />
                       </div>
-                      <select style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem' }}>
-                        <option>Todos los locales</option>
-                        {locales.map(l => <option key={l.cod_local}>{l.nombre}</option>)}
+                      <select 
+                        value={disputeLocalFilter}
+                        onChange={(e) => setDisputeLocalFilter(e.target.value)}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem' }}
+                      >
+                        <option value="">Todos los locales</option>
+                        {locales.map(l => <option key={l.cod_local} value={l.nombre}>{l.nombre}</option>)}
                       </select>
                     </div>
                   </div>
@@ -1639,23 +1653,35 @@ const CommandCenter = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                          <td style={{ padding: '1rem 2rem' }}>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>GUSTAVO QUEVEDO</p>
-                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: 3657834</p>
-                          </td>
-                          <td style={{ padding: '1rem 2rem' }}>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', margin: 0 }}>ESC. BAS. CARLOS ANTONIO LOPEZ</p>
-                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Mesa 5</p>
-                          </td>
-                          <td style={{ padding: '1rem 2rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900 }}>A</div>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>Alcides Vazquez</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '1rem 2rem', fontSize: '0.75rem', color: 'var(--text-3)' }}>Hoy, 14:30</td>
-                        </tr>
+                        {conflictsHistory
+                          .filter(h => !disputeSearch || (h.elector_nombre + ' ' + h.elector_apellido).toUpperCase().includes(disputeSearch.toUpperCase()))
+                          .filter(h => !disputeLocalFilter || h.local_votacion === disputeLocalFilter)
+                          .map((h: any) => (
+                          <tr key={h.conflict_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                            <td style={{ padding: '1rem 2rem' }}>
+                              <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>{h.elector_nombre} {h.elector_apellido}</p>
+                              <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {h.elector_ci}</p>
+                            </td>
+                            <td style={{ padding: '1rem 2rem' }}>
+                              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', margin: 0 }}>{h.local_votacion}</p>
+                              <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Mesa {h.mesa}</p>
+                            </td>
+                            <td style={{ padding: '1rem 2rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900 }}>{h.winner_name?.charAt(0)}</div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>{h.winner_name}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '1rem 2rem', fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                              {new Date(h.resolved_at).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                          </tr>
+                        ))}
+                        {conflictsHistory.length === 0 && (
+                          <tr>
+                            <td colSpan={4} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.85rem' }}>No hay registros en el historial.</td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>

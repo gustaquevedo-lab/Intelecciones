@@ -450,11 +450,24 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
          if (tableAlias === 'e') {
            sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
            params.push(user.campaign_id);
+         } else if (tableAlias === 'u' || tableAlias === 'l' || tableAlias === 'c') {
+           const col = (tableAlias === 'c') ? 'id' : 'assigned_campaign_id';
+           const finalCol = (tableAlias === 'l') ? 'campaign_id' : col;
+           sql += ` AND ${tableAlias}.${finalCol} = ?`;
+           params.push(user.campaign_id);
          }
       }
 
       if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
-        if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
+        if (tableAlias === 'u') {
+          // Users: check user district OR their assigned list's city OR their campaign's district
+          sql += ` AND (
+            UPPER(TRIM(u.distrito)) = UPPER(TRIM(?)) OR 
+            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND UPPER(TRIM(l2.ciudad)) = UPPER(TRIM(?))) OR
+            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND UPPER(TRIM(c2.distrito)) = UPPER(TRIM(?)))
+          )`;
+          params.push(activeDistrict, activeDistrict, activeDistrict);
+        } else if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
           sql += ` AND (UPPER(TRIM(${tableAlias}.${distColumn})) = UPPER(TRIM(?)) OR (CASE WHEN '${tableAlias}'='e' THEN UPPER(TRIM(${tableAlias}.distrito)) ELSE '' END) = UPPER(TRIM(?)))`;
           params.push(activeDistrict, activeDistrict);
         } else if (tableAlias === 'ec') {
@@ -473,7 +486,6 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
            sql += ` AND ${tableAlias}.${col} = ?`;
            params.push(listId);
          } else if (tableAlias === 'e') {
-           // Join electors to captures to filter by list
            sql += ` AND EXISTS (SELECT 1 FROM elector_captures ec2 WHERE ec2.elector_ci = e.ci AND ec2.list_id = ?)`;
            params.push(listId);
          }
@@ -1011,8 +1023,7 @@ function hashCode(str: string) {
 
 // Campaign Management
 app.get('/api/campaigns', (req, res) => {
-  const role = getRole(req);
-  const sec = (role === 'SUPERUSUARIO') ? { sql: '', params: [] } : getSecurityFilter(req, 'c');
+  const sec = getSecurityFilter(req, 'c');
   const params = sec.params || [];
   
   try {
@@ -1374,13 +1385,9 @@ app.get('/api/captures', (req, res) => {
     const params = [...(sec.params || [])];
     
     let listFilter = '';
-    if ((role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') && list_id && !isNaN(list_id)) {
-      if (list_id) {
-        listFilter = `AND ec.list_id = ?`;
-        params.push(list_id);
-      } else {
-        listFilter = `AND ec.list_id IS NULL`;
-      }
+    if (list_id && !isNaN(list_id)) {
+      listFilter = `AND ec.list_id = ?`;
+      params.push(list_id);
     }
 
     let localFilter = '';
@@ -1787,8 +1794,7 @@ app.post('/api/admin/users/:id/reset-password', (req, res) => {
 });
 
 app.get('/api/lists', (req, res) => {
-  const role = getRole(req);
-  const sec = (role === 'SUPERUSUARIO') ? { sql: '', params: [] } : getSecurityFilter(req, 'l');
+  const sec = getSecurityFilter(req, 'l');
   const params = sec.params || [];
 
   try {
@@ -2117,9 +2123,7 @@ app.get('/api/logistics/pending', (req, res) => {
 
 // Strategic Command Center Endpoints
 app.get('/api/admin/conflicts', (req, res) => {
-  const role = getRole(req);
-  const user_id = parseInt(req.headers['x-user-id'] as string || '0');
-  const isPadrino = role === 'PADRINO';
+  const sec = getSecurityFilter(req, 'u');
   
   try {
     const query = `
@@ -2173,11 +2177,43 @@ app.get('/api/admin/conflicts', (req, res) => {
       JOIN electors e ON cc.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       LEFT JOIN users p ON u.parent_id = p.id
-      WHERE cc.status = 'PENDING'
-      ${isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : ''}
+      WHERE cc.status = 'PENDING' ${sec.sql}
     `;
-    const conflicts = db.prepare(query).all();
+    const conflicts = db.prepare(query).all(...sec.params);
     res.json(conflicts);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/conflicts/history', (req, res) => {
+  const sec = getSecurityFilter(req, 'u');
+  
+  try {
+    const query = `
+      SELECT 
+        cc.id as conflict_id,
+        cc.status as conflict_status,
+        cc.resolved_at,
+        e.ci as elector_ci,
+        e.nombre as elector_nombre,
+        e.apellido as elector_apellido,
+        e.local_votacion,
+        e.mesa,
+        
+        u_win.nombre as winner_name,
+        u_win.role as winner_role
+      FROM capture_conflicts cc
+      JOIN electors e ON cc.elector_ci = e.ci
+      JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
+      JOIN users u_win ON ec_win.coordinator_id = u_win.id
+      JOIN users u ON ec_win.coordinator_id = u.id -- For security filter join
+      WHERE cc.status = 'RESOLVED' ${sec.sql}
+      ORDER BY cc.resolved_at DESC
+      LIMIT 100
+    `;
+    const history = db.prepare(query).all(...sec.params);
+    res.json(history);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -2563,17 +2599,22 @@ app.get('/api/stats/command', (req, res) => {
 
 
 app.get('/api/padrino/team-stats', (req, res) => {
-  const padrino_id = req.query.padrino_id || req.headers['x-user-id'];
+  const padrino_id = req.query.padrino_id;
   const role = getRole(req);
-  if (!padrino_id && role !== 'SUPERUSUARIO') return res.status(400).json({ error: 'Padrino ID requerido' });
+  const sec = getSecurityFilter(req, 'u');
 
   try {
-    const whereClause = (role === 'SUPERUSUARIO' && !req.query.padrino_id) ? "u.role = 'COORDINADOR'" : "u.parent_id = ? AND u.role = 'COORDINADOR'";
-    const params = (role === 'SUPERUSUARIO' && !req.query.padrino_id) ? [] : [padrino_id];
+    let whereClause = "u.role = 'COORDINADOR'";
+    let params: any[] = [];
+
+    if (padrino_id) {
+      whereClause += " AND u.parent_id = ?";
+      params.push(padrino_id);
+    }
 
     const stats = db.prepare(`
       SELECT 
-        u.id, u.nombre, u.username, u.photo_url, u.telefono,
+        u.id, u.nombre, u.username, u.photo_url, u.telefono, u.distrito,
         COUNT(ec.id) as total_electors,
         COALESCE(SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END), 0) as green,
         COALESCE(SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END), 0) as yellow,
@@ -2582,9 +2623,9 @@ app.get('/api/padrino/team-stats', (req, res) => {
         COALESCE(SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END), 0) as transport_needed
       FROM users u
       LEFT JOIN elector_captures ec ON u.id = ec.coordinator_id
-      WHERE ${whereClause}
+      WHERE ${whereClause} ${sec.sql}
       GROUP BY u.id
-    `).all(...params);
+    `).all(...params, ...sec.params);
     res.json(stats);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2593,13 +2634,11 @@ app.get('/api/padrino/team-stats', (req, res) => {
 
 // New Structure Endpoints for Command Hierarchy
 app.get('/api/structure/padrinos', (req, res) => {
-  const district = getDistrict(req);
-  const list_id = getListId(req);
+  const sec = getSecurityFilter(req, 'u');
   const role = getRole(req);
 
   try {
-    // Single-pass GROUP BY replaces 5 correlated subqueries — ~10x faster
-    let sql = `
+    const padrinos = db.prepare(`
       SELECT u.id, u.nombre, u.photo_url, u.telefono, u.assigned_list_id,
              l.list_number, l.option_number,
              COUNT(DISTINCT u2.id) AS coordinator_count,
@@ -2613,21 +2652,10 @@ app.get('/api/structure/padrinos', (req, res) => {
       LEFT JOIN lists l           ON u.assigned_list_id = l.id
       LEFT JOIN users u2          ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u2.id
-      WHERE u.role = 'PADRINO'
-    `;
-    let params: any[] = [];
-
-    if (district && district !== 'Global') {
-      sql += " AND UPPER(TRIM(u.distrito)) = UPPER(TRIM(?))";
-      params.push(district);
-    }
-    if (list_id && role !== 'JEFE_CAMPANA') {
-      sql += " AND u.assigned_list_id = ?";
-      params.push(list_id);
-    }
-    sql += " GROUP BY u.id ORDER BY u.nombre";
-
-    const padrinos = db.prepare(sql).all(...params);
+      WHERE u.role = 'PADRINO' ${sec.sql}
+      GROUP BY u.id 
+      ORDER BY u.nombre
+    `).all(...sec.params);
     res.json(padrinos);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2751,12 +2779,7 @@ app.get('/api/coordinator/:id/captures', (req, res) => {
 });
 
 app.get('/api/admin/requests', (req, res) => {
-  const list_id = getListId(req);
-  const role = getRole(req);
-  const user_id = req.headers['x-user-id'];
-  const isSuper = role === 'SUPERUSUARIO';
-  const isJefe = role === 'JEFE_CAMPANA';
-  const isPadrino = role === 'PADRINO';
+  const sec = getSecurityFilter(req, 'u');
 
   try {
     const query = `
@@ -2769,11 +2792,10 @@ app.get('/api/admin/requests', (req, res) => {
       FROM field_requests r
       JOIN users u ON r.coordinator_id = u.id
       LEFT JOIN users p ON u.parent_id = p.id
-      WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id && !isNaN(list_id) ? `AND r.list_id = ${list_id}` : ''))}
+      WHERE 1=1 ${sec.sql}
       ORDER BY r.timestamp DESC
     `;
-    const requests = db.prepare(query).all();
+    const requests = db.prepare(query).all(...sec.params);
     res.json(requests);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2830,28 +2852,22 @@ app.post('/api/coordinator/request', upload.fields([{ name: 'photo', maxCount: 1
 });
 
 app.get('/api/admin/activity', (req, res) => {
-  const list_id = getListId(req);
-  const role = getRole(req);
-  const user_id = req.headers['x-user-id'];
-  const isSuper = role === 'SUPERUSUARIO';
-  const isPadrino = role === 'PADRINO';
+  const sec = getSecurityFilter(req, 'u');
 
   try {
     const query = `
-      SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, e.nombre || ' ' || e.apellido as entity_name, ec.traffic_light as detail
+      SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, e.nombre || ' ' || e.apellido as entity_name, 'Nueva Captura' as detail
       FROM elector_captures ec
-      JOIN users u ON ec.coordinator_id = u.id
       JOIN electors e ON ec.elector_ci = e.ci
-      WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id && !isNaN(list_id) ? `AND ec.list_id = ${list_id}` : ''))}
+      JOIN users u ON ec.coordinator_id = u.id
+      WHERE 1=1 ${sec.sql}
       
       UNION ALL
       
       SELECT 'REQUEST' as type, r.timestamp, u.nombre as user_name, r.type as entity_name, r.description as detail
       FROM field_requests r
       JOIN users u ON r.coordinator_id = u.id
-      WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND u.parent_id = ${user_id}` : (list_id && !isNaN(list_id) ? `AND r.list_id = ${list_id}` : ''))}
+      WHERE 1=1 ${sec.sql}
       
       UNION ALL
       
@@ -2860,13 +2876,12 @@ app.get('/api/admin/activity', (req, res) => {
       JOIN electors e ON cc.elector_ci = e.ci
       JOIN elector_captures ec ON cc.capture_id = ec.id
       JOIN users u ON ec.coordinator_id = u.id
-      WHERE 1=1
-      ${isSuper ? '' : (isPadrino ? `AND (u.parent_id = ${user_id} OR u.id = ${user_id})` : (list_id && !isNaN(list_id) ? `AND cc.list_id = ${list_id}` : ''))}
+      WHERE 1=1 ${sec.sql}
       
       ORDER BY timestamp DESC
       LIMIT 20
     `;
-    const activity = db.prepare(query).all();
+    const activity = db.prepare(query).all(...sec.params, ...sec.params, ...sec.params);
     res.json(activity);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
