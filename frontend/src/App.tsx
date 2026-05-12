@@ -8,6 +8,7 @@ const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
 const LogisticsApp = React.lazy(() => import('./pages/LogisticsApp'));
 const Communications = React.lazy(() => import('./pages/Communications'));
 const DiaDApp = React.lazy(() => import('./pages/DiaDApp'));
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -28,10 +29,7 @@ const RootRedirect = () => {
     </div>
   );
   
-  if (!user) {
-    console.log('[Root] No user found, redirecting to /login');
-    return <Navigate to="/login" replace />;
-  }
+  if (!user) return null; // Let the router handle the root route (LandingPage)
   
   const role = user.role;
   console.log('[Root] User authenticated, role:', role);
@@ -63,8 +61,7 @@ function App() {
               </div>
             }>
               <Routes>
-                <Route path="/" element={<RootRedirect />} />
-                <Route path="/app.html" element={<RootRedirect />} />
+                <Route path="/" element={user ? <RootRedirect /> : <LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/coordinador" element={<CoordinatorApp />} />
                 <Route path="/comando" element={<CommandCenter />} />
