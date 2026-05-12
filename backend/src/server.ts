@@ -843,6 +843,93 @@ app.get('/api/admin/verify-user/:ci', (req, res) => {
   }
 });
 
+// 🏥 SYSTEM HEALTH & AUDIT
+app.get('/api/admin/system/health', (req, res) => {
+  try {
+    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
+    const captureCount = db.prepare('SELECT COUNT(*) as count FROM elector_captures').get() as any;
+    const electorCount = db.prepare('SELECT COUNT(*) as count FROM electors').get() as any;
+    const auditCount = db.prepare('SELECT COUNT(*) as count FROM audit_logs').get() as any;
+    
+    res.json({
+      status: 'OK',
+      database: {
+        users: userCount.count,
+        captures: captureCount.count,
+        electors: electorCount.count,
+        logs: auditCount.count
+      },
+      system: {
+        uptime: Math.floor(process.uptime()),
+        memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + ' MB',
+        node: process.version,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/audit', (req, res) => {
+  try {
+    const { action, limit = 100 } = req.query;
+    let query = 'SELECT * FROM audit_logs WHERE 1=1';
+    const params = [];
+
+    if (action) {
+      query += ' AND action LIKE ?';
+      params.push(`%${action}%`);
+    }
+
+    query += ' ORDER BY timestamp DESC LIMIT ?';
+    params.push(parseInt(limit as string));
+
+    const logs = db.prepare(query).all(...params);
+    res.json(logs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 📥 BULK IMPORT PADRON
+app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No se subió ningún archivo' });
+  
+  try {
+    const workbook = XLSX.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as any[];
+    
+    const insert = db.prepare(`
+      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const transaction = db.transaction((rows) => {
+      for (const row of rows) {
+        insert.run(
+          row.ci?.toString() || '',
+          row.nombre || '',
+          row.apellido || '',
+          row.local || row.local_votacion || '',
+          parseInt(row.mesa || '0'),
+          parseInt(row.orden || '0'),
+          row.ciudad || '',
+          row.distrito || row.ciudad || ''
+        );
+      }
+    });
+
+    transaction(data);
+    res.json({ success: true, count: data.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+  }
+});
+
 // Voting Locations
 app.get('/api/voting-locations', (req, res) => {
   try {

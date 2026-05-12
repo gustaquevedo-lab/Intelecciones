@@ -1,6 +1,6 @@
 
 const DB_NAME = 'InteleccionesOffline';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented to trigger onupgradeneeded for pending_sync store
 const STORE_NAME = 'electors';
 const SYNC_STORE = 'pending_sync';
 

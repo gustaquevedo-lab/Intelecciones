@@ -202,6 +202,7 @@ const SuperAdmin = () => {
   const [predictions, setPredictions] = useState<any>(null);
   const [pendingLogistics, setPendingLogistics] = useState<any[]>([]);
   const [captures, setCaptures] = useState<any[]>([]);
+  const [systemStats, setSystemStats] = useState<any>(null);
   
   // Audit Filters
   const [auditFilterAction, setAuditFilterAction] = useState('');
@@ -808,18 +809,22 @@ Status: ${error.response?.status || 'N/A'}
 
   const fetchAuditData = useCallback(async () => {
     try {
-      const [logs] = await Promise.all([
-        api.get('/audit/logs', {
-          params: {
-            action: auditFilterAction,
-            start_date: auditFilterStart,
-            end_date: auditFilterEnd
-          }
-        })
-      ]);
-      setAuditLogs(logs.data);
+      const res = await api.get('/admin/audit', {
+        params: {
+          action: auditFilterAction,
+          limit: 200
+        }
+      });
+      setAuditLogs(res.data);
     } catch (err) { console.error(err); }
-  }, [auditFilterAction, auditFilterStart, auditFilterEnd]);
+  }, [auditFilterAction]);
+
+  const fetchSystemHealth = useCallback(async () => {
+    try {
+      const res = await api.get('/admin/system/health');
+      setSystemStats(res.data);
+    } catch (err) { console.error(err); }
+  }, []);
 
   const fetchLoginAttempts = useCallback(async () => {
     setIsLoading(true);
@@ -1957,6 +1962,95 @@ Status: ${error.response?.status || 'N/A'}
     </div>
   );
 
+  const renderSystem = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white' }}>Estado del Sistema</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-3)' }}>Métricas de rendimiento y salud de la plataforma en tiempo real.</p>
+        </div>
+        <button className="action-btn-primary" onClick={fetchSystemHealth}>
+          <RefreshCw size={18} /> Actualizar Diagnóstico
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+        <div className="card-premium-styled" style={{ borderLeft: '4px solid var(--plra-400)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Base de Datos</p>
+              <h3 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{systemStats?.database?.electors?.toLocaleString() || '---'}</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem' }}>Electores en padrón</p>
+            </div>
+            <Database size={28} style={{ color: 'var(--plra-300)', opacity: 0.5 }} />
+          </div>
+          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>CAPTURES</p>
+              <p style={{ fontWeight: 800 }}>{systemStats?.database?.captures?.toLocaleString()}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>USUARIOS</p>
+              <p style={{ fontWeight: 800 }}>{systemStats?.database?.users?.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card-premium-styled" style={{ borderLeft: '4px solid var(--green)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Servidor (Node.js)</p>
+              <h3 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{systemStats?.system?.status || 'Online'}</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem' }}>Uptime: {Math.floor((systemStats?.system?.uptime || 0) / 3600)}h {Math.floor(((systemStats?.system?.uptime || 0) % 3600) / 60)}m</p>
+            </div>
+            <Activity size={28} style={{ color: 'var(--green)', opacity: 0.5 }} />
+          </div>
+          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>MEMORIA</p>
+              <p style={{ fontWeight: 800 }}>{systemStats?.system?.memory || '---'}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>VERSIÓN</p>
+              <p style={{ fontWeight: 800 }}>{systemStats?.system?.node || '---'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card-premium-styled" style={{ borderLeft: '4px solid var(--yellow)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Seguridad</p>
+              <h3 style={{ fontSize: '1.75rem', fontWeight: 900 }}>{systemStats?.database?.logs?.toLocaleString() || '0'}</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem' }}>Eventos auditados</p>
+            </div>
+            <Shield size={28} style={{ color: 'var(--yellow)', opacity: 0.5 }} />
+          </div>
+          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+            <button className="icon-btn" style={{ width: '100%', gap: '0.5rem' }} onClick={() => setActiveTab('audit')}>
+              Ver Logs Detallados <FileText size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="card-premium-styled" style={{ padding: '2rem', textAlign: 'center', background: 'rgba(59,130,246,0.03)' }}>
+        <h4 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Mantenimiento de Datos</h4>
+        <p style={{ color: 'var(--text-3)', maxWidth: '600px', margin: '0 auto 1.5rem' }}>
+          Realiza limpiezas preventivas o reseteos controlados de la información de campo antes del inicio de una nueva jornada electoral.
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+          <button className="action-btn-danger" onClick={handleWipeCaptures}>
+            <Trash2 size={18} /> Purgar Datos de Campo (RESET)
+          </button>
+          <button className="action-btn-secondary" onClick={() => setActiveTab('padrones')}>
+            <Database size={18} /> Gestionar Padrones
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderUsers = () => {
     const filteredUsers = users.filter(u => {
       const matchesSearch = !userSearchTerm || 
@@ -2219,6 +2313,7 @@ Status: ${error.response?.status || 'N/A'}
               {activeTab === 'lists' && renderLists()}
               {activeTab === 'users' && renderUsers()}
               {activeTab === 'logistics' && renderLogistics()}
+              {activeTab === 'system' && renderSystem()}
               {activeTab === 'audit' && renderAudit()}
               {activeTab === 'locales' && renderLocales()}
               {activeTab === 'padrones' && renderPadrones()}

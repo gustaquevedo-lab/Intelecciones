@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   { id: 'locales',   label: 'Locales',    icon: MapPin },
   { id: 'padrones',  label: 'Padrones',   icon: FileText },
   { id: 'whatsapp',  label: 'WhatsApp',   icon: MessageSquare },
+  { id: 'system',    label: 'Sistema',    icon: Activity },
   { id: 'audit',     label: 'Auditoría',  icon: History },
   { id: 'settings',  label: 'Ajustes',    icon: Settings },
 ];
