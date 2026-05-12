@@ -424,109 +424,97 @@ const requireRole = (...roles: string[]) => (req: express.Request, res: express.
 // ────────────────────────────────────────────────────────────────────────────
 
 const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
-  const role = (getRole(req) || 'GUEST').toUpperCase().trim();
-  const user_id = req.headers['x-user-id'];
-  const activeDistrict = getDistrict(req);
+  try {
+    const role = (getRole(req) || 'GUEST').toUpperCase().trim();
+    const user_id = req.headers['x-user-id'];
+    const activeDistrict = getDistrict(req);
 
-  // 1. Column name mapping: 'lists' and 'electors' use 'ciudad', others use 'distrito'
-  let distColumn = 'distrito';
-  if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
+    // 1. Column name mapping: 'lists' and 'electors' use 'ciudad', others use 'distrito'
+    let distColumn = 'distrito';
+    if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
 
-  // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña sees their campaign
-  if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA') {
-    let sql = '';
-    let params: any[] = [];
+    // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña sees their campaign
+    if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA') {
+      let sql = '';
+      let params: any[] = [];
 
-    // Filter by campaign if user is JEFE_CAMPANA
-    const user = user_id ? getCachedUserInfo(user_id as string) : null;
-    if (role === 'JEFE_CAMPANA' && user?.campaign_id) {
-       if (tableAlias === 'e') {
-         sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
-         params.push(user.campaign_id);
-       } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'l') {
-         // Join or filter by list -> campaign
-         const cCol = (tableAlias === 'l') ? 'campaign_id' : 'campaign_id'; // Add join context if needed
-         // Note: we assume the queries already have necessary joins for campaign filtering if needed, 
-         // but here we focus on district first as it's the most common filter.
-       }
+      // Filter by campaign if user is JEFE_CAMPANA
+      const user = user_id ? getCachedUserInfo(user_id as string) : null;
+      if (role === 'JEFE_CAMPANA' && user?.campaign_id) {
+         if (tableAlias === 'e') {
+           sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
+           params.push(user.campaign_id);
+         }
+      }
+
+      if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
+        if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
+          sql += ` AND (UPPER(${tableAlias}.${distColumn}) = UPPER(?) OR (CASE WHEN '${tableAlias}'='e' THEN UPPER(${tableAlias}.distrito) ELSE '' END) = UPPER(?))`;
+          params.push(activeDistrict, activeDistrict);
+        } else if (tableAlias === 'ec') {
+          sql += ` AND (UPPER(e.ciudad) = UPPER(?) OR UPPER(e.distrito) = UPPER(?))`;
+          params.push(activeDistrict, activeDistrict);
+        }
+      }
+
+      const listId = getListId(req);
+      if (listId && !isNaN(listId)) {
+         if (tableAlias === 'l') {
+           sql += ` AND ${tableAlias}.id = ?`;
+           params.push(listId);
+         } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'u' || tableAlias === 'capture_conflicts') {
+           const col = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
+           sql += ` AND ${tableAlias}.${col} = ?`;
+           params.push(listId);
+         } else if (tableAlias === 'e') {
+           // Join electors to captures to filter by list
+           sql += ` AND EXISTS (SELECT 1 FROM elector_captures ec2 WHERE ec2.elector_ci = e.ci AND ec2.list_id = ?)`;
+           params.push(listId);
+         }
+      }
+      return { sql, params };
     }
 
-    if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
-      if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
-        sql += ` AND (UPPER(${tableAlias}.${distColumn}) = UPPER(?) OR (CASE WHEN '${tableAlias}'='e' THEN UPPER(${tableAlias}.distrito) ELSE '' END) = UPPER(?))`;
-        params.push(activeDistrict, activeDistrict);
-      } else if (tableAlias === 'ec') {
-        sql += ` AND (UPPER(e.ciudad) = UPPER(?) OR UPPER(e.distrito) = UPPER(?))`;
-        params.push(activeDistrict, activeDistrict);
+    // 3. Non-SuperUsers: Locked to their assignment (uses cache)
+    if (!user_id) return { sql: ' AND 1=0', params: [] };
+
+    const user = getCachedUserInfo(user_id as string);
+    if (!user || !user.distrito) return { sql: ' AND 1=0', params: [] };
+
+    // Adjust for ec (elector_captures) which needs to filter via joined electors table 'e'
+    let targetAlias = tableAlias;
+    let targetCol = distColumn;
+    if (tableAlias === 'ec') {
+      targetAlias = 'e';
+      targetCol = 'ciudad';
+    }
+
+    let sql = ` AND UPPER(${targetAlias}.${targetCol}) = UPPER(?)`;
+    let params: any[] = [user.distrito];
+
+    // Electors: also filter by campaign_id when the tenant has one set — prevents cross-tenant elector leakage
+    if ((tableAlias === 'e') && user.campaign_id) {
+      sql += ` AND (${targetAlias}.campaign_id = ? OR ${targetAlias}.campaign_id IS NULL)`;
+      params.push(user.campaign_id);
+    }
+
+    // 4. Strict Hierarchy Isolation (for users/lists)
+    if ((tableAlias === 'u' || tableAlias === 'l') && role !== 'JEFE_CAMPANA') {
+      if (user.assigned_list_id) {
+         if (tableAlias === 'l') sql += ` AND ${tableAlias}.id = ?`;
+         else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_list_id = ?`;
+         params.push(user.assigned_list_id);
+      } else if (user.assigned_campaign_id) {
+         if (tableAlias === 'l') sql += ` AND ${tableAlias}.campaign_id = ?`;
+         else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_campaign_id = ?`;
+         params.push(user.assigned_campaign_id);
       }
     }
-
-    const listId = getListId(req);
-    if (listId && !isNaN(listId)) {
-       if (tableAlias === 'l') {
-         sql += ` AND ${tableAlias}.id = ?`;
-         params.push(listId);
-       } else if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages' || tableAlias === 'u' || tableAlias === 'capture_conflicts') {
-         const col = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
-         sql += ` AND ${tableAlias}.${col} = ?`;
-         params.push(listId);
-       } else if (tableAlias === 'e') {
-         // Join electors to captures to filter by list
-         sql += ` AND EXISTS (SELECT 1 FROM elector_captures ec2 WHERE ec2.elector_ci = e.ci AND ec2.list_id = ?)`;
-         params.push(listId);
-       }
-    }
     return { sql, params };
+  } catch (err: any) {
+    console.error('[SECURITY FILTER ERROR]', err);
+    return { sql: '', params: [] }; // Failsafe: return empty filter on error
   }
-
-  // 3. Non-SuperUsers: Locked to their assignment (uses cache)
-  if (!user_id) return { sql: ' AND 1=0', params: [] };
-
-  const user = getCachedUserInfo(user_id as string);
-  if (!user || !user.distrito) return { sql: ' AND 1=0', params: [] };
-
-  // Adjust for ec (elector_captures) which needs to filter via joined electors table 'e'
-  let targetAlias = tableAlias;
-  let targetCol = distColumn;
-  if (tableAlias === 'ec') {
-    targetAlias = 'e';
-    targetCol = 'ciudad';
-  }
-
-  let sql = ` AND UPPER(${targetAlias}.${targetCol}) = UPPER(?)`;
-  let params: any[] = [user.distrito];
-
-  // Electors: also filter by campaign_id when the tenant has one set — prevents cross-tenant elector leakage
-  if ((tableAlias === 'e') && user.campaign_id) {
-    sql += ` AND (${targetAlias}.campaign_id = ? OR ${targetAlias}.campaign_id IS NULL)`;
-    params.push(user.campaign_id);
-  }
-
-  // 4. Strict Hierarchy Isolation (for users/lists)
-  if ((tableAlias === 'u' || tableAlias === 'l') && role !== 'JEFE_CAMPANA') {
-    if (user.assigned_list_id) {
-       if (tableAlias === 'l') sql += ` AND ${tableAlias}.id = ?`;
-       else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_list_id = ?`;
-       params.push(user.assigned_list_id);
-    } else if (user.assigned_campaign_id) {
-       if (tableAlias === 'l') sql += ` AND ${tableAlias}.campaign_id = ?`;
-       else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_campaign_id = ?`;
-       params.push(user.assigned_campaign_id);
-    }
-  }
-  // PERMISSIVE isolation for Map/Stats for Jefes (they see the whole district battle)
-  else if (role === 'JEFE_CAMPANA') {
-     // Jefes see EVERYTHING in their district for intelligence tables
-  }
-  // STRICT isolation for other roles (Coordinators only see their list)
-  else if (user.assigned_list_id) {
-    if (tableAlias === 'ec' || tableAlias === 'whatsapp_messages') {
-      sql += ` AND ${tableAlias}.list_id = ?`;
-      params.push(user.assigned_list_id);
-    }
-  }
-
-  return { sql, params };
 };
 
 const getTenant = (req: any) => {
@@ -1728,6 +1716,27 @@ app.delete('/api/lists/:id', (req, res) => {
   }
 });
 
+app.get('/api/debug', (req, res) => {
+  try {
+    const electorsSchema = db.prepare('PRAGMA table_info(electors)').all();
+    const campaignsSchema = db.prepare('PRAGMA table_info(campaigns)').all();
+    const usersSchema = db.prepare('PRAGMA table_info(users)').all();
+    
+    res.json({
+      role: getRole(req),
+      district: getDistrict(req),
+      userId: req.headers['x-user-id'],
+      schemas: {
+        electors: electorsSchema.map((c: any) => c.name),
+        campaigns: campaignsSchema.map((c: any) => c.name),
+        users: usersSchema.map((c: any) => c.name)
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   try {
     const users = db.prepare('SELECT COUNT(*) as count FROM users').get() as any;
@@ -1755,15 +1764,22 @@ app.get('/api/stats/summary', (req, res) => {
   const params = sec.params || [];
   
   try {
+    console.log('[STATS] Fetching usersCount...');
     const usersCount = db.prepare(`SELECT COUNT(*) as count FROM users u WHERE 1=1 ${getSecurityFilter(req, 'u').sql}`).get(...getSecurityFilter(req, 'u').params) as any;
+    console.log('[STATS] Fetching campaignsCount...');
     const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${getSecurityFilter(req, 'c').sql}`).get(...getSecurityFilter(req, 'c').params) as any;
+    console.log('[STATS] Fetching listsCount...');
     const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${getSecurityFilter(req, 'l').sql}`).get(...getSecurityFilter(req, 'l').params) as any;
+    console.log('[STATS] Fetching electorsCount...');
     const electorsCount = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${getSecurityFilter(req, 'e').sql}`).get(...getSecurityFilter(req, 'e').params) as any;
     
+    console.log('[STATS] Fetching capturesCount...');
     const capturesCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`).get(...params) as any;
+    console.log('[STATS] Fetching transport...');
     const transportNeeded = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 ${sec.sql}`).get(...params) as any;
     const transportAssigned = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NOT NULL ${sec.sql}`).get(...params) as any;
 
+    console.log('[STATS] Fetching traffic lights...');
     const greenCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'GREEN' ${sec.sql}`).get(...params) as any;
     const yellowCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'YELLOW' ${sec.sql}`).get(...params) as any;
     const redCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'RED' ${sec.sql}`).get(...params) as any;
