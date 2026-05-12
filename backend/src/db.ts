@@ -293,6 +293,7 @@ addColumnIfNotExists("elector_captures", "is_disputed", "INTEGER DEFAULT 0");
 addColumnIfNotExists("elector_captures", "campaign_id", "INTEGER");
 addColumnIfNotExists("elector_captures", "list_id", "INTEGER");
 addColumnIfNotExists("elector_captures", "assigned_vehicle_id", "INTEGER");
+addColumnIfNotExists("elector_captures", "transport_status", "TEXT DEFAULT 'PENDING'");
 addColumnIfNotExists("electors", "ciudad", "TEXT DEFAULT ''");
 addColumnIfNotExists("electors", "distrito", "TEXT DEFAULT ''");
 addColumnIfNotExists("electors", "barrio", "TEXT DEFAULT ''");

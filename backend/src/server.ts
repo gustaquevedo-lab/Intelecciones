@@ -2062,7 +2062,8 @@ app.post('/api/settings', (req, res) => {
 app.get('/api/vehicles', (req, res) => {
   try {
     const vehicles = db.prepare(`
-      SELECT v.*, u.nombre as coordinator_name, l.list_number 
+      SELECT v.*, u.nombre as coordinator_name, l.list_number,
+             (SELECT COUNT(*) FROM elector_captures WHERE assigned_vehicle_id = v.id AND transport_status = 'IN_TRANSIT') as current_passengers
       FROM vehicles v
       LEFT JOIN users u ON v.assigned_user_id = u.id
       LEFT JOIN lists l ON u.assigned_list_id = l.id
@@ -2098,8 +2099,19 @@ app.delete('/api/vehicles/:id', (req, res) => {
 app.post('/api/logistics/assign', (req, res) => {
   const { capture_id, vehicle_id } = req.body;
   try {
-    db.prepare('UPDATE elector_captures SET assigned_vehicle_id = ? WHERE id = ?').run(vehicle_id, capture_id);
+    db.prepare("UPDATE elector_captures SET assigned_vehicle_id = ?, transport_status = 'IN_TRANSIT' WHERE id = ?").run(vehicle_id, capture_id);
     logAction(1, 'ASSIGN_TRANSPORT', 'CAPTURE', capture_id, `Assigned vehicle ${vehicle_id} to capture ${capture_id}`);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/logistics/complete-trip', (req, res) => {
+  const { vehicle_id } = req.body;
+  try {
+    db.prepare("UPDATE elector_captures SET transport_status = 'COMPLETED' WHERE assigned_vehicle_id = ? AND transport_status = 'IN_TRANSIT'").run(vehicle_id);
+    logAction(1, 'COMPLETE_TRIP', 'VEHICLE', vehicle_id, `Marked trip completed for vehicle ${vehicle_id}`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2113,7 +2125,7 @@ app.get('/api/logistics/pending', (req, res) => {
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN vehicles v ON ec.assigned_vehicle_id = v.id
-      WHERE ec.needs_transport = 1
+      WHERE ec.needs_transport = 1 AND ec.transport_status != 'COMPLETED'
     `).all();
     res.json(pending);
   } catch (err: any) {

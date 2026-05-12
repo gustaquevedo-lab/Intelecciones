@@ -7,10 +7,11 @@ import LogisticsMap from '../components/LogisticsMap';
 import api from '../services/api';
 
 const LogisticsApp: React.FC = () => {
-  const { user } = useAuth();
+  const { user, activeDistrict } = useAuth();
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [pendingLogistics, setPendingLogistics] = useState<any[]>([]);
+  const [locales, setLocales] = useState<any[]>([]);
   const [clusters, setClusters] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [showModal, setShowModal] = useState<string | null>(null);
@@ -31,27 +32,41 @@ const LogisticsApp: React.FC = () => {
     fetchData();
     const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeDistrict]);
 
   const fetchData = async () => {
     try {
-      const [v, p, u, s, c] = await Promise.all([
-        api.get('/vehicles'),
-        api.get('/logistics/pending'),
-        api.get('/users'),
-        api.get('/logistics/stats'),
-        api.get('/logistics/clusters')
+      const params = new URLSearchParams();
+      if (activeDistrict) params.append('district', activeDistrict);
+      const queryStr = params.toString();
+
+      const [v, p, u, s, c, l] = await Promise.all([
+        api.get(`/vehicles?${queryStr}`),
+        api.get(`/logistics/pending?${queryStr}`),
+        api.get(`/users?${queryStr}`),
+        api.get(`/logistics/stats?${queryStr}`),
+        api.get(`/logistics/clusters?${queryStr}`),
+        api.get('/voting-locations')
       ]);
       setVehicles(v.data);
       setPendingLogistics(p.data);
       setUsers(u.data);
       setStats(s.data);
       setClusters(c.data);
+      setLocales(l.data);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCompleteTrip = async (vehicleId: number) => {
+    if (!window.confirm('¿Confirmar que los pasajeros llegaron a destino? Esto liberará los asientos del móvil.')) return;
+    try {
+      await api.post('/logistics/complete-trip', { vehicle_id: vehicleId });
+      fetchData();
+    } catch (err) { console.error(err); }
   };
 
   const handleAssignVehicle = async (capture_id: number, vehicle_id: string) => {
@@ -179,7 +194,13 @@ const LogisticsApp: React.FC = () => {
               border: '1px solid var(--border)',
               boxShadow: 'var(--shadow-lg)'
             }}>
-              <LogisticsMap pendingRequests={pendingLogistics} vehicles={vehicles} clusters={clusters} />
+              <LogisticsMap 
+                pendingRequests={pendingLogistics} 
+                vehicles={vehicles} 
+                clusters={clusters} 
+                activeDistrict={activeDistrict || user?.distrito}
+                locales={locales}
+              />
               <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000 }}>
                 <button className="action-btn-primary" onClick={() => setShowModal('vehicle')}>
                   <Plus size={18} /> Registrar Móvil
@@ -233,19 +254,21 @@ const LogisticsApp: React.FC = () => {
                       </div>
                       {req.is_priority === 1 && <AlertTriangle size={14} style={{ color: 'var(--red)' }} />}
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                      <select 
-                        className="mini-input" 
-                        style={{ flex: 1 }}
-                        onChange={(e) => handleAssignVehicle(req.id, e.target.value)}
-                        defaultValue=""
-                      >
-                        <option value="" disabled>Asignar Móvil...</option>
-                        {vehicles.filter(v => v.status === 'AVAILABLE').map(v => (
-                          <option key={v.id} value={v.id}>{v.description} ({v.type})</option>
-                        ))}
-                      </select>
-                    </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <select 
+                          className="mini-input" 
+                          style={{ flex: 1, fontSize: '0.7rem' }}
+                          onChange={(e) => handleAssignVehicle(req.id, e.target.value)}
+                          defaultValue=""
+                        >
+                          <option value="" disabled>Asignar Móvil...</option>
+                          {vehicles.map(v => (
+                            <option key={v.id} value={v.id} disabled={(v.current_passengers || 0) >= v.capacity}>
+                              {v.description} ({(v.current_passengers || 0)}/{v.capacity})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                   </motion.div>
                 ))}
                 {pendingLogistics.length === 0 && (
@@ -266,41 +289,56 @@ const LogisticsApp: React.FC = () => {
               <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {vehicles.map(v => (
                   <div key={v.id} style={{ 
-                    padding: '0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', 
+                    padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', 
                     borderRadius: '12px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.8rem', fontWeight: 800 }}>{v.description}</p>
-                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
-                          {v.driver_name} • {v.plate}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <p style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>{v.description}</p>
+                          <span style={{ 
+                            fontSize: '0.65rem', fontWeight: 800, color: (v.current_passengers || 0) >= v.capacity ? 'var(--red)' : 'var(--green)'
+                          }}>
+                            {v.current_passengers || 0} / {v.capacity} ASIENTOS
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>
+                          {v.driver_name} • {v.plate || 'Sin Chapa'}
                         </p>
-                        {v.coordinator_name && (
-                          <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', fontWeight: 700, marginTop: '0.1rem' }}>
-                            Coord: {v.coordinator_name}
-                          </p>
-                        )}
-                        {v.driver_phone && (
-                          <a 
-                            href={`https://wa.me/${v.driver_phone.replace(/\+/g, '')}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{ 
-                              display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.4rem', 
-                              fontSize: '0.65rem', color: 'var(--green)', textDecoration: 'none', fontWeight: 700 
-                            }}
-                          >
-                            <MessageSquare size={12} /> Contactar Chofer
-                          </a>
-                        )}
+                        
+                        {/* Progress Bar */}
+                        <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '0.5rem', overflow: 'hidden' }}>
+                          <div style={{ 
+                            height: '100%', 
+                            width: `${Math.min(100, ((v.current_passengers || 0) / v.capacity) * 100)}%`,
+                            background: (v.current_passengers || 0) >= v.capacity ? 'var(--red)' : 'var(--plra-400)',
+                            transition: 'width 0.3s ease'
+                          }} />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                          {v.driver_phone && (
+                            <a 
+                              href={`https://wa.me/${v.driver_phone.replace(/\+/g, '')}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="action-btn-secondary"
+                              style={{ flex: 1, textDecoration: 'none', fontSize: '0.65rem', padding: '0.4rem', justifyContent: 'center', minHeight: '32px' }}
+                            >
+                              <MessageSquare size={12} /> WhatsApp
+                            </a>
+                          )}
+                          {(v.current_passengers || 0) > 0 && (
+                            <button 
+                              onClick={() => handleCompleteTrip(v.id)}
+                              className="action-btn-primary"
+                              style={{ flex: 1, fontSize: '0.65rem', padding: '0.4rem', background: 'var(--green)', minHeight: '32px' }}
+                            >
+                              <CheckCircle size={12} /> Llegaron
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <span style={{ 
-                        fontSize: '0.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
-                        background: v.status === 'AVAILABLE' ? 'rgba(34,197,94,0.1)' : 'rgba(234,179,8,0.1)',
-                        color: v.status === 'AVAILABLE' ? 'var(--green)' : 'var(--yellow)'
-                      }}>
-                        {v.status === 'AVAILABLE' ? 'DISPONIBLE' : 'EN RUTA'}
-                      </span>
                     </div>
                   </div>
                 ))}
