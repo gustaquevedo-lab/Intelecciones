@@ -40,6 +40,25 @@ const RootRedirect = () => {
   return <Navigate to="/coordinador" replace />;
 };
 
+const AppRoutes = () => {
+  const { user } = useAuth();
+  
+  return (
+    <Routes>
+      <Route path="/" element={user ? <RootRedirect /> : <LandingPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/coordinador" element={<CoordinatorApp />} />
+      <Route path="/comando" element={<CommandCenter />} />
+      <Route path="/veedor" element={<VeedorApp />} />
+      <Route path="/admin" element={<SuperAdmin />} />
+      <Route path="/logistica" element={<LogisticsApp />} />
+      <Route path="/comunicaciones" element={<Communications />} />
+      <Route path="/diad" element={<DiaDApp />} />
+      <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+    </Routes>
+  );
+};
+
 function App() {
   console.log('App Rendering Real V2');
   return (
@@ -60,18 +79,7 @@ function App() {
                 </div>
               </div>
             }>
-              <Routes>
-                <Route path="/" element={user ? <RootRedirect /> : <LandingPage />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/coordinador" element={<CoordinatorApp />} />
-                <Route path="/comando" element={<CommandCenter />} />
-                <Route path="/veedor" element={<VeedorApp />} />
-                <Route path="/admin" element={<SuperAdmin />} />
-                <Route path="/logistica" element={<LogisticsApp />} />
-                <Route path="/comunicaciones" element={<Communications />} />
-                <Route path="/diad" element={<DiaDApp />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
+              <AppRoutes />
             </React.Suspense>
           </Router>
         </AuthProvider>
