@@ -1119,43 +1119,47 @@ app.put('/api/captures/:id', (req, res) => {
 
 // Migrations for missing columns
 try { db.prepare('ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE voting_locations ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE campaigns ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE lists ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE users ADD COLUMN ci TEXT').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 1').run(); } catch(e) {}
 
 console.log("DATABASE: Esquema verificado y columnas de distrito preparadas.");
 
 // 🔄 DATA UNIFICATION: Force everything to UPPERCASE to avoid duplicates like "Pedro Juan Caballero" vs "PEDRO JUAN CABALLERO"
-try {
-  // Fix specific variations for CONCEPCION
-  const fixCon = (table: string, col: string) => {
-    db.prepare(`UPDATE ${table} SET ${col} = 'CONCEPCION' WHERE UPPER(TRIM(${col})) IN ('CONCEPCION', 'CONCEPCIÓN')`).run();
-  };
-  fixCon('campaigns', 'distrito');
-  fixCon('lists', 'ciudad');
-  fixCon('voting_locations', 'ciudad');
-  fixCon('voting_locations', 'distrito');
-  fixCon('electors', 'ciudad');
-  fixCon('electors', 'distrito');
+const safeRun = (sql: string, ...params: any[]) => {
+  try { db.prepare(sql).run(...params); } catch (e: any) { console.error(`[UNIFIER FAIL] ${sql}: ${e.message}`); }
+};
 
-  db.prepare("UPDATE campaigns SET name = UPPER(TRIM(name)), distrito = UPPER(TRIM(distrito))").run();
-  db.prepare("UPDATE lists SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
-  db.prepare("UPDATE voting_locations SET nombre = UPPER(TRIM(nombre)), ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))").run();
-  
-  // Sync ciudad and distrito for electors to ensure filtering works regardless of which one is used
-  db.prepare("UPDATE electors SET ciudad = distrito WHERE (ciudad IS NULL OR ciudad = '') AND (distrito IS NOT NULL AND distrito != '')").run();
-  db.prepare("UPDATE electors SET distrito = ciudad WHERE (distrito IS NULL OR distrito = '') AND (ciudad IS NOT NULL AND ciudad != '')").run();
-  
-  db.prepare("UPDATE electors SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)), local_votacion = UPPER(TRIM(local_votacion))").run();
-  
-  // Normalize users district as well
-  db.prepare("UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != ''").run();
-  
-  console.log("DATABASE: Unificación de datos (UPPERCASE, SYNC, USERS & CONCEPCION) completada exitosamente.");
-} catch (err: any) {
-  console.error("DATABASE: Error durante la unificación de datos:", err.message);
-}
+// Fix specific variations for CONCEPCION
+const fixCon = (table: string, col: string) => {
+  safeRun(`UPDATE ${table} SET ${col} = 'CONCEPCION' WHERE UPPER(TRIM(${col})) IN ('CONCEPCION', 'CONCEPCIÓN')`);
+};
+
+fixCon('campaigns', 'distrito');
+fixCon('lists', 'ciudad');
+fixCon('voting_locations', 'ciudad');
+fixCon('voting_locations', 'distrito');
+fixCon('electors', 'ciudad');
+fixCon('electors', 'distrito');
+
+safeRun("UPDATE campaigns SET name = UPPER(TRIM(name)), distrito = UPPER(TRIM(distrito))");
+safeRun("UPDATE lists SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))");
+safeRun("UPDATE voting_locations SET nombre = UPPER(TRIM(nombre)), ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito))");
+
+// Sync ciudad and distrito for electors to ensure filtering works regardless of which one is used
+safeRun("UPDATE electors SET ciudad = distrito WHERE (ciudad IS NULL OR ciudad = '') AND (distrito IS NOT NULL AND distrito != '')");
+safeRun("UPDATE electors SET distrito = ciudad WHERE (distrito IS NULL OR distrito = '') AND (ciudad IS NOT NULL AND ciudad != '')");
+safeRun("UPDATE electors SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)), local_votacion = UPPER(TRIM(local_votacion))");
+
+// Normalize users district as well
+safeRun("UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != ''");
+
+console.log("DATABASE: Unificación de datos completada exitosamente.");
 
 app.get('/api/locales', (req, res) => {
   try {
