@@ -1292,7 +1292,9 @@ const CommandCenter = () => {
                           boxShadow: active ? `0 0 8px ${item.color}` : 'none',
                           border: active ? `2px solid rgba(255,255,255,0.6)` : '2px solid transparent'
                         }} />
-                        <span style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.9)', fontWeight: active ? 900 : 700 }}>{item.label}</span>
+                        <span style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.9)', fontWeight: active ? 900 : 700 }}>
+                          {item.label} <span style={{ opacity: 0.6, marginLeft: '4px' }}>({commandStats?.[item.id.toLowerCase() as keyof typeof commandStats] || 0})</span>
+                        </span>
                         {active && <div style={{ marginLeft: 'auto', width: '5px', height: '5px', borderRadius: '50%', background: item.color }} />}
                       </div>
                     );
@@ -1311,7 +1313,7 @@ const CommandCenter = () => {
                     >
                       <div style={{ width: '13px', height: '13px', borderRadius: '50%', flexShrink: 0, border: `2.5px solid #3B82F6`, background: needsTransportFilter ? '#3B82F650' : 'transparent' }} />
                       <span style={{ fontSize: '0.62rem', color: needsTransportFilter ? '#93C5FD' : 'rgba(255,255,255,0.6)', fontWeight: 800 }}>
-                        {needsTransportFilter ? '✓ ' : ''}TRANSPORTE
+                        {needsTransportFilter ? '✓ ' : ''}TRANSPORTE <span style={{ opacity: 0.6, marginLeft: '4px' }}>({commandStats?.transport_needed || 0})</span>
                       </span>
                     </div>
                   </div>

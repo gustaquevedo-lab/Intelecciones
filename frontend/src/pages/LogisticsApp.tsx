@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Plus, Clock, User, ChevronRight, X, MapPin, AlertTriangle, Users, CheckCircle, MessageSquare } from 'lucide-react';
+import { Truck, Plus, Clock, User, X, AlertTriangle, CheckCircle, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,7 @@ const LogisticsApp: React.FC = () => {
   const [clusters, setClusters] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [showModal, setShowModal] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
 
   // Form states
   const [newVehicleDesc, setNewVehicleDesc] = useState('');
@@ -56,8 +56,6 @@ const LogisticsApp: React.FC = () => {
       setLocales(l.data);
     } catch (err) {
       console.error(err);
-    } finally {
-      setIsLoading(false);
     }
   };
 

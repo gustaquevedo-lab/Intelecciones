@@ -2615,6 +2615,10 @@ app.get('/api/stats/command', (req, res) => {
     ];
     const locationStats = db.prepare(locationStatsQuery).all(...locParams) as any[];
 
+    const transportNeeded = db.prepare(`
+      SELECT COUNT(*) as count ${captureJoins} ${captureWhere} AND ec.needs_transport = 1
+    `).get(...captureParams) as any;
+
     const totalCap = totalCaptures?.count || 0;
     const totalEl  = totalElectors?.count  || 0;
     res.json({
@@ -2622,6 +2626,7 @@ app.get('/api/stats/command', (req, res) => {
       yellow:  stats.find(s => s.traffic_light === 'YELLOW')?.count || 0,
       red:     stats.find(s => s.traffic_light === 'RED')?.count    || 0,
       purple:  stats.find(s => s.traffic_light === 'PURPLE')?.count || 0,
+      transport_needed: transportNeeded?.count || 0,
       total_captures: totalCap,
       total_electors: totalEl,
       percentage: totalEl > 0 ? ((totalCap / totalEl) * 100).toFixed(1) : '0',
