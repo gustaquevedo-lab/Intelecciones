@@ -131,6 +131,12 @@ const LogisticsApp: React.FC = () => {
     setNewVehiclePlate('');
   };
 
+  const handleUpdateLocalGeo = async (cod: string, lat: number, lng: number) => {
+    try {
+      await api.post(`/voting-locations/${cod}/geo`, { lat, lng });
+    } catch (err) { console.error(err); }
+  };
+
   const isMobile = window.innerWidth < 1024;
 
   return (
@@ -198,6 +204,8 @@ const LogisticsApp: React.FC = () => {
                 clusters={clusters} 
                 activeDistrict={activeDistrict || user?.distrito}
                 locales={locales}
+                onUpdateLocalGeo={handleUpdateLocalGeo}
+                users={users}
               />
               <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000 }}>
                 <button className="action-btn-primary" onClick={() => setShowModal('vehicle')}>
