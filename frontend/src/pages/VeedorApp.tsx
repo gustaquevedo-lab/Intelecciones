@@ -1,3 +1,44 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  MapPin, CheckSquare, Check, Minus, Plus, Camera, Upload, Send, FileText 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import MainLayout from '../components/MainLayout';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+
+interface ListaVotos {
+  lista_id: number;
+  nombre: string;
+  color: string;
+  votos: number;
+}
+
+const TabBtn = ({ active, icon: Icon, label, onClick }: any) => (
+  <button
+    onClick={onClick}
+    style={{
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '0.5rem',
+      padding: '0.75rem',
+      borderRadius: '12px',
+      border: 'none',
+      background: active ? 'var(--plra-500)' : 'transparent',
+      color: active ? 'white' : 'var(--text-3)',
+      fontWeight: 800,
+      fontSize: '0.85rem',
+      transition: 'all 0.2s',
+      cursor: 'pointer'
+    }}
+  >
+    <Icon size={18} />
+    {label}
+  </button>
+);
+
 /* ─────────────────────────────────────────────
    VEEDURÍA TAB (optimized for mobile)
    ───────────────────────────────────────────── */
@@ -11,7 +52,9 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
 
   const isMiembroMesa = user?.role === 'MIEMBRO_DE_MESA';
 
-  useEffect(() => { loadTableData(); }, [user]);
+  useEffect(() => {
+    if (user) loadTableData();
+  }, [user]);
 
   const loadTableData = async () => {
     try {
@@ -51,6 +94,21 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
       console.error('Error marking vote:', err);
     }
   };
+
+  const hasAssignment = tableInfo?.local && tableInfo.local !== 'SIN ASIGNACIÓN';
+
+  if (!hasAssignment && !loading && (user?.role === 'MIEMBRO_DE_MESA' || user?.role === 'VEEDOR')) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+           <MapPin size={40} style={{ color: 'var(--text-3)' }} />
+        </div>
+        <h3 style={{ color: 'white', fontWeight: 800 }}>Sin Mesa Asignada</h3>
+        <p style={{ fontSize: '0.9rem' }}>Aún no tienes un local o mesa de votación asignada en el sistema.</p>
+        <p style={{ fontSize: '0.75rem', marginTop: '1rem', opacity: 0.7 }}>Contacta a tu coordinador para que asigne tu local y mesa.</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -261,7 +319,7 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
 /* ─────────────────────────────────────────────
    ACTA FINAL TAB (optimized)
    ───────────────────────────────────────────── */
-const ActaFinalTab = ({ user }: { user: any }) => {
+const ActaFinalTab = () => {
   const [listas, setListas] = useState<ListaVotos[]>([]);
   const [votosEnBlanco, setVotosEnBlanco] = useState(0);
   const [votosNulos, setVotosNulos] = useState(0);
@@ -526,6 +584,16 @@ const ActaFinalTab = ({ user }: { user: any }) => {
           </motion.button>
         )}
       </div>
+      
+      {error && (
+        <div style={{ 
+          padding: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', 
+          borderRadius: '12px', color: '#F87171', fontSize: '0.85rem', fontWeight: 700, 
+          marginBottom: '1.5rem', textAlign: 'center' 
+        }}>
+          {error}
+        </div>
+      )}
 
       {/* Submit Button - GIGANTE */}
       <motion.button
@@ -556,6 +624,8 @@ const VeedorApp = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'veeduria' | 'acta'>('veeduria');
   const isMiembroMesa = user?.role === 'MIEMBRO_DE_MESA';
+
+
 
   return (
     <MainLayout title="Panel de Mesa" userName={user?.nombre || 'Veedor'}>
@@ -591,7 +661,7 @@ const VeedorApp = () => {
             </motion.div>
           ) : (
             <motion.div key="acta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <ActaFinalTab user={user} />
+              <ActaFinalTab />
             </motion.div>
           )}
         </AnimatePresence>

@@ -313,8 +313,7 @@ const DiaDApp: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const now = new Date();
-    const isElectionDay = now.getFullYear() === 2026 && now.getMonth() === 5 && now.getDate() === 7;
+    const isElectionDay = true; // Relaxed for testing or pre-election day monitoring
     if (isElectionDay) {
       fetchData();
     }
@@ -322,8 +321,7 @@ const DiaDApp: React.FC = () => {
 
   useEffect(() => {
     // Solo activamos el polling si es el día de la elección (07/06/2026) o si el usuario lo activa manualmente
-    const now = new Date();
-    const isElectionDay = now.getFullYear() === 2026 && now.getMonth() === 5 && now.getDate() === 7;
+    const isElectionDay = true; // Relaxed for testing or pre-election day monitoring
     
     if (!autoRefresh || !isElectionDay) return;
     
@@ -353,7 +351,7 @@ const DiaDApp: React.FC = () => {
     <MainLayout title="Día D — Centro de Resultados" userName={user?.nombre || ''} userPhoto={getImageUrl(user?.photo_url) || ''}>
       
       {/* ── Standby Banner ── */}
-      {(new Date().getFullYear() !== 2026 || new Date().getMonth() !== 5 || new Date().getDate() !== 7) && (
+      {false && (
         <div style={{
           background: 'rgba(245,158,11,0.1)',
           borderBottom: '1px solid rgba(245,158,11,0.2)',

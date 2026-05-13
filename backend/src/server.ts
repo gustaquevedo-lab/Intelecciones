@@ -413,7 +413,7 @@ const getCachedUserInfo = (user_id: string): CachedUser | null => {
   if (hit && now - hit.ts < USER_CACHE_TTL) return hit;
   const user = db.prepare(`
     SELECT u.id, u.role, u.assigned_list_id, u.assigned_campaign_id,
-           COALESCE(l.ciudad, c.distrito) as distrito,
+           COALESCE(u.distrito, l.ciudad, c.distrito) as distrito,
            COALESCE(l.campaign_id, u.assigned_campaign_id) as campaign_id
     FROM users u
     LEFT JOIN lists l ON u.assigned_list_id = l.id
@@ -518,7 +518,9 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
 
     // 3. Non-SuperUsers: Locked to their assignment (uses cache)
     if (!user || !user.distrito) {
-      if (role !== 'GUEST') console.warn(`[SECURITY] User ${user_id} (${role}) blocked - missing district assignment`);
+      if (role !== 'GUEST') {
+        console.warn(`[SECURITY] User ${user_id} (${role}) blocked - missing district assignment. Cache result:`, user);
+      }
       return { sql: ' AND 1=0', params: [] };
     }
 
@@ -1446,6 +1448,7 @@ app.get('/api/logistics/stats', (req, res) => {
   try {
     const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
     const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
+    const district = getDistrict(req);
 
     const stats = db.prepare(`
       SELECT
@@ -1454,16 +1457,18 @@ app.get('/api/logistics/stats', (req, res) => {
         SUM(CASE WHEN e.is_priority = 1 THEN 1 ELSE 0 END) as priority
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 ${filterSql}
-    `).get(...filterParams) as any;
+      WHERE ec.needs_transport = 1 ${filterSql} ${district ? 'AND (UPPER(e.ciudad) = UPPER(?) OR UPPER(e.distrito) = UPPER(?))' : ''}
+    `).get(...filterParams, ...(district ? [district, district] : [])) as any;
 
     const fleet = db.prepare(`
       SELECT
         COUNT(*) as total_vehicles,
         SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) as available
       FROM vehicles
-      ${list_id && !isNaN(list_id) ? 'WHERE assigned_list_id = ?' : ''}
-    `).get(...filterParams) as any;
+      WHERE 1=1
+      ${list_id && !isNaN(list_id) ? ' AND assigned_list_id = ?' : ''}
+      ${district ? ' AND (UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?))' : ''}
+    `).get(...filterParams, ...(district ? [district, district] : [])) as any;
 
     res.json({ ...stats, ...fleet });
   } catch (err: any) {
