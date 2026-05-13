@@ -668,7 +668,6 @@ const CoordinatorApp = () => {
       setError('El número de teléfono es obligatorio.');
       return;
     }
-    const activeLocation = location || { lat: editingCapture.lat || 0, lng: editingCapture.lng || 0 };
     try {
       setIsLoading(true);
       await api.put(`/captures/${editingCapture.id}`, {
