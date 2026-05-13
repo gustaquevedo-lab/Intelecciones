@@ -1230,12 +1230,12 @@ app.get('/api/login-attempts', (req, res) => {
 
 app.put('/api/captures/:id', (req, res) => {
   try {
-    const { lat, lng, traffic_light, needs_transport } = req.body;
+    const { traffic_light, needs_transport, telefono } = req.body;
     db.prepare(`
       UPDATE elector_captures 
-      SET lat = ?, lng = ?, traffic_light = ?, needs_transport = ?
+      SET traffic_light = ?, needs_transport = ?, telefono = ?
       WHERE id = ?
-    `).run(lat, lng, traffic_light, needs_transport ? 1 : 0, req.params.id);
+    `).run(traffic_light, needs_transport ? 1 : 0, telefono, req.params.id);
     
     res.json({ success: true });
   } catch (err: any) {
@@ -2345,7 +2345,7 @@ app.get('/api/admin/electors/search', (req, res) => {
     }
 
     const electors = db.prepare(`
-      SELECT e.*, ec.traffic_light, u.nombre as coordinator_name, u.role as coordinator_role
+      SELECT e.*, ec.traffic_light, ec.id as capture_id, ec.telefono, ec.needs_transport, ec.lat, ec.lng, ec.coordinator_id, u.nombre as coordinator_name, u.role as coordinator_role
       FROM electors e
       LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
       LEFT JOIN users u ON ec.coordinator_id = u.id

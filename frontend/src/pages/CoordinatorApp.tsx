@@ -543,7 +543,9 @@ const CoordinatorApp = () => {
       if (electorData) {
         setElector(electorData);
         if (electorData.traffic_light) {
-          setError(`Este elector ya fue captado (Semáforo: ${electorData.traffic_light})`);
+          if (electorData.coordinator_id !== user?.id) {
+            setError(`Este elector ya fue captado por ${electorData.coordinator_name || 'otro coordinador'}.`);
+          }
         }
       } else {
         setError('Elector no encontrado en el padrón.');
@@ -562,6 +564,10 @@ const CoordinatorApp = () => {
 
   const handleConfirm = () => {
     if (isReadOnly) return;
+    if (elector?.traffic_light) {
+      handleEditHistory(elector);
+      return;
+    }
     if (location) {
       setShowModal(true);
       if (navigator.geolocation) {
@@ -666,8 +672,6 @@ const CoordinatorApp = () => {
     try {
       setIsLoading(true);
       await api.put(`/captures/${editingCapture.id}`, {
-        lat: activeLocation.lat,
-        lng: activeLocation.lng,
         traffic_light: color,
         needs_transport: needsTransport,
         telefono: telefono.replace(/\s/g, '')
@@ -677,6 +681,10 @@ const CoordinatorApp = () => {
       setEditingCapture(null);
       setNeedsTransport(false);
       fetchHistory();
+      if (selectedCoordDetail) {
+        fetchCoordinatorDetail(selectedCoordDetail);
+        fetchMyPadrinoStats();
+      }
     } catch (err) {
       setError('No se pudo actualizar.');
     } finally {
@@ -728,10 +736,14 @@ const CoordinatorApp = () => {
   };
 
   const handleEditHistory = (cap: any) => {
-    setEditingCapture(cap);
-    setNeedsTransport(!!cap.needs_transport);
-    setLocation({ lat: cap.lat, lng: cap.lng });
-    setTelefono(cap.telefono || '');
+    const preparedCap = {
+      ...cap,
+      id: cap.id || cap.capture_id,
+      elector_ci: cap.ci || cap.elector_ci
+    };
+    setEditingCapture(preparedCap);
+    setNeedsTransport(!!preparedCap.needs_transport);
+    setTelefono(preparedCap.telefono || '');
     setShowModal(true);
   };
 
@@ -741,6 +753,10 @@ const CoordinatorApp = () => {
       setIsLoading(true);
       await api.delete(`/captures/${id}`);
       fetchHistory();
+      if (selectedCoordDetail) {
+        fetchCoordinatorDetail(selectedCoordDetail);
+        fetchMyPadrinoStats();
+      }
     } catch (err) {
       setError('No se pudo eliminar.');
     } finally {
@@ -1178,6 +1194,8 @@ const CoordinatorApp = () => {
                   {isLoading ? <Spinner size={20} /> : (
                     isReadOnly ? (
                       <><Search size={20} /> <span>Perfil Solo Consulta</span></>
+                    ) : (elector.traffic_light && elector.coordinator_id === user?.id) ? (
+                      <><Edit2 size={20} /> <span>Editar Mi Registro</span></>
                     ) : (
                       <><ClipboardCheck size={20} strokeWidth={2.5} /> <span>Registrar Elector</span></>
                     )
@@ -1684,14 +1702,28 @@ const CoordinatorApp = () => {
                     </div>
                       
                       {cap.telefono && (
-                        <a 
-                          href={`https://wa.me/${formatWhatsApp(cap.telefono)}`} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          style={{ background: '#25D366', color: 'white', padding: '0.4rem 0.75rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                        >
-                          <MessageSquare size={12} /> WHATSAPP
-                        </a>
+                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
+                          <a 
+                            href={`https://wa.me/${formatWhatsApp(cap.telefono)}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{ flex: 1, background: '#25D366', color: 'white', padding: '0.4rem 0.75rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                          >
+                            <MessageSquare size={12} /> WHATSAPP
+                          </a>
+                          <button 
+                            onClick={() => handleEditHistory(cap)}
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.4rem', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteCapture(cap.id)}
+                            style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.4rem', color: 'var(--red)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       )}
                     </div>
                 ))}
