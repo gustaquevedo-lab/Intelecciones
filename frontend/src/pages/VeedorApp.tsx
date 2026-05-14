@@ -40,6 +40,58 @@ const TabBtn = ({ active, icon: Icon, label, onClick }: any) => (
 );
 
 /* ─────────────────────────────────────────────
+   MAIN APP COMPONENT
+   ───────────────────────────────────────────── */
+const VeedorApp = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'veeduria' | 'acta'>('veeduria');
+  const isMiembroMesa = user?.role === 'MIEMBRO_DE_MESA';
+
+  return (
+    <MainLayout title="Panel de Mesa" userName={user?.nombre || 'Veedor'}>
+      <div style={{ 
+        padding: '1rem', 
+        maxWidth: '500px', 
+        margin: '0 auto', 
+        minHeight: 'calc(100vh - 70px)',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+
+        {/* Tab selector - HIDDEN for Miembro de Mesa if they haven't finished */}
+        {!isMiembroMesa && (
+          <div style={{
+            display: 'flex', gap: '0.5rem',
+            background: 'rgba(0,0,0,0.3)', padding: '0.35rem',
+            borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)',
+            marginBottom: '1.25rem'
+          }}>
+            <TabBtn active={activeTab === 'veeduria'} icon={CheckSquare} label="Veeduría" onClick={() => setActiveTab('veeduria')} />
+            <TabBtn active={activeTab === 'acta'} icon={FileText} label="Acta Final" onClick={() => setActiveTab('acta')} />
+          </div>
+        )}
+
+        <AnimatePresence mode="wait">
+          {activeTab === 'veeduria' ? (
+            <motion.div key="veeduria" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <VeeduriaTab 
+                user={user} 
+                onFinish={() => setActiveTab('acta')} 
+              />
+            </motion.div>
+          ) : (
+            <motion.div key="acta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <ActaFinalTab />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </MainLayout>
+  );
+};
+
+
+/* ─────────────────────────────────────────────
    VEEDURÍA TAB (optimized for mobile)
    ───────────────────────────────────────────── */
 const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) => {
@@ -617,57 +669,5 @@ const ActaFinalTab = () => {
   );
 };
 
-/* ─────────────────────────────────────────────
-   MAIN APP COMPONENT
-   ───────────────────────────────────────────── */
-const VeedorApp = () => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'veeduria' | 'acta'>('veeduria');
-  const isMiembroMesa = user?.role === 'MIEMBRO_DE_MESA';
-
-
-
-  return (
-    <MainLayout title="Panel de Mesa" userName={user?.nombre || 'Veedor'}>
-      <div style={{ 
-        padding: '1rem', 
-        maxWidth: '500px', 
-        margin: '0 auto', 
-        minHeight: 'calc(100vh - 70px)',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-
-        {/* Tab selector - HIDDEN for Miembro de Mesa if they haven't finished */}
-        {!isMiembroMesa && (
-          <div style={{
-            display: 'flex', gap: '0.5rem',
-            background: 'rgba(0,0,0,0.3)', padding: '0.35rem',
-            borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)',
-            marginBottom: '1.25rem'
-          }}>
-            <TabBtn active={activeTab === 'veeduria'} icon={CheckSquare} label="Veeduría" onClick={() => setActiveTab('veeduria')} />
-            <TabBtn active={activeTab === 'acta'} icon={FileText} label="Acta Final" onClick={() => setActiveTab('acta')} />
-          </div>
-        )}
-
-        <AnimatePresence mode="wait">
-          {activeTab === 'veeduria' ? (
-            <motion.div key="veeduria" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <VeeduriaTab 
-                user={user} 
-                onFinish={() => setActiveTab('acta')} 
-              />
-            </motion.div>
-          ) : (
-            <motion.div key="acta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <ActaFinalTab />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </MainLayout>
-  );
-};
-
 export default VeedorApp;
+

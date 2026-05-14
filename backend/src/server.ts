@@ -154,8 +154,9 @@ app.get('/api/offline/padron', (req, res) => {
     let params: any[] = [];
     let activeDistrito = headerDistrict;
 
-    // If no district in header, try to find user's assigned district
-    if (!activeDistrito && user_id) {
+    // Resolve user's assigned district
+    let userDistrito = null;
+    if (user_id) {
       const user = db.prepare(`
         SELECT COALESCE(l.ciudad, c.distrito, u.distrito) as distrito 
         FROM users u 
@@ -163,7 +164,16 @@ app.get('/api/offline/padron', (req, res) => {
         LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
         WHERE u.id = ?
       `).get(user_id) as any;
-      activeDistrito = user?.distrito;
+      userDistrito = user?.distrito;
+    }
+
+    // Force strict district filtering for non-superusers
+    if (role !== 'SUPERUSUARIO' && role !== 'SUPER_ADMIN') {
+        if (userDistrito) {
+            activeDistrito = userDistrito;
+        }
+    } else if (!activeDistrito) {
+        activeDistrito = userDistrito;
     }
 
     // Filter by district if we found one
@@ -482,20 +492,25 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
          }
       }
 
-      if (activeDistrict && activeDistrict !== 'null' && activeDistrict !== 'undefined' && activeDistrict !== 'Global' && activeDistrict !== '') {
+      let effectiveDistrict = activeDistrict;
+      if (role === 'JEFE_CAMPANA' && user?.distrito) {
+        effectiveDistrict = user.distrito;
+      }
+
+      if (effectiveDistrict && effectiveDistrict !== 'null' && effectiveDistrict !== 'undefined' && effectiveDistrict !== 'Global' && effectiveDistrict !== '') {
         if (tableAlias === 'u') {
           sql += ` AND (
             UPPER(TRIM(u.distrito)) = UPPER(TRIM(?)) OR 
             EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND UPPER(TRIM(l2.ciudad)) = UPPER(TRIM(?))) OR
             EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND UPPER(TRIM(c2.distrito)) = UPPER(TRIM(?)))
           )`;
-          params.push(activeDistrict, activeDistrict, activeDistrict);
+          params.push(effectiveDistrict, effectiveDistrict, effectiveDistrict);
         } else if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
           sql += ` AND (UPPER(TRIM(${tableAlias}.${distColumn})) = UPPER(TRIM(?)) OR (CASE WHEN '${tableAlias}'='e' THEN UPPER(TRIM(${tableAlias}.distrito)) ELSE '' END) = UPPER(TRIM(?)))`;
-          params.push(activeDistrict, activeDistrict);
+          params.push(effectiveDistrict, effectiveDistrict);
         } else if (tableAlias === 'ec') {
           sql += ` AND (UPPER(TRIM(e.ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(e.distrito)) = UPPER(TRIM(?)))`;
-          params.push(activeDistrict, activeDistrict);
+          params.push(effectiveDistrict, effectiveDistrict);
         }
       }
 

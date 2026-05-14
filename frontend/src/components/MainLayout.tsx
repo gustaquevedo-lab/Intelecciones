@@ -40,7 +40,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   };
   const currentRoleLabel = user ? (roleLabels[user.role] ?? 'Usuario') : 'Usuario';
 
-  const showDistrictSelector = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+  const showDistrictSelector = user?.role === 'SUPERUSUARIO' || (user?.role === 'JEFE_CAMPANA' && !user?.distrito);
   const [districts, setDistricts] = useState<string[]>([]);
   
   useEffect(() => {
