@@ -76,23 +76,40 @@ const createCustomIcon = (color: string, iconName: string = 'MapPin', needsTrans
   });
 };
 
-const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
-    'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
-    'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
-    'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
-    'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
-};
-
-const MapHandler = ({ district }: { district: string | undefined }) => {
+const MapHandler = ({ district, locales }: { district: string | undefined, locales?: any[] }) => {
   const map = useMap();
+  const [lastDistrict, setLastDistrict] = useState<string | null>(null);
+
   useEffect(() => {
-    if (district) {
+    if (district && district !== lastDistrict) {
       const city = district.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
+        'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
+        'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+        'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
+        'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+        'CONCEPCION': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+        'CAPITAN BADO': { lat: -23.2652, lng: -55.5323, zoom: 14 },
+        'BELLA VISTA NORTE': { lat: -22.1287, lng: -56.5204, zoom: 14 },
+        'ZANJA PYTA': { lat: -22.6186, lng: -55.6795, zoom: 14 },
+        'KARAPAI': { lat: -23.4194, lng: -55.8458, zoom: 14 }
+      };
+
       if (CIUDADES_PARAGUAY[city]) {
         map.flyTo([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng], CIUDADES_PARAGUAY[city].zoom, { duration: 2 });
+        setLastDistrict(district);
+      } else if (locales && locales.length > 0) {
+        const validLocales = locales.filter(l => l.lat != null && l.lng != null);
+        if (validLocales.length > 0) {
+          const bounds = L.latLngBounds(validLocales.map(l => [l.lat, l.lng]));
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+          setLastDistrict(district);
+        } else {
+          setLastDistrict(district);
+        }
       }
     }
-  }, [district, map]);
+  }, [district, map, lastDistrict, locales]);
   return null;
 };
 
@@ -161,7 +178,7 @@ const LogisticsMap: React.FC<LogisticsMapProps> = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         <ZoomControl position="bottomright" />
-        <MapHandler district={activeDistrict} />
+        <MapHandler district={activeDistrict} locales={locales} />
 
         {/* Locales de Votación */}
         {locales

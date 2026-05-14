@@ -436,7 +436,7 @@ const formatAction = (action: string) => {
   return map[action] || action.toLowerCase().replace('_', ' ');
 };
 
-const MapHandler = ({ center, selectedLocalId, activeDistrict }: { center: [number, number] | null, selectedLocalId: string | null, activeDistrict?: string }) => {
+const MapHandler = ({ center, selectedLocalId, activeDistrict, locales }: { center: [number, number] | null, selectedLocalId: string | null, activeDistrict?: string, locales?: any[] }) => {
   const map = useMap();
   const [lastId, setLastId] = useState<string | null>(null);
   const [lastDistrict, setLastDistrict] = useState<string | null>(null);
@@ -453,15 +453,26 @@ const MapHandler = ({ center, selectedLocalId, activeDistrict }: { center: [numb
       const city = activeDistrict.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (CIUDADES_PARAGUAY[city]) {
         map.flyTo([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng], CIUDADES_PARAGUAY[city].zoom, { duration: 2 });
+        setLastDistrict(activeDistrict);
+      } else if (locales && locales.length > 0) {
+        const validLocales = locales.filter(l => l.lat != null && l.lng != null);
+        if (validLocales.length > 0) {
+          const bounds = L.latLngBounds(validLocales.map(l => [l.lat, l.lng]));
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+          setLastDistrict(activeDistrict);
+        } else {
+          // If locales loaded but none have lat/lng, just mark as done
+          setLastDistrict(activeDistrict);
+        }
       }
-      setLastDistrict(activeDistrict);
     }
-  }, [center, selectedLocalId, lastId, map, activeDistrict, lastDistrict]);
+  }, [center, selectedLocalId, lastId, map, activeDistrict, lastDistrict, locales]);
   return null;
 };
 
 const CommandCenter = () => {
   const { user: authUser, loading, activeListId, activeDistrict } = useAuth();
+  const effectiveDistrict = activeDistrict || authUser?.distrito;
   const { settings } = useSettings();
   const { isDark } = useTheme();
   const navigate = useNavigate();
@@ -1016,7 +1027,8 @@ const CommandCenter = () => {
                     return null;
                   })()}
                   selectedLocalId={selectedLocal}
-                  activeDistrict={activeDistrict}
+                  activeDistrict={effectiveDistrict}
+                  locales={locales}
                 />
 
                 {locales.filter(l => l.lat != null && l.lng != null).map((l: any) => {

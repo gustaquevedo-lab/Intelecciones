@@ -21,7 +21,8 @@ L.Marker.prototype.options.icon = DefaultIcon;
 import { useAuth, apiFetch } from '../context/AuthContext';
 
 const TerritoryMap: React.FC = () => {
-    const { user } = useAuth();
+const TerritoryMap: React.FC = () => {
+    const { user, activeDistrict } = useAuth();
     const [electors, setElectors] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'visited' | 'pending'>('all');
@@ -205,7 +206,7 @@ const TerritoryMap: React.FC = () => {
                             </Marker>
                         ))}
                     </MarkerClusterGroup>
-                    <MapController center={filteredElectors.length > 0 ? [filteredElectors[0].lat, filteredElectors[0].lng] : [-22.540, -55.729]} />
+                    <MapHandler activeDistrict={activeDistrict || user?.distrito} electors={filteredElectors} />
                 </MapContainer>
 
                 {/* Dashboard Overlay */}
@@ -229,12 +230,40 @@ const TerritoryMap: React.FC = () => {
 };
 
 // Helper to re-center map
-const MapController = ({ center }: { center: [number, number] }) => {
+const MapHandler = ({ activeDistrict, electors }: { activeDistrict?: string, electors?: any[] }) => {
     const map = useMap();
+    const [lastDistrict, setLastDistrict] = useState<string | null>(null);
+  
     useEffect(() => {
-        if (center) map.setView(center);
-    }, [center, map]);
+      if (activeDistrict && activeDistrict !== lastDistrict) {
+        const city = activeDistrict.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
+          'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
+          'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+          'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
+          'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+          'CONCEPCION': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+          'CAPITAN BADO': { lat: -23.2652, lng: -55.5323, zoom: 14 },
+          'BELLA VISTA NORTE': { lat: -22.1287, lng: -56.5204, zoom: 14 },
+          'ZANJA PYTA': { lat: -22.6186, lng: -55.6795, zoom: 14 },
+          'KARAPAI': { lat: -23.4194, lng: -55.8458, zoom: 14 }
+        };
+        if (CIUDADES_PARAGUAY[city]) {
+          map.flyTo([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng], CIUDADES_PARAGUAY[city].zoom, { duration: 2 });
+          setLastDistrict(activeDistrict);
+        } else if (electors && electors.length > 0) {
+          const validElectors = electors.filter(e => e.lat != null && e.lng != null);
+          if (validElectors.length > 0) {
+            const bounds = L.latLngBounds(validElectors.map(e => [e.lat, e.lng]));
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            setLastDistrict(activeDistrict);
+          } else {
+            setLastDistrict(activeDistrict);
+          }
+        }
+      }
+    }, [map, activeDistrict, lastDistrict, electors]);
     return null;
-};
+  };
 
 export default TerritoryMap;

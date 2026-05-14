@@ -41,6 +41,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const currentRoleLabel = user ? (roleLabels[user.role] ?? 'Usuario') : 'Usuario';
 
   const showDistrictSelector = user?.role === 'SUPERUSUARIO' || (user?.role === 'JEFE_CAMPANA' && !user?.distrito);
+  const showListSelector = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
   const [districts, setDistricts] = useState<string[]>([]);
   
   useEffect(() => {
@@ -69,46 +70,55 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
           </div>
 
           {/* CENTER: district + list selector — only md+ */}
-          {showDistrictSelector && (
+          {(showDistrictSelector || showListSelector) && (
             <div className="header-center">
               <div className="header-filters-pill">
-                <div className="header-filter-group">
-                  <span className="header-filter-label">DISTRITO</span>
-                  <select
-                    value={activeDistrict ?? 'null'}
-                    onChange={e => {
-                      setActiveDistrict(e.target.value === 'null' ? null : e.target.value);
-                      setActiveListId(null);
-                    }}
-                    disabled={user?.role !== 'SUPERUSUARIO' && user?.role !== 'JEFE_CAMPANA'}
-                    className="header-filter-select"
-                  >
-                    <option value="null">🌎 TODOS</option>
-                    {districts.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
+                {showDistrictSelector && (
+                  <>
+                    <div className="header-filter-group">
+                      <span className="header-filter-label">DISTRITO</span>
+                      <select
+                        value={activeDistrict ?? 'null'}
+                        onChange={e => {
+                          setActiveDistrict(e.target.value === 'null' ? null : e.target.value);
+                          setActiveListId(null);
+                        }}
+                        disabled={user?.role !== 'SUPERUSUARIO' && user?.role !== 'JEFE_CAMPANA'}
+                        className="header-filter-select"
+                      >
+                        <option value="null">🌎 TODOS</option>
+                        {districts.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="header-filter-divider" />
+                    {showListSelector && <div className="header-filter-divider" />}
+                  </>
+                )}
 
-                <div className="header-filter-group">
-                  <span className="header-filter-label">LISTA</span>
-                  <select
-                    value={activeListId === null ? 'null' : activeListId}
-                    onChange={e => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
-                    className="header-filter-select"
-                  >
-                    <option value="null">📋 TODAS</option>
-                    {lists
-                      .filter(l => !activeDistrict || (l.ciudad?.toUpperCase().trim() === activeDistrict) || (l.campaign_distrito?.toUpperCase().trim() === activeDistrict))
-                      .map((l: any) => (
-                        <option key={l.id} value={l.id}>
-                          L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
-                        </option>
-                      ))}
-                  </select>
-                </div>
+                {showListSelector && (
+                  <div className="header-filter-group">
+                    <span className="header-filter-label">LISTA</span>
+                    <select
+                      value={activeListId === null ? 'null' : activeListId}
+                      onChange={e => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
+                      className="header-filter-select"
+                    >
+                      <option value="null">📋 TODAS</option>
+                      {lists
+                        .filter(l => {
+                          const effectiveDistrict = activeDistrict || user?.distrito;
+                          return !effectiveDistrict || (l.ciudad?.toUpperCase().trim() === effectiveDistrict) || (l.campaign_distrito?.toUpperCase().trim() === effectiveDistrict);
+                        })
+                        .map((l: any) => (
+                          <option key={l.id} value={l.id}>
+                            L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -175,42 +185,51 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
         </div>
 
         {/* ── ROW 3 ── Mobile-only compact filter bar */}
-        {showDistrictSelector && (
+        {(showDistrictSelector || showListSelector) && (
           <div className="header-row3">
-            <div className="header-row3-group">
-              <span className="header-row3-label">DIST</span>
-              <select
-                value={activeDistrict ?? 'null'}
-                onChange={e => {
-                  setActiveDistrict(e.target.value === 'null' ? null : e.target.value);
-                  setActiveListId(null);
-                }}
-                className="header-row3-select"
-              >
-                <option value="null">🌎 Todos</option>
-                {districts.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-            <div className="header-row3-divider" />
-            <div className="header-row3-group">
-              <span className="header-row3-label">LISTA</span>
-              <select
-                value={activeListId === null ? 'null' : activeListId}
-                onChange={e => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
-                className="header-row3-select"
-              >
-                <option value="null">📋 Todas</option>
-                {lists
-                  .filter(l => !activeDistrict || (l.ciudad?.toUpperCase().trim() === activeDistrict) || (l.campaign_distrito?.toUpperCase().trim() === activeDistrict))
-                  .map((l: any) => (
-                    <option key={l.id} value={l.id}>
-                      L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            {showDistrictSelector && (
+              <>
+                <div className="header-row3-group">
+                  <span className="header-row3-label">DIST</span>
+                  <select
+                    value={activeDistrict ?? 'null'}
+                    onChange={e => {
+                      setActiveDistrict(e.target.value === 'null' ? null : e.target.value);
+                      setActiveListId(null);
+                    }}
+                    className="header-row3-select"
+                  >
+                    <option value="null">🌎 Todos</option>
+                    {districts.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                {showListSelector && <div className="header-row3-divider" />}
+              </>
+            )}
+            {showListSelector && (
+              <div className="header-row3-group">
+                <span className="header-row3-label">LISTA</span>
+                <select
+                  value={activeListId === null ? 'null' : activeListId}
+                  onChange={e => setActiveListId(e.target.value === 'null' ? null : parseInt(e.target.value))}
+                  className="header-row3-select"
+                >
+                  <option value="null">📋 Todas</option>
+                  {lists
+                    .filter(l => {
+                      const effectiveDistrict = activeDistrict || user?.distrito;
+                      return !effectiveDistrict || (l.ciudad?.toUpperCase().trim() === effectiveDistrict) || (l.campaign_distrito?.toUpperCase().trim() === effectiveDistrict);
+                    })
+                    .map((l: any) => (
+                      <option key={l.id} value={l.id}>
+                        L-{l.list_number} — {l.candidate_alias || l.candidate_nombre}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
       </header>

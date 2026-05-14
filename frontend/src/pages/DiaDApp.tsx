@@ -17,6 +17,42 @@ import 'leaflet/dist/leaflet.css';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
 // ─── D'Hondt Algorithm ──────────────────────────────────────────────────────
+const MapHandler = ({ activeDistrict, locales }: { activeDistrict?: string, locales?: any[] }) => {
+  const map = useMap();
+  const [lastDistrict, setLastDistrict] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeDistrict && activeDistrict !== lastDistrict) {
+      const city = activeDistrict.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
+        'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
+        'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+        'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
+        'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+        'CONCEPCION': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+        'CAPITAN BADO': { lat: -23.2652, lng: -55.5323, zoom: 14 },
+        'BELLA VISTA NORTE': { lat: -22.1287, lng: -56.5204, zoom: 14 },
+        'ZANJA PYTA': { lat: -22.6186, lng: -55.6795, zoom: 14 },
+        'KARAPAI': { lat: -23.4194, lng: -55.8458, zoom: 14 }
+      };
+      if (CIUDADES_PARAGUAY[city]) {
+        map.flyTo([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng], CIUDADES_PARAGUAY[city].zoom, { duration: 2 });
+        setLastDistrict(activeDistrict);
+      } else if (locales && locales.length > 0) {
+        const validLocales = locales.filter(l => l.lat != null && l.lng != null);
+        if (validLocales.length > 0) {
+          const bounds = L.latLngBounds(validLocales.map(l => [l.lat, l.lng]));
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+          setLastDistrict(activeDistrict);
+        } else {
+          setLastDistrict(activeDistrict);
+        }
+      }
+    }
+  }, [map, activeDistrict, lastDistrict, locales]);
+  return null;
+};
+
 function calcularDHondt(
   listas: { id: number; nombre: string; votos: number }[],
   bancas: number
@@ -96,7 +132,7 @@ const StatCard: React.FC<{ label: string; value: string | number; color?: string
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const DiaDApp: React.FC = () => {
-  const { user } = useAuth();
+  const { user, activeDistrict } = useAuth();
   const { settings } = useSettings();
 
   const [activeTab, setActiveTab] = useState<'cobertura' | 'resultados' | 'dhondt' | 'actas' | 'miembros'>('cobertura');
@@ -620,6 +656,7 @@ const DiaDApp: React.FC = () => {
                       attribution='&copy; OpenStreetMap'
                     />
                     <ZoomControl position="bottomright" />
+                    <MapHandler activeDistrict={activeDistrict || user?.distrito} locales={locations} />
                     
                     {/* Voting Locations Pins */}
                     {locations.map(loc => (
