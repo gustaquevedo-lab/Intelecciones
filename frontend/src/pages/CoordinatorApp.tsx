@@ -710,6 +710,13 @@ const CoordinatorApp = () => {
     try {
       const res = await api.get(`/coordinator/${user.id}/captures`);
       const data = res.data;
+      
+      if (!Array.isArray(data)) {
+        console.warn("Ignored invalid history data (not an array)");
+        setIsStatsLoading(false);
+        return;
+      }
+      
       setHistory(data);
       
       // Calculate real stats from history
@@ -724,8 +731,10 @@ const CoordinatorApp = () => {
 
       // Fetch location stats
       const statsRes = await api.get('/stats/command');
-      if (statsRes.data.locations) {
-        setLocationStats(statsRes.data.locations);
+      if (statsRes.data && typeof statsRes.data === 'object' && !Array.isArray(statsRes.data)) {
+        if (statsRes.data.locations) {
+          setLocationStats(statsRes.data.locations);
+        }
       }
       setIsStatsLoading(false);
     } catch (err) {

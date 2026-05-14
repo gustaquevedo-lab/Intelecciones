@@ -659,14 +659,25 @@ const CommandCenter = () => {
 
       // 1. CRITICAL & LIGHT: Fetch core stats and locations first
       // These are essential for the dashboard shell
-      api.get(`/stats/command?${queryStr}`).then(res => setCommandStats(res.data)).catch(() => { });
-      api.get('/voting-locations').then(res => setLocales(res.data)).catch(() => { });
+      api.get(`/stats/command?${queryStr}`).then(res => {
+        if (res.data && typeof res.data === 'object' && !Array.isArray(res.data) && !res.data.error) {
+          setCommandStats(res.data);
+        }
+      }).catch(() => { });
+      
+      api.get('/voting-locations').then(res => {
+        if (Array.isArray(res.data)) setLocales(res.data);
+      }).catch(() => { });
 
       // Helper for independent state updates
       const fetchToState = async (url: string, setter: (data: any) => void) => {
         try {
           const res = await api.get(url);
-          setter(Array.isArray(res.data) ? res.data : []);
+          if (Array.isArray(res.data)) {
+            setter(res.data);
+          } else {
+            console.warn(`Ignored invalid data from ${url} (not an array)`);
+          }
         } catch (err) {
           console.warn(`Fetch failed for ${url}:`, err);
         }

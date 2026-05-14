@@ -1561,7 +1561,11 @@ app.delete('/api/captures/:id', (req, res) => {
   try {
     const capture = db.prepare('SELECT elector_ci FROM elector_captures WHERE id = ?').get(req.params.id) as any;
     if (capture) {
-      db.prepare("UPDATE electors SET status = 'Pendiente' WHERE ci = ?").run(capture.elector_ci);
+      try {
+        db.prepare("UPDATE electors SET status = 'Pendiente' WHERE ci = ?").run(capture.elector_ci);
+      } catch (e) {
+        // ignore legacy column error
+      }
       db.prepare('DELETE FROM elector_captures WHERE id = ?').run(req.params.id);
     }
     res.json({ success: true });
