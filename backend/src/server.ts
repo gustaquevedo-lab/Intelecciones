@@ -2259,13 +2259,13 @@ app.get('/api/admin/conflicts', (req, res) => {
         lb.list_number as list_b
 
       FROM capture_conflicts cc
-      JOIN electors e ON REPLACE(REPLACE(cc.elector_ci, '.', ''), ',', '') = REPLACE(REPLACE(e.ci, '.', ''), ',', '')
+      JOIN electors e ON REPLACE(REPLACE(TRIM(cc.elector_ci), '.', ''), ',', '') = REPLACE(REPLACE(TRIM(e.ci), '.', ''), ',', '')
       JOIN elector_captures ca ON cc.capture_id = ca.id
-      JOIN elector_captures cb ON cc.capture_id_b = cb.id
+      LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
       JOIN users ua ON ca.coordinator_id = ua.id
-      JOIN users ub ON cb.coordinator_id = ub.id
+      LEFT JOIN users ub ON cb.coordinator_id = ub.id
       JOIN lists la ON ca.list_id = la.id
-      JOIN lists lb ON cb.list_id = lb.id
+      LEFT JOIN lists lb ON cb.list_id = lb.id
       WHERE cc.status != 'RESOLVED'
     `;
     const params: any[] = [];
@@ -2280,8 +2280,10 @@ app.get('/api/admin/conflicts', (req, res) => {
     }
 
     const conflicts = db.prepare(sql).all(...params);
+    console.log(`[CONFLICTS] Found ${conflicts.length} active conflicts for district: ${district || 'GLOBAL'}`);
     res.json(conflicts);
   } catch (err: any) {
+    console.error('[CONFLICTS ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -2305,7 +2307,7 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         u_win.nombre as winner_name,
         u_win.role as winner_role
       FROM capture_conflicts cc
-      JOIN electors e ON REPLACE(REPLACE(cc.elector_ci, '.', ''), ',', '') = REPLACE(REPLACE(e.ci, '.', ''), ',', '')
+      JOIN electors e ON REPLACE(REPLACE(TRIM(cc.elector_ci), '.', ''), ',', '') = REPLACE(REPLACE(TRIM(e.ci), '.', ''), ',', '')
       JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
       JOIN users u_win ON ec_win.coordinator_id = u_win.id
       WHERE cc.status = 'RESOLVED'
