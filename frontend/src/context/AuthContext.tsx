@@ -4,7 +4,7 @@ import api from '../services/api';
 interface User {
     id: number;
     username: string;
-    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR' | 'CANDIDATO' | 'MIEMBRO_DE_MESA';
+    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR' | 'CANDIDATO' | 'MIEMBRO_DE_MESA' | 'SUBJEFE';
     nombre: string;
     party?: string;
     assigned_list_id?: number;
@@ -55,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if ((parsed as any).role === 'SUPER_ADMIN') parsed.role = 'SUPERUSUARIO';
                 if ((parsed as any).role === 'COORDINATOR') parsed.role = 'COORDINADOR';
                 if ((parsed as any).role === 'CANDIDATE') parsed.role = 'JEFE_CAMPANA';
+                if ((parsed as any).role === 'LIDER_LISTA' || (parsed as any).role === 'SUBJEFE') parsed.role = 'SUBJEFE';
 
                 setUser(parsed);
                 if (parsed.role !== 'SUPERUSUARIO') {

@@ -1,0 +1,60 @@
+﻿app.get('/api/admin/conflicts', (req, res) => {
+  const sec = getSecurityFilter(req, 'u');
+  
+  try {
+    const query = `
+      SELECT 
+        cc.id as conflict_id,
+        cc.status as conflict_status,
+        e.ci as elector_ci,
+        e.nombre as elector_nombre,
+        e.apellido as elector_apellido,
+        
+        -- New Capture (The one that triggered the conflict)
+        ec.id as capture_id,
+        ec.traffic_light,
+        ec.timestamp as capture_time,
+        ec.lat as capture_lat,
+        ec.lng as capture_lng,
+        u.nombre as coordinator_name,
+        u.id as coordinator_id,
+        p.nombre as parent_name,
+        
+        -- Original Capture (The one already in the system)
+        (SELECT ec2.id FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_id,
+         
+        (SELECT ec2.timestamp FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_time,
+
+        (SELECT ec2.lat FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_lat,
+
+        (SELECT ec2.lng FROM elector_captures ec2 
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_lng,
+         
+        (SELECT u2.nombre FROM elector_captures ec2 
+         JOIN users u2 ON ec2.coordinator_id = u2.id
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_coordinator_name,
+
+        (SELECT p2.nombre FROM elector_captures ec2 
+         JOIN users u2 ON ec2.coordinator_id = u2.id
+         LEFT JOIN users p2 ON u2.parent_id = p2.id
+         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
+         ORDER BY ec2.timestamp ASC LIMIT 1) as original_parent_name
+
+      FROM capture_conflicts cc
+      JOIN elector_captures ec ON cc.capture_id = ec.id
+      JOIN electors e ON cc.elector_ci = e.ci
+      JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      WHERE cc.status = 'PENDING' ${sec.sql}
+    `;
+    const conflicts = db.prepare(query).all(...sec.params);
+    res.json(conflicts);
+  } catch (err: any) {

@@ -746,12 +746,20 @@ const CommandCenter = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleResolve = async (winnerCaptureId: number) => {
+  const handleDecide = async (winnerCaptureId: number) => {
     try {
-      await api.post('/admin/conflicts/resolve', {
+      await api.post('/admin/conflicts/decide', {
         conflict_id: showResolveModal.conflict_id,
         winner_capture_id: winnerCaptureId
       });
+      setShowResolveModal(null);
+      loadData();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleConsent = async (conflictId: number) => {
+    try {
+      await api.post('/admin/conflicts/consent', { conflict_id: conflictId });
       setShowResolveModal(null);
       loadData();
     } catch (err) { console.error(err); }
@@ -1664,14 +1672,14 @@ const CommandCenter = () => {
                     gap: '1rem',
                     marginBottom: '3rem'
                   }}>
-                    {conflicts.slice(0, 10).map((conf: any) => (
+                    {conflicts.map((conf: any) => (
                       <motion.div
                         whileHover={{ y: -5, scale: 1.02 }}
                         key={conf.conflict_id}
                         onClick={() => setShowResolveModal(conf)}
                         style={{
-                          background: 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(8,14,28,0.8))',
-                          border: '1px solid rgba(239,68,68,0.25)',
+                          background: conf.conflict_type === 'INTER_LIST' ? 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(8,14,28,0.8))' : 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(8,14,28,0.8))',
+                          border: `1px solid ${conf.conflict_type === 'INTER_LIST' ? 'rgba(59,130,246,0.25)' : 'rgba(239,68,68,0.25)'}`,
                           borderRadius: '20px',
                           padding: '1.5rem',
                           cursor: 'pointer',
@@ -1680,7 +1688,9 @@ const CommandCenter = () => {
                           boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
                         }}
                       >
-                        <div style={{ position: 'absolute', top: 0, right: 0, padding: '4px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 900, borderRadius: '0 0 0 10px' }}>DISPUTA</div>
+                        <div style={{ position: 'absolute', top: 0, right: 0, padding: '4px 8px', background: conf.conflict_type === 'INTER_LIST' ? 'var(--plra-500)' : 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 900, borderRadius: '0 0 0 10px' }}>
+                            {conf.conflict_type === 'INTER_LIST' ? 'INTER-LISTAS' : 'INTERNA'}
+                        </div>
                         <div style={{ marginBottom: '1rem' }}>
                           <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{conf.elector_nombre}</p>
                           <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>{conf.elector_apellido}</p>
@@ -1688,15 +1698,17 @@ const CommandCenter = () => {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Original</p>
-                            <p style={{ fontSize: '0.72rem', color: 'var(--plra-200)', fontWeight: 800, margin: 0 }}>{conf.original_coordinator_name}</p>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Lista {conf.list_a}</p>
+                            <p style={{ fontSize: '0.72rem', color: 'var(--plra-200)', fontWeight: 800, margin: 0 }}>{conf.coord_a}</p>
                           </div>
                           <div style={{ background: 'rgba(239,68,68,0.05)', padding: '0.5rem', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.1)' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase' }}>Disputante</p>
-                            <p style={{ fontSize: '0.72rem', color: 'white', fontWeight: 800, margin: 0 }}>{conf.coordinator_name}</p>
+                            <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase' }}>Lista {conf.list_b}</p>
+                            <p style={{ fontSize: '0.72rem', color: 'white', fontWeight: 800, margin: 0 }}>{conf.coord_b}</p>
                           </div>
                         </div>
-                        <button style={{ width: '100%', marginTop: '1rem', padding: '0.5rem', borderRadius: '10px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}>RESOLVER AHORA</button>
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textAlign: 'center' }}>
+                            {conf.conflict_status === 'WAITING_CONSENT' ? '⏳ ESPERANDO CONSENTIMIENTO' : '🔴 PENDIENTE DECISIÓN'}
+                        </div>
                       </motion.div>
                     ))}
                   </div>
@@ -1850,104 +1862,80 @@ const CommandCenter = () => {
                     Compara los detalles para decidir a quién adjudicar el elector:
                   </p>
 
-                  {/* Party 1: Original */}
+                  {/* Party 1: A */}
                   <div style={{
                     padding: '1.25rem', borderRadius: '16px', background: 'var(--accent-subtle)',
-                    border: '1px solid var(--border)', position: 'relative', overflow: 'hidden'
+                    border: showResolveModal.jefe_decision_id === showResolveModal.capture_a_id ? '2px solid var(--plra-400)' : '1px solid var(--border)', 
+                    position: 'relative', overflow: 'hidden', marginBottom: '1rem'
                   }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--plra-500)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>CAPTURA ORIGINAL</div>
+                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--plra-500)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>LISTA {showResolveModal.list_a}</div>
 
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.original_coordinator_name}</p>
-                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.original_parent_name || 'Mando Directo'}</span></p>
-
+                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coord_a}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
-                          <Clock size={12} />
-                          {new Date(showResolveModal.original_capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          <Clock size={12} /> {new Date(showResolveModal.time_a).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
-
-                      {/* Mini Map Thumbnail */}
-                      <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
-                        <MapContainer
-                          center={[showResolveModal.original_capture_lat || -22.54, showResolveModal.original_capture_lng || -55.73]}
-                          zoom={15}
-                          style={{ height: '100%', width: '100%' }}
-                          zoomControl={false}
-                          dragging={false}
-                          scrollWheelZoom={false}
-                          doubleClickZoom={false}
-                          attributionControl={false}
-                        >
-                          <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                          />
-                          {showResolveModal.original_capture_lat != null && showResolveModal.original_capture_lng != null && (
-                            <Marker position={[showResolveModal.original_capture_lat, showResolveModal.original_capture_lng]} icon={createCustomIcon('var(--plra-500)', 'MapPin')} />
-                          )}
-                        </MapContainer>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: showResolveModal.consent_a ? 'var(--green)' : 'var(--text-3)', opacity: 0.8 }}>
+                        {showResolveModal.consent_a ? '✓ CONSENTIDO' : '⏳ PENDIENTE'}
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleResolve(showResolveModal.original_capture_id)}
-                      className="btn-confirm-styled"
-                      style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--plra-600)' }}
-                    >
-                      ADJUDICAR A ORIGINAL
-                    </button>
+                    {(authUser?.role === 'SUPERUSUARIO' || authUser?.role === 'JEFE_CAMPANA') && showResolveModal.conflict_status !== 'RESOLVED' && (
+                        <button
+                        onClick={() => handleDecide(showResolveModal.capture_a_id)}
+                        className="btn-confirm-styled"
+                        style={{ width: '100%', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--plra-600)' }}
+                        disabled={showResolveModal.jefe_decision_id === showResolveModal.capture_a_id}
+                        >
+                        {showResolveModal.jefe_decision_id === showResolveModal.capture_a_id ? 'DECISIÓN TOMADA' : 'ADJUDICAR A LISTA ' + showResolveModal.list_a}
+                        </button>
+                    )}
+                    
+                    {authUser?.role === 'SUBJEFE' && authUser.assigned_list_id === showResolveModal.list_id_a && !showResolveModal.consent_a && showResolveModal.status === 'WAITING_CONSENT' && (
+                        <button onClick={() => handleConsent(showResolveModal.conflict_id)} style={{ width: '100%', padding: '0.75rem', background: 'var(--green)', color: 'white', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer' }}>
+                            DAR CONSENTIMIENTO
+                        </button>
+                    )}
                   </div>
 
-                  {/* Party 2: New Conflict */}
+                  {/* Party 2: B */}
                   <div style={{
                     padding: '1.25rem', borderRadius: '16px', background: 'rgba(239,68,68,0.05)',
-                    border: '1px solid rgba(239,68,68,0.2)', position: 'relative', overflow: 'hidden'
+                    border: showResolveModal.jefe_decision_id === showResolveModal.capture_b_id ? '2px solid var(--red)' : '1px solid rgba(239,68,68,0.2)', 
+                    position: 'relative', overflow: 'hidden'
                   }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>NUEVA DISPUTA</div>
+                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>LISTA {showResolveModal.list_b}</div>
 
-                    <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coordinator_name}</p>
-                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, marginBottom: '0.75rem' }}>Superior: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.parent_name || 'Mando Directo'}</span></p>
-
+                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coord_b}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
-                          <Clock size={12} />
-                          {new Date(showResolveModal.capture_time).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          <Clock size={12} /> {new Date(showResolveModal.time_b).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
-
-                      {/* Mini Map Thumbnail */}
-                      <div style={{ width: '100px', height: '80px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface)' }}>
-                        <MapContainer
-                          center={[showResolveModal.capture_lat || -22.54, showResolveModal.capture_lng || -55.73]}
-                          zoom={15}
-                          style={{ height: '100%', width: '100%' }}
-                          zoomControl={false}
-                          dragging={false}
-                          scrollWheelZoom={false}
-                          doubleClickZoom={false}
-                          attributionControl={false}
-                        >
-                          <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                          />
-                          {showResolveModal.capture_lat != null && showResolveModal.capture_lng != null && (
-                            <Marker position={[showResolveModal.capture_lat, showResolveModal.capture_lng]} icon={createCustomIcon('var(--red)', 'MapPin')} />
-                          )}
-                        </MapContainer>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: showResolveModal.consent_b ? 'var(--green)' : 'var(--text-3)', opacity: 0.8 }}>
+                        {showResolveModal.consent_b ? '✓ CONSENTIDO' : '⏳ PENDIENTE'}
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleResolve(showResolveModal.capture_id)}
-                      className="btn-confirm-styled"
-                      style={{ width: '100%', marginTop: '1rem', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--red)' }}
-                    >
-                      ADJUDICAR A NUEVO
-                    </button>
+                    {(authUser?.role === 'SUPERUSUARIO' || authUser?.role === 'JEFE_CAMPANA') && showResolveModal.conflict_status !== 'RESOLVED' && (
+                        <button
+                        onClick={() => handleDecide(showResolveModal.capture_b_id)}
+                        className="btn-confirm-styled"
+                        style={{ width: '100%', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--red)' }}
+                        disabled={showResolveModal.jefe_decision_id === showResolveModal.capture_b_id}
+                        >
+                        {showResolveModal.jefe_decision_id === showResolveModal.capture_b_id ? 'DECISIÓN TOMADA' : 'ADJUDICAR A LISTA ' + showResolveModal.list_b}
+                        </button>
+                    )}
+
+                    {authUser?.role === 'SUBJEFE' && authUser.assigned_list_id === showResolveModal.list_id_b && !showResolveModal.consent_b && showResolveModal.status === 'WAITING_CONSENT' && (
+                        <button onClick={() => handleConsent(showResolveModal.conflict_id)} style={{ width: '100%', padding: '0.75rem', background: 'var(--green)', color: 'white', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer' }}>
+                            DAR CONSENTIMIENTO
+                        </button>
+                    )}
                   </div>
                 </div>
 

@@ -398,6 +398,7 @@ const getRole = (req: express.Request) => {
   const role = (req.headers['x-user-role'] as string || 'GUEST').toUpperCase().trim();
   if (role === 'SUPER_ADMIN' || role === 'SUPERUSUARIO') return 'SUPERUSUARIO';
   if (role === 'CANDIDATE' || role === 'JEFE_CAMPANA') return 'JEFE_CAMPANA';
+  if (role === 'SUBJEFE' || role === 'LIDER_LISTA') return 'SUBJEFE';
   if (role === 'COORDINATOR' || role === 'COORDINADOR') return 'COORDINADOR';
   return role;
 };
@@ -528,6 +529,21 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
            params.push(listId);
          }
       }
+
+      // 🛑 PRIVACY LAYER: If Jefe Campana, hide details of lists that have a SUBJEFE (unless orphan)
+      // This applies to Captures, Users (Coordinators/Padrinos) and Conflicts details.
+      // Macro stats (stats/command) should NOT use this filter to keep global numbers.
+      const isDetailQuery = ['ec', 'u'].includes(tableAlias);
+      const isPublicStats = req.path.includes('/stats/command'); // stats/command sees everything for totals
+      
+      if (role === 'JEFE_CAMPANA' && isDetailQuery && !isPublicStats) {
+          const listCol = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
+          sql += ` AND (
+            ${tableAlias}.${listCol} IS NULL OR 
+            NOT EXISTS (SELECT 1 FROM users ul WHERE ul.assigned_list_id = ${tableAlias}.${listCol} AND ul.role = 'SUBJEFE')
+          )`;
+      }
+
       return { sql, params };
     }
 
@@ -740,33 +756,35 @@ app.get('/api/electors/:ci', (req, res) => {
 app.post('/api/captures', (req, res) => {
   try {
     const capture = CaptureSchema.parse(req.body);
-    const user = db.prepare('SELECT assigned_list_id FROM users WHERE id = ?').get(capture.coordinator_id) as any;
+    const user = db.prepare('SELECT assigned_list_id, assigned_campaign_id FROM users WHERE id = ?').get(capture.coordinator_id) as any;
     const list_id = user?.assigned_list_id;
+    const campaign_id = user?.assigned_campaign_id;
 
     if (!list_id) return res.status(403).json({ error: 'El usuario no tiene una lista asignada.' });
 
     const transaction = db.transaction(() => {
-      const existingCapture = db.prepare('SELECT * FROM elector_captures WHERE elector_ci = ? AND list_id = ? LIMIT 1')
+      // 1. Check for conflict in the SAME LIST
+      const intraListCapture = db.prepare('SELECT * FROM elector_captures WHERE elector_ci = ? AND list_id = ? LIMIT 1')
         .get(capture.elector_ci, list_id) as any;
 
-      if (existingCapture) {
-        if (existingCapture.coordinator_id !== capture.coordinator_id) {
-          // Elector ya captado por OTRO coordinador de la MISMA lista: CONFLICTO
+      if (intraListCapture) {
+        if (intraListCapture.coordinator_id !== capture.coordinator_id) {
+          // Conflict within the same list: resolved by the Subjefe
           db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE elector_ci = ? AND list_id = ?').run(capture.elector_ci, list_id);
           
           const result = db.prepare(`
-            INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport)
+            INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport)
             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
-          `).run(capture.elector_ci, capture.coordinator_id, list_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
+          `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
 
           db.prepare(`
-            INSERT INTO capture_conflicts (capture_id, elector_ci, list_id, status)
-            VALUES (?, ?, ?, 'PENDING')
-          `).run(Number(result.lastInsertRowid), capture.elector_ci, list_id);
+            INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id, list_id_a, list_id_b, conflict_type, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'INTERNAL', 'PENDING')
+          `).run(intraListCapture.id, Number(result.lastInsertRowid), capture.elector_ci, list_id, list_id, list_id);
 
-          return { success: true, warning: 'Elector en disputa con otro coordinador de tu lista. Se ha notificado al Jefe de Campaña.', is_disputed: true };
+          return { success: true, warning: 'Elector en disputa interna en tu lista. Se ha notificado al Jefe.', is_disputed: true };
         } else {
-          // El mismo coordinador actualiza su captura
+          // Update own capture
           db.prepare(`
             UPDATE elector_captures 
             SET lat = ?, lng = ?, traffic_light = ?, needs_transport = ?, timestamp = CURRENT_TIMESTAMP
@@ -774,15 +792,39 @@ app.post('/api/captures', (req, res) => {
           `).run(capture.lat, capture.lng, capture.traffic_light, capture.needs_transport ? 1 : 0, capture.elector_ci, capture.coordinator_id, list_id);
           
           logAction(capture.coordinator_id, 'UPDATE', 'CAPTURE', capture.elector_ci, `Updated capture for ${capture.elector_ci}`);
-          return { success: true, message: 'Captura actualizada correctamente.', is_disputed: existingCapture.is_disputed === 1 };
+          return { success: true, message: 'Captura actualizada correctamente.', is_disputed: intraListCapture.is_disputed === 1 };
         }
       }
 
-      // Nueva captura sin conflictos en esta lista
+      // 2. Check for conflict in DIFFERENT LIST but SAME CAMPAIGN
+      const interListCapture = db.prepare(`
+        SELECT * FROM elector_captures 
+        WHERE elector_ci = ? AND campaign_id = ? AND list_id != ? AND is_disputed = 0 
+        LIMIT 1
+      `).get(capture.elector_ci, campaign_id, list_id) as any;
+
+      if (interListCapture) {
+        // Inter-list conflict: Requires Jefe decision + 2 consents
+        db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE id = ?').run(interListCapture.id);
+        
+        const result = db.prepare(`
+          INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport)
+          VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+        `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
+
+        db.prepare(`
+          INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
+          VALUES (?, ?, ?, ?, ?, 'INTER_LIST', 'PENDING')
+        `).run(interListCapture.id, Number(result.lastInsertRowid), capture.elector_ci, interListCapture.list_id, list_id);
+
+        return { success: true, warning: 'Disputa Inter-Listas detectada. El Jefe de Campaña deberá arbitrar y ambos líderes consentir.', is_disputed: true };
+      }
+
+      // 3. New clean capture
       db.prepare(`
-        INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, lat, lng, traffic_light, telefono, needs_transport)
+        INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, telefono, needs_transport)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(capture.elector_ci, capture.coordinator_id, list_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
+      `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
       
       logAction(capture.coordinator_id, 'CREATE', 'CAPTURE', capture.elector_ci, `Captured elector ${capture.elector_ci} as ${capture.traffic_light}`);
       
@@ -2188,54 +2230,39 @@ app.get('/api/admin/conflicts', (req, res) => {
       SELECT 
         cc.id as conflict_id,
         cc.status as conflict_status,
+        cc.conflict_type,
+        cc.jefe_decision_id,
+        cc.consent_a,
+        cc.consent_b,
+        cc.list_id_a,
+        cc.list_id_b,
         e.ci as elector_ci,
         e.nombre as elector_nombre,
         e.apellido as elector_apellido,
         
-        -- New Capture (The one that triggered the conflict)
-        ec.id as capture_id,
-        ec.traffic_light,
-        ec.timestamp as capture_time,
-        ec.lat as capture_lat,
-        ec.lng as capture_lng,
-        u.nombre as coordinator_name,
-        u.id as coordinator_id,
-        p.nombre as parent_name,
+        -- Capture A
+        ca.id as capture_a_id,
+        ca.traffic_light as tl_a,
+        ca.timestamp as time_a,
+        ua.nombre as coord_a,
+        la.list_number as list_a,
         
-        -- Original Capture (The one already in the system)
-        (SELECT ec2.id FROM elector_captures ec2 
-         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
-         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_id,
-         
-        (SELECT ec2.timestamp FROM elector_captures ec2 
-         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
-         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_time,
-
-        (SELECT ec2.lat FROM elector_captures ec2 
-         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
-         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_lat,
-
-        (SELECT ec2.lng FROM elector_captures ec2 
-         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
-         ORDER BY ec2.timestamp ASC LIMIT 1) as original_capture_lng,
-         
-        (SELECT u2.nombre FROM elector_captures ec2 
-         JOIN users u2 ON ec2.coordinator_id = u2.id
-         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
-         ORDER BY ec2.timestamp ASC LIMIT 1) as original_coordinator_name,
-
-        (SELECT p2.nombre FROM elector_captures ec2 
-         JOIN users u2 ON ec2.coordinator_id = u2.id
-         LEFT JOIN users p2 ON u2.parent_id = p2.id
-         WHERE ec2.elector_ci = e.ci AND ec2.list_id = ec.list_id AND ec2.id != ec.id 
-         ORDER BY ec2.timestamp ASC LIMIT 1) as original_parent_name
+        -- Capture B
+        cb.id as capture_b_id,
+        cb.traffic_light as tl_b,
+        cb.timestamp as time_b,
+        ub.nombre as coord_b,
+        lb.list_number as list_b
 
       FROM capture_conflicts cc
-      JOIN elector_captures ec ON cc.capture_id = ec.id
       JOIN electors e ON cc.elector_ci = e.ci
-      JOIN users u ON ec.coordinator_id = u.id
-      LEFT JOIN users p ON u.parent_id = p.id
-      WHERE cc.status = 'PENDING' ${sec.sql}
+      JOIN elector_captures ca ON cc.capture_id = ca.id
+      JOIN elector_captures cb ON cc.capture_id_b = cb.id
+      JOIN users ua ON ca.coordinator_id = ua.id
+      JOIN users ub ON cb.coordinator_id = ub.id
+      JOIN lists la ON ca.list_id = la.id
+      JOIN lists lb ON cb.list_id = lb.id
+      WHERE cc.status != 'RESOLVED' ${sec.sql.replace(/u\./g, 'ua.')}
     `;
     const conflicts = db.prepare(query).all(...sec.params);
     res.json(conflicts);
@@ -2277,32 +2304,81 @@ app.get('/api/admin/conflicts/history', (req, res) => {
   }
 });
 
-app.post('/api/admin/conflicts/resolve', (req, res) => {
+app.post('/api/admin/conflicts/decide', (req, res) => {
   const { conflict_id, winner_capture_id } = req.body;
   const user_id = parseInt(req.headers['x-user-id'] as string || '0');
+  
   try {
     db.transaction(() => {
       const conflict = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
       if (!conflict) throw new Error('Conflicto no encontrado');
 
-      // 1. Mark the winner capture as NOT disputed and the others as rejected
-      db.prepare('UPDATE elector_captures SET is_disputed = 0 WHERE id = ?').run(winner_capture_id);
-      db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE elector_ci = ? AND id != ?').run(conflict.elector_ci, winner_capture_id);
-      
-      // 2. Resolve the conflict record
-      db.prepare(`
-        UPDATE capture_conflicts 
-        SET status = 'RESOLVED', resolved_by_jefe_id = ?, resolved_coordinator_id = (SELECT coordinator_id FROM elector_captures WHERE id = ?)
-        WHERE elector_ci = ?
-      `).run(user_id, winner_capture_id, conflict.elector_ci);
+      // Update the Jefe's decision
+      db.prepare('UPDATE capture_conflicts SET jefe_decision_id = ?, status = "WAITING_CONSENT" WHERE id = ?')
+        .run(winner_capture_id, conflict_id);
 
-      logAction(user_id, 'RESOLVE_CONFLICT', 'ELECTOR', conflict.elector_ci, `Resolved conflict for ${conflict.elector_ci} in favor of capture ${winner_capture_id}`);
+      // AUTO-CONSENT Logic: If a list has NO SUBJEFE, the Jefe consents for it automatically.
+      const lists = [conflict.list_id_a, conflict.list_id_b];
+      lists.forEach((lid, idx) => {
+          const hasSubjefe = db.prepare('SELECT 1 FROM users WHERE assigned_list_id = ? AND role = "SUBJEFE" LIMIT 1').get(lid);
+          if (!hasSubjefe) {
+              const col = (idx === 0) ? 'consent_a' : 'consent_b';
+              db.prepare(`UPDATE capture_conflicts SET ${col} = 1 WHERE id = ?`).run(conflict_id);
+          }
+      });
+
+      checkAndFinalizeConflict(conflict_id, user_id);
+      logAction(user_id, 'DECIDE_CONFLICT', 'CONFLICT', conflict_id, `Jefe decided conflict ${conflict_id} in favor of ${winner_capture_id}`);
     })();
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.post('/api/admin/conflicts/consent', (req, res) => {
+    const { conflict_id } = req.body;
+    const user_id = req.headers['x-user-id'] as string;
+    const user = getCachedUserInfo(user_id);
+
+    if (!user || user.role !== 'SUBJEFE') return res.status(403).json({ error: 'Solo los líderes de lista pueden dar consentimiento.' });
+
+    try {
+        db.transaction(() => {
+            const conflict = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
+            if (!conflict) throw new Error('Conflicto no encontrado');
+
+            if (conflict.list_id_a === user.assigned_list_id) {
+                db.prepare('UPDATE capture_conflicts SET consent_a = 1 WHERE id = ?').run(conflict_id);
+            } else if (conflict.list_id_b === user.assigned_list_id) {
+                db.prepare('UPDATE capture_conflicts SET consent_b = 1 WHERE id = ?').run(conflict_id);
+            } else {
+                throw new Error('No perteneces a ninguna de las listas involucradas.');
+            }
+
+            checkAndFinalizeConflict(conflict_id, parseInt(user_id));
+        })();
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+const checkAndFinalizeConflict = (conflict_id: number, resolver_id: number) => {
+    const cc = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
+    if (cc.jefe_decision_id && cc.consent_a === 1 && cc.consent_b === 1) {
+        // FINALIZE!
+        const winnerId = cc.jefe_decision_id;
+        const loserId = (cc.capture_id === winnerId) ? cc.capture_id_b : cc.capture_id;
+
+        db.prepare('UPDATE elector_captures SET is_disputed = 0 WHERE id = ?').run(winnerId);
+        db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE id = ?').run(loserId);
+        db.prepare('UPDATE capture_conflicts SET status = "RESOLVED", resolved_by_jefe_id = ? WHERE id = ?')
+            .run(resolver_id, conflict_id);
+        
+        console.log(`[CONFLICT] Resolved and finalized conflict ${conflict_id}`);
+    }
+};
 
 app.get('/api/admin/requests', (req, res) => {
   const sec = getSecurityFilter(req, 'u');

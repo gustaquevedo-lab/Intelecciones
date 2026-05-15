@@ -307,9 +307,17 @@ addColumnIfNotExists("voting_locations", "distrito", "TEXT DEFAULT ''");
 addColumnIfNotExists("voting_locations", "ciudad", "TEXT DEFAULT ''");
 addColumnIfNotExists("campaigns", "enabled_modules", "TEXT DEFAULT 'COMMAND_CENTER,REGISTRY'");
 addColumnIfNotExists("users", "enabled_modules", "TEXT");
-addColumnIfNotExists("users", "parent_id", "INTEGER");
 addColumnIfNotExists("users", "telefono", "TEXT");
 addColumnIfNotExists("field_requests", "priority", "TEXT DEFAULT 'NORMAL'");
+
+// ── CAPTURE CONFLICTS V2 (Inter-List & Consensus) ──────────────────────────
+addColumnIfNotExists("capture_conflicts", "capture_id_b", "INTEGER");
+addColumnIfNotExists("capture_conflicts", "conflict_type", "TEXT DEFAULT 'INTERNAL'");
+addColumnIfNotExists("capture_conflicts", "jefe_decision_id", "INTEGER");
+addColumnIfNotExists("capture_conflicts", "consent_a", "INTEGER DEFAULT 0");
+addColumnIfNotExists("capture_conflicts", "consent_b", "INTEGER DEFAULT 0");
+addColumnIfNotExists("capture_conflicts", "list_id_a", "INTEGER");
+addColumnIfNotExists("capture_conflicts", "list_id_b", "INTEGER");
 
 // 🛠️ HEAVY ONE-TIME MIGRATIONS
 try {
