@@ -755,7 +755,9 @@ app.get('/api/electors/:ci', (req, res) => {
 // Capture Endpoints
 app.post('/api/captures', (req, res) => {
   try {
-    const capture = CaptureSchema.parse(req.body);
+    const rawCapture = CaptureSchema.parse(req.body);
+    const capture = { ...rawCapture, elector_ci: rawCapture.elector_ci.replace(/\./g, '').replace(/,/g, '').trim() };
+    
     const user = db.prepare('SELECT assigned_list_id, assigned_campaign_id FROM users WHERE id = ?').get(capture.coordinator_id) as any;
     const list_id = user?.assigned_list_id;
     const campaign_id = user?.assigned_campaign_id;
@@ -2257,7 +2259,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         lb.list_number as list_b
 
       FROM capture_conflicts cc
-      JOIN electors e ON cc.elector_ci = e.ci
+      JOIN electors e ON REPLACE(REPLACE(cc.elector_ci, '.', ''), ',', '') = REPLACE(REPLACE(e.ci, '.', ''), ',', '')
       JOIN elector_captures ca ON cc.capture_id = ca.id
       JOIN elector_captures cb ON cc.capture_id_b = cb.id
       JOIN users ua ON ca.coordinator_id = ua.id
@@ -2269,7 +2271,7 @@ app.get('/api/admin/conflicts', (req, res) => {
     const params: any[] = [];
 
     if (district && district !== 'null' && district !== 'undefined') {
-      sql += " AND (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))";
+      sql += " AND (UPPER(TRIM(e.distrito)) = UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) = UPPER(TRIM(?)))";
       params.push(district, district);
     }
     if (list_id && !isNaN(list_id) && list_id !== 0) {
@@ -2303,7 +2305,7 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         u_win.nombre as winner_name,
         u_win.role as winner_role
       FROM capture_conflicts cc
-      JOIN electors e ON cc.elector_ci = e.ci
+      JOIN electors e ON REPLACE(REPLACE(cc.elector_ci, '.', ''), ',', '') = REPLACE(REPLACE(e.ci, '.', ''), ',', '')
       JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
       JOIN users u_win ON ec_win.coordinator_id = u_win.id
       WHERE cc.status = 'RESOLVED'
@@ -2311,7 +2313,7 @@ app.get('/api/admin/conflicts/history', (req, res) => {
     const params: any[] = [];
 
     if (district && district !== 'null' && district !== 'undefined') {
-      sql += " AND (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))";
+      sql += " AND (UPPER(TRIM(e.distrito)) = UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) = UPPER(TRIM(?)))";
       params.push(district, district);
     }
     if (list_id && !isNaN(list_id) && list_id !== 0) {
