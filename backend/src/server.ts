@@ -774,13 +774,13 @@ app.post('/api/captures', (req, res) => {
           
           const result = db.prepare(`
             INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport)
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
           `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
 
           db.prepare(`
-            INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id, list_id_a, list_id_b, conflict_type, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'INTERNAL', 'PENDING')
-          `).run(intraListCapture.id, Number(result.lastInsertRowid), capture.elector_ci, list_id, list_id, list_id);
+            INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
+            VALUES (?, ?, ?, ?, ?, 'INTERNAL', 'PENDING')
+          `).run(intraListCapture.id, Number(result.lastInsertRowid), capture.elector_ci, list_id, list_id);
 
           return { success: true, warning: 'Elector en disputa interna en tu lista. Se ha notificado al Jefe.', is_disputed: true };
         } else {
@@ -809,7 +809,7 @@ app.post('/api/captures', (req, res) => {
         
         const result = db.prepare(`
           INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport)
-          VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
         `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
 
         db.prepare(`
@@ -823,7 +823,7 @@ app.post('/api/captures', (req, res) => {
       // 3. New clean capture
       db.prepare(`
         INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, telefono, needs_transport)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
       
       logAction(capture.coordinator_id, 'CREATE', 'CAPTURE', capture.elector_ci, `Captured elector ${capture.elector_ci} as ${capture.traffic_light}`);
@@ -2272,7 +2272,7 @@ app.get('/api/admin/conflicts', (req, res) => {
       sql += " AND (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))";
       params.push(district, district);
     }
-    if (list_id && !isNaN(list_id)) {
+    if (list_id && !isNaN(list_id) && list_id !== 0) {
       sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
       params.push(list_id, list_id);
     }
@@ -2314,7 +2314,7 @@ app.get('/api/admin/conflicts/history', (req, res) => {
       sql += " AND (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))";
       params.push(district, district);
     }
-    if (list_id && !isNaN(list_id)) {
+    if (list_id && !isNaN(list_id) && list_id !== 0) {
       sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
       params.push(list_id, list_id);
     }
