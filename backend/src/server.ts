@@ -2277,7 +2277,7 @@ app.get('/api/admin/conflicts', (req, res) => {
       params.push(list_id, list_id);
     }
 
-    const conflicts = db.prepare(query).all(...params);
+    const conflicts = db.prepare(sql).all(...params);
     res.json(conflicts);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
