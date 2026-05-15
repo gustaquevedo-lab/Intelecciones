@@ -10,7 +10,7 @@ import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import api, { getImageUrl } from '../services/api';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
