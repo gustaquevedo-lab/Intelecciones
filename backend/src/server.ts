@@ -1031,8 +1031,9 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
 
 // Voting Locations
 app.get('/api/voting-locations', (req, res) => {
+  const sec = getSecurityFilter(req, 'loc');
   try {
-    const locations = db.prepare('SELECT * FROM voting_locations').all();
+    const locations = db.prepare(`SELECT * FROM voting_locations loc WHERE 1=1 ${sec.sql}`).all(...sec.params);
     res.json(locations);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2223,10 +2224,11 @@ app.get('/api/logistics/pending', (req, res) => {
 
 // Strategic Command Center Endpoints
 app.get('/api/admin/conflicts', (req, res) => {
-  const sec = getSecurityFilter(req, 'u');
+  const district = req.query.district as string;
+  const list_id = getListId(req);
   
   try {
-    const query = `
+    let sql = `
       SELECT 
         cc.id as conflict_id,
         cc.status as conflict_status,
@@ -2262,9 +2264,20 @@ app.get('/api/admin/conflicts', (req, res) => {
       JOIN users ub ON cb.coordinator_id = ub.id
       JOIN lists la ON ca.list_id = la.id
       JOIN lists lb ON cb.list_id = lb.id
-      WHERE cc.status != 'RESOLVED' ${sec.sql.replace(/u\./g, 'ua.')}
+      WHERE cc.status != 'RESOLVED'
     `;
-    const conflicts = db.prepare(query).all(...sec.params);
+    const params: any[] = [];
+
+    if (district && district !== 'null' && district !== 'undefined') {
+      sql += " AND (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))";
+      params.push(district, district);
+    }
+    if (list_id && !isNaN(list_id)) {
+      sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
+      params.push(list_id, list_id);
+    }
+
+    const conflicts = db.prepare(query).all(...params);
     res.json(conflicts);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2272,10 +2285,11 @@ app.get('/api/admin/conflicts', (req, res) => {
 });
 
 app.get('/api/admin/conflicts/history', (req, res) => {
-  const sec = getSecurityFilter(req, 'u');
+  const district = req.query.district as string;
+  const list_id = getListId(req);
   
   try {
-    const query = `
+    let sql = `
       SELECT 
         cc.id as conflict_id,
         cc.status as conflict_status,
@@ -2290,14 +2304,24 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         u_win.role as winner_role
       FROM capture_conflicts cc
       JOIN electors e ON cc.elector_ci = e.ci
-      JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
+      JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
       JOIN users u_win ON ec_win.coordinator_id = u_win.id
-      JOIN users u ON ec_win.coordinator_id = u.id -- For security filter join
-      WHERE cc.status = 'RESOLVED' ${sec.sql}
-      ORDER BY cc.resolved_at DESC
-      LIMIT 100
+      WHERE cc.status = 'RESOLVED'
     `;
-    const history = db.prepare(query).all(...sec.params);
+    const params: any[] = [];
+
+    if (district && district !== 'null' && district !== 'undefined') {
+      sql += " AND (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))";
+      params.push(district, district);
+    }
+    if (list_id && !isNaN(list_id)) {
+      sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
+      params.push(list_id, list_id);
+    }
+
+    sql += " ORDER BY cc.resolved_at DESC LIMIT 100";
+
+    const history = db.prepare(sql).all(...params);
     res.json(history);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2373,8 +2397,8 @@ const checkAndFinalizeConflict = (conflict_id: number, resolver_id: number) => {
 
         db.prepare('UPDATE elector_captures SET is_disputed = 0 WHERE id = ?').run(winnerId);
         db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE id = ?').run(loserId);
-        db.prepare('UPDATE capture_conflicts SET status = "RESOLVED", resolved_by_jefe_id = ? WHERE id = ?')
-            .run(resolver_id, conflict_id);
+        db.prepare('UPDATE capture_conflicts SET status = "RESOLVED", resolved_by_jefe_id = ?, winner_capture_id = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run(resolver_id, winnerId, conflict_id);
         
         console.log(`[CONFLICT] Resolved and finalized conflict ${conflict_id}`);
     }
@@ -2580,7 +2604,15 @@ app.get('/api/admin/electors/stats', (req, res) => {
   }
 });
 
+let _districtsCache: { data: string[], ts: number } | null = null;
+const DISTRICTS_CACHE_TTL = 600_000; // 10 minutes
+
 app.get('/api/districts/global', (req, res) => {
+  const now = Date.now();
+  if (_districtsCache && (now - _districtsCache.ts < DISTRICTS_CACHE_TTL)) {
+    return res.json(_districtsCache.data);
+  }
+
   try {
     const districts = db.prepare(`
       SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM campaigns WHERE distrito IS NOT NULL AND distrito != ''
@@ -2592,8 +2624,11 @@ app.get('/api/districts/global', (req, res) => {
       SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM electors WHERE ciudad IS NOT NULL AND ciudad != ''
       UNION
       SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM electors WHERE distrito IS NOT NULL AND distrito != ''
-    `).all();
-    res.json(districts.map((d: any) => d.name).sort());
+    `).all() as any[];
+    
+    const data = districts.map((d: any) => d.name).sort();
+    _districtsCache = { data, ts: now };
+    res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -3517,17 +3552,16 @@ app.get('/api/diad/coverage', (req, res) => {
   const role = getRole(req);
   const user_id = req.headers['x-user-id'];
   
+  let districtName = '';
   let distritoFilter = '';
+  let vlFilter = '';
+  
   if (role !== 'SUPERUSUARIO' && user_id) {
-    const user = db.prepare(`
-      SELECT c.distrito 
-      FROM users u 
-      JOIN lists l2 ON u.assigned_list_id = l2.id 
-      JOIN campaigns c ON l2.campaign_id = c.id 
-      WHERE u.id = ?
-    `).get(user_id) as any;
+    const user = getCachedUserInfo(user_id as string);
     if (user?.distrito) {
-      distritoFilter = `WHERE distrito = '${user.distrito}' OR ciudad = '${user.distrito}'`;
+      districtName = user.distrito;
+      distritoFilter = `WHERE (UPPER(distrito) = UPPER('${districtName}') OR UPPER(ciudad) = UPPER('${districtName}'))`;
+      vlFilter = `AND (UPPER(vl.distrito) = UPPER('${districtName}') OR UPPER(vl.ciudad) = UPPER('${districtName}'))`;
     }
   }
 
@@ -3536,70 +3570,76 @@ app.get('/api/diad/coverage', (req, res) => {
     const { total_mesas } = db.prepare(`SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as total_mesas FROM electors ${distritoFilter}`).get() as any;
     
     // 2. Operational Coverage: Mesas with at least 1 member assigned (VEEDOR or MIEMBRO_MESA)
-    // We check users assigned to local and mesa
     const { assigned_mesas } = db.prepare(`
-      SELECT COUNT(DISTINCT assigned_local || "-" || assigned_mesa) as assigned_mesas 
-      FROM users 
-      WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') 
-      AND assigned_local IS NOT NULL 
-      AND assigned_mesa IS NOT NULL
-      ${list_id && !isNaN(list_id) ? `AND assigned_list_id = ${list_id}` : ''}
+      SELECT COUNT(DISTINCT u.assigned_local || "-" || u.assigned_mesa) as assigned_mesas 
+      FROM users u
+      JOIN voting_locations vl ON u.assigned_local = vl.nombre
+      WHERE (u.role = 'VEEDOR' OR u.role = 'MIEMBRO_MESA') 
+      AND u.assigned_local IS NOT NULL 
+      AND u.assigned_mesa IS NOT NULL
+      ${vlFilter}
+      ${list_id && !isNaN(list_id) ? `AND u.assigned_list_id = ${list_id}` : ''}
     `).get() as any;
 
     // 3. Results Coverage: Mesas with actas submitted
-    // We check the 'results' table
     const { reported_mesas } = db.prepare(`
-      SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as reported_mesas 
-      FROM results
-      ${list_id && !isNaN(list_id) ? `WHERE tenant_id = ${list_id}` : ''}
+      SELECT COUNT(DISTINCT r.local_votacion || "-" || r.mesa) as reported_mesas 
+      FROM results r
+      JOIN voting_locations vl ON r.local_votacion = vl.nombre
+      WHERE 1=1 ${vlFilter}
+      ${list_id && !isNaN(list_id) ? `AND r.tenant_id = ${list_id}` : ''}
     `).get() as any;
 
-    // 4. Votos Procesados (Total of acta_results + blancos + nulos)
+    // 4. Votos Procesados
     const votos = db.prepare(`
       SELECT 
-        (SELECT COALESCE(SUM(votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id ${list_id && !isNaN(list_id) ? `WHERE r2.tenant_id = ${list_id}` : ''}) +
-        (SELECT COALESCE(SUM(votos_blancos + votos_nulos), 0) FROM results ${list_id && !isNaN(list_id) ? `WHERE tenant_id = ${list_id}` : ''}) as total
+        (SELECT COALESCE(SUM(ar.votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id JOIN voting_locations vl ON r2.local_votacion = vl.nombre WHERE 1=1 ${vlFilter} ${list_id && !isNaN(list_id) ? `AND r2.tenant_id = ${list_id}` : ''}) +
+        (SELECT COALESCE(SUM(r3.votos_blancos + r3.votos_nulos), 0) FROM results r3 JOIN voting_locations vl ON r3.local_votacion = vl.nombre WHERE 1=1 ${vlFilter} ${list_id && !isNaN(list_id) ? `AND r3.tenant_id = ${list_id}` : ''}) as total
     `).get() as any;
 
-    // 5. Mesas details for the map
+    // 5. Mesas details for the map (Most critical for performance)
     const mesas = db.prepare(`
       SELECT 
         e.local_votacion as local, e.mesa as numero, 
         vl.lat, vl.lng,
         (CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) as reportada,
         (CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) as operativa
-      FROM (SELECT local_votacion, mesa FROM electors GROUP BY local_votacion, mesa) e
+      FROM (SELECT local_votacion, mesa FROM electors ${distritoFilter} GROUP BY local_votacion, mesa) e
       JOIN voting_locations vl ON e.local_votacion = vl.nombre
       LEFT JOIN (SELECT id, local_votacion, mesa FROM results GROUP BY local_votacion, mesa) r ON r.local_votacion = e.local_votacion AND r.mesa = e.mesa
       LEFT JOIN (SELECT id, assigned_local, assigned_mesa FROM users WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') GROUP BY assigned_local, assigned_mesa) u ON u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa
+      WHERE 1=1 ${vlFilter}
     `).all();
 
     // 6. Active Coordinators
     const { total_coordinadores } = db.prepare(`
-      SELECT COUNT(*) as total_coordinadores FROM users 
+      SELECT COUNT(*) as total_coordinadores FROM users u
       WHERE role = 'COORDINADOR'
-      ${list_id && !isNaN(list_id) ? `AND assigned_list_id = ${list_id}` : ''}
+      ${districtName ? `AND (UPPER(u.distrito) = UPPER('${districtName}'))` : ''}
+      ${list_id && !isNaN(list_id) ? `AND u.assigned_list_id = ${list_id}` : ''}
     `).get() as any;
 
     // 7. Active Vehicles (Móviles)
     const { total_vehiculos } = db.prepare(`
-      SELECT COUNT(*) as total_vehiculos FROM vehicles
-      ${list_id && !isNaN(list_id) ? `WHERE (assigned_list_id = ${list_id} OR list_id = ${list_id})` : ''}
+      SELECT COUNT(*) as total_vehiculos FROM vehicles v
+      WHERE 1=1
+      ${list_id && !isNaN(list_id) ? `AND (v.assigned_list_id = ${list_id})` : ''}
     `).get() as any;
 
     res.json({
       total_mesas,
-      mesas_operativas: assigned_mesas,
+      mesas_operativas: assigned_mesas || 0,
       op_porcentaje: total_mesas > 0 ? (assigned_mesas / total_mesas) * 100 : 0,
-      mesas_reportadas: reported_mesas,
-      mesas_pendientes: total_mesas - reported_mesas,
+      mesas_reportadas: reported_mesas || 0,
+      mesas_pendientes: total_mesas - (reported_mesas || 0),
       porcentaje: total_mesas > 0 ? (reported_mesas / total_mesas) * 100 : 0,
       votos_procesados: votos.total || 0,
-      total_coordinadores,
-      total_vehiculos,
+      total_coordinadores: total_coordinadores || 0,
+      total_vehiculos: total_vehiculos || 0,
       mesas
     });
   } catch (err: any) {
+    console.error('[DIAD COVERAGE ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });

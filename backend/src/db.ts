@@ -318,6 +318,8 @@ addColumnIfNotExists("capture_conflicts", "consent_a", "INTEGER DEFAULT 0");
 addColumnIfNotExists("capture_conflicts", "consent_b", "INTEGER DEFAULT 0");
 addColumnIfNotExists("capture_conflicts", "list_id_a", "INTEGER");
 addColumnIfNotExists("capture_conflicts", "list_id_b", "INTEGER");
+addColumnIfNotExists("capture_conflicts", "resolved_at", "DATETIME");
+addColumnIfNotExists("capture_conflicts", "winner_capture_id", "INTEGER");
 
 // 🛠️ HEAVY ONE-TIME MIGRATIONS
 try {
@@ -409,6 +411,11 @@ db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_campaign ON electors(campaign_id)").run();
 db.prepare("CREATE INDEX IF NOT EXISTS idx_whatsapp_terminals_campaign ON whatsapp_terminals(campaign_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors (distrito)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_voting_locations_distrito ON voting_locations (distrito)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_results_local_mesa ON results (local_votacion, mesa)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_acta_results_acta ON acta_results (acta_id)").run();
+db.prepare("CREATE INDEX IF NOT EXISTS idx_acta_results_lista ON acta_results (lista_id)").run();
 
 
 export default db;
