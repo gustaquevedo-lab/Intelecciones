@@ -504,15 +504,15 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
         const d = effectiveDistrict; // Already normalized in getDistrict
         if (tableAlias === 'u') {
           sql += ` AND (
-            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.distrito, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ? OR 
-            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(l2.ciudad, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?) OR 
-            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(c2.distrito, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?)
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(u.distrito), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ? OR 
+            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(l2.ciudad), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?) OR 
+            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(c2.distrito), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?)
           )`;
           params.push(d, d, d);
         } else if (tableAlias === 'ec') {
           sql += ` AND (
-            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(e.ciudad, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ? OR 
-            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(e.distrito, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(e.ciudad), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ? OR 
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(e.distrito), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?
           )`;
           params.push(d, d);
         } else if (tableAlias === 'whatsapp_messages') {
@@ -522,8 +522,8 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
           const colA = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
           const colB = (tableAlias === 'e' || tableAlias === 'loc') ? 'distrito' : 'ciudad';
           sql += ` AND (
-            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${tableAlias}.${colA}, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ? OR 
-            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${tableAlias}.${colB}, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${tableAlias}.${colA}), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ? OR 
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${tableAlias}.${colB}), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?
           )`;
           params.push(d, d);
         }
