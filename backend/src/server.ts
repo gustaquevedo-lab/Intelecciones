@@ -2692,7 +2692,8 @@ app.get('/api/stats/command', (req, res) => {
     
   // Dynamic goal: SUM(goal) from lists filtered by district/security
   const listsGoal = db.prepare(`SELECT SUM(goal) as total FROM lists l WHERE 1=1 ${secL.sql}`).get(...secL.params) as any;
-  const globalGoal = Math.max(1, parseInt(listsGoal?.total || '0') || parseInt(settings.find(s => s.key === 'goal')?.value || '1000'));
+  const dbGoalSetting = db.prepare("SELECT value FROM settings WHERE key = 'goal'").get() as any;
+  const globalGoal = Math.max(1, parseInt(listsGoal?.total || '0') || parseInt(dbGoalSetting?.value || '1000'));
   console.time(`STATS_COMMAND_${requesterId}`);
   try {
     // --- Parameterized list filter (avoids = NULL bug and SQL injection) ---
