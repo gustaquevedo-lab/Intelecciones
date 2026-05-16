@@ -492,16 +492,25 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       let sql = '';
       let params: any[] = [];
 
-      // Filter by campaign if user is JEFE_CAMPANA
-      if (role === 'JEFE_CAMPANA' && user?.campaign_id) {
-         if (tableAlias === 'e') {
-           sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
-           params.push(user.campaign_id);
-         } else if (tableAlias === 'u' || tableAlias === 'l' || tableAlias === 'c') {
-           const col = (tableAlias === 'c') ? 'id' : 'assigned_campaign_id';
-           const finalCol = (tableAlias === 'l') ? 'campaign_id' : col;
-           sql += ` AND ${tableAlias}.${finalCol} = ?`;
-           params.push(user.campaign_id);
+      // Filter by campaign or district if user is JEFE_CAMPANA
+      if (role === 'JEFE_CAMPANA') {
+         const hasCampaign = !!user?.campaign_id;
+         const hasDistrict = !!user?.distrito;
+
+         if (hasDistrict) {
+            // If they have a district, they see EVERYTHING in that district (multi-campaign support)
+            // This is handled by the 'effectiveDistrict' logic below
+         } else if (hasCampaign) {
+            // Fallback to single campaign if no district is assigned
+            if (tableAlias === 'e') {
+              sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
+              params.push(user.campaign_id);
+            } else if (tableAlias === 'u' || tableAlias === 'l' || tableAlias === 'c') {
+              const col = (tableAlias === 'c') ? 'id' : 'assigned_campaign_id';
+              const finalCol = (tableAlias === 'l') ? 'campaign_id' : col;
+              sql += ` AND ${tableAlias}.${finalCol} = ?`;
+              params.push(user.campaign_id);
+            }
          }
       }
 

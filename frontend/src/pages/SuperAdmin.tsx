@@ -352,6 +352,7 @@ Status: ${error.response?.status || 'N/A'}
   const [newUserMesa, setNewUserMesa] = useState<number | null>(null);
   const [newUserParent, setNewUserParent] = useState('');
   const [newUserTelefono, setNewUserTelefono] = useState('');
+  const [newUserDistrito, setNewUserDistrito] = useState('');
   // List Form
   const [newListCiudad, setNewListCiudad] = useState('');
   const [newListCampaign, setNewListCampaign] = useState('');
@@ -560,7 +561,7 @@ Status: ${error.response?.status || 'N/A'}
         photo_url: userProfilePreview?.photo_url,
         parent_id: newUserParent || null,
         telefono: newUserTelefono || null,
-        distrito: activeDistrict || null
+        distrito: newUserDistrito || activeDistrict || null
       });
       setShowModal(null);
       setNewUserLocal('');
@@ -588,7 +589,7 @@ Status: ${error.response?.status || 'N/A'}
         photo_url: userProfilePreview?.photo_url,
         parent_id: newUserParent || null,
         telefono: newUserTelefono || null,
-        distrito: editingUser.distrito || null
+        distrito: newUserDistrito || null
       });
       setShowModal(null);
       setEditingUser(null);
@@ -2378,6 +2379,7 @@ Status: ${error.response?.status || 'N/A'}
                     setNewUserMesa(u.assigned_mesa || null);
                     setNewUserParent(u.parent_id?.toString() || '');
                     setNewUserTelefono(u.telefono || '');
+                    setNewUserDistrito(u.distrito || '');
                     setUserProfilePreview({ photo_url: u.photo_url, nombre: u.nombre });
                     setIsUserVerified(!!u.ci);
                     setShowModal('user'); 
@@ -2897,13 +2899,28 @@ Status: ${error.response?.status || 'N/A'}
                         </div>
 
                         {newUserRole === 'JEFE_CAMPANA' && (
-                          <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
-                            <label>Campaña que lidera</label>
-                            <select className="modern-input-premium-styled" value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
-                              <option value="">Seleccione Campaña...</option>
-                              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                          </div>
+                          <>
+                            <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
+                              <label>Campaña Principal</label>
+                              <select className="modern-input-premium-styled" value={newUserCampaign} onChange={e => setNewUserCampaign(e.target.value)} required>
+                                <option value="">Seleccione Campaña...</option>
+                                {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
+                              <label>Distrito bajo su mando (Opcional)</label>
+                              <input 
+                                className="modern-input-premium-styled" 
+                                placeholder="Ej: PEDRO JUAN CABALLERO" 
+                                value={newUserDistrito} 
+                                onChange={e => setNewUserDistrito(e.target.value.toUpperCase())}
+                                list="districts-list"
+                              />
+                              <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>
+                                Si asigna un distrito, este Jefe podrá ver TODAS las campañas y listas de esa ciudad.
+                              </p>
+                            </div>
+                          </>
                         )}
 
                         {(newUserRole === 'PADRINO' || newUserRole === 'COORDINADOR' || newUserRole === 'SUBJEFE') && (
@@ -3060,35 +3077,40 @@ Status: ${error.response?.status || 'N/A'}
                         </div>
 
                         <div className="form-group">
-                          <label>Número de Lista (Candidato de Intendente)</label>
-                          {newListType === 'INTENDENTE' ? (
-                            <input className="modern-input-premium-styled" placeholder="Ej: 2" value={newListNumber} onChange={e => setNewListNumber(e.target.value)} required />
-                          ) : (
-                            <select 
+                          <label>Número de Lista</label>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                            <input 
                               className="modern-input-premium-styled" 
+                              placeholder="Ej: 2" 
                               value={newListNumber} 
-                              onChange={e => {
-                                const val = e.target.value;
-                                setNewListNumber(val);
-                                // Auto-fill campaign and city if an intendente is picked
-                                const linkedList = lists.find(l => l.type === 'INTENDENTE' && l.list_number === val && (!newListCiudad || l.ciudad === newListCiudad));
-                                if (linkedList) {
-                                  if (linkedList.campaign_id) setNewListCampaign(linkedList.campaign_id.toString());
-                                  if (linkedList.ciudad) setNewListCiudad(linkedList.ciudad);
-                                }
-                              }} 
-                              required
-                            >
-                              <option value="">Seleccione Lista Patrón...</option>
-                              {lists.filter(l => 
-                                l.type === 'INTENDENTE' && 
-                                (newListCiudad ? l.ciudad?.toUpperCase() === newListCiudad.toUpperCase() : true) &&
-                                (newListCampaign ? l.campaign_id?.toString() === newListCampaign.toString() : true)
-                              ).map(l => (
-                                <option key={l.id} value={l.list_number}>Lista {l.list_number} — {l.candidate_alias || l.candidate_nombre} ({l.ciudad || 'Sin Ciudad'})</option>
-                              ))}
-                            </select>
-                          )}
+                              onChange={e => setNewListNumber(e.target.value)} 
+                              required 
+                            />
+                            {newListType === 'CONCEJAL' && (
+                              <select 
+                                className="modern-input-premium-styled" 
+                                style={{ fontSize: '0.65rem', padding: '0.4rem', height: 'auto', background: 'rgba(255,255,255,0.02)' }}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  if (!val) return;
+                                  setNewListNumber(val);
+                                  const linkedList = lists.find(l => l.type === 'INTENDENTE' && l.list_number === val && (!newListCiudad || l.ciudad === newListCiudad));
+                                  if (linkedList) {
+                                    if (linkedList.campaign_id) setNewListCampaign(linkedList.campaign_id.toString());
+                                    if (linkedList.ciudad) setNewListCiudad(linkedList.ciudad);
+                                  }
+                                }}
+                              >
+                                <option value="">Auto-vínculo con Intendente...</option>
+                                {lists.filter(l => 
+                                  l.type === 'INTENDENTE' && 
+                                  (newListCiudad ? l.ciudad?.toUpperCase() === newListCiudad.toUpperCase() : true)
+                                ).map(l => (
+                                  <option key={l.id} value={l.list_number}>Usar # de Lista {l.list_number} ({l.candidate_alias || l.candidate_nombre})</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                         </div>
 
                         <div className="form-group">
