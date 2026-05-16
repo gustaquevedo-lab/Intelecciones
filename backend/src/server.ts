@@ -1006,6 +1006,7 @@ app.get('/api/admin/system/health', (req, res) => {
 
 app.get('/api/admin/audit', (req, res) => {
   try {
+    const { action, limit = 100 } = req.query;
     const sec = getSecurityFilter(req, 'u');
     let query = `
       SELECT a.*, u.username, u.distrito as user_district
