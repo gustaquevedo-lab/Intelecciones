@@ -41,7 +41,7 @@ const RootRedirect = () => {
   console.log('[Root] User authenticated, role:', role);
 
   if (role === 'SUPERUSUARIO') return <Navigate to="/admin" replace />;
-  if (role === 'JEFE_CAMPANA' || role === 'CANDIDATO') return <Navigate to="/comando" replace />;
+  if (role === 'JEFE_CAMPANA' || role === 'CANDIDATO' || role === 'SUBJEFE') return <Navigate to="/comando" replace />;
   if (role === 'MIEMBRO_DE_MESA') return <Navigate to="/veedor" replace />;
   return <Navigate to="/coordinador" replace />;
 };

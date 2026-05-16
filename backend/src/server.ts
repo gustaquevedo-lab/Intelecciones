@@ -488,16 +488,16 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     let distColumn = 'distrito';
     if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
 
-    // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña sees their campaign
-    if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA') {
+    // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña and Subjefes see their scope
+    if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO') {
       let sql = '';
       let params: any[] = [];
 
       // 1. Determine the effective district to filter by
       let effectiveDistrict = getDistrict(req);
       
-      // CRITICAL: If they are a JEFE_CAMPANA, their profile district ALWAYS overrides or acts as fallback
-      if (role === 'JEFE_CAMPANA' && user?.distrito) {
+      // CRITICAL: If they are a JEFE_CAMPANA/SUBJEFE, their profile district ALWAYS overrides or acts as fallback
+      if ((role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO') && user?.distrito) {
         effectiveDistrict = user.distrito;
       }
 
@@ -550,7 +550,13 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
         }
       }
 
-      const listId = getListId(req);
+      let listId = getListId(req);
+      
+      // FORCED LIST ISOLATION for Subjefes and Padrinos (they are lords, but only of THEIR list)
+      if ((role === 'SUBJEFE' || role === 'PADRINO') && user?.assigned_list_id) {
+          listId = user.assigned_list_id;
+      }
+
       if (listId && !isNaN(listId)) {
          if (tableAlias === 'l') {
            sql += ` AND ${tableAlias}.id = ?`;
@@ -605,7 +611,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     }
 
     // 4. Strict Hierarchy Isolation (for users/lists)
-    if ((tableAlias === 'u' || tableAlias === 'l') && role !== 'JEFE_CAMPANA') {
+    if ((tableAlias === 'u' || tableAlias === 'l') && !['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO'].includes(role)) {
       if (user.assigned_list_id) {
          if (tableAlias === 'l') sql += ` AND ${tableAlias}.id = ?`;
          else if (tableAlias === 'u') sql += ` AND ${tableAlias}.assigned_list_id = ?`;
@@ -758,7 +764,7 @@ app.get('/api/electors/:ci', (req, res) => {
   const role = getRole(req);
 
   let distritoFilter = '';
-  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA' && user_id) {
+  if (!['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO'].includes(role) && user_id) {
     const user = db.prepare(`
       SELECT c.distrito 
       FROM users u 

@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 const MODULES = [
-  { id: 'coordinador',    label: 'Coordinador', short: 'Coord',  path: '/coordinador',   icon: Users,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'REGISTRY' },
-  { id: 'comando',        label: 'Comando',     short: 'Cmd',    path: '/comando',        icon: Map,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'COMMAND_CENTER' },
-  { id: 'logistics',      label: 'Logística',   short: 'Log',    path: '/logistica',      icon: Truck,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'LOGISTICS' },
-  { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA'], moduleKey: 'DAY_D' },
-  { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'COMMUNICATIONS' },
-  { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
+  { id: 'coordinador',    label: 'Coordinador', short: 'Coord',  path: '/coordinador',   icon: Users,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'REGISTRY' },
+  { id: 'comando',        label: 'Comando',     short: 'Cmd',    path: '/comando',        icon: Map,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMAND_CENTER' },
+  { id: 'logistics',      label: 'Logística',   short: 'Log',    path: '/logistica',      icon: Truck,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'LOGISTICS' },
+  { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA','SUBJEFE'], moduleKey: 'DAY_D' },
+  { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMUNICATIONS' },
+  { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
   { id: 'admin',          label: 'Admin',       short: 'Admin',  path: '/admin',          icon: Shield,       roles: ['SUPERUSUARIO'],                                           moduleKey: 'SUPER_ADMIN' },
 ];
 
@@ -25,6 +25,7 @@ export const ModuleSwitcher: React.FC = () => {
     user.role === 'SUPERUSUARIO' ||
     user.role === 'JEFE_CAMPANA' ||
     user.role === 'PADRINO' ||
+    user.role === 'SUBJEFE' ||
     user.role === 'MIEMBRO_DE_MESA';
   if (!canSeeAny) return null;
 

@@ -24,7 +24,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const [lists, setLists] = useState<any[]>([]);
 
   useEffect(() => {
-    if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO') {
+    if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO' || user?.role === 'SUBJEFE') {
       api.get('/lists').then(res => setLists(res.data)).catch(err => console.error(err));
     }
   }, [user]);
@@ -35,13 +35,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
     'SUPERUSUARIO':    'Super Admin',
     'JEFE_CAMPANA':    'Jefe de Campaña',
     'PADRINO':         'Padrino',
+    'SUBJEFE':         'Sub Jefe',
     'COORDINADOR':     'Coordinador',
     'MIEMBRO_DE_MESA': 'Miembro de Mesa'
   };
   const currentRoleLabel = user ? (roleLabels[user.role] ?? 'Usuario') : 'Usuario';
 
   const showDistrictSelector = user?.role === 'SUPERUSUARIO' || (user?.role === 'JEFE_CAMPANA' && !user?.distrito);
-  const showListSelector = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+  const showListSelector = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
   const [districts, setDistricts] = useState<string[]>([]);
   
   useEffect(() => {
