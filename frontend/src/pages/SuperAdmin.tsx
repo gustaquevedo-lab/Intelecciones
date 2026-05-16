@@ -31,7 +31,9 @@ import {
   User,
   Copy,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
@@ -205,6 +207,7 @@ const SuperAdmin = () => {
   const [pendingLogistics, setPendingLogistics] = useState<any[]>([]);
   const [captures, setCaptures] = useState<any[]>([]);
   const [systemStats, setSystemStats] = useState<any>(null);
+  const [selectedCityForLists, setSelectedCityForLists] = useState<string | null>(null);
   
   // Audit Filters
   const [auditFilterAction, setAuditFilterAction] = useState('');
@@ -1295,25 +1298,139 @@ Status: ${error.response?.status || 'N/A'}
   );
 
   const renderLists = () => {
+    // 1. Group lists by city for the overview
+    const listsByCity = lists.reduce((acc: Record<string, any[]>, list) => {
+      const city = list.ciudad || 'GENERAL';
+      if (!acc[city]) acc[city] = [];
+      acc[city].push(list);
+      return acc;
+    }, {});
+
+    const cityStats = Object.keys(listsByCity).map(city => ({
+      name: city,
+      count: listsByCity[city].length,
+      intendentes: listsByCity[city].filter(l => l.type === 'INTENDENTE').length,
+      concejales: listsByCity[city].filter(l => l.type === 'CONCEJAL').length
+    })).sort((a, b) => a.name.localeCompare(b.name));
+
     const filteredLists = lists.filter(l => {
       const matchesSearch = !listSearchTerm || 
         l.candidate_nombre?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
         (l as any).candidate_alias?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
         l.list_number?.toString().includes(listSearchTerm);
-      const matchesCity = !listCityFilter || l.ciudad === listCityFilter;
+      const matchesCity = selectedCityForLists ? l.ciudad === selectedCityForLists : (!listCityFilter || l.ciudad === listCityFilter);
       const matchesType = !listTypeFilter || l.type === listTypeFilter;
       return matchesSearch && matchesCity && matchesType;
     });
 
+    if (!selectedCityForLists) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', marginBottom: '0.4rem' }}>Listas Electorales</h2>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>Distribución geográfica de candidatos y listas por distrito</p>
+            </div>
+            <button className="action-btn-primary" onClick={() => {
+              setEditingList(null);
+              setNewListCiudad('');
+              setNewListNumber('');
+              setNewListCandidateCI('');
+              setCandidatePreview(null);
+              setListPhotoUrl('');
+              setNewListCampaign(campaigns[0]?.id?.toString() || '');
+              setNewListType('INTENDENTE');
+              setNewListOption('');
+              setNewListGoal(1000);
+              setNewListAlias('');
+              setIsCandidateVerified(false);
+              setShowModal('list');
+            }}>
+              <Plus size={18} /> Registrar Nueva Lista
+            </button>
+          </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {cityStats.map(city => (
+              <motion.div 
+                key={city.name}
+                whileHover={{ y: -5, scale: 1.02 }}
+                onClick={() => setSelectedCityForLists(city.name)}
+                className="card-premium-styled"
+                style={{ 
+                  cursor: 'pointer',
+                  padding: '2rem',
+                  borderLeft: '4px solid var(--plra-400)',
+                  background: 'linear-gradient(145deg, var(--surface), rgba(59, 130, 246, 0.05))',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.5rem',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.05 }}>
+                  <MapPin size={120} />
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', marginBottom: '0.25rem' }}>{city.name}</h3>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Distrito Electoral</p>
+                  </div>
+                  <div style={{ 
+                    background: 'rgba(59, 130, 246, 0.1)', color: 'var(--plra-300)', 
+                    padding: '0.5rem 1rem', borderRadius: '12px', fontWeight: 900, fontSize: '1.2rem'
+                  }}>
+                    {city.count}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>Intendentes</p>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--plra-200)' }}>{city.intendentes}</p>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>Concejales</p>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--yellow)' }}>{city.concejales}</p>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', 
+                  color: 'var(--plra-400)', fontWeight: 800, fontSize: '0.8rem' 
+                }}>
+                  Gestionar Listas <ArrowRight size={14} />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Listas Electorales</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <button 
+              onClick={() => setSelectedCityForLists(null)}
+              className="icon-btn"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '0.75rem' }}
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white' }}>
+                Listas en <span style={{ color: 'var(--plra-300)' }}>{selectedCityForLists}</span>
+              </h2>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.8rem', fontWeight: 700 }}>{filteredLists.length} CANDIDATOS REGISTRADOS</p>
+            </div>
+          </div>
           <button className="action-btn-primary" onClick={() => {
             setEditingList(null);
-            setNewListCiudad('');
+            setNewListCiudad(selectedCityForLists || '');
             setNewListNumber('');
             setNewListCandidateCI('');
             setCandidatePreview(null);
@@ -1332,7 +1449,7 @@ Status: ${error.response?.status || 'N/A'}
 
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '1fr 200px 200px auto', 
+          gridTemplateColumns: '1fr 200px auto', 
           gap: '1rem', 
           padding: '1rem', 
           background: 'rgba(255,255,255,0.02)', 
@@ -1353,15 +1470,6 @@ Status: ${error.response?.status || 'N/A'}
           <select 
             className="modern-input-premium-styled" 
             style={{ marginBottom: 0 }}
-            value={listCityFilter} 
-            onChange={e => setListCityFilter(e.target.value)}
-          >
-            <option value="">Todas las Ciudades</option>
-            {cities.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select 
-            className="modern-input-premium-styled" 
-            style={{ marginBottom: 0 }}
             value={listTypeFilter} 
             onChange={e => setListTypeFilter(e.target.value)}
           >
@@ -1369,10 +1477,10 @@ Status: ${error.response?.status || 'N/A'}
             <option value="INTENDENTE">INTENDENTE</option>
             <option value="CONCEJAL">CONCEJAL</option>
           </select>
-          {(listSearchTerm || listCityFilter || listTypeFilter) && (
+          {(listSearchTerm || listTypeFilter) && (
             <button 
               className="icon-btn" 
-              onClick={() => { setListSearchTerm(''); setListCityFilter(''); setListTypeFilter(''); }}
+              onClick={() => { setListSearchTerm(''); setListTypeFilter(''); }}
               style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)' }}
             >
               <X size={18} />
@@ -1412,7 +1520,6 @@ Status: ${error.response?.status || 'N/A'}
               sortKey: 'candidate_alias'
             },
             { header: 'Campaña', accessor: 'campaign_name', sortKey: 'campaign_name' },
-            { header: 'Ciudad', accessor: 'ciudad', sortKey: 'ciudad' },
             { 
               header: 'Tipo', 
               accessor: (l: any) => (

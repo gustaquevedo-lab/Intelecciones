@@ -885,7 +885,7 @@ const CommandCenter = () => {
           >
             {showSidebar ? <X size={20} /> : <BarChart3 size={20} />}
           </button>
-        ))}
+        )}
 
         <aside style={{
           overflowY: 'auto',
