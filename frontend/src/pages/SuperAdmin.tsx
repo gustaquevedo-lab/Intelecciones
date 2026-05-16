@@ -924,30 +924,30 @@ Status: ${error.response?.status || 'N/A'}
           api.get('/lists'),
           api.get('/campaigns')
         ]);
-        setStats(summary.data);
-        setPredictions(predictionsRes.data);
-        setCaptures(allCaptures.data);
-        setLocales(allLocales.data);
-        setUsers(allUsers.data);
-        setLists(allLists.data);
-        setCampaigns(allCamps.data);
+        setStats(summary.data || null);
+        setPredictions(predictionsRes.data || null);
+        setCaptures(Array.isArray(allCaptures.data) ? allCaptures.data : []);
+        setLocales(Array.isArray(allLocales.data) ? allLocales.data : []);
+        setUsers(Array.isArray(allUsers.data) ? allUsers.data : []);
+        setLists(Array.isArray(allLists.data) ? allLists.data : []);
+        setCampaigns(Array.isArray(allCamps.data) ? allCamps.data : []);
       } else if (activeTab === 'campaigns') {
         const res = await api.get('/campaigns');
-        setCampaigns(res.data);
+        setCampaigns(Array.isArray(res.data) ? res.data : []);
       } else if (activeTab === 'lists') {
         const res = await api.get('/lists');
-        setLists(res.data);
+        setLists(Array.isArray(res.data) ? res.data : []);
         const camps = await api.get('/campaigns');
-        setCampaigns(camps.data);
+        setCampaigns(Array.isArray(camps.data) ? camps.data : []);
       } else if (activeTab === 'users') {
         const [res, lts, camps] = await Promise.all([
           api.get('/users'),
           api.get('/lists'),
           api.get('/campaigns')
         ]);
-        setUsers(res.data);
-        setLists(lts.data);
-        setCampaigns(camps.data);
+        setUsers(Array.isArray(res.data) ? res.data : []);
+        setLists(Array.isArray(lts.data) ? lts.data : []);
+        setCampaigns(Array.isArray(camps.data) ? camps.data : []);
       } else if (activeTab === 'audit') {
         await fetchAuditData();
       } else if (activeTab === 'logistics') {
@@ -955,13 +955,13 @@ Status: ${error.response?.status || 'N/A'}
           api.get('/vehicles'),
           api.get('/logistics/pending')
         ]);
-        setVehicles(v.data);
-        setPendingLogistics(p.data);
+        setVehicles(Array.isArray(v.data) ? v.data : []);
+        setPendingLogistics(Array.isArray(p.data) ? p.data : []);
         const lts = await api.get('/lists');
-        setLists(lts.data);
+        setLists(Array.isArray(lts.data) ? lts.data : []);
       } else if (activeTab === 'locales') {
         const res = await api.get('/voting-locations');
-        setLocales(res.data);
+        setLocales(Array.isArray(res.data) ? res.data : []);
       } else if (activeTab === 'settings') {
         const res = await api.get('/settings');
         if (res.data.election_date) {
@@ -1063,25 +1063,25 @@ Status: ${error.response?.status || 'N/A'}
         <StatCard 
           icon={UsersIcon} 
           label="Usuarios Activos" 
-          value={selectedCampaignId === 'all' ? (stats?.users || 0) : users.filter(u => u.assigned_campaign_id?.toString() === selectedCampaignId).length} 
+          value={selectedCampaignId === 'all' ? (stats?.users || 0) : (Array.isArray(users) ? users.filter(u => u.assigned_campaign_id?.toString() === selectedCampaignId).length : 0)} 
           color="var(--plra-300)" 
         />
         <StatCard 
           icon={Activity} 
           label="Capturas Totales" 
-          value={selectedCampaignId === 'all' ? (stats?.captures || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId).length} 
+          value={selectedCampaignId === 'all' ? (stats?.captures || 0) : (Array.isArray(captures) ? captures.filter(c => c.campaign_id?.toString() === selectedCampaignId).length : 0)} 
           color="var(--plra-100)" 
         />
         <StatCard 
           icon={CheckCircle2} 
           label="Electores CASA" 
-          value={selectedCampaignId === 'all' ? (stats?.green || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'GREEN').length} 
+          value={selectedCampaignId === 'all' ? (stats?.green || 0) : (Array.isArray(captures) ? captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'GREEN').length : 0)} 
           color="var(--green)" 
         />
         <StatCard 
           icon={Flag} 
           label="Familiares" 
-          value={selectedCampaignId === 'all' ? (stats?.yellow || 0) : captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'YELLOW').length} 
+          value={selectedCampaignId === 'all' ? (stats?.yellow || 0) : (Array.isArray(captures) ? captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'YELLOW').length : 0)} 
           color="var(--yellow)" 
         />
       </div>
@@ -1148,7 +1148,7 @@ Status: ${error.response?.status || 'N/A'}
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           <ZoomControl position="bottomright" />
           <MarkerClusterGroup>
-            {captures
+            {(Array.isArray(captures) ? captures : [])
               .filter(c => c.lat && (selectedCampaignId === 'all' || c.campaign_id?.toString() === selectedCampaignId))
               .map(c => (
               <Marker 
@@ -1173,7 +1173,7 @@ Status: ${error.response?.status || 'N/A'}
               </Marker>
             ))}
           </MarkerClusterGroup>
-          {locales.filter(l => l.lat).map(l => (
+          {(Array.isArray(locales) ? locales : []).filter(l => l.lat).map(l => (
             <Marker 
               key={`loc-${l.cod_local}`} 
               position={[l.lat, l.lng]} 
@@ -1202,9 +1202,9 @@ Status: ${error.response?.status || 'N/A'}
         </div>
         <ManagementTable 
           isLoading={isLoading}
-          data={campaigns.map(camp => {
-            const campCaptures = captures.filter(c => c.campaign_id === camp.id).length;
-            const campUsers = users.filter(u => u.assigned_campaign_id === camp.id).length;
+          data={(Array.isArray(campaigns) ? campaigns : []).map(camp => {
+            const campCaptures = (Array.isArray(captures) ? captures : []).filter(c => c.campaign_id === camp.id).length;
+            const campUsers = (Array.isArray(users) ? users : []).filter(u => u.assigned_campaign_id === camp.id).length;
             const progress = camp.goal ? Math.min(100, (campCaptures / camp.goal) * 100) : 0;
             return { ...camp, campCaptures, campUsers, progress };
           })}
@@ -1326,7 +1326,7 @@ Status: ${error.response?.status || 'N/A'}
 
   const renderLists = () => {
     // 1. Group lists by city for the overview
-    const listsByCity = lists.reduce((acc: Record<string, any[]>, list) => {
+    const listsByCity = (Array.isArray(lists) ? lists : []).reduce((acc: Record<string, any[]>, list) => {
       const city = list.ciudad || 'GENERAL';
       if (!acc[city]) acc[city] = [];
       acc[city].push(list);
@@ -1336,8 +1336,8 @@ Status: ${error.response?.status || 'N/A'}
     const cityStats = Object.keys(listsByCity).map(city => ({
       name: city,
       count: listsByCity[city].length,
-      intendentes: listsByCity[city].filter(l => l.type === 'INTENDENTE').length,
-      concejales: listsByCity[city].filter(l => l.type === 'CONCEJAL').length
+      intendentes: (Array.isArray(listsByCity[city]) ? listsByCity[city] : []).filter(l => l.type === 'INTENDENTE').length,
+      concejales: (Array.isArray(listsByCity[city]) ? listsByCity[city] : []).filter(l => l.type === 'CONCEJAL').length
     })).sort((a, b) => a.name.localeCompare(b.name));
 
     const filteredLists = lists.filter(l => {
@@ -1827,7 +1827,7 @@ Status: ${error.response?.status || 'N/A'}
             )
           }
         ]}
-        data={locales.filter(l => {
+        data={(Array.isArray(locales) ? locales : []).filter(l => {
           const matchesSearch = l.nombre.toLowerCase().includes(localeSearchTerm.toLowerCase());
           const matchesCity = !localeCityFilter || l.ciudad === localeCityFilter || l.distrito === localeCityFilter;
           return matchesSearch && matchesCity;
@@ -1839,7 +1839,7 @@ Status: ${error.response?.status || 'N/A'}
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           <ZoomControl position="bottomright" />
           <MapRecenter center={mapCenter} zoom={mapZoom} />
-          {locales.filter(l => l.lat).map(l => (
+          {(Array.isArray(locales) ? locales : []).filter(l => l.lat).map(l => (
             <Marker key={l.cod_local} position={[parseFloat(l.lat), parseFloat(l.lng)]} icon={createCustomIcon('var(--plra-500)', l.icon, 28)}>
               <Popup>
                 <div style={{ color: 'black' }}>
@@ -2270,7 +2270,7 @@ Status: ${error.response?.status || 'N/A'}
   );
 
   const renderUsers = () => {
-    const filteredUsers = users.filter(u => {
+    const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
       const matchesSearch = !userSearchTerm || 
         u.username?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
         u.nombre?.toLowerCase().includes(userSearchTerm.toLowerCase());
