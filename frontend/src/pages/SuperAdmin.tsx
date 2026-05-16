@@ -745,11 +745,6 @@ Status: ${error.response?.status || 'N/A'}
         .filter(n => n > 0);
       setTakenOptions(options);
 
-      // Auto-select list number ONLY if there is exactly one mayor list in the campaign
-      const intendants = campaignLists.filter(l => l.type === 'INTENDENTE');
-      if (newListType === 'CONCEJAL' && intendants.length === 1 && !editingList && !newListNumber) {
-        setNewListNumber(intendants[0].list_number);
-      }
     }
   }, [newListCampaign, newListNumber, newListType, lists, editingList]);
 
