@@ -492,43 +492,45 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       let sql = '';
       let params: any[] = [];
 
-      // Filter by campaign or district if user is JEFE_CAMPANA
-      if (role === 'JEFE_CAMPANA') {
-         const hasCampaign = !!user?.campaign_id;
-         const hasDistrict = !!user?.distrito;
+      // 1. Determine the effective district to filter by
+      let effectiveDistrict = getDistrict(req);
+      
+      // CRITICAL: If they are a JEFE_CAMPANA, their profile district ALWAYS overrides or acts as fallback
+      if (role === 'JEFE_CAMPANA' && user?.distrito) {
+        effectiveDistrict = user.distrito;
+      }
 
-         if (hasDistrict) {
-            // If they have a district, they see EVERYTHING in that district (multi-campaign support)
-            // This is handled by the 'effectiveDistrict' logic below
-         } else if (hasCampaign) {
-            // Fallback to single campaign if no district is assigned
+      if (effectiveDistrict) {
+        const d = effectiveDistrict.toUpperCase().trim();
+        if (tableAlias === 'u') {
+          sql += ` AND (UPPER(u.distrito) = ? OR EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND UPPER(l2.ciudad) = ?) OR EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND UPPER(c2.distrito) = ?))`;
+          params.push(d, d, d);
+        } else if (tableAlias === 'ec') {
+          sql += ` AND (UPPER(e.ciudad) = ? OR UPPER(e.distrito) = ?)`;
+          params.push(d, d);
+        } else if (tableAlias === 'whatsapp_messages') {
+           // No direct district filter for raw messages yet
+        } else {
+          // For lists, electors, campaigns, voting_locations
+          const colA = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
+          const colB = (tableAlias === 'e' || tableAlias === 'loc') ? 'distrito' : 'ciudad';
+          sql += ` AND (UPPER(${tableAlias}.${colA}) = ? OR UPPER(${tableAlias}.${colB}) = ?)`;
+          params.push(d, d);
+        }
+      }
+
+      // 2. Campaign/List Isolation for non-SuperUsers (only if no district is assigned)
+      if (role === 'JEFE_CAMPANA' && !effectiveDistrict) {
+        if (user?.campaign_id) {
             if (tableAlias === 'e') {
               sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
               params.push(user.campaign_id);
-            } else if (tableAlias === 'u' || tableAlias === 'l' || tableAlias === 'c') {
+            } else {
               const col = (tableAlias === 'c') ? 'id' : 'assigned_campaign_id';
               const finalCol = (tableAlias === 'l') ? 'campaign_id' : col;
               sql += ` AND ${tableAlias}.${finalCol} = ?`;
               params.push(user.campaign_id);
             }
-         }
-      }
-
-      let effectiveDistrict = normalizedActiveDistrict;
-      if (role === 'JEFE_CAMPANA' && user?.distrito) {
-        effectiveDistrict = user.distrito.toUpperCase().trim();
-      }
-
-      if (effectiveDistrict && effectiveDistrict !== 'NULL' && effectiveDistrict !== 'UNDEFINED' && effectiveDistrict !== 'GLOBAL' && effectiveDistrict !== '') {
-        if (tableAlias === 'u') {
-          sql += ` AND (u.distrito = ? OR EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND l2.ciudad = ?) OR EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND c2.distrito = ?))`;
-          params.push(effectiveDistrict, effectiveDistrict, effectiveDistrict);
-        } else if (tableAlias !== 'ec' && tableAlias !== 'whatsapp_messages') {
-          sql += ` AND (${tableAlias}.${distColumn} = ? OR (CASE WHEN '${tableAlias}'='e' THEN ${tableAlias}.distrito ELSE '' END) = ?)`;
-          params.push(effectiveDistrict, effectiveDistrict);
-        } else if (tableAlias === 'ec') {
-          sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
-          params.push(effectiveDistrict, effectiveDistrict);
         }
       }
 
@@ -557,7 +559,8 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
           const listCol = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
           sql += ` AND (
             ${tableAlias}.${listCol} IS NULL OR 
-            NOT EXISTS (SELECT 1 FROM users ul WHERE ul.assigned_list_id = ${tableAlias}.${listCol} AND ul.role = 'SUBJEFE')
+            ${tableAlias}.role IN ('SUBJEFE', 'PADRINO') OR
+            NOT EXISTS (SELECT 1 FROM users ul WHERE ul.assigned_list_id = ${tableAlias}.${listCol} AND ul.role IN ('SUBJEFE', 'PADRINO'))
           )`;
       }
 
@@ -1753,6 +1756,7 @@ app.get('/api/users', (req, res) => {
         u.*, 
         l.list_number, 
         l.type as list_type, 
+        COALESCE(c.id, u.assigned_campaign_id) as effective_campaign_id,
         c.name as campaign_name,
         p.nombre as parent_name
       FROM users u
@@ -2305,10 +2309,10 @@ app.get('/api/admin/conflicts', (req, res) => {
     `;
     const params: any[] = [];
 
-    if (district && district !== 'null' && district !== 'undefined') {
-      sql += " AND (UPPER(TRIM(e.distrito)) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) LIKE UPPER(TRIM(?)))";
-      params.push(`%${district}%`, `%${district}%`);
-    }
+    const sec = getSecurityFilter(req, 'e');
+    sql += ` ${sec.sql}`;
+    params.push(...sec.params);
+
     if (list_id && !isNaN(list_id) && list_id !== 0) {
       sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
       params.push(list_id, list_id);
@@ -2683,7 +2687,12 @@ app.get('/api/stats/command', (req, res) => {
   const isPadrino = role === 'PADRINO';
   const requesterId = req.headers['x-user-id'];
   const sec = getSecurityFilter(req, 'e');
+  const secL = getSecurityFilter(req, 'l');
   const secLoc = getSecurityFilter(req, 'loc');
+    
+  // Dynamic goal: SUM(goal) from lists filtered by district/security
+  const listsGoal = db.prepare(`SELECT SUM(goal) as total FROM lists l WHERE 1=1 ${secL.sql}`).get(...secL.params) as any;
+  const globalGoal = Math.max(1, parseInt(listsGoal?.total || '0') || parseInt(settings.find(s => s.key === 'goal')?.value || '1000'));
   console.time(`STATS_COMMAND_${requesterId}`);
   try {
     // --- Parameterized list filter (avoids = NULL bug and SQL injection) ---
@@ -2877,7 +2886,7 @@ app.get('/api/structure/padrinos', (req, res) => {
       LEFT JOIN lists l           ON u.assigned_list_id = l.id
       LEFT JOIN users u2          ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u2.id
-      WHERE u.role = 'PADRINO' ${sec.sql}
+      WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
       GROUP BY u.id 
       ORDER BY u.nombre
     `).all(...sec.params);
@@ -3570,6 +3579,7 @@ app.get('/api/admin/disputes/global', (req, res) => {
   if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Acceso denegado' });
 
   try {
+    const sec = getSecurityFilter(req, 'e');
     const disputes = db.prepare(`
       SELECT 
         e.ci, e.nombre, e.apellido, e.local_votacion,
@@ -3579,9 +3589,10 @@ app.get('/api/admin/disputes/global', (req, res) => {
       JOIN electors e ON ec.elector_ci = e.ci
       JOIN lists l ON ec.list_id = l.id
       JOIN users u ON ec.coordinator_id = u.id
+      WHERE 1=1 ${sec.sql}
       GROUP BY e.ci
       HAVING list_count > 1
-    `).all();
+    `).all(...sec.params);
     res.json(disputes);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

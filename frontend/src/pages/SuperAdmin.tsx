@@ -2266,7 +2266,9 @@ Status: ${error.response?.status || 'N/A'}
         u.username?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
         u.nombre?.toLowerCase().includes(userSearchTerm.toLowerCase());
       const matchesRole = !userRoleFilter || u.role === userRoleFilter;
-      const matchesCampaign = !userCampaignFilter || u.assigned_campaign_id?.toString() === userCampaignFilter;
+      const matchesCampaign = !userCampaignFilter || 
+        u.assigned_campaign_id?.toString() === userCampaignFilter ||
+        u.effective_campaign_id?.toString() === userCampaignFilter;
       return matchesSearch && matchesRole && matchesCampaign;
     });
 
@@ -2320,6 +2322,7 @@ Status: ${error.response?.status || 'N/A'}
               <option value="SUPERUSUARIO">SuperUsuario</option>
               <option value="JEFE_CAMPANA">Jefe Campaña</option>
               <option value="PADRINO">Padrino</option>
+              <option value="SUBJEFE">Subjefe</option>
               <option value="COORDINADOR">Coordinador</option>
             </select>
           </div>

@@ -665,7 +665,7 @@ const CommandCenter = () => {
         }
       }).catch(() => { });
       
-      api.get('/voting-locations').then(res => {
+      api.get(`/voting-locations?${queryStr}`).then(res => {
         if (Array.isArray(res.data)) setLocales(res.data);
       }).catch(() => { });
 
