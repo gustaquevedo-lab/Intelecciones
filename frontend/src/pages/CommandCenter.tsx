@@ -1718,13 +1718,10 @@ const CommandCenter = () => {
                               </div>
                               <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
                                 <div style={{ 
-                                  padding: '1px 6px', borderRadius: '6px', 
-                                  background: statusColor, color: 'white', 
-                                  fontSize: '0.45rem', fontWeight: 950,
-                                  boxShadow: `0 0 8px ${statusColor}66`
-                                }}>
-                                  {conf.tl_a}
-                                </div>
+                                  width: '24px', height: '8px', borderRadius: '4px', 
+                                  background: statusColor,
+                                  boxShadow: `0 0 10px ${statusColor}66`
+                                }} />
                                 {conf.transport_a === 1 && <span style={{ fontSize: '0.8rem' }}>🚌</span>}
                               </div>
                             </div>
@@ -1736,19 +1733,19 @@ const CommandCenter = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                                     <div style={{ minWidth: 0 }}>
                                         <p style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>CAPTURA A</p>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_a_nombre}</p>
-                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_a_nombre || 'N/A'}</p>
+                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_a}</p>
+                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_a || 'N/A'}</p>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', margin: 0 }}>{conf.list_a_name}</p>
-                                        <p style={{ fontSize: '0.5rem', color: 'var(--plra-300)', fontWeight: 800 }}>{new Date(conf.capture_a_date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</p>
+                                        <p style={{ fontSize: '0.65rem', color: 'var(--text)', fontWeight: 900, margin: 0 }}>LISTA {conf.list_a} {conf.option_a ? `OPC ${conf.option_a}` : ''}</p>
+                                        <p style={{ fontSize: '0.5rem', color: 'var(--plra-300)', fontWeight: 800 }}>{conf.time_a ? new Date(conf.time_a).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
                                     </div>
                                 </div>
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_a_id); }}
                                     style={{ 
                                         width: '100%', padding: '6px', borderRadius: '10px', 
-                                        background: 'var(--plra-500)', color: 'white', border: 'none', 
+                                        background: 'var(--plra-700)', color: 'white', border: '1px solid var(--border)', 
                                         fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
                                     }}
                                 >
@@ -1760,20 +1757,20 @@ const CommandCenter = () => {
                             <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border)', padding: '0.65rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                                     <div style={{ minWidth: 0 }}>
-                                        <p style={{ fontSize: '0.55rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>CAPTURA B</p>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_b_nombre}</p>
-                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_b_nombre || 'N/A'}</p>
+                                        <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>CAPTURA B</p>
+                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_b}</p>
+                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_b || 'N/A'}</p>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', margin: 0 }}>{conf.list_b_name}</p>
-                                        <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 800 }}>{new Date(conf.capture_b_date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</p>
+                                        <p style={{ fontSize: '0.65rem', color: 'var(--text)', fontWeight: 900, margin: 0 }}>LISTA {conf.list_b} {conf.option_b ? `OPC ${conf.option_b}` : ''}</p>
+                                        <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800 }}>{conf.time_b ? new Date(conf.time_b).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
                                     </div>
                                 </div>
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_b_id); }}
                                     style={{ 
                                         width: '100%', padding: '6px', borderRadius: '10px', 
-                                        background: 'var(--red)', color: 'white', border: 'none', 
+                                        background: 'var(--plra-700)', color: 'white', border: '1px solid var(--border)', 
                                         fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
                                     }}
                                 >
