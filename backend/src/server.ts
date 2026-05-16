@@ -400,7 +400,7 @@ const getDistrict = (req: express.Request) => {
   const d = req.headers['x-district'];
   const val = (q && q !== 'null' && q !== 'undefined' && q !== '') ? q : (d as string);
   if (!val || val === 'null' || val === 'undefined') return null;
-  const normalized = val.toString().toUpperCase().trim();
+  const normalized = val.toString().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   if (['GLOBAL', 'TODOS', 'ALL', 'TODAS', ''].includes(normalized)) return null;
   return normalized;
 };
@@ -501,12 +501,19 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       }
 
       if (effectiveDistrict) {
-        const d = effectiveDistrict.toUpperCase().trim();
+        const d = effectiveDistrict; // Already normalized in getDistrict
         if (tableAlias === 'u') {
-          sql += ` AND (UPPER(u.distrito) = ? OR EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND UPPER(l2.ciudad) = ?) OR EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND UPPER(c2.distrito) = ?))`;
+          sql += ` AND (
+            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.distrito, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ? OR 
+            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(l2.ciudad, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?) OR 
+            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(c2.distrito, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?)
+          )`;
           params.push(d, d, d);
         } else if (tableAlias === 'ec') {
-          sql += ` AND (UPPER(e.ciudad) = ? OR UPPER(e.distrito) = ?)`;
+          sql += ` AND (
+            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(e.ciudad, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ? OR 
+            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(e.distrito, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?
+          )`;
           params.push(d, d);
         } else if (tableAlias === 'whatsapp_messages') {
            // No direct district filter for raw messages yet
@@ -514,7 +521,10 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
           // For lists, electors, campaigns, voting_locations
           const colA = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
           const colB = (tableAlias === 'e' || tableAlias === 'loc') ? 'distrito' : 'ciudad';
-          sql += ` AND (UPPER(${tableAlias}.${colA}) = ? OR UPPER(${tableAlias}.${colB}) = ?)`;
+          sql += ` AND (
+            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${tableAlias}.${colA}, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ? OR 
+            UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${tableAlias}.${colB}, 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U')) = ?
+          )`;
           params.push(d, d);
         }
       }
@@ -996,16 +1006,21 @@ app.get('/api/admin/system/health', (req, res) => {
 
 app.get('/api/admin/audit', (req, res) => {
   try {
-    const { action, limit = 100 } = req.query;
-    let query = 'SELECT * FROM audit_logs WHERE 1=1';
-    const params = [];
+    const sec = getSecurityFilter(req, 'u');
+    let query = `
+      SELECT a.*, u.username, u.distrito as user_district
+      FROM audit_logs a
+      LEFT JOIN users u ON a.user_id = u.id
+      WHERE 1=1 ${sec.sql}
+    `;
+    const params = [...sec.params];
 
     if (action) {
-      query += ' AND action LIKE ?';
+      query += ' AND a.action LIKE ?';
       params.push(`%${action}%`);
     }
 
-    query += ' ORDER BY timestamp DESC LIMIT ?';
+    query += ' ORDER BY a.timestamp DESC LIMIT ?';
     params.push(parseInt(limit as string));
 
     const logs = db.prepare(query).all(...params);
@@ -1298,11 +1313,15 @@ app.get('/api/login-attempts', (req, res) => {
   if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Acceso denegado' });
 
   try {
+    const sec = getSecurityFilter(req, 'u');
     const attempts = db.prepare(`
-      SELECT * FROM login_attempts 
-      ORDER BY timestamp DESC 
+      SELECT la.*, u.distrito as user_district
+      FROM login_attempts la
+      LEFT JOIN users u ON la.username = u.username
+      WHERE 1=1 ${sec.sql.replace(/u\./g, 'u.')} -- Applies filter to the joined user
+      ORDER BY la.timestamp DESC 
       LIMIT 100
-    `).all();
+    `).all(...sec.params);
     res.json(attempts);
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener logs de seguridad' });
@@ -2029,13 +2048,14 @@ app.get('/api/stats/summary', (req, res) => {
 app.get('/api/audit/logs', (req, res) => {
   const { action, user_id, start_date, end_date } = req.query;
   try {
-    let query = `
-      SELECT a.*, u.username 
-      FROM audit_logs a
-      LEFT JOIN users u ON a.user_id = u.id
-      WHERE 1=1
-    `;
-    const params: any[] = [];
+      const sec = getSecurityFilter(req, 'u');
+      let query = `
+        SELECT a.*, u.username, u.distrito as user_district
+        FROM audit_logs a
+        LEFT JOIN users u ON a.user_id = u.id
+        WHERE 1=1 ${sec.sql}
+      `;
+      const params: any[] = [...sec.params];
 
     if (action) {
       query += ` AND a.action = ?`;

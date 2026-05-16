@@ -1030,7 +1030,10 @@ Status: ${error.response?.status || 'N/A'}
                   setActiveListId(null);
                 } else {
                   const camp = campaigns.find(c => c.id.toString() === val);
-                  if (camp) setActiveDistrict(camp.distrito);
+                  if (camp) {
+                    setActiveDistrict(camp.distrito);
+                    setTimeout(fetchData, 100); // Trigger auto-sync
+                  }
                 }
               }}
             >
@@ -1652,6 +1655,7 @@ Status: ${error.response?.status || 'N/A'}
             columns={[
               { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp' },
               { header: 'Usuario', accessor: 'username', sortKey: 'username' },
+              { header: 'Distrito', accessor: (row: any) => row.user_district || 'SISTEMA' },
               { header: 'Acción', accessor: 'action', sortKey: 'action' },
               { header: 'Detalles', accessor: 'details', sortKey: 'details' }
             ]}
@@ -1664,6 +1668,7 @@ Status: ${error.response?.status || 'N/A'}
           columns={[
             { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp', width: '180px' },
             { header: 'Usuario', accessor: 'username', sortKey: 'username' },
+            { header: 'Distrito', accessor: (row: any) => row.user_district || 'N/A' },
             { 
               header: 'Estado', 
               accessor: (row: any) => (
