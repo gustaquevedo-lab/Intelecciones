@@ -486,13 +486,14 @@ select option:active {
 }
 
 .tactical-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
 }
 
 .light-theme .tactical-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--border-mid);
   box-shadow: var(--shadow-sm);
 }

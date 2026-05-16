@@ -1428,27 +1428,31 @@ const CommandCenter = () => {
                             <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--plra-600), var(--plra-400))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{p.nombre?.charAt(0)}</div>
                           )}
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</p>
+                            <p style={{ 
+                               fontSize: '0.95rem', fontWeight: 900, color: 'var(--text)', margin: 0, 
+                               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                               overflow: 'hidden', lineHeight: '1.2'
+                             }}>{p.nombre}</p>
                             <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                               PADRINO LISTA {p.list_number || '3'} {p.option_number ? `OPC ${p.option_number}` : ''}
                             </span>
                           </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
-                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                          <div style={{ background: 'var(--bg)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
                             <p style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 1px' }}>COORDS</p>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.coordinator_count}</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{p.coordinator_count}</p>
                           </div>
-                          <div style={{ background: 'rgba(59,130,246,0.05)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.1)', textAlign: 'center' }}>
+                          <div style={{ background: 'rgba(59,130,246,0.1)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.2)', textAlign: 'center' }}>
                             <p style={{ fontSize: '0.45rem', color: 'var(--plra-300)', fontWeight: 800, margin: '0 0 1px' }}>CAPTADOS</p>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.total_electors || 0}</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{p.total_electors || 0}</p>
                           </div>
-                          <div style={{ background: 'rgba(251,191,36,0.05)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid rgba(251,191,36,0.1)', textAlign: 'center' }}>
+                          <div style={{ background: 'rgba(251,191,36,0.1)', padding: '0.5rem 0.2rem', borderRadius: '10px', border: '1px solid rgba(251,191,36,0.2)', textAlign: 'center' }}>
                             <p style={{ fontSize: '0.45rem', color: 'var(--yellow)', fontWeight: 800, margin: '0 0 1px' }}>LOGÍSTICA</p>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', margin: 0 }}>{p.transport_total || 0}</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{p.transport_total || 0}</p>
                           </div>
                         </div>
-                        <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '1rem', display: 'flex', overflow: 'hidden' }}>
+                        <div style={{ height: '4px', background: 'var(--border)', borderRadius: '2px', marginTop: '1rem', display: 'flex', overflow: 'hidden' }}>
                           {p.total_electors > 0 && (
                             <>
                               <div style={{ width: `${(p.green_total / p.total_electors) * 100}%`, background: 'var(--green)' }} />
@@ -1533,8 +1537,12 @@ const CommandCenter = () => {
                                 <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
                               )}
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
-                                <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', margin: 0, fontWeight: 800 }}>COORDINADOR OPERATIVO</p>
+                                <p style={{ 
+                                  fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', margin: 0, 
+                                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden', lineHeight: '1.2'
+                                }}>{c.nombre}</p>
+                                <p style={{ fontSize: '0.55rem', color: 'var(--plra-300)', marginTop: '0.15rem', fontWeight: 800, textTransform: 'uppercase' }}>Coordinador Operativo</p>
                               </div>
                             </div>
 
@@ -1600,9 +1608,9 @@ const CommandCenter = () => {
                         </thead>
                         <tbody>
                           {electorDetails.map(e => (
-                            <tr key={e.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                            <tr key={e.id} style={{ borderBottom: '1px solid var(--border)', background: 'transparent' }}>
                               <td style={{ padding: '1.25rem' }}>
-                                <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', margin: 0 }}>{e.nombre} {e.apellido}</p>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>{e.nombre} {e.apellido}</p>
                                 {e.needs_transport === 1 && <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900 }}>REQUIERE TRANSPORTE</span>}
                               </td>
                               <td style={{ padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 700 }}>{e.elector_ci}</td>
@@ -1614,17 +1622,17 @@ const CommandCenter = () => {
                                 <div style={{
                                   display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
                                   background: e.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : e.traffic_light === 'YELLOW' ? 'rgba(234,179,8,0.1)' : e.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)',
-                                  padding: '4px 10px', borderRadius: '8px'
+                                  padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'
                                 }}>
                                   <div style={{
                                     width: '8px', height: '8px', borderRadius: '50%',
                                     background: e.traffic_light === 'GREEN' ? 'var(--green)' : e.traffic_light === 'YELLOW' ? 'var(--yellow)' : e.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)'
                                   }} />
-                                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'white' }}>{e.traffic_light}</span>
+                                  <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text)' }}>{e.traffic_light}</span>
                                 </div>
                               </td>
                               <td style={{ padding: '1.25rem' }}>
-                                <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'white', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer' }}>
+                                <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer' }}>
                                   <MessageSquare size={16} />
                                 </button>
                               </td>
@@ -1677,112 +1685,96 @@ const CommandCenter = () => {
                       
                       return (
                         <motion.div
-                          whileHover={{ y: -5, scale: 1.02 }}
+                          whileHover={{ y: -4, scale: 1.01 }}
                           key={conf.conflict_id}
                           style={{
-                            background: 'rgba(15,23,42,0.8)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '28px',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '20px',
                             position: 'relative',
                             overflow: 'hidden',
-                            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                            boxShadow: 'var(--shadow-sm)',
                             display: 'flex',
-                            flexDirection: 'column'
+                            flexDirection: 'column',
+                            minHeight: '380px'
                           }}
                         >
-                          {/* Glassy Colored Header */}
+                          {/* Intense Header Gradient */}
                           <div style={{ 
-                            padding: '1.25rem', 
-                            background: `linear-gradient(180deg, ${statusColor}22, rgba(255,255,255,0.02))`,
-                            borderBottom: `1px solid ${statusColor}44`,
-                            position: 'relative'
+                            padding: '0.85rem 1rem', 
+                            background: `linear-gradient(180deg, ${statusColor}99 0%, ${statusColor}33 40%, transparent 100%)`,
                           }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div>
-                                <h4 style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0, letterSpacing: '0.5px' }}>
-                                  {conf.elector_nombre}
-                                </h4>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'rgba(255,255,255,0.7)', margin: 0 }}>
-                                  {conf.elector_apellido}
-                                </h4>
-                                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.25rem', fontWeight: 600 }}>CI: {conf.elector_ci}</p>
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                <div style={{ 
-                                  padding: '4px 12px', borderRadius: '20px', 
-                                  background: `${statusColor}22`, border: `1px solid ${statusColor}88`,
-                                  color: statusColor, fontSize: '0.6rem', fontWeight: 900,
-                                  boxShadow: `0 0 15px ${statusColor}33`
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <h4 style={{ 
+                                    fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', margin: 0, 
+                                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden', lineHeight: '1.1'
                                 }}>
-                                  ● {conf.tl_a}
+                                  {conf.elector_nombre} {conf.elector_apellido}
+                                </h4>
+                                <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', marginTop: '0.2rem', fontWeight: 700 }}>CI: {conf.elector_ci}</p>
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                                <div style={{ 
+                                  padding: '1px 6px', borderRadius: '6px', 
+                                  background: statusColor, color: 'white', 
+                                  fontSize: '0.45rem', fontWeight: 950,
+                                  boxShadow: `0 0 8px ${statusColor}66`
+                                }}>
+                                  {conf.tl_a}
                                 </div>
-                                {conf.transport_a === 1 && <span title="Necesita Transporte" style={{ fontSize: '1rem', filter: 'drop-shadow(0 0 5px #60a5fa)' }}>🚌</span>}
+                                {conf.transport_a === 1 && <span style={{ fontSize: '0.8rem' }}>🚌</span>}
                               </div>
                             </div>
                           </div>
 
-                          {/* Contenders Stack */}
-                          <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          <div style={{ padding: '0.75rem 1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             {/* Contender A */}
-                            <div style={{ 
-                                background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '20px', 
-                                border: '1px solid rgba(255,255,255,0.05)', position: 'relative'
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900, background: 'var(--plra-900)', padding: '2px 8px', borderRadius: '6px' }}>
-                                        LISTA {conf.list_a} {conf.option_a ? `| OPT ${conf.option_a}` : ''}
-                                    </span>
-                                    <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>
-                                        {new Date(conf.time_a).toLocaleDateString()} {new Date(conf.time_a).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                    </span>
+                            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border)', padding: '0.65rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <p style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>CAPTURA A</p>
+                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_a_nombre}</p>
+                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_a_nombre || 'N/A'}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', margin: 0 }}>{conf.list_a_name}</p>
+                                        <p style={{ fontSize: '0.5rem', color: 'var(--plra-300)', fontWeight: 800 }}>{new Date(conf.capture_a_date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</p>
+                                    </div>
                                 </div>
-                                <p style={{ fontSize: '0.9rem', color: 'white', fontWeight: 800, margin: 0 }}>{conf.coord_a}</p>
-                                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, margin: '2px 0 0 0' }}>Padrino: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{conf.padrino_a || 'S/P'}</span></p>
-                                
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_a_id); }}
                                     style={{ 
-                                        width: '100%', marginTop: '0.75rem', padding: '8px', borderRadius: '12px', 
+                                        width: '100%', padding: '6px', borderRadius: '10px', 
                                         background: 'var(--plra-500)', color: 'white', border: 'none', 
-                                        fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer',
-                                        transition: 'all 0.2s'
+                                        fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
                                     }}
                                 >
                                     ADJUDICAR A
                                 </button>
                             </div>
 
-                            {/* VS Divider */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.2 }}>
-                                <div style={{ flex: 1, height: '1px', background: 'white' }} />
-                                <span style={{ fontSize: '0.5rem', fontWeight: 900, color: 'white' }}>VS</span>
-                                <div style={{ flex: 1, height: '1px', background: 'white' }} />
-                            </div>
-
                             {/* Contender B */}
-                            <div style={{ 
-                                background: 'rgba(239,68,68,0.04)', padding: '1rem', borderRadius: '20px', 
-                                border: '1px solid rgba(239,68,68,0.1)', position: 'relative'
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ fontSize: '0.55rem', color: '#f87171', fontWeight: 900, background: 'rgba(239,68,68,0.2)', padding: '2px 8px', borderRadius: '6px' }}>
-                                        LISTA {conf.list_b} {conf.option_b ? `| OPT ${conf.option_b}` : ''}
-                                    </span>
-                                    <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>
-                                        {conf.time_b ? `${new Date(conf.time_b).toLocaleDateString()} ${new Date(conf.time_b).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : '-'}
-                                    </span>
+                            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border)', padding: '0.65rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <p style={{ fontSize: '0.55rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>CAPTURA B</p>
+                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_b_nombre}</p>
+                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_b_nombre || 'N/A'}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', margin: 0 }}>{conf.list_b_name}</p>
+                                        <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 800 }}>{new Date(conf.capture_b_date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</p>
+                                    </div>
                                 </div>
-                                <p style={{ fontSize: '0.9rem', color: 'white', fontWeight: 800, margin: 0 }}>{conf.coord_b}</p>
-                                <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, margin: '2px 0 0 0' }}>Padrino: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{conf.padrino_b || 'S/P'}</span></p>
-                                
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_b_id); }}
                                     style={{ 
-                                        width: '100%', marginTop: '0.75rem', padding: '8px', borderRadius: '12px', 
+                                        width: '100%', padding: '6px', borderRadius: '10px', 
                                         background: 'var(--red)', color: 'white', border: 'none', 
-                                        fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer',
-                                        transition: 'all 0.2s'
+                                        fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
                                     }}
                                 >
                                     ADJUDICAR B
@@ -1790,13 +1782,12 @@ const CommandCenter = () => {
                             </div>
                           </div>
 
-                          {/* Status Footer */}
                           <div style={{ 
                               marginTop: 'auto',
-                              fontSize: '0.6rem', fontWeight: 900, 
-                              color: conf.conflict_status === 'WAITING_CONSENT' ? 'var(--yellow)' : 'rgba(255,255,255,0.3)', 
-                              textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '8px',
-                              letterSpacing: '1px'
+                              fontSize: '0.55rem', fontWeight: 900, 
+                              color: conf.conflict_status === 'WAITING_CONSENT' ? 'var(--yellow)' : 'var(--text-3)', 
+                              textAlign: 'center', background: 'rgba(0,0,0,0.15)', padding: '6px',
+                              letterSpacing: '0.5px'
                           }}>
                               {conf.conflict_status === 'WAITING_CONSENT' ? '⏳ ESPERANDO CONSENTIMIENTO SUBJEFES' : '🔴 PENDIENTE DECISIÓN JEFE'}
                           </div>
@@ -1809,7 +1800,7 @@ const CommandCenter = () => {
                 {/* History Log with Advanced Filters */}
                 <div style={{ background: 'var(--surface)', borderRadius: '28px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                   <div style={{ padding: '1.5rem 2rem', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>Historial de Resoluciones</h3>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>Historial de Resoluciones</h3>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                       <div style={{ position: 'relative' }}>
                         <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
@@ -1818,13 +1809,13 @@ const CommandCenter = () => {
                           placeholder="Buscar elector..." 
                           value={disputeSearch}
                           onChange={(e) => setDisputeSearch(e.target.value)}
-                          style={{ padding: '0.5rem 1rem 0.5rem 2.25rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem', width: '200px' }} 
+                          style={{ padding: '0.5rem 1rem 0.5rem 2.25rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', width: '200px' }} 
                         />
                       </div>
                       <select 
                         value={disputeLocalFilter}
                         onChange={(e) => setDisputeLocalFilter(e.target.value)}
-                        style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'white', fontSize: '0.75rem' }}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem' }}
                       >
                         <option value="">Todos los locales</option>
                         {locales.map(l => <option key={l.cod_local} value={l.nombre}>{l.nombre}</option>)}
