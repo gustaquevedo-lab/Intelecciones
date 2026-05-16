@@ -255,9 +255,9 @@ const SuperAdmin = () => {
   const [apiError, setApiError] = useState<{ message: string; details?: string } | null>(null);
 
   const cities = Array.from(new Set([
-    ...lists.map(l => l.ciudad),
-    ...locales.map(l => l.ciudad || l.distrito),
-    ...campaigns.map(c => c.distrito)
+    ...(Array.isArray(lists) ? lists.map(l => l.ciudad) : []),
+    ...(Array.isArray(locales) ? locales.map(l => l.ciudad || l.distrito) : []),
+    ...(Array.isArray(campaigns) ? campaigns.map(c => c.distrito) : [])
   ].filter(Boolean))).sort();
 
   const handleCopyDiagnostic = (error: any) => {
@@ -310,7 +310,7 @@ Status: ${error.response?.status || 'N/A'}
     const key = prompt('NIVEL DE SEGURIDAD 2: Ingrese la LLAVE MAESTRA para autorizar la purga:');
     if (!key) return;
     
-    const distritos = Array.from(new Set(campaigns.map(c => c.distrito).filter(Boolean)));
+    const distritos = Array.from(new Set((Array.isArray(campaigns) ? campaigns : []).map(c => c.distrito).filter(Boolean)));
     const distMsg = distritos.length > 0 
       ? `Distritos detectados: ${distritos.join(', ')}.\n\n` 
       : '';
@@ -740,7 +740,7 @@ Status: ${error.response?.status || 'N/A'}
 
   useEffect(() => {
     if (newListCampaign) {
-      const campaignLists = lists.filter(l => l.campaign_id?.toString() === newListCampaign.toString());
+      const campaignLists = (Array.isArray(lists) ? lists : []).filter(l => l.campaign_id?.toString() === newListCampaign.toString());
       
       // Filter taken options ONLY for the currently selected list number
       const options = campaignLists
@@ -748,7 +748,6 @@ Status: ${error.response?.status || 'N/A'}
         .map(l => parseInt(l.option_number || '0'))
         .filter(n => n > 0);
       setTakenOptions(options);
-
     }
   }, [newListCampaign, newListNumber, newListType, lists, editingList]);
 
@@ -1042,7 +1041,7 @@ Status: ${error.response?.status || 'N/A'}
               }}
             >
               <option value="all">Todas las Campañas</option>
-              {campaigns.map(c => (
+              {Array.isArray(campaigns) && campaigns.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
@@ -1197,7 +1196,7 @@ Status: ${error.response?.status || 'N/A'}
             <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>Monitoreo de tracción por cliente SaaS</p>
           </div>
           <div style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--plra-300)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800 }}>
-            {campaigns.length} CLIENTES ACTIVOS
+            {Array.isArray(campaigns) ? campaigns.length : 0} CLIENTES ACTIVOS
           </div>
         </div>
         <ManagementTable 
@@ -1319,7 +1318,7 @@ Status: ${error.response?.status || 'N/A'}
             )
           }
         ]}
-        data={campaigns}
+        data={Array.isArray(campaigns) ? campaigns : []}
       />
     </div>
   );
@@ -1340,7 +1339,7 @@ Status: ${error.response?.status || 'N/A'}
       concejales: (Array.isArray(listsByCity[city]) ? listsByCity[city] : []).filter(l => l.type === 'CONCEJAL').length
     })).sort((a, b) => a.name.localeCompare(b.name));
 
-    const filteredLists = lists.filter(l => {
+    const filteredLists = (Array.isArray(lists) ? lists : []).filter(l => {
       const matchesSearch = !listSearchTerm || 
         l.candidate_nombre?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
         (l as any).candidate_alias?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
@@ -1377,8 +1376,7 @@ Status: ${error.response?.status || 'N/A'}
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-            {cityStats.map(city => (
+            {(Array.isArray(cityStats) ? cityStats : []).map(city => (
               <motion.div 
                 key={city.name}
                 whileHover={{ y: -5, scale: 1.02 }}
@@ -1663,7 +1661,7 @@ Status: ${error.response?.status || 'N/A'}
               { header: 'Acción', accessor: 'action', sortKey: 'action' },
               { header: 'Detalles', accessor: 'details', sortKey: 'details' }
             ]}
-            data={auditLogs}
+            data={Array.isArray(auditLogs) ? auditLogs : []}
           />
         </>
       ) : (
@@ -1712,7 +1710,7 @@ Status: ${error.response?.status || 'N/A'}
               )
             }
           ]}
-          data={loginAttempts}
+          data={Array.isArray(loginAttempts) ? loginAttempts : []}
         />
       )}
     </div>
@@ -2080,7 +2078,7 @@ Status: ${error.response?.status || 'N/A'}
         </h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {padronStats.map(stat => (
+          {(Array.isArray(padronStats) ? padronStats : []).map(stat => (
             <div key={stat.ciudad} className="card-premium-styled" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <p style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>CIUDAD</p>
@@ -2092,7 +2090,7 @@ Status: ${error.response?.status || 'N/A'}
               </div>
             </div>
           ))}
-          {padronStats.length === 0 && (
+          {(Array.isArray(padronStats) ? padronStats : []).length === 0 && (
             <p style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-3)', padding: '2rem' }}>No hay padrones cargados aún.</p>
           )}
         </div>
@@ -2459,7 +2457,7 @@ Status: ${error.response?.status || 'N/A'}
             <Clock size={18} style={{ color: 'var(--plra-300)' }} /> Solicitudes Pendientes
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {pendingLogistics.filter(p => !p.assigned_vehicle_id).map(cap => (
+            {(Array.isArray(pendingLogistics) ? pendingLogistics : []).filter(p => !p.assigned_vehicle_id).map(cap => (
               <div key={cap.id} style={{ 
                 padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', 
                 borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem'
@@ -2476,7 +2474,7 @@ Status: ${error.response?.status || 'N/A'}
                 </div>
               </div>
             ))}
-            {pendingLogistics.filter(p => !p.assigned_vehicle_id).length === 0 && (
+            {(Array.isArray(pendingLogistics) ? pendingLogistics : []).filter(p => !p.assigned_vehicle_id).length === 0 && (
               <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.8rem', padding: '1rem' }}>No hay traslados pendientes</p>
             )}
           </div>
@@ -2487,7 +2485,7 @@ Status: ${error.response?.status || 'N/A'}
             <Truck size={18} style={{ color: 'var(--green)' }} /> Flota de Vehículos
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {vehicles.map(v => {
+            {(Array.isArray(vehicles) ? vehicles : []).map(v => {
               const statusColor = v.status === 'AVAILABLE' ? 'var(--green)' : v.status === 'IN_TRANSIT' ? 'var(--yellow)' : 'var(--red)';
               const statusLabel = v.status === 'AVAILABLE' ? 'Disponible' : v.status === 'IN_TRANSIT' ? 'En Ruta' : 'Mantenimiento';
               return (
