@@ -337,15 +337,22 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("whatsapp_messages", "campaign_id", "INTEGER");
     addColumnIfNotExists("voting_locations", "campaign_id", "INTEGER");
 
-    // Indexes
+    // Indexes for better JOIN performance
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa);
       CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors (ciudad);
+      CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors (distrito);
       CREATE INDEX IF NOT EXISTS idx_electors_nombre ON electors (nombre, apellido);
       CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id);
       CREATE INDEX IF NOT EXISTS idx_users_ci ON users (ci);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+      CREATE INDEX IF NOT EXISTS idx_users_list ON users (assigned_list_id);
+      CREATE INDEX IF NOT EXISTS idx_users_campaign ON users (assigned_campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_lists_campaign ON lists (campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_lists_ciudad ON lists (ciudad);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captures(elector_ci);
+      CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id);
+      CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC);
@@ -357,17 +364,21 @@ if (dbVersion < currentSchemaVersion) {
 
 // Heavy one-time normalization logic remains protected by its own check
 try {
-  const needsNormalization = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v2_done'").get();
+  const needsNormalization = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v3_done'").get();
   if (!needsNormalization) {
+    console.log("PERFORMANCE: Running database normalization...");
     db.transaction(() => {
       db.exec(`
-        UPDATE electors SET ci = TRIM(ci), ciudad = UPPER(TRIM(ciudad)) WHERE ci IS NOT NULL;
-        UPDATE voting_locations SET cod_local = TRIM(cod_local), distrito = UPPER(TRIM(distrito)), ciudad = UPPER(TRIM(distrito)) WHERE cod_local IS NOT NULL;
+        UPDATE electors SET ci = TRIM(ci), ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)) WHERE ci IS NOT NULL;
+        UPDATE voting_locations SET cod_local = TRIM(cod_local), distrito = UPPER(TRIM(distrito)), ciudad = UPPER(TRIM(ciudad)) WHERE cod_local IS NOT NULL;
         UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
+        UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL;
         UPDATE users SET distrito = 'PEDRO JUAN CABALLERO' WHERE (distrito IS NULL OR TRIM(distrito) = '') AND role != 'SUPERUSUARIO';
-        INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v2_done', 'true');
+        UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL;
+        INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v3_done', 'true');
       `);
     })();
+    console.log("PERFORMANCE: Normalization complete.");
   }
 } catch (e: any) {}
 
