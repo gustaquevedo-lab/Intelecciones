@@ -916,7 +916,7 @@ app.get('/api/admin/verify-candidate/:ci', (req, res) => {
     const candidate = db.prepare(`
       SELECT ci, nombre, apellido, distrito, departamento, photo_url 
       FROM electors 
-      WHERE REPLACE(REPLACE(ci, '.', ''), ',', '') = ?
+      WHERE ci = ?
     `).get(cleanCI) as any;
     
     if (candidate) {
@@ -937,28 +937,29 @@ app.get('/api/admin/verify-user/:ci', (req, res) => {
   let { ci } = req.params;
   const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
 
-  // First check in electors for name/data
-  const elector = db.prepare(`
-    SELECT ci, nombre, apellido, photo_url 
-    FROM electors 
-    WHERE REPLACE(REPLACE(ci, '.', ''), ',', '') = ?
-  `).get(cleanCI) as any;
+  try {
+    const elector = db.prepare(`
+      SELECT ci, nombre, apellido, photo_url 
+      FROM electors 
+      WHERE ci = ?
+    `).get(cleanCI) as any;
 
-  // Then check in users for existing account (username can be the CI or a custom name)
-  const user = db.prepare(`
-    SELECT photo_url 
-    FROM users 
-    WHERE REPLACE(REPLACE(username, '.', ''), ',', '') = ? 
-       OR username = ?
-  `).get(cleanCI, cleanCI) as any;
+    const user = db.prepare(`
+      SELECT photo_url 
+      FROM users 
+      WHERE username = ?
+    `).get(cleanCI) as any;
 
-  if (elector) {
-    res.json({
-      ...elector,
-      photo_url: user?.photo_url || elector.photo_url || `https://i.pravatar.cc/150?u=${elector.ci}`
-    });
-  } else {
-    res.status(404).json({ error: 'Persona no encontrada.' });
+    if (elector) {
+      res.json({
+        ...elector,
+        photo_url: user?.photo_url || elector.photo_url || `https://i.pravatar.cc/150?u=${elector.ci}`
+      });
+    } else {
+      res.status(404).json({ error: 'Persona no encontrada.' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -2344,7 +2345,7 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         u_win.nombre as winner_name,
         u_win.role as winner_role
       FROM capture_conflicts cc
-      JOIN electors e ON REPLACE(REPLACE(TRIM(cc.elector_ci), '.', ''), ',', '') = REPLACE(REPLACE(TRIM(e.ci), '.', ''), ',', '')
+      JOIN electors e ON cc.elector_ci = e.ci
       LEFT JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
       LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
       WHERE cc.status = 'RESOLVED'

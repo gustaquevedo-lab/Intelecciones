@@ -177,7 +177,29 @@ interface User {
   assigned_list_id?: number;
   assigned_campaign_id?: number;
   list_number?: string;
-}
+const StatCard = ({ icon: Icon, label, value, color }: any) => (
+  <div style={{
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '1.25rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem'
+  }}>
+    <div style={{ 
+      width: '32px', height: '32px', borderRadius: '8px', 
+      background: `${color}15`, border: `1px solid ${color}30`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      <Icon size={16} style={{ color }} />
+    </div>
+    <div>
+      <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{label}</p>
+      <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)', marginTop: '0.25rem' }}>{value}</p>
+    </div>
+  </div>
+);
 
 const SuperAdmin = () => {
   const { 
@@ -2268,6 +2290,7 @@ Status: ${error.response?.status || 'N/A'}
             setNewUserCampaign('');
             setNewUserParent('');
             setNewUserTelefono('');
+            setNewUserDistrito('');
             setUserProfilePreview(null);
             setIsUserVerified(false);
             setShowModal('user');
@@ -3342,28 +3365,5 @@ Status: ${error.response?.status || 'N/A'}
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color }: any) => (
-  <div style={{
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '16px',
-    padding: '1.25rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem'
-  }}>
-    <div style={{ 
-      width: '32px', height: '32px', borderRadius: '8px', 
-      background: `${color}15`, border: `1px solid ${color}30`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }}>
-      <Icon size={16} style={{ color }} />
-    </div>
-    <div>
-      <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{label}</p>
-      <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)', marginTop: '0.25rem' }}>{value}</p>
-    </div>
-  </div>
-);
 
 export default SuperAdmin;

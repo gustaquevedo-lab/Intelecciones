@@ -33,7 +33,7 @@ db.pragma('auto_vacuum = INCREMENTAL');
 db.pragma('page_size = 4096');
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 12; // Update this to trigger migrations
+const currentSchemaVersion = 13; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -276,6 +276,31 @@ if (dbVersion < currentSchemaVersion) {
         details TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE INDEX IF NOT EXISTS idx_users_list ON users(assigned_list_id);
+      CREATE INDEX IF NOT EXISTS idx_users_campaign ON users(assigned_campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id);
+      CREATE INDEX IF NOT EXISTS idx_users_ci ON users(ci);
+      CREATE INDEX IF NOT EXISTS idx_users_distrito ON users(distrito);
+
+      CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
+      CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
+      CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(ciudad);
+
+      CREATE INDEX IF NOT EXISTS idx_captures_ci ON elector_captures(elector_ci);
+      CREATE INDEX IF NOT EXISTS idx_captures_coord ON elector_captures(coordinator_id);
+      CREATE INDEX IF NOT EXISTS idx_captures_list ON elector_captures(list_id);
+      CREATE INDEX IF NOT EXISTS idx_captures_campaign ON elector_captures(campaign_id);
+
+      CREATE INDEX IF NOT EXISTS idx_conflicts_ci ON capture_conflicts(elector_ci);
+      CREATE INDEX IF NOT EXISTS idx_conflicts_ids ON capture_conflicts(capture_id, capture_id_b);
+      CREATE INDEX IF NOT EXISTS idx_conflicts_lists ON capture_conflicts(list_id_a, list_id_b);
+
+      CREATE INDEX IF NOT EXISTS idx_lists_campaign ON lists(campaign_id);
+      CREATE INDEX IF NOT EXISTS idx_lists_ciudad ON lists(ciudad);
+      
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id);
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number);
     `);
 
     const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
