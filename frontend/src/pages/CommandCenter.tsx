@@ -1533,32 +1533,32 @@ const CommandCenter = () => {
                                 <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 900, color: 'var(--plra-300)' }}>{c.nombre?.charAt(0)}</div>
                               )}
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
                                 <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', margin: 0, fontWeight: 800 }}>COORDINADOR OPERATIVO</p>
                               </div>
                             </div>
 
-                            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '14px', border: '1px solid var(--border)', textAlign: 'center', marginBottom: '0.75rem' }}>
+                            <div style={{ background: 'var(--bg)', padding: '0.75rem', borderRadius: '14px', border: '1px solid var(--border)', textAlign: 'center', marginBottom: '0.75rem' }}>
                               <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, margin: '0 0 2px', textTransform: 'uppercase' }}>Total Captados</p>
-                              <p style={{ fontSize: '1.4rem', fontWeight: 950, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>{c.total_electors || 0}</p>
+                              <p style={{ fontSize: '1.4rem', fontWeight: 950, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>{c.total_electors || 0}</p>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', marginBottom: '0.75rem' }}>
-                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(34,197,94,0.08)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.15)' }}>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(34,197,94,0.12)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.2)' }}>
                                 <p style={{ fontSize: '0.4rem', color: 'var(--green)', fontWeight: 900, margin: '0 0 1px' }}>CASA</p>
-                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.green || 0}</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{c.green || 0}</p>
                               </div>
-                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(234,179,8,0.08)', borderRadius: '8px', border: '1px solid rgba(234,179,8,0.15)' }}>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(234,179,8,0.12)', borderRadius: '8px', border: '1px solid rgba(234,179,8,0.2)' }}>
                                 <p style={{ fontSize: '0.4rem', color: 'var(--yellow)', fontWeight: 900, margin: '0 0 1px' }}>FAMILIARES</p>
-                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.yellow || 0}</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{c.yellow || 0}</p>
                               </div>
-                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.15)' }}>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(239,68,68,0.12)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)' }}>
                                 <p style={{ fontSize: '0.4rem', color: 'var(--red)', fontWeight: 900, margin: '0 0 1px' }}>OTROS</p>
-                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.red || 0}</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{c.red || 0}</p>
                               </div>
-                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(168,85,247,0.08)', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.15)' }}>
+                              <div style={{ textAlign: 'center', padding: '0.4rem 0.1rem', background: 'rgba(168,85,247,0.12)', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.2)' }}>
                                 <p style={{ fontSize: '0.4rem', color: '#A855F7', fontWeight: 900, margin: '0 0 1px' }}>VOLUNTARIO</p>
-                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', margin: 0 }}>{c.purple || 0}</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{c.purple || 0}</p>
                               </div>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(59,130,246,0.1)', padding: '0.5rem 0.75rem', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.15)' }}>
@@ -1566,7 +1566,7 @@ const CommandCenter = () => {
                                 <Truck size={12} color="var(--plra-300)" />
                                 <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-200)', textTransform: 'uppercase' }}>Logística</span>
                               </div>
-                              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.transport_total || 0}</span>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>{c.transport_total || 0}</span>
                             </div>
                           </motion.div>
                         ))}
@@ -1575,11 +1575,11 @@ const CommandCenter = () => {
                   </div>
                 ) : (
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '28px', overflow: 'hidden' }}>
-                    <div style={{ padding: '1.75rem', background: 'rgba(59,130,246,0.1)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '1.75rem', background: 'var(--accent-subtle)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                         <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'var(--plra-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 900, color: 'white' }}>{selectedCoordDetails.nombre.charAt(0)}</div>
                         <div>
-                          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', margin: 0 }}>{selectedCoordDetails.nombre}</p>
+                          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{selectedCoordDetails.nombre}</p>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0 }}>{electorDetails.length} electores bajo gestión operativa</p>
                         </div>
                       </div>
