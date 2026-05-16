@@ -71,13 +71,20 @@ export const warmup = async () => {
   }
 };
 
-// Auto-warmup every 2 minutes while the tab is active
+// Auto-warmup every 45 seconds while the tab is active to prevent Cold Starts on Railway
 if (typeof window !== 'undefined') {
   setInterval(() => {
     if (document.visibilityState === 'visible') {
       warmup();
     }
-  }, 120000);
+  }, 45000);
+
+  // Also warmup immediately when the tab becomes visible again
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      warmup();
+    }
+  });
 }
 
 export default api;

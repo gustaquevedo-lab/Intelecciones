@@ -1725,15 +1725,25 @@ const CommandCenter = () => {
                             </div>
                           </div>
 
-                          <div style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ textAlign: 'left' }}>
-                                <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0 }}>BANDO A</p>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--plra-300)' }}>LISTA {conf.list_a}</p>
+                          <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <User size={12} style={{ color: 'var(--plra-300)' }} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>Captura Inicial</p>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conf.coord_a}</p>
+                                </div>
                             </div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', fontWeight: 900 }}>VS</div>
-                            <div style={{ textAlign: 'right' }}>
-                                <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0 }}>BANDO B</p>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--red)' }}>LISTA {conf.list_b}</p>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <AlertTriangle size={12} style={{ color: 'var(--red)' }} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>Última Captura</p>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conf.coord_b}</p>
+                                </div>
                             </div>
                           </div>
 
@@ -1920,7 +1930,7 @@ const CommandCenter = () => {
                   {/* Contender A Detail */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div style={{ padding: '1.5rem', borderRadius: '24px', background: 'var(--bg)', border: '1px solid var(--border)', position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--plra-500)', color: 'white', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900 }}>BANDO A · LISTA {showResolveModal.list_a} {showResolveModal.option_a ? `OPC ${showResolveModal.option_a}` : ''}</div>
+                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>Captura Inicial · Lista {showResolveModal.list_a}</div>
                         
                         <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
                             <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: showResolveModal.photo_a ? `url(${getImageUrl(showResolveModal.photo_a)}) center/cover` : 'var(--border)', border: '2px solid var(--plra-400)' }} />
@@ -1955,11 +1965,11 @@ const CommandCenter = () => {
 
                         <button 
                             onClick={() => handleDecide(showResolveModal.capture_a_id)}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--plra-600)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--plra-500)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'var(--plra-600)'}
+                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--surface-3)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-4)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-3)'}
                         >
-                            ADJUDICAR A BANDO A
+                            ADJUDICAR
                         </button>
                     </div>
                   </div>
@@ -1967,7 +1977,7 @@ const CommandCenter = () => {
                   {/* Contender B Detail */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div style={{ padding: '1.5rem', borderRadius: '24px', background: 'var(--bg)', border: '1px solid var(--border)', position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--red)', color: 'white', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900 }}>BANDO B · LISTA {showResolveModal.list_b} {showResolveModal.option_b ? `OPC ${showResolveModal.option_b}` : ''}</div>
+                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>Última Captura · Lista {showResolveModal.list_b}</div>
                         
                         <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
                             <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: showResolveModal.photo_b ? `url(${getImageUrl(showResolveModal.photo_b)}) center/cover` : 'var(--border)', border: '2px solid var(--red)' }} />
@@ -2002,11 +2012,11 @@ const CommandCenter = () => {
 
                         <button 
                             onClick={() => handleDecide(showResolveModal.capture_b_id)}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--red)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s' }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#dc2626'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'var(--red)'}
+                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--surface-3)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-4)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-3)'}
                         >
-                            ADJUDICAR A BANDO B
+                            ADJUDICAR
                         </button>
                     </div>
                   </div>

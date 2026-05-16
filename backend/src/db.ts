@@ -27,9 +27,10 @@ db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
 db.pragma('cache_size = -131072');     // 128 MB cache
 db.pragma('temp_store = MEMORY');
-db.pragma('mmap_size = 268435456');    // 256 MB memory-mapped I/O
-db.pragma('busy_timeout = 10000');     // wait up to 10s (prevents SQLite_BUSY on cold starts)
+db.pragma('mmap_size = 3000000000');   // 3GB memory-mapped I/O (Railway standard containers can handle this)
+db.pragma('busy_timeout = 30000');     // wait up to 30s (CRITICAL: prevents SQLite_BUSY on cold starts/heavy load)
 db.pragma('auto_vacuum = INCREMENTAL');
+db.pragma('page_size = 4096');
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
 const currentSchemaVersion = 12; // Update this to trigger migrations
