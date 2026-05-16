@@ -885,7 +885,7 @@ const CommandCenter = () => {
           >
             {showSidebar ? <X size={20} /> : <BarChart3 size={20} />}
           </button>
-        )}
+        ))}
 
         <aside style={{
           overflowY: 'auto',
@@ -1934,8 +1934,8 @@ const CommandCenter = () => {
                             <div style={{ padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
                                 <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>Capturado el</p>
                                 <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>
-                                    {new Date(showResolveModal.time_a).toLocaleDateString('es-PY')} <br/>
-                                    <span style={{ color: 'var(--plra-300)' }}>{new Date(showResolveModal.time_a).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    {new Date(showResolveModal.time_a).toLocaleDateString('es-PY')}
+                                    <div style={{ color: 'var(--plra-300)' }}>{new Date(showResolveModal.time_a).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</div>
                                 </p>
                             </div>
                             <a 
@@ -1981,8 +1981,8 @@ const CommandCenter = () => {
                             <div style={{ padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
                                 <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>Capturado el</p>
                                 <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>
-                                    {new Date(showResolveModal.time_b).toLocaleDateString('es-PY')} <br/>
-                                    <span style={{ color: 'var(--red)' }}>{new Date(showResolveModal.time_b).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    {new Date(showResolveModal.time_b).toLocaleDateString('es-PY')}
+                                    <div style={{ color: 'var(--red)' }}>{new Date(showResolveModal.time_b).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</div>
                                 </p>
                             </div>
                             <a 
@@ -2020,9 +2020,6 @@ const CommandCenter = () => {
                     Cerrar sin cambios
                   </button>
                 </div>
-              </motion.div>
-            </div>
-          )}
               </motion.div>
             </div>
           )}
