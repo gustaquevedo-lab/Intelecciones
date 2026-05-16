@@ -1714,7 +1714,7 @@ const CommandCenter = () => {
                                 <p style={{ fontSize: '0.8rem', color: 'white', fontWeight: 800, margin: '2px 0 0 0' }}>{conf.coord_a}</p>
                                 <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, margin: 0 }}>Padrino: {conf.padrino_a || 'S/P'}</p>
                             </div>
-                            <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{new Date(conf.time_a).toLocaleDateString()} {new Date(conf.time_a).toLocaleTimeString([], {hour: '2-numeric', minute:'2-numeric'})}</p>
+                            <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{new Date(conf.time_a).toLocaleDateString()} {new Date(conf.time_a).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_a_id); }}
                                 style={{ marginTop: '0.2rem', padding: '6px', borderRadius: '8px', background: 'var(--plra-500)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}
@@ -1730,7 +1730,7 @@ const CommandCenter = () => {
                                 <p style={{ fontSize: '0.8rem', color: 'white', fontWeight: 800, margin: '2px 0 0 0' }}>{conf.coord_b}</p>
                                 <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, margin: 0 }}>Padrino: {conf.padrino_b || 'S/P'}</p>
                             </div>
-                            <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{conf.time_b ? `${new Date(conf.time_b).toLocaleDateString()} ${new Date(conf.time_b).toLocaleTimeString([], {hour: '2-numeric', minute:'2-numeric'})}` : '-'}</p>
+                            <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{conf.time_b ? `${new Date(conf.time_b).toLocaleDateString()} ${new Date(conf.time_b).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : '-'}</p>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_b_id); }}
                                 style={{ marginTop: '0.2rem', padding: '6px', borderRadius: '8px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}
