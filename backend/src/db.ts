@@ -387,24 +387,67 @@ if (dbVersion < currentSchemaVersion) {
     console.log("MIGRATION: Update completed.");
 }
 
-// Heavy one-time normalization logic remains protected by its own check
+// 🔄 COMPREHENSIVE DATA NORMALIZATION: Fix dots, spaces and casing globally
 try {
-  const needsNormalization = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v3_done'").get();
+  const needsNormalization = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v4_full_done'").get();
   if (!needsNormalization) {
-    console.log("PERFORMANCE: Running database normalization...");
+    console.log("PERFORMANCE: Running global database normalization (v4)...");
     db.transaction(() => {
+      // 1. Clean Electors
       db.exec(`
-        UPDATE electors SET ci = TRIM(ci), ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)) WHERE ci IS NOT NULL;
-        UPDATE voting_locations SET cod_local = TRIM(cod_local), distrito = UPPER(TRIM(distrito)), ciudad = UPPER(TRIM(ciudad)) WHERE cod_local IS NOT NULL;
-        UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL AND distrito != '';
-        UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL;
-        UPDATE users SET distrito = 'PEDRO JUAN CABALLERO' WHERE (distrito IS NULL OR TRIM(distrito) = '') AND role != 'SUPERUSUARIO';
-        UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL;
-        INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v3_done', 'true');
+        UPDATE electors SET 
+          ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
+          ciudad = UPPER(TRIM(ciudad)), 
+          distrito = UPPER(TRIM(distrito)) 
+        WHERE ci IS NOT NULL;
       `);
+      
+      // 2. Clean Captures (Critical for JOINs)
+      db.exec(`
+        UPDATE elector_captures SET 
+          elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
+        WHERE elector_ci IS NOT NULL;
+      `);
+
+      // 3. Clean Conflicts
+      db.exec(`
+        UPDATE capture_conflicts SET 
+          elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
+        WHERE elector_ci IS NOT NULL;
+      `);
+
+      // 4. Clean Users (CI and Username are often the same)
+      db.exec(`
+        UPDATE users SET 
+          ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
+          username = REPLACE(REPLACE(TRIM(username), '.', ''), ' ', ''),
+          distrito = UPPER(TRIM(distrito)) 
+        WHERE ci IS NOT NULL;
+      `);
+
+      // 5. RE-BACKFILL: Now that CIs are clean, we might find new duplicates that were fragmented
+      db.prepare(`
+        INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
+        SELECT 
+          MIN(id) as capture_id, 
+          MAX(id) as capture_id_b, 
+          elector_ci, 
+          MIN(list_id) as list_id_a, 
+          MAX(list_id) as list_id_b,
+          CASE WHEN MIN(list_id) = MAX(list_id) THEN 'INTERNAL' ELSE 'INTER_LIST' END as conflict_type,
+          'PENDING'
+        FROM elector_captures
+        WHERE elector_ci IN (SELECT elector_ci FROM elector_captures GROUP BY elector_ci HAVING COUNT(*) > 1)
+        AND elector_ci NOT IN (SELECT elector_ci FROM capture_conflicts)
+        GROUP BY elector_ci
+      `).run();
+
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v4_full_done', 'true')").run();
     })();
-    console.log("PERFORMANCE: Normalization complete.");
+    console.log("PERFORMANCE: Global normalization and backfill complete.");
   }
-} catch (e: any) {}
+} catch (e: any) {
+    console.error("MIGRATION ERROR (Normalization):", e.message);
+}
 
 export default db;
