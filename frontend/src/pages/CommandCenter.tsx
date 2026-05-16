@@ -9,7 +9,7 @@ import {
   ChevronDown,
   Download, MapPin, Bell, X, Search,
   ChevronRight, Truck, Target, MessageSquare, Mic, Clock,
-  RefreshCw, CheckCircle, Plus, ExternalLink, User
+  RefreshCw, CheckCircle, Plus, ExternalLink
 } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import MainLayout from '../components/MainLayout';
@@ -1728,7 +1728,7 @@ const CommandCenter = () => {
                           <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <User size={12} style={{ color: 'var(--plra-300)' }} />
+                                    <Users size={12} style={{ color: 'var(--plra-300)' }} />
                                 </div>
                                 <div style={{ minWidth: 0 }}>
                                     <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>Captura Inicial</p>
@@ -1742,7 +1742,7 @@ const CommandCenter = () => {
                                 </div>
                                 <div style={{ minWidth: 0 }}>
                                     <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>Última Captura</p>
-                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conf.coord_b}</p>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conf.coord_b || 'No disponible'}</p>
                                 </div>
                             </div>
                           </div>
@@ -1977,12 +1977,12 @@ const CommandCenter = () => {
                   {/* Contender B Detail */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div style={{ padding: '1.5rem', borderRadius: '24px', background: 'var(--bg)', border: '1px solid var(--border)', position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>Última Captura · Lista {showResolveModal.list_b}</div>
+                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>Última Captura · Lista {showResolveModal.list_b || 'N/A'}</div>
                         
                         <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
                             <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: showResolveModal.photo_b ? `url(${getImageUrl(showResolveModal.photo_b)}) center/cover` : 'var(--border)', border: '2px solid var(--red)' }} />
                             <div>
-                                <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{showResolveModal.coord_b}</p>
+                                <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{showResolveModal.coord_b || 'Coordinador no encontrado'}</p>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700, margin: 0 }}>Padrino: <span style={{ color: 'var(--red)' }}>{showResolveModal.padrino_b || 'N/A'}</span></p>
                             </div>
                         </div>

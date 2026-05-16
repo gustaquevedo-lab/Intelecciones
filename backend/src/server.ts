@@ -1444,6 +1444,7 @@ app.get('/api/conflicts', (req, res) => {
   }
 });
 
+
 app.get('/api/activities', (req, res) => {
   const sec = getSecurityFilter(req, 'l');
   const params = sec.params || [];
@@ -2279,14 +2280,14 @@ app.get('/api/admin/conflicts', (req, res) => {
         lb.option_number as option_b
 
       FROM capture_conflicts cc
-      JOIN electors e ON REPLACE(REPLACE(TRIM(cc.elector_ci), '.', ''), ',', '') = REPLACE(REPLACE(TRIM(e.ci), '.', ''), ',', '')
-      JOIN elector_captures ca ON cc.capture_id = ca.id
+      LEFT JOIN electors e ON REPLACE(REPLACE(TRIM(cc.elector_ci), '.', ''), ',', '') = REPLACE(REPLACE(TRIM(e.ci), '.', ''), ',', '')
+      LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
       LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
-      JOIN users ua ON ca.coordinator_id = ua.id
+      LEFT JOIN users ua ON ca.coordinator_id = ua.id
       LEFT JOIN users ub ON cb.coordinator_id = ub.id
       LEFT JOIN users pa ON ua.parent_id = pa.id
       LEFT JOIN users pb ON ub.parent_id = pb.id
-      JOIN lists la ON ca.list_id = la.id
+      LEFT JOIN lists la ON ca.list_id = la.id
       LEFT JOIN lists lb ON cb.list_id = lb.id
       WHERE cc.status != 'RESOLVED'
     `;
@@ -2665,9 +2666,10 @@ app.get('/api/stats/command', (req, res) => {
   const local_id = (req.query.localId as string) || '';
   const role = getRole(req);
   const isPadrino = role === 'PADRINO';
+  const requesterId = req.headers['x-user-id'];
   const sec = getSecurityFilter(req, 'e');
   const secLoc = getSecurityFilter(req, 'loc');
-
+  console.time(`STATS_COMMAND_${requesterId}`);
   try {
     // --- Parameterized list filter (avoids = NULL bug and SQL injection) ---
     let listFilterSql = '';
@@ -2800,6 +2802,8 @@ app.get('/api/stats/command', (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  } finally {
+    console.timeEnd(`STATS_COMMAND_${requesterId}`);
   }
 });
 
