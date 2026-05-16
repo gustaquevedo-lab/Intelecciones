@@ -9,7 +9,7 @@ import {
   ChevronDown,
   Download, MapPin, Bell, X, Search,
   ChevronRight, Truck, Target, MessageSquare, Mic, Clock,
-  RefreshCw, CheckCircle, Plus
+  RefreshCw, CheckCircle, Plus, ExternalLink
 } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import MainLayout from '../components/MainLayout';
@@ -163,7 +163,7 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
         <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600 }}>{new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
 
-      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>{req.type}</p>
+      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>{req.type}</p>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '1.25rem', lineHeight: '1.5', wordBreak: 'break-word' }}>{req.description}</p>
 
       {/* Multimedia Display (Premium) */}
@@ -202,7 +202,7 @@ const RequestItem = ({ req, onResolve, isReadOnly }: { req: any, onResolve: (sta
             {req.coordinator_name?.charAt(0)}
           </div>
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: '0.75rem', color: 'white', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.coordinator_name}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text)', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.coordinator_name}</p>
             {req.padrino_name && (
               <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Padrino: <span style={{ fontWeight: 700, color: 'var(--plra-200)' }}>{req.padrino_name}</span></p>
             )}
@@ -298,10 +298,10 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
                 }}
               >
                 <span style={{ fontSize: '0.9rem', marginBottom: '2px', filter: active ? 'drop-shadow(0 0 4px rgba(255,255,255,0.5))' : 'none' }}>{f.icon}</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 950, color: active ? 'white' : 'rgba(255,255,255,0.9)' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 950, color: active ? 'var(--text-inverse)' : 'var(--text)' }}>
                   {f.key === 'GREEN' ? stats?.green : f.key === 'YELLOW' ? stats?.yellow : f.key === 'RED' ? stats?.red : stats?.purple}
                 </span>
-                <span style={{ fontSize: '0.42rem', fontWeight: 900, color: active ? 'white' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</span>
+                <span style={{ fontSize: '0.42rem', fontWeight: 900, color: active ? 'var(--text-inverse)' : 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</span>
               </button>
             );
           })}
@@ -328,7 +328,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.nombre}</p>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.nombre}</p>
                     <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, margin: '1px 0 0' }}>{loc.total_captures} / {loc.total_electors} ELECTORES</p>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '0.5rem' }}>
@@ -1388,11 +1388,11 @@ const CommandCenter = () => {
                           else setSelectedPadrino(null);
                         }}
                         style={{
-                          background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border)',
-                          color: 'white', padding: '0.75rem 1.25rem', borderRadius: '16px',
+                          background: 'var(--surface)', border: '1px solid var(--border)',
+                          color: 'var(--text)', padding: '0.75rem 1.25rem', borderRadius: '16px',
                           cursor: 'pointer', fontWeight: 900, fontSize: '0.75rem',
                           display: 'flex', alignItems: 'center', gap: '0.6rem',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                          boxShadow: 'var(--shadow-sm)'
                         }}
                       >
                         <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} />
@@ -1656,7 +1656,7 @@ const CommandCenter = () => {
               <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                 <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', marginBottom: '0.3rem' }}>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.3rem' }}>
                       Panel de <span style={{ color: 'var(--red)' }}>Disputas</span>
                     </h2>
                     <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', fontWeight: 700 }}>RESOLUCIÓN TÁCTICA DE CONFLICTOS DE CAPTACIÓN</p>
@@ -1670,7 +1670,7 @@ const CommandCenter = () => {
                 {conflicts.length === 0 ? (
                   <div style={{ padding: '4rem', textAlign: 'center', background: 'var(--surface)', borderRadius: '24px', border: '1px dashed var(--border)' }}>
                     <CheckCircle size={48} style={{ color: 'var(--green)', marginBottom: '1.5rem', opacity: 0.5 }} />
-                    <h3 style={{ color: 'white', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Territorio Controlado</h3>
+                    <h3 style={{ color: 'var(--text)', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Territorio Controlado</h3>
                     <p style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>No hay disputas vigentes en este distrito.</p>
                   </div>
                 ) : (
@@ -1685,109 +1685,70 @@ const CommandCenter = () => {
                       
                       return (
                         <motion.div
-                          whileHover={{ y: -4, scale: 1.01 }}
+                          whileHover={{ y: -4, scale: 1.02 }}
                           key={conf.conflict_id}
+                          onClick={() => setShowResolveModal(conf)}
                           style={{
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            backdropFilter: 'blur(10px)',
+                            background: 'var(--surface)',
                             border: '1px solid var(--border)',
                             borderRadius: '20px',
                             position: 'relative',
                             overflow: 'hidden',
                             boxShadow: 'var(--shadow-sm)',
+                            cursor: 'pointer',
                             display: 'flex',
                             flexDirection: 'column',
-                            minHeight: '380px'
+                            minHeight: '180px'
                           }}
                         >
-                          {/* Intense Header Gradient */}
+                          {/* Compact Summary Header */}
                           <div style={{ 
-                            padding: '0.85rem 1rem', 
-                            background: `linear-gradient(180deg, ${statusColor}99 0%, ${statusColor}33 40%, transparent 100%)`,
+                            padding: '1rem', 
+                            background: `linear-gradient(180deg, ${statusColor}44 0%, transparent 100%)`,
+                            borderBottom: '1px solid var(--border)'
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <h4 style={{ 
                                     fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', margin: 0, 
-                                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden', lineHeight: '1.1'
+                                    display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden', lineHeight: '1.2'
                                 }}>
                                   {conf.elector_nombre} {conf.elector_apellido}
                                 </h4>
-                                <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', marginTop: '0.2rem', fontWeight: 700 }}>CI: {conf.elector_ci}</p>
+                                <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, margin: '2px 0 0' }}>CI: {conf.elector_ci}</p>
                               </div>
-                              <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
-                                <div style={{ 
-                                  width: '24px', height: '8px', borderRadius: '4px', 
-                                  background: statusColor,
-                                  boxShadow: `0 0 10px ${statusColor}66`
-                                }} />
-                                {conf.transport_a === 1 && <span style={{ fontSize: '0.8rem' }}>🚌</span>}
-                              </div>
+                              <div style={{ 
+                                width: '20px', height: '6px', borderRadius: '3px', 
+                                background: statusColor, boxShadow: `0 0 12px ${statusColor}66`
+                              }} />
                             </div>
                           </div>
 
-                          <div style={{ padding: '0.75rem 1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            {/* Contender A */}
-                            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border)', padding: '0.65rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                                    <div style={{ minWidth: 0 }}>
-                                        <p style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>CAPTURA A</p>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_a}</p>
-                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_a || 'N/A'}</p>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '0.65rem', color: 'var(--text)', fontWeight: 900, margin: 0 }}>LISTA {conf.list_a} {conf.option_a ? `OPC ${conf.option_a}` : ''}</p>
-                                        <p style={{ fontSize: '0.5rem', color: 'var(--plra-300)', fontWeight: 800 }}>{conf.time_a ? new Date(conf.time_a).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_a_id); }}
-                                    style={{ 
-                                        width: '100%', padding: '6px', borderRadius: '10px', 
-                                        background: 'var(--plra-700)', color: 'white', border: '1px solid var(--border)', 
-                                        fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
-                                    }}
-                                >
-                                    ADJUDICAR A
-                                </button>
+                          <div style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ textAlign: 'left' }}>
+                                <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0 }}>BANDO A</p>
+                                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--plra-300)' }}>LISTA {conf.list_a}</p>
                             </div>
-
-                            {/* Contender B */}
-                            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border)', padding: '0.65rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                                    <div style={{ minWidth: 0 }}>
-                                        <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>CAPTURA B</p>
-                                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{conf.coord_b}</p>
-                                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 700 }}>Padrino: {conf.padrino_b || 'N/A'}</p>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '0.65rem', color: 'var(--text)', fontWeight: 900, margin: 0 }}>LISTA {conf.list_b} {conf.option_b ? `OPC ${conf.option_b}` : ''}</p>
-                                        <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800 }}>{conf.time_b ? new Date(conf.time_b).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_b_id); }}
-                                    style={{ 
-                                        width: '100%', padding: '6px', borderRadius: '10px', 
-                                        background: 'var(--plra-700)', color: 'white', border: '1px solid var(--border)', 
-                                        fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
-                                    }}
-                                >
-                                    ADJUDICAR B
-                                </button>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', fontWeight: 900 }}>VS</div>
+                            <div style={{ textAlign: 'right' }}>
+                                <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, margin: 0 }}>BANDO B</p>
+                                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--red)' }}>LISTA {conf.list_b}</p>
                             </div>
                           </div>
 
                           <div style={{ 
-                              marginTop: 'auto',
-                              fontSize: '0.55rem', fontWeight: 900, 
-                              color: conf.conflict_status === 'WAITING_CONSENT' ? 'var(--yellow)' : 'var(--text-3)', 
-                              textAlign: 'center', background: 'rgba(0,0,0,0.15)', padding: '6px',
-                              letterSpacing: '0.5px'
+                                marginTop: 'auto',
+                                fontSize: '0.5rem', fontWeight: 900, 
+                                color: 'var(--text-inverse)', 
+                                textAlign: 'center', background: 'var(--plra-600)', padding: '5px',
+                                letterSpacing: '0.5px', textTransform: 'uppercase'
                           }}>
-                              {conf.conflict_status === 'WAITING_CONSENT' ? '⏳ ESPERANDO CONSENTIMIENTO SUBJEFES' : '🔴 PENDIENTE DECISIÓN JEFE'}
+                              <AlertTriangle size={10} style={{ display: 'inline', marginRight: '4px' }} /> Ver Detalles y Resolver
                           </div>
+                        </motion.div>
+                      );
+                    })}
                         </motion.div>
                       );
                     })}
@@ -1920,108 +1881,151 @@ const CommandCenter = () => {
 
         <AnimatePresence>
           {showResolveModal && (
-            <div className="modal-overlay" onClick={() => setShowResolveModal(null)}>
+            <div className="modal-overlay" onClick={() => setShowResolveModal(null)} style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)' }}>
               <motion.div
                 className="modal-content"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
                 onClick={e => e.stopPropagation()}
-                style={{ maxWidth: '500px', width: '100%' }}
+                style={{ maxWidth: '950px', width: '95%', padding: 0, borderRadius: '28px', border: '1px solid var(--border)', overflow: 'hidden' }}
               >
-                <div style={{ padding: '2rem', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to bottom, rgba(239,68,68,0.05), transparent)' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <AlertTriangle size={24} style={{ color: 'var(--red)' }} />
-                    Conflicto de Captura
-                  </h3>
-                </div>
-
-                <div style={{ padding: '2rem' }}>
-                  <p style={{ color: 'var(--text-2)', marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '0.9rem' }}>
-                    Se ha detectado una disputa por <strong>{showResolveModal.elector_nombre} {showResolveModal.elector_apellido}</strong>.
-                    Compara los detalles para decidir a quién adjudicar el elector:
-                  </p>
-
-                  {/* Party 1: A */}
-                  <div style={{
-                    padding: '1.25rem', borderRadius: '16px', background: 'var(--accent-subtle)',
-                    border: showResolveModal.jefe_decision_id === showResolveModal.capture_a_id ? '2px solid var(--plra-400)' : '1px solid var(--border)', 
-                    position: 'relative', overflow: 'hidden', marginBottom: '1rem'
-                  }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--plra-500)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>LISTA {showResolveModal.list_a}</div>
-
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coord_a}</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
-                          <Clock size={12} /> {new Date(showResolveModal.time_a).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                {/* Tactical Header */}
+                {(() => {
+                  const statusColor = showResolveModal.tl_a === 'GREEN' ? '#10b981' : showResolveModal.tl_a === 'YELLOW' ? '#f59e0b' : showResolveModal.tl_a === 'PURPLE' ? '#a855f7' : '#ef4444';
+                  return (
+                    <div style={{ 
+                        padding: '2rem', 
+                        background: `linear-gradient(135deg, ${statusColor}cc 0%, rgba(15,23,42,0.95) 100%)`,
+                        borderBottom: '1px solid var(--border)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                    }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: 'white' }}>
+                                    {showResolveModal.elector_nombre} {showResolveModal.elector_apellido}
+                                </h3>
+                                <div style={{ padding: '4px 12px', borderRadius: '100px', background: statusColor, color: 'white', fontSize: '0.65rem', fontWeight: 900, boxShadow: `0 0 20px ${statusColor}80` }}>
+                                    DISPUTA ACTIVA
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1.5rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', fontWeight: 700 }}>
+                                <span>CI: {showResolveModal.elector_ci}</span>
+                                {showResolveModal.transport_a === 1 && <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Truck size={14} /> REQUIERE TRANSPORTE</span>}
+                            </div>
                         </div>
-                      </div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: showResolveModal.consent_a ? 'var(--green)' : 'var(--text-3)', opacity: 0.8 }}>
-                        {showResolveModal.consent_a ? '✓ CONSENTIDO' : '⏳ PENDIENTE'}
-                      </div>
+                        <AlertTriangle size={48} style={{ color: 'white', opacity: 0.2 }} />
                     </div>
+                  )
+                })()}
 
-                    {(authUser?.role === 'SUPERUSUARIO' || authUser?.role === 'JEFE_CAMPANA') && showResolveModal.conflict_status !== 'RESOLVED' && (
-                        <button
-                        onClick={() => handleDecide(showResolveModal.capture_a_id)}
-                        className="btn-confirm-styled"
-                        style={{ width: '100%', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--plra-600)' }}
-                        disabled={showResolveModal.jefe_decision_id === showResolveModal.capture_a_id}
+                <div style={{ padding: '2rem', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem', background: 'var(--surface)' }}>
+                  {/* Contender A Detail */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ padding: '1.5rem', borderRadius: '24px', background: 'var(--bg)', border: '1px solid var(--border)', position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--plra-500)', color: 'white', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900 }}>BANDO A · LISTA {showResolveModal.list_a} {showResolveModal.option_a ? `OPC ${showResolveModal.option_a}` : ''}</div>
+                        
+                        <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: showResolveModal.photo_a ? `url(${getImageUrl(showResolveModal.photo_a)}) center/cover` : 'var(--border)', border: '2px solid var(--plra-400)' }} />
+                            <div>
+                                <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{showResolveModal.coord_a}</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700, margin: 0 }}>Padrino: <span style={{ color: 'var(--plra-300)' }}>{showResolveModal.padrino_a || 'N/A'}</span></p>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+                                <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>Capturado el</p>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>
+                                    {new Date(showResolveModal.time_a).toLocaleDateString('es-PY')} <br/>
+                                    <span style={{ color: 'var(--plra-300)' }}>{new Date(showResolveModal.time_a).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </p>
+                            </div>
+                            <a 
+                                href={`https://www.google.com/maps/search/?api=1&query=${showResolveModal.lat_a},${showResolveModal.lng_a}`} 
+                                target="_blank" rel="noreferrer"
+                                style={{ 
+                                    padding: '1rem', borderRadius: '16px', background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)',
+                                    display: 'flex', flexDirection: 'column', justifyContent: 'center', textDecoration: 'none'
+                                }}
+                            >
+                                <p style={{ fontSize: '0.6rem', color: 'var(--plra-300)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <MapPin size={10} /> Ubicación de Captura
+                                </p>
+                                <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-2)' }}>Verificar en Mapa <ExternalLink size={10} style={{ marginLeft: '4px' }} /></p>
+                            </a>
+                        </div>
+
+                        <button 
+                            onClick={() => handleDecide(showResolveModal.capture_a_id)}
+                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--plra-600)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--plra-500)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--plra-600)'}
                         >
-                        {showResolveModal.jefe_decision_id === showResolveModal.capture_a_id ? 'DECISIÓN TOMADA' : 'ADJUDICAR A LISTA ' + showResolveModal.list_a}
+                            ADJUDICAR A BANDO A
                         </button>
-                    )}
-                    
-                    {authUser?.role === 'SUBJEFE' && authUser.assigned_list_id === showResolveModal.list_id_a && !showResolveModal.consent_a && showResolveModal.status === 'WAITING_CONSENT' && (
-                        <button onClick={() => handleConsent(showResolveModal.conflict_id)} style={{ width: '100%', padding: '0.75rem', background: 'var(--green)', color: 'white', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer' }}>
-                            DAR CONSENTIMIENTO
-                        </button>
-                    )}
+                    </div>
                   </div>
 
-                  {/* Party 2: B */}
-                  <div style={{
-                    padding: '1.25rem', borderRadius: '16px', background: 'rgba(239,68,68,0.05)',
-                    border: showResolveModal.jefe_decision_id === showResolveModal.capture_b_id ? '2px solid var(--red)' : '1px solid rgba(239,68,68,0.2)', 
-                    position: 'relative', overflow: 'hidden'
-                  }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, padding: '2px 8px', background: 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 800, borderRadius: '0 0 8px 0', zIndex: 10 }}>LISTA {showResolveModal.list_b}</div>
-
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem' }}>{showResolveModal.coord_b}</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '8px' }}>
-                          <Clock size={12} /> {new Date(showResolveModal.time_b).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  {/* Contender B Detail */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ padding: '1.5rem', borderRadius: '24px', background: 'var(--bg)', border: '1px solid var(--border)', position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: -12, left: 24, padding: '4px 16px', background: 'var(--red)', color: 'white', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900 }}>BANDO B · LISTA {showResolveModal.list_b} {showResolveModal.option_b ? `OPC ${showResolveModal.option_b}` : ''}</div>
+                        
+                        <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', marginBottom: '1.5rem', marginTop: '0.5rem' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: showResolveModal.photo_b ? `url(${getImageUrl(showResolveModal.photo_b)}) center/cover` : 'var(--border)', border: '2px solid var(--red)' }} />
+                            <div>
+                                <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{showResolveModal.coord_b}</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700, margin: 0 }}>Padrino: <span style={{ color: 'var(--red)' }}>{showResolveModal.padrino_b || 'N/A'}</span></p>
+                            </div>
                         </div>
-                      </div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: showResolveModal.consent_b ? 'var(--green)' : 'var(--text-3)', opacity: 0.8 }}>
-                        {showResolveModal.consent_b ? '✓ CONSENTIDO' : '⏳ PENDIENTE'}
-                      </div>
-                    </div>
 
-                    {(authUser?.role === 'SUPERUSUARIO' || authUser?.role === 'JEFE_CAMPANA') && showResolveModal.conflict_status !== 'RESOLVED' && (
-                        <button
-                        onClick={() => handleDecide(showResolveModal.capture_b_id)}
-                        className="btn-confirm-styled"
-                        style={{ width: '100%', padding: '0.6rem', fontSize: '0.7rem', background: 'var(--red)' }}
-                        disabled={showResolveModal.jefe_decision_id === showResolveModal.capture_b_id}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ padding: '1rem', borderRadius: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+                                <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px' }}>Capturado el</p>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>
+                                    {new Date(showResolveModal.time_b).toLocaleDateString('es-PY')} <br/>
+                                    <span style={{ color: 'var(--red)' }}>{new Date(showResolveModal.time_b).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </p>
+                            </div>
+                            <a 
+                                href={`https://www.google.com/maps/search/?api=1&query=${showResolveModal.lat_b},${showResolveModal.lng_b}`} 
+                                target="_blank" rel="noreferrer"
+                                style={{ 
+                                    padding: '1rem', borderRadius: '16px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)',
+                                    display: 'flex', flexDirection: 'column', justifyContent: 'center', textDecoration: 'none'
+                                }}
+                            >
+                                <p style={{ fontSize: '0.6rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <MapPin size={10} /> Ubicación de Captura
+                                </p>
+                                <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-2)' }}>Verificar en Mapa <ExternalLink size={10} style={{ marginLeft: '4px' }} /></p>
+                            </a>
+                        </div>
+
+                        <button 
+                            onClick={() => handleDecide(showResolveModal.capture_b_id)}
+                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--red)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#dc2626'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--red)'}
                         >
-                        {showResolveModal.jefe_decision_id === showResolveModal.capture_b_id ? 'DECISIÓN TOMADA' : 'ADJUDICAR A LISTA ' + showResolveModal.list_b}
+                            ADJUDICAR A BANDO B
                         </button>
-                    )}
-
-                    {authUser?.role === 'SUBJEFE' && authUser.assigned_list_id === showResolveModal.list_id_b && !showResolveModal.consent_b && showResolveModal.status === 'WAITING_CONSENT' && (
-                        <button onClick={() => handleConsent(showResolveModal.conflict_id)} style={{ width: '100%', padding: '0.75rem', background: 'var(--green)', color: 'white', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer' }}>
-                            DAR CONSENTIMIENTO
-                        </button>
-                    )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="modal-footer-premium-styled">
-                  <button onClick={() => setShowResolveModal(null)} className="btn-cancel-styled" style={{ width: '100%' }}>Cerrar sin cambios</button>
+                <div style={{ padding: '1rem 2rem 2rem', background: 'var(--surface)', display: 'flex', justifyContent: 'center' }}>
+                  <button 
+                    onClick={() => setShowResolveModal(null)} 
+                    style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Cerrar sin cambios
+                  </button>
                 </div>
+              </motion.div>
+            </div>
+          )}
               </motion.div>
             </div>
           )}

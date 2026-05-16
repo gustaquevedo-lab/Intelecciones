@@ -177,8 +177,8 @@ const CreateUserModal = ({
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '0.7rem 0.9rem', borderRadius: '10px',
-    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-    color: 'white', fontSize: '0.88rem', fontWeight: 600, outline: 'none',
+    background: 'var(--input-bg)', border: '1px solid var(--border)',
+    color: 'var(--text)', fontSize: '0.88rem', fontWeight: 600, outline: 'none',
     boxSizing: 'border-box'
   };
   const labelStyle: React.CSSProperties = {
@@ -236,7 +236,7 @@ const CreateUserModal = ({
             <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
           </div>
 
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginBottom: '0.4rem' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.4rem' }}>
             Nuevo Miembro de Equipo
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', maxWidth: '300px', margin: '0 auto' }}>
@@ -444,7 +444,7 @@ const PadrinoRow = ({
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white' }}>{padrino.nombre}</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text)' }}>{padrino.nombre}</span>
             <RolePill role="PADRINO" />
             {padrino.status === 'INACTIVE' && <span style={{ fontSize: '0.58rem', color: 'var(--red)', fontWeight: 900 }}>INACTIVO</span>}
           </div>
@@ -517,7 +517,7 @@ const PadrinoRow = ({
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'white' }}>{c.nombre}</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text)' }}>{c.nombre}</span>
                   <RolePill role="COORDINADOR" />
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
@@ -534,7 +534,7 @@ const PadrinoRow = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
                 <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
                   <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white' }}>{c.total_captures ?? 0}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>{c.total_captures ?? 0}</div>
                 </div>
                 <StatDot count={c.green || 0} color="#22C55E" />
                 <StatDot count={c.yellow || 0} color="#EAB308" />
@@ -612,7 +612,7 @@ const TeamPanel = () => {
         {isSuperOrJefe && (
           <button onClick={() => setShowCreatePadrino(true)} style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: 'var(--plra-300)', border: 'none', borderRadius: '12px',
+            background: 'var(--plra-500)', border: 'none', borderRadius: '12px',
             color: 'white', padding: '0.7rem 1.25rem',
             fontSize: '0.82rem', fontWeight: 900, cursor: 'pointer', flexShrink: 0
           }}>
@@ -670,7 +670,7 @@ const TeamPanel = () => {
       {isPadrino && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>
               <UserCheck size={16} style={{ display: 'inline', marginRight: '0.5rem', color: 'var(--plra-300)' }} />
               Mis Coordinadores
             </h3>
@@ -707,7 +707,7 @@ const TeamPanel = () => {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontWeight: 800, color: 'white', fontSize: '0.9rem' }}>{c.nombre}</span>
+                    <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.9rem' }}>{c.nombre}</span>
                     <RolePill role="COORDINADOR" />
                   </div>
                   {c.telefono && (
@@ -721,7 +721,7 @@ const TeamPanel = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
                   <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
                     <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>{c.total_captures ?? 0}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)' }}>{c.total_captures ?? 0}</div>
                   </div>
                   <StatDot count={c.green || 0} color="#22C55E" />
                   <StatDot count={c.yellow || 0} color="#EAB308" />
