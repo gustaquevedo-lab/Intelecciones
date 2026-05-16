@@ -1676,38 +1676,77 @@ const CommandCenter = () => {
                       <motion.div
                         whileHover={{ y: -5, scale: 1.02 }}
                         key={conf.conflict_id}
-                        onClick={() => setShowResolveModal(conf)}
                         style={{
-                          background: conf.conflict_type === 'INTER_LIST' ? 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(8,14,28,0.8))' : 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(8,14,28,0.8))',
-                          border: `1px solid ${conf.conflict_type === 'INTER_LIST' ? 'rgba(59,130,246,0.25)' : 'rgba(239,68,68,0.25)'}`,
-                          borderRadius: '20px',
-                          padding: '1.5rem',
-                          cursor: 'pointer',
+                          background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(8,14,28,0.98))',
+                          border: `1px solid ${conf.conflict_type === 'INTER_LIST' ? 'rgba(59,130,246,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                          borderRadius: '24px',
+                          padding: '1.25rem',
                           position: 'relative',
                           overflow: 'hidden',
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '1rem'
                         }}
                       >
-                        <div style={{ position: 'absolute', top: 0, right: 0, padding: '4px 8px', background: conf.conflict_type === 'INTER_LIST' ? 'var(--plra-500)' : 'var(--red)', color: 'white', fontSize: '0.55rem', fontWeight: 900, borderRadius: '0 0 0 10px' }}>
-                            {conf.conflict_type === 'INTER_LIST' ? 'INTER-LISTAS' : 'INTERNA'}
-                        </div>
-                        <div style={{ marginBottom: '1rem' }}>
-                          <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>{conf.elector_nombre}</p>
-                          <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>{conf.elector_apellido}</p>
-                          <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.2rem' }}>CI: {conf.elector_ci}</p>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Lista {conf.list_a}</p>
-                            <p style={{ fontSize: '0.72rem', color: 'var(--plra-200)', fontWeight: 800, margin: 0 }}>{conf.coord_a}</p>
+                        {/* Header: Elector Info */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
+                          <div>
+                            <p style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white', margin: 0, textTransform: 'uppercase' }}>{conf.elector_nombre} {conf.elector_apellido}</p>
+                            <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.1rem' }}>CI: {conf.elector_ci}</p>
                           </div>
-                          <div style={{ background: 'rgba(239,68,68,0.05)', padding: '0.5rem', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.1)' }}>
-                            <p style={{ fontSize: '0.5rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase' }}>Lista {conf.list_b}</p>
-                            <p style={{ fontSize: '0.72rem', color: 'white', fontWeight: 800, margin: 0 }}>{conf.coord_b}</p>
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                            <div style={{ 
+                              width: '12px', height: '12px', borderRadius: '50%', 
+                              background: conf.tl_a === 'GREEN' ? '#10b981' : conf.tl_a === 'YELLOW' ? '#f59e0b' : conf.tl_a === 'PURPLE' ? '#a855f7' : '#ef4444',
+                              boxShadow: `0 0 10px ${conf.tl_a === 'GREEN' ? '#10b981' : conf.tl_a === 'YELLOW' ? '#f59e0b' : '#ef4444'}44`
+                            }} />
+                            {conf.transport_a === 1 && <div style={{ fontSize: '0.7rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', padding: '2px 6px', borderRadius: '6px', fontWeight: 800 }}>🚌</div>}
                           </div>
                         </div>
-                        <div style={{ marginTop: '0.75rem', fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textAlign: 'center' }}>
-                            {conf.conflict_status === 'WAITING_CONSENT' ? '⏳ ESPERANDO CONSENTIMIENTO' : '🔴 PENDIENTE DECISIÓN'}
+
+                        {/* Contenders Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                          {/* List A */}
+                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <div>
+                                <p style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 800, margin: 0 }}>LISTA {conf.list_a} {conf.option_a ? `(OPT ${conf.option_a})` : ''}</p>
+                                <p style={{ fontSize: '0.8rem', color: 'white', fontWeight: 800, margin: '2px 0 0 0' }}>{conf.coord_a}</p>
+                                <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, margin: 0 }}>Padrino: {conf.padrino_a || 'S/P'}</p>
+                            </div>
+                            <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{new Date(conf.time_a).toLocaleDateString()} {new Date(conf.time_a).toLocaleTimeString([], {hour: '2-numeric', minute:'2-numeric'})}</p>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_a_id); }}
+                                style={{ marginTop: '0.2rem', padding: '6px', borderRadius: '8px', background: 'var(--plra-500)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}
+                            >
+                                ADJUDICAR A
+                            </button>
+                          </div>
+
+                          {/* List B */}
+                          <div style={{ background: 'rgba(239,68,68,0.04)', padding: '0.75rem', borderRadius: '16px', border: '1px solid rgba(239,68,68,0.1)', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            <div>
+                                <p style={{ fontSize: '0.55rem', color: 'var(--red)', fontWeight: 800, margin: 0 }}>LISTA {conf.list_b} {conf.option_b ? `(OPT ${conf.option_b})` : ''}</p>
+                                <p style={{ fontSize: '0.8rem', color: 'white', fontWeight: 800, margin: '2px 0 0 0' }}>{conf.coord_b}</p>
+                                <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, margin: 0 }}>Padrino: {conf.padrino_b || 'S/P'}</p>
+                            </div>
+                            <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{conf.time_b ? `${new Date(conf.time_b).toLocaleDateString()} ${new Date(conf.time_b).toLocaleTimeString([], {hour: '2-numeric', minute:'2-numeric'})}` : '-'}</p>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleDecide(conf.capture_b_id); }}
+                                style={{ marginTop: '0.2rem', padding: '6px', borderRadius: '8px', background: 'var(--red)', color: 'white', border: 'none', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}
+                            >
+                                ADJUDICAR B
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Status Footer */}
+                        <div style={{ 
+                            fontSize: '0.6rem', fontWeight: 900, 
+                            color: conf.conflict_status === 'WAITING_CONSENT' ? 'var(--yellow)' : 'var(--text-3)', 
+                            textAlign: 'center', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '8px' 
+                        }}>
+                            {conf.conflict_status === 'WAITING_CONSENT' ? '⏳ ESPERANDO CONSENTIMIENTO SUBJEFES' : '🔴 PENDIENTE DECISIÓN JEFE'}
                         </div>
                       </motion.div>
                     ))}
