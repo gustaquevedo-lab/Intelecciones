@@ -177,6 +177,10 @@ interface User {
   assigned_list_id?: number;
   assigned_campaign_id?: number;
   list_number?: string;
+  effective_campaign_id?: number;
+  user_district?: string;
+}
+
 const StatCard = ({ icon: Icon, label, value, color }: any) => (
   <div style={{
     background: 'var(--surface)',
