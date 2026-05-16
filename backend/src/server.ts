@@ -2617,16 +2617,28 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
   }
 });
 
+// Cache for /api/admin/electors/stats — full-table aggregate, expensive on large padrones.
+// TTL: 5 minutes. Invalidated automatically on next request after expiry.
+let _electorStatsCache: { data: any[], ts: number } | null = null;
+const ELECTOR_STATS_CACHE_TTL = 300_000; // 5 minutes
+
 app.get('/api/admin/electors/stats', (req, res) => {
+  const now = Date.now();
+  if (_electorStatsCache && (now - _electorStatsCache.ts < ELECTOR_STATS_CACHE_TTL)) {
+    return res.json(_electorStatsCache.data);
+  }
   try {
+    // Uses idx_electors_ciudad_distrito — GROUP BY ciudad avoids full expression scan
+    // when ciudad is already normalised (UPPER/TRIM applied at import time).
     const stats = db.prepare(`
-      SELECT 
-        UPPER(TRIM(COALESCE(NULLIF(ciudad, ''), NULLIF(distrito, ''), 'Sin Asignar'))) as ciudad, 
-        COUNT(*) as count 
-      FROM electors 
+      SELECT
+        UPPER(TRIM(COALESCE(NULLIF(ciudad, ''), NULLIF(distrito, ''), 'Sin Asignar'))) as ciudad,
+        COUNT(*) as count
+      FROM electors
       GROUP BY 1
       ORDER BY 2 DESC
     `).all();
+    _electorStatsCache = { data: stats, ts: now };
     res.json(stats);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2634,6 +2646,7 @@ app.get('/api/admin/electors/stats', (req, res) => {
 });
 
 let _districtsCache: { data: string[], ts: number } | null = null;
+
 const DISTRICTS_CACHE_TTL = 600_000; // 10 minutes
 
 app.get('/api/districts/global', (req, res) => {
@@ -2662,6 +2675,13 @@ app.get('/api/districts/global', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Cache for the elector-counts-by-location subquery used in /api/stats/command.
+// This is the most expensive part for superadmin (full-table GROUP BY on 1M+ rows).
+// Keyed by security-filter params so district-scoped users get their own slice.
+// TTL: 2 minutes — elector data is static between imports.
+const _electorCountsByLocalCache = new Map<string, { data: Map<string, number>, ts: number }>();
+const ELECTOR_COUNTS_CACHE_TTL = 120_000; // 2 minutes
 
 app.get('/api/stats/command', (req, res) => {
   const list_id = getListId(req);
@@ -2742,42 +2762,60 @@ app.get('/api/stats/command', (req, res) => {
       WHERE 1=1 ${localFilterSql} ${secElectors.sql}
     `).get(...electorParams) as any;
 
-    // Location stats
-    const locationStatsQuery = `
-      SELECT
-        loc.cod_local,
-        loc.nombre,
-        COALESCE(e_counts.total, 0)  as total_electors,
-        COALESCE(ec_counts.total, 0) as total_captures,
-        COALESCE(ec_counts.green, 0) as green_captures
-      FROM voting_locations loc
-      LEFT JOIN (
+    // Location stats — elector counts per location are cached separately because
+    // they are the most expensive subquery (full-table GROUP BY on electors) and
+    // are read-only between padron imports. Capture counts are always live.
+    const electorCountsCacheKey = JSON.stringify(secElectors.params || []);
+    const nowMs = Date.now();
+    let electorCountsByLocal: Map<string, number>;
+    const cachedECounts = _electorCountsByLocalCache.get(electorCountsCacheKey);
+    if (cachedECounts && (nowMs - cachedECounts.ts < ELECTOR_COUNTS_CACHE_TTL)) {
+      electorCountsByLocal = cachedECounts.data;
+    } else {
+      // Uses idx_electors_local — covers GROUP BY local_votacion without full scan
+      const rawCounts = db.prepare(`
         SELECT local_votacion, COUNT(*) as total
         FROM electors e WHERE 1=1 ${secElectors.sql}
         GROUP BY local_votacion
-      ) e_counts ON loc.nombre = e_counts.local_votacion
-      LEFT JOIN (
-        SELECT e.local_votacion,
-          COUNT(ec.id) as total,
-          SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
-        FROM elector_captures ec
-        JOIN electors e ON ec.elector_ci = e.ci
-        LEFT JOIN users u ON ec.coordinator_id = u.id
-        LEFT JOIN lists l ON ec.list_id = l.id
-        LEFT JOIN campaigns c ON l.campaign_id = c.id
-        WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${hierarchyFilterSql}
-        GROUP BY e.local_votacion
-      ) ec_counts ON loc.nombre = ec_counts.local_votacion
-      WHERE 1=1 ${secLoc.sql}
+      `).all(...(secElectors.params || [])) as any[];
+      electorCountsByLocal = new Map(rawCounts.map((r: any) => [r.local_votacion, r.total]));
+      _electorCountsByLocalCache.set(electorCountsCacheKey, { data: electorCountsByLocal, ts: nowMs });
+    }
+
+    // Capture counts per location — always live (changes frequently during election day)
+    const captureCountsQuery = `
+      SELECT e.local_votacion,
+        COUNT(ec.id) as total,
+        SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${hierarchyFilterSql}
+      GROUP BY e.local_votacion
     `;
-    const locParams = [
-      ...(secElectors.params || []),
+    const captureCountsParams = [
       ...(sec.params || []),
       ...listFilterParams,
       ...hierarchyFilterParams,
-      ...(secLoc.params || []),
     ];
-    const locationStats = db.prepare(locationStatsQuery).all(...locParams) as any[];
+    const captureCounts = db.prepare(captureCountsQuery).all(...captureCountsParams) as any[];
+    const captureCountsByLocal = new Map(captureCounts.map((r: any) => [r.local_votacion, r]));
+
+    // Merge with voting_locations to build the final location stats array
+    const allLocations = db.prepare(`SELECT cod_local, nombre FROM voting_locations loc WHERE 1=1 ${secLoc.sql}`).all(...(secLoc.params || [])) as any[];
+    const locationStats = allLocations.map((loc: any) => {
+      const ec = captureCountsByLocal.get(loc.nombre) as any;
+      return {
+        cod_local: loc.cod_local,
+        nombre: loc.nombre,
+        total_electors: electorCountsByLocal.get(loc.nombre) || 0,
+        total_captures: ec?.total || 0,
+        green_captures: ec?.green || 0,
+      };
+    });
+
 
     const transportNeeded = db.prepare(`
       SELECT COUNT(*) as count ${captureJoins} ${captureWhere} AND ec.needs_transport = 1
