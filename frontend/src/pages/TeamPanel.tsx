@@ -27,6 +27,7 @@ interface TeamUser {
 interface Campaign { id: number; name: string; distrito?: string; lists: any[]; }
 
 const ROLE_COLORS: Record<string, string> = {
+  SUBJEFE:      '#10B981', // Emerald
   PADRINO:      '#A855F7',
   COORDINADOR:  '#3B82F6',
   MIEMBRO_DE_MESA: '#F59E0B',
@@ -568,7 +569,7 @@ const TeamPanel = () => {
   const [loading, setLoading] = useState(true);
   const [showCreatePadrino, setShowCreatePadrino] = useState(false);
 
-  const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+  const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
   const isPadrino = user?.role === 'PADRINO';
 
   const load = useCallback(async () => {

@@ -358,6 +358,31 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC);
     `);
 
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_conflicts_capture ON capture_conflicts(capture_id)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_conflicts_capture_b ON capture_conflicts(capture_id_b)').run();
+
+    // BACKFILL: Restore conflicts from existing duplicates if they are missing from the table
+    try {
+      db.prepare(`
+        INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
+        SELECT 
+          MIN(id) as capture_id, 
+          MAX(id) as capture_id_b, 
+          elector_ci, 
+          MIN(list_id) as list_id_a, 
+          MAX(list_id) as list_id_b,
+          CASE WHEN MIN(list_id) = MAX(list_id) THEN 'INTERNAL' ELSE 'INTER_LIST' END as conflict_type,
+          'PENDING'
+        FROM elector_captures
+        WHERE elector_ci IN (SELECT elector_ci FROM elector_captures GROUP BY elector_ci HAVING COUNT(*) > 1)
+        AND elector_ci NOT IN (SELECT elector_ci FROM capture_conflicts)
+        GROUP BY elector_ci
+      `).run();
+      console.log("MIGRATION: Backfilled capture_conflicts from existing duplicates.");
+    } catch (e: any) {
+      console.log("MIGRATION: Backfill skipped or failed (likely already clean).");
+    }
+
     setDbVersion(currentSchemaVersion);
     console.log("MIGRATION: Update completed.");
 }

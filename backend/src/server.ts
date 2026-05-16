@@ -827,6 +827,7 @@ app.post('/api/captures', (req, res) => {
           VALUES (?, ?, ?, ?, ?, 'INTER_LIST', 'PENDING')
         `).run(interListCapture.id, Number(result.lastInsertRowid), capture.elector_ci, interListCapture.list_id, list_id);
 
+        console.log(`[CONFLICT] Created INTER_LIST dispute. ID_A: ${interListCapture.id}, ID_B: ${result.lastInsertRowid}`);
         return { success: true, warning: 'Disputa Inter-Listas detectada. El Jefe de Campaña deberá arbitrar y ambos líderes consentir.', is_disputed: true };
       }
 
@@ -1656,16 +1657,17 @@ app.post('/api/users', (req, res) => {
 
   // ── Authorization: who can create whom ──────────────────────────────────
   const ALLOWED_ROLES_TO_CREATE: Record<string, string[]> = {
-    SUPERUSUARIO: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','COORDINADOR','MIEMBRO_DE_MESA','CANDIDATO'],
-    JEFE_CAMPANA: ['PADRINO','COORDINADOR','MIEMBRO_DE_MESA'],
-    PADRINO:      ['COORDINADOR','MIEMBRO_DE_MESA'],
+    SUPERUSUARIO: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA','CANDIDATO'],
+    JEFE_CAMPANA: ['PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA'],
+    PADRINO:      ['SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA'],
+    SUBJEFE:      ['PADRINO','COORDINADOR','MIEMBRO_DE_MESA'],
   };
   const allowed = ALLOWED_ROLES_TO_CREATE[requesterRole] || [];
   if (!allowed.includes(role.toUpperCase())) {
     return res.status(403).json({ error: `Tu rol (${requesterRole}) no puede crear usuarios con el rol ${role}.` });
   }
 
-  // JEFE_CAMPANA/PADRINO: force campaign_id to their own, prevent cross-tenant creation
+  // JEFE_CAMPANA/PADRINO/SUBJEFE: force campaign_id to their own, prevent cross-tenant creation
   let forcedCampaignId: number | null = null;
   if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
     const requesterInfo = getCachedUserInfo(requesterId);
@@ -2280,7 +2282,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         lb.option_number as option_b
 
       FROM capture_conflicts cc
-      LEFT JOIN electors e ON REPLACE(REPLACE(TRIM(cc.elector_ci), '.', ''), ',', '') = REPLACE(REPLACE(TRIM(e.ci), '.', ''), ',', '')
+      LEFT JOIN electors e ON cc.elector_ci = e.ci
       LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
       LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
       LEFT JOIN users ua ON ca.coordinator_id = ua.id
@@ -2303,7 +2305,10 @@ app.get('/api/admin/conflicts', (req, res) => {
     }
 
     const conflicts = db.prepare(sql).all(...params);
-    console.log(`[CONFLICTS] Found ${conflicts.length} active conflicts for district: ${district || 'GLOBAL'}`);
+    console.log(`[DB] Fetched ${conflicts.length} conflicts.`);
+    if (conflicts.length > 0) {
+      console.log(`[DB] Sample Conflict: ID=${conflicts[0].conflict_id}, coord_a=${conflicts[0].coord_a}, coord_b=${conflicts[0].coord_b}, capture_b_id=${conflicts[0].capture_b_id}`);
+    }
     res.json(conflicts);
   } catch (err: any) {
     console.error('[CONFLICTS ERROR]', err);
@@ -3101,14 +3106,13 @@ app.get('/api/admin/activity', (req, res) => {
 // ── MY TEAM — JEFE_CAMPANA / PADRINO self-service team management ────────────
 
 // GET /api/my-team — full hierarchy for the logged-in user's campaign
-app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (req, res) => {
+app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), (req, res) => {
   const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
 
   try {
     const info = getCachedUserInfo(requesterId);
-    const campaignId = info?.campaign_id;
-
+    
     // PADRINO: only sees their own coordinadores
     if (role === 'PADRINO') {
       const coordinators = db.prepare(`
@@ -3148,7 +3152,7 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (r
 });
 
 // GET /api/my-team/padrino/:id/coordinators
-app.get('/api/my-team/padrino/:id/coordinators', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO'), (req, res) => {
+app.get('/api/my-team/padrino/:id/coordinators', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), (req, res) => {
   const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
   const padrinoId = req.params.id;

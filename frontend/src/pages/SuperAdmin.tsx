@@ -714,19 +714,21 @@ Status: ${error.response?.status || 'N/A'}
   useEffect(() => {
     if (newListCampaign) {
       const campaignLists = lists.filter(l => l.campaign_id?.toString() === newListCampaign.toString());
-      const intendant = campaignLists.find(l => l.type === 'INTENDENTE');
       
+      // Filter taken options ONLY for the currently selected list number
       const options = campaignLists
-        .filter(l => l.type === 'CONCEJAL')
+        .filter(l => l.type === 'CONCEJAL' && l.list_number === newListNumber)
         .map(l => parseInt(l.option_number || '0'))
         .filter(n => n > 0);
       setTakenOptions(options);
 
-      if (newListType === 'CONCEJAL' && intendant && !editingList) {
-        setNewListNumber(intendant.list_number);
+      // Auto-select list number ONLY if there is exactly one mayor list in the campaign
+      const intendants = campaignLists.filter(l => l.type === 'INTENDENTE');
+      if (newListType === 'CONCEJAL' && intendants.length === 1 && !editingList && !newListNumber) {
+        setNewListNumber(intendants[0].list_number);
       }
     }
-  }, [newListCampaign, newListType, lists, editingList]);
+  }, [newListCampaign, newListNumber, newListType, lists, editingList]);
 
   const handleCreateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2888,6 +2890,7 @@ Status: ${error.response?.status || 'N/A'}
                           <select className="modern-input-premium-styled" value={newUserRole} onChange={e => setNewUserRole(e.target.value)}>
                             <option value="COORDINADOR">Coordinador de Campo</option>
                             <option value="PADRINO">Padrino</option>
+                            <option value="SUBJEFE">Sub-Jefe (Líder de Lista)</option>
                             <option value="JEFE_CAMPANA">Jefe de Campaña</option>
                             <option value="SUPERUSUARIO">Súper Admin</option>
                           </select>
@@ -2903,13 +2906,21 @@ Status: ${error.response?.status || 'N/A'}
                           </div>
                         )}
 
-                        {(newUserRole === 'PADRINO' || newUserRole === 'COORDINADOR') && (
+                        {(newUserRole === 'PADRINO' || newUserRole === 'COORDINADOR' || newUserRole === 'SUBJEFE') && (
                           <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
-                            <label>{newUserRole === 'PADRINO' ? 'Superior (Jefe de Campaña)' : 'Superior (Padrino)'}</label>
+                            <label>
+                              {newUserRole === 'SUBJEFE' ? 'Superior (Jefe de Campaña)' : 
+                               newUserRole === 'PADRINO' ? 'Superior (Jefe de Campaña)' : 
+                               'Superior (Padrino o Sub-Jefe)'}
+                            </label>
                             <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
                               <option value="">Seleccione Superior...</option>
-                              {users.filter(u => u.role === (newUserRole === 'PADRINO' ? 'JEFE_CAMPANA' : 'PADRINO')).map(u => (
-                                <option key={u.id} value={u.id}>{u.nombre}</option>
+                              {users.filter(u => {
+                                if (newUserRole === 'SUBJEFE') return u.role === 'JEFE_CAMPANA';
+                                if (newUserRole === 'PADRINO') return u.role === 'JEFE_CAMPANA';
+                                return u.role === 'PADRINO' || u.role === 'SUBJEFE';
+                              }).map(u => (
+                                <option key={u.id} value={u.id}>{u.nombre} ({u.role})</option>
                               ))}
                             </select>
                           </div>
@@ -3049,14 +3060,32 @@ Status: ${error.response?.status || 'N/A'}
                         </div>
 
                         <div className="form-group">
-                          <label>Número de Lista</label>
+                          <label>Número de Lista (Candidato de Intendente)</label>
                           {newListType === 'INTENDENTE' ? (
                             <input className="modern-input-premium-styled" placeholder="Ej: 2" value={newListNumber} onChange={e => setNewListNumber(e.target.value)} required />
                           ) : (
-                            <select className="modern-input-premium-styled" value={newListNumber} onChange={e => setNewListNumber(e.target.value)} required>
-                              <option value="">Lista de Intendente...</option>
-                              {lists.filter(l => l.type === 'INTENDENTE' && l.campaign_id?.toString() === newListCampaign.toString()).map(l => (
-                                <option key={l.id} value={l.list_number}>{l.list_number} — {l.candidate_alias || l.candidate_nombre}</option>
+                            <select 
+                              className="modern-input-premium-styled" 
+                              value={newListNumber} 
+                              onChange={e => {
+                                const val = e.target.value;
+                                setNewListNumber(val);
+                                // Auto-fill campaign and city if an intendente is picked
+                                const linkedList = lists.find(l => l.type === 'INTENDENTE' && l.list_number === val && (!newListCiudad || l.ciudad === newListCiudad));
+                                if (linkedList) {
+                                  if (linkedList.campaign_id) setNewListCampaign(linkedList.campaign_id.toString());
+                                  if (linkedList.ciudad) setNewListCiudad(linkedList.ciudad);
+                                }
+                              }} 
+                              required
+                            >
+                              <option value="">Seleccione Lista Patrón...</option>
+                              {lists.filter(l => 
+                                l.type === 'INTENDENTE' && 
+                                (newListCiudad ? l.ciudad?.toUpperCase() === newListCiudad.toUpperCase() : true) &&
+                                (newListCampaign ? l.campaign_id?.toString() === newListCampaign.toString() : true)
+                              ).map(l => (
+                                <option key={l.id} value={l.list_number}>Lista {l.list_number} — {l.candidate_alias || l.candidate_nombre} ({l.ciudad || 'Sin Ciudad'})</option>
                               ))}
                             </select>
                           )}
