@@ -22,6 +22,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import UpdatePrompt from './components/UpdatePrompt';
 import './services/syncService'; // Initialize sync listeners
 import { useAuth } from './context/AuthContext';
+import { warmup } from './services/api';
 
 const RootRedirect = () => {
   const { user, loading } = useAuth();
@@ -66,6 +67,9 @@ const AppRoutes = () => {
 };
 
 function App() {
+  React.useEffect(() => {
+    warmup();
+  }, []);
   console.log('App Rendering Real V2');
   return (
     <ErrorBoundary>

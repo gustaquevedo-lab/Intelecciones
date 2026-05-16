@@ -61,6 +61,17 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
+
+// 💓 Health Check & Warmup
+app.get('/api/ping', (_req, res) => {
+  try {
+    // Light db query to verify connection
+    db.prepare('SELECT 1').get();
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: 'Database unreachable' });
+  }
+});
 // 📊 Robust Recursive Storage Diagnosis & Safe Cache Purge
 const performStorageMaintenance = async () => {
   if (process.env.NODE_ENV !== 'production') return;

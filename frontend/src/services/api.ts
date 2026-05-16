@@ -61,4 +61,23 @@ export const getImageUrl = (url?: string) => {
   return finalUrl;
 };
 
+/** Background Warmup: Keeps the backend alive on platforms like Railway/Vercel */
+export const warmup = async () => {
+  try {
+    await api.get('/ping');
+    console.log('[API] Backend warmed up successfully');
+  } catch (e) {
+    console.warn('[API] Warmup failed, backend might be sleeping');
+  }
+};
+
+// Auto-warmup every 2 minutes while the tab is active
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      warmup();
+    }
+  }, 120000);
+}
+
 export default api;
