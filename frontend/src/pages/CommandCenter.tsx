@@ -1749,9 +1749,6 @@ const CommandCenter = () => {
                         </motion.div>
                       );
                     })}
-                        </motion.div>
-                      );
-                    })}
                   </div>
                 )}
 
@@ -1797,7 +1794,7 @@ const CommandCenter = () => {
                           .map((h: any) => (
                           <tr key={h.conflict_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                             <td style={{ padding: '1rem 2rem' }}>
-                              <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', margin: 0 }}>{h.elector_nombre} {h.elector_apellido}</p>
+                              <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>{h.elector_nombre} {h.elector_apellido}</p>
                               <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {h.elector_ci}</p>
                             </td>
                             <td style={{ padding: '1rem 2rem' }}>
@@ -1807,7 +1804,7 @@ const CommandCenter = () => {
                             <td style={{ padding: '1rem 2rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--plra-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900 }}>{h.winner_name?.charAt(0)}</div>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>{h.winner_name}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)' }}>{h.winner_name}</span>
                               </div>
                             </td>
                             <td style={{ padding: '1rem 2rem', fontSize: '0.75rem', color: 'var(--text-3)' }}>
