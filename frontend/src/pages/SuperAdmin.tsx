@@ -1376,6 +1376,7 @@ Status: ${error.response?.status || 'N/A'}
             </button>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {(Array.isArray(cityStats) ? cityStats : []).map(city => (
               <motion.div 
                 key={city.name}
