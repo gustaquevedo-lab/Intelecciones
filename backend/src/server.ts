@@ -2271,8 +2271,8 @@ app.get('/api/admin/conflicts', (req, res) => {
     const params: any[] = [];
 
     if (district && district !== 'null' && district !== 'undefined') {
-      sql += " AND (UPPER(TRIM(e.distrito)) = UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) = UPPER(TRIM(?)))";
-      params.push(district, district);
+      sql += " AND (UPPER(TRIM(e.distrito)) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) LIKE UPPER(TRIM(?)))";
+      params.push(`%${district}%`, `%${district}%`);
     }
     if (list_id && !isNaN(list_id) && list_id !== 0) {
       sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
@@ -2308,15 +2308,15 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         u_win.role as winner_role
       FROM capture_conflicts cc
       JOIN electors e ON REPLACE(REPLACE(TRIM(cc.elector_ci), '.', ''), ',', '') = REPLACE(REPLACE(TRIM(e.ci), '.', ''), ',', '')
-      JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
-      JOIN users u_win ON ec_win.coordinator_id = u_win.id
+      LEFT JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
+      LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
       WHERE cc.status = 'RESOLVED'
     `;
     const params: any[] = [];
 
     if (district && district !== 'null' && district !== 'undefined') {
-      sql += " AND (UPPER(TRIM(e.distrito)) = UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) = UPPER(TRIM(?)))";
-      params.push(district, district);
+      sql += " AND (UPPER(TRIM(e.distrito)) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) LIKE UPPER(TRIM(?)))";
+      params.push(`%${district}%`, `%${district}%`);
     }
     if (list_id && !isNaN(list_id) && list_id !== 0) {
       sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
