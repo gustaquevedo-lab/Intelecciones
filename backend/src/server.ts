@@ -399,9 +399,10 @@ const getDistrict = (req: express.Request) => {
   const q = req.query.district as string;
   const d = req.headers['x-district'];
   const val = (q && q !== 'null' && q !== 'undefined' && q !== '') ? q : (d as string);
-  if (!val || val === 'null' || val === 'undefined') return null;
+  if (!val || val === 'null' || val === 'undefined' || val === '') return null;
+  // Normalize: Uppercase, trim, and remove accents
   const normalized = val.toString().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  if (['GLOBAL', 'TODOS', 'ALL', 'TODAS', ''].includes(normalized)) return null;
+  if (['GLOBAL', 'TODOS', 'ALL', 'TODAS', 'NULL'].includes(normalized)) return null;
   return normalized;
 };
 
@@ -501,31 +502,36 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       }
 
       if (effectiveDistrict) {
-        const d = effectiveDistrict; // Already normalized in getDistrict
+        const d = effectiveDistrict; 
+        console.log(`[SECURITY] Applying district filter: ${d} for table ${tableAlias}`);
+        
+        // Robust accent-insensitive matching helper
+        const accentFold = (col: string) => `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${col}),'Á','A'),'É','E'),'Í','I'),'Ó','O'),'Ú','U'),'á','A'),'é','E'),'í','I'),'ó','O'),'ú','U')`;
+
         if (tableAlias === 'u') {
           sql += ` AND (
-            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(u.distrito), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ? OR 
-            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(l2.ciudad), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?) OR 
-            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(c2.distrito), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?)
+            ${accentFold('u.distrito')} = ? OR 
+            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND ${accentFold('l2.ciudad')} = ?) OR 
+            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND ${accentFold('c2.distrito')} = ?)
           )`;
           params.push(d, d, d);
         } else if (tableAlias === 'ec') {
-          sql += ` AND (
-            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(e.ciudad), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ? OR 
-            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(e.distrito), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?
-          )`;
+          sql += ` AND (${accentFold('e.ciudad')} = ? OR ${accentFold('e.distrito')} = ?)`;
           params.push(d, d);
-        } else if (tableAlias === 'whatsapp_messages') {
-           // No direct district filter for raw messages yet
         } else {
-          // For lists, electors, campaigns, voting_locations
-          const colA = (tableAlias === 'l' || tableAlias === 'e') ? 'ciudad' : 'distrito';
-          const colB = (tableAlias === 'e' || tableAlias === 'loc') ? 'distrito' : 'ciudad';
-          sql += ` AND (
-            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${tableAlias}.${colA}), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ? OR 
-            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${tableAlias}.${colB}), 'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U') = ?
-          )`;
-          params.push(d, d);
+          // Determine which column to use based on table schema
+          let col = 'distrito';
+          if (tableAlias === 'l' || tableAlias === 'e') col = 'ciudad';
+          
+          sql += ` AND ${accentFold(`${tableAlias}.${col}`)} = ?`;
+          params.push(d);
+          
+          // Fallback for tables that have both or might use either
+          if (tableAlias === 'e' || tableAlias === 'loc') {
+             sql = sql.slice(0, -1); // remove the last '?'
+             sql = sql.replace(` AND ${accentFold(`${tableAlias}.${col}`)} = `, ` AND (${accentFold(`${tableAlias}.ciudad`)} = ? OR ${accentFold(`${tableAlias}.distrito`)} = ?)`);
+             params.push(d); // add second param for the OR
+          }
         }
       }
 
@@ -559,11 +565,8 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
          }
       }
 
-      // 🛑 PRIVACY LAYER: If Jefe Campana, hide details of lists that have a SUBJEFE (unless orphan)
-      // This applies to Captures, Users (Coordinators/Padrinos) and Conflicts details.
-      // Macro stats (stats/command) should NOT use this filter to keep global numbers.
       const isDetailQuery = ['ec', 'u'].includes(tableAlias);
-      const isPublicStats = req.path.includes('/stats/command'); // stats/command sees everything for totals
+      const isPublicStats = req.path.includes('/stats/command'); 
       
       if (role === 'JEFE_CAMPANA' && isDetailQuery && !isPublicStats) {
           const listCol = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
