@@ -69,7 +69,7 @@ const UpdatePrompt = () => {
             border: '1px solid var(--border)',
             borderRadius: '16px',
             padding: '1rem',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.75rem'
@@ -145,7 +145,7 @@ const UpdatePrompt = () => {
             border: '1px solid var(--border)',
             borderRadius: '16px',
             padding: '1rem',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.75rem'
@@ -154,10 +154,13 @@ const UpdatePrompt = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <div style={{
-                background: 'var(--blue-lt)',
+                background: 'var(--primary)',
                 padding: '8px',
                 borderRadius: '10px',
-                color: 'white'
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
                 <Download size={20} />
               </div>
@@ -185,7 +188,7 @@ const UpdatePrompt = () => {
               padding: '0.6rem',
               borderRadius: '10px',
               border: 'none',
-              background: 'var(--blue-lt)',
+              background: 'var(--primary)',
               color: 'white',
               fontWeight: 700,
               fontSize: '0.8rem',
