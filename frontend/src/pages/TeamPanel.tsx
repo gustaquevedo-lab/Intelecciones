@@ -84,7 +84,15 @@ const CreateUserModal = ({
       if (user?.role === 'PADRINO') {
         setPadrinos([user as any]);
       } else {
-        api.get('/my-team').then(r => setPadrinos(r.data.padrinos || [])).catch(() => {});
+        api.get('/my-team').then(r => {
+          const fetched = r.data.padrinos || [];
+          // If I am a SUBJEFE, I should also be an option for my coordinators
+          if (user?.role === 'SUBJEFE' && !fetched.find((p: any) => p.id === user.id)) {
+            setPadrinos([user as any, ...fetched]);
+          } else {
+            setPadrinos(fetched);
+          }
+        }).catch(() => {});
       }
     }
   }, [form.role, user]);
@@ -570,7 +578,7 @@ const TeamPanel = () => {
   const [showCreatePadrino, setShowCreatePadrino] = useState(false);
 
   const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
-  const isPadrino = user?.role === 'PADRINO';
+  const isPadrino = user?.role === 'PADRINO' || user?.role === 'SUBJEFE';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -738,7 +746,7 @@ const TeamPanel = () => {
       {/* Modals */}
       {showCreatePadrino && (
         <CreateUserModal
-          defaultRole={isPadrino ? 'COORDINADOR' : 'PADRINO'}
+          defaultRole={user?.role === 'PADRINO' ? 'COORDINADOR' : 'PADRINO'}
           defaultParentId={isPadrino ? user?.id : undefined}
           campaigns={campaigns}
           onClose={() => setShowCreatePadrino(false)}

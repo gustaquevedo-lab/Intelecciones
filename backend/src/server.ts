@@ -3163,23 +3163,28 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
   try {
     const info = getCachedUserInfo(requesterId);
     
-    // PADRINO: only sees their own coordinadores
-    if (role === 'PADRINO') {
-      const coordinators = db.prepare(`
+    // PADRINO & SUBJEFE: can have their own direct coordinators
+    let coordinators: any[] = [];
+    if (role === 'PADRINO' || role === 'SUBJEFE') {
+      coordinators = db.prepare(`
         SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
                COUNT(ec.id) AS total_captures,
                SUM(CASE WHEN ec.traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
                SUM(CASE WHEN ec.traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
-               SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red
+               SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red,
+               SUM(CASE WHEN ec.needs_transport=1      THEN 1 ELSE 0 END) AS transport_total
         FROM users u
         LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
         WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')
         GROUP BY u.id ORDER BY u.nombre
       `).all(requesterId);
+    }
+
+    if (role === 'PADRINO') {
       return res.json({ role: 'PADRINO', padrinos: [], coordinators });
     }
 
-    // JEFE_CAMPANA / SUPERUSUARIO: full tree
+    // JEFE_CAMPANA / SUBJEFE / SUPERUSUARIO: list view
     const filter = getSecurityFilter(req, 'u');
     const padrinos = db.prepare(`
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
@@ -3195,11 +3200,12 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
       GROUP BY u.id ORDER BY u.nombre
     `).all(...filter.params);
 
-    res.json({ role, padrinos, coordinators: [] });
+    res.json({ role, padrinos, coordinators });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // GET /api/my-team/padrino/:id/coordinators
 app.get('/api/my-team/padrino/:id/coordinators', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), (req, res) => {
