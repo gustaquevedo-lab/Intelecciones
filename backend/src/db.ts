@@ -25,15 +25,16 @@ const db = new Database(dbPath);
 // ── PERFORMANCE PRAGMAS ───────────────────────────────────────────────────
 db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
-db.pragma('cache_size = -131072');     // 128 MB cache
-db.pragma('temp_store = MEMORY');
-db.pragma('mmap_size = 3000000000');   // 3GB memory-mapped I/O (Railway standard containers can handle this)
-db.pragma('busy_timeout = 30000');     // wait up to 30s (CRITICAL: prevents SQLite_BUSY on cold starts/heavy load)
+db.pragma('cache_size = -131072');     // 128 MB page cache (~128 MB)
+db.pragma('temp_store = MEMORY');      // temp tables/sorts in RAM, not disk
+db.pragma('mmap_size = 3000000000');   // 3 GB memory-mapped I/O
+db.pragma('busy_timeout = 30000');     // wait up to 30 s on SQLITE_BUSY
 db.pragma('auto_vacuum = INCREMENTAL');
 db.pragma('page_size = 4096');
+db.pragma('wal_autocheckpoint = 1000'); // checkpoint every 1000 pages to keep WAL small
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 12; // Update this to trigger migrations
+const currentSchemaVersion = 13; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -349,6 +350,22 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC);
+
+      -- v13: Strategic indexes for aggregate/statistics queries (superadmin map & stats)
+      -- Covers GROUP BY local_votacion queries in /api/stats/command location subquery
+      CREATE INDEX IF NOT EXISTS idx_electors_local ON electors (local_votacion);
+      -- Covers district-level filtering and GROUP BY ciudad/distrito in stats endpoints
+      CREATE INDEX IF NOT EXISTS idx_electors_ciudad_distrito ON electors (ciudad, distrito);
+      -- Covers /api/admin/electors/stats GROUP BY ciudad and district filter queries
+      CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors (distrito);
+      -- Covers is_priority filter queries
+      CREATE INDEX IF NOT EXISTS idx_electors_priority ON electors (is_priority);
+      -- Composite covering index for combined city+location filters (map marker queries)
+      CREATE INDEX IF NOT EXISTS idx_electors_ciudad_local ON electors (ciudad, local_votacion);
+      -- Covers elector_captures JOIN on elector_ci + traffic_light GROUP BY (command stats)
+      CREATE INDEX IF NOT EXISTS idx_captures_ci_traffic ON elector_captures (elector_ci, traffic_light);
+      -- Covers transport queries: needs_transport filter + vehicle assignment
+      CREATE INDEX IF NOT EXISTS idx_captures_transport ON elector_captures (needs_transport, assigned_vehicle_id);
     `);
 
     setDbVersion(currentSchemaVersion);
