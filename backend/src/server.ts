@@ -2456,7 +2456,12 @@ app.get('/api/admin/conflicts', (req, res) => {
     sql += ` ${sec.sql}`;
     params.push(...sec.params);
 
-    if (list_id && !isNaN(list_id) && list_id !== 0) {
+    const user_id = req.headers['x-user-id'] as string;
+    const user = getCachedUserInfo(user_id);
+    const role = (user?.role || req.headers['x-user-role'] as string || '').toUpperCase().trim();
+
+    // ONLY filter by list_id for Subjefes/Contenders. Jefes de Campaña and SuperAdmins see ALL active conflicts in their district/campaign
+    if (role === 'SUBJEFE' && list_id && !isNaN(list_id) && list_id !== 0) {
       sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
       params.push(list_id, list_id);
     }
@@ -2503,7 +2508,13 @@ app.get('/api/admin/conflicts/history', (req, res) => {
       sql += " AND (UPPER(TRIM(e.distrito)) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) LIKE UPPER(TRIM(?)))";
       params.push(`%${district}%`, `%${district}%`);
     }
-    if (list_id && !isNaN(list_id) && list_id !== 0) {
+
+    const user_id = req.headers['x-user-id'] as string;
+    const user = getCachedUserInfo(user_id);
+    const role = (user?.role || req.headers['x-user-role'] as string || '').toUpperCase().trim();
+
+    // ONLY filter by list_id for Subjefes/Contenders. Jefes de Campaña and SuperAdmins see ALL resolved conflicts
+    if (role === 'SUBJEFE' && list_id && !isNaN(list_id) && list_id !== 0) {
       sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
       params.push(list_id, list_id);
     }

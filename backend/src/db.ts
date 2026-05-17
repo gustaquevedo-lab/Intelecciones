@@ -434,6 +434,78 @@ if (dbVersion < currentSchemaVersion) {
       console.log("MIGRATION: Backfill skipped or failed (likely already clean).");
     }
 
+    // REPAIR EXISTING CONFLICTS: Backfill capture_id_b, list_id_a, list_id_b, and delete invalid conflicts
+    try {
+      // 1. Backfill capture_id_b for existing conflicts where it is NULL
+      db.prepare(`
+        UPDATE capture_conflicts 
+        SET capture_id_b = (
+          SELECT id 
+          FROM elector_captures 
+          WHERE elector_captures.elector_ci = capture_conflicts.elector_ci 
+            AND elector_captures.id != capture_conflicts.capture_id 
+          ORDER BY id DESC
+          LIMIT 1
+        )
+        WHERE capture_id_b IS NULL;
+      `).run();
+
+      // 2. Backfill list_id_b for conflicts where it is NULL but capture_id_b is populated
+      db.prepare(`
+        UPDATE capture_conflicts 
+        SET list_id_b = (
+          SELECT list_id 
+          FROM elector_captures 
+          WHERE elector_captures.id = capture_conflicts.capture_id_b
+        )
+        WHERE list_id_b IS NULL AND capture_id_b IS NOT NULL;
+      `).run();
+
+      // 3. Backfill list_id_a for conflicts where it is NULL (using old list_id column or linked Capture A)
+      db.prepare(`
+        UPDATE capture_conflicts 
+        SET list_id_a = COALESCE(list_id_a, list_id, (
+          SELECT list_id 
+          FROM elector_captures 
+          WHERE elector_captures.id = capture_conflicts.capture_id
+        ))
+        WHERE list_id_a IS NULL;
+      `).run();
+
+      // 4. Update conflict_type if list_id_a and list_id_b are populated
+      db.prepare(`
+        UPDATE capture_conflicts 
+        SET conflict_type = CASE WHEN list_id_a = list_id_b THEN 'INTERNAL' ELSE 'INTER_LIST' END
+        WHERE list_id_a IS NOT NULL AND list_id_b IS NOT NULL AND (conflict_type IS NULL OR conflict_type = '');
+      `).run();
+
+      // 5. Clean up any invalid/dangling conflicts (where capture_id_b is still NULL or matches capture_id)
+      // Select the captures that are in invalid conflicts so we can reset their is_disputed status
+      const invalidCaptureIds = db.prepare(`
+        SELECT id FROM elector_captures 
+        WHERE id IN (
+          SELECT capture_id FROM capture_conflicts WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b
+          UNION
+          SELECT capture_id_b FROM capture_conflicts WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b
+        )
+      `).all() as any[];
+
+      if (invalidCaptureIds.length > 0) {
+        const idsString = invalidCaptureIds.map(c => c.id).join(',');
+        db.prepare(`UPDATE elector_captures SET is_disputed = 0 WHERE id IN (${idsString})`).run();
+      }
+
+      // Delete the invalid conflict rows
+      db.prepare(`
+        DELETE FROM capture_conflicts 
+        WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b;
+      `).run();
+
+      console.log("MIGRATION: Successfully repaired and synchronized existing capture conflicts.");
+    } catch (err: any) {
+      console.log("MIGRATION: Conflict repair skipped or error:", err.message);
+    }
+
     setDbVersion(currentSchemaVersion);
     console.log("MIGRATION: Update completed.");
 }
