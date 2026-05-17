@@ -994,7 +994,21 @@ const DiaDApp: React.FC = () => {
                                 {(r.votos || 0).toLocaleString('es-PY')} votos · {(r.porcentaje || 0).toFixed(1)}%
                               </span>
                             </motion.div>
-                               {activeTab === 'miembros' && (
+                          );
+                        })}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>
+                    <BarChart3 size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                    <p style={{ fontWeight: 700 }}>Sin resultados cargados aún</p>
+                    <p style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>Los veedores deben cargar las actas de mesa para visualizar resultados.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'miembros' && (
               <motion.div key="miembros" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 {/* Visual Header Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
