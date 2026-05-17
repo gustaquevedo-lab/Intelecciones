@@ -234,7 +234,12 @@ const ContactIntelPanel: React.FC<{ phone: string; onClose: () => void }> = ({ p
               { icon: MapPin, label: 'Local', value: intel.data.local_votacion },
               { icon: Hash, label: 'Mesa', value: intel.data.mesa },
               { icon: Tag, label: 'Orden', value: intel.data.orden },
-              { icon: UserCheck, label: 'Coordinador', value: intel.data.coordinator_name || '—' }
+              { icon: UserCheck, label: 'Coordinador', value: intel.data.coordinator_name ? `${intel.data.coordinator_name} (${intel.data.coordinator_phone || 'Sin tel'})` : '—' },
+              ...(intel.data.parent_name ? [{ icon: Star, label: intel.data.parent_role === 'SUBJEFE' ? 'Líder (Subjefe)' : 'Referente (Padrino)', value: `${intel.data.parent_name} (${intel.data.parent_phone || 'Sin tel'})` }] : []),
+              ...(intel.data.grandparent_name ? [{ icon: Users, label: intel.data.grandparent_role === 'SUBJEFE' ? 'Líder (Subjefe)' : 'Referente (Padrino)', value: `${intel.data.grandparent_name} (${intel.data.grandparent_phone || 'Sin tel'})` }] : []),
+              ...(intel.data.list_number ? [{ icon: FileText, label: 'Lista / Opción', value: `Lista ${intel.data.list_number} ${intel.data.candidate_name ? `(${intel.data.candidate_name})` : ''}` }] : []),
+              ...(intel.data.ciudad ? [{ icon: MapPin, label: 'Ciudad/Distrito', value: intel.data.ciudad }] : []),
+              ...(intel.data.barrio ? [{ icon: MapPin, label: 'Barrio', value: intel.data.barrio }] : []),
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Icon size={12} style={{ color: 'var(--plra-300)', flexShrink: 0 }} />
@@ -259,6 +264,20 @@ const ContactIntelPanel: React.FC<{ phone: string; onClose: () => void }> = ({ p
               </div>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-2)' }}>CI: {intel.data.ci}</div>
             </div>
+            {[
+              { icon: Smartphone, label: 'Teléfono', value: intel.data.telefono || '—' },
+              { icon: MapPin, label: 'Distrito', value: intel.data.distrito || '—' },
+              ...(intel.data.parent_name ? [{ icon: Star, label: `Superior (${intel.data.parent_role})`, value: `${intel.data.parent_name} (${intel.data.parent_phone || 'Sin tel'})` }] : []),
+              ...(intel.data.grandparent_name ? [{ icon: Users, label: `Líder (${intel.data.grandparent_role})`, value: `${intel.data.grandparent_name} (${intel.data.grandparent_phone || 'Sin tel'})` }] : []),
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Icon size={12} style={{ color: 'var(--plra-300)', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: '0.55rem', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 700 }}>{label}</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)' }}>{value}</div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -878,6 +897,9 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   const [mediaUrl, setMediaUrl] = useState('');
   const [broadcastLog, setBroadcastLog] = useState<{ logId: number; total: number; sent: number; failed: number; status: string } | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
+  const [minDelay, setMinDelay] = useState<number>(1);
+  const [maxDelay, setMaxDelay] = useState<number>(60);
+  const [useSpintax, setUseSpintax] = useState<boolean>(true);
 
   useEffect(() => {
     api.get('/whatsapp/templates').then(r => setTemplates(r.data)).catch(() => {});
@@ -938,13 +960,15 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
           number: phone, message: msg,
           media_url: mediaUrl || undefined,
           media_type: mediaType !== 'TEXT' ? mediaType : undefined,
-          terminalId
+          terminalId,
+          use_spintax: useSpintax
         });
         sent++;
       } catch { failed++; }
       setBroadcastLog({ logId: 0, total, sent, failed, status: 'RUNNING' });
-      // Brief anti-spam delay
-      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+      // Customized randomized dynamic delay based on min/max delay preferences
+      const currentDelaySec = minDelay + Math.random() * (maxDelay - minDelay);
+      await new Promise(r => setTimeout(r, currentDelaySec * 1000));
     }
 
     setBroadcastLog(prev => prev ? { ...prev, status: 'COMPLETED' } : null);
@@ -1230,6 +1254,72 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                 />
               )}
             </div>
+
+            {/* Premium Anti-Ban Settings Panel */}
+            <div style={{
+              padding: '1.25rem', borderRadius: '14px',
+              background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.18)',
+              display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle2 size={16} style={{ color: 'var(--plra-300)' }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text)' }}>
+                  Configuración de Envío Seguro (Anti-Bloqueo)
+                </span>
+              </div>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0, lineHeight: 1.4 }}>
+                Para mitigar el riesgo de bloqueo de cuenta por algoritmos de WhatsApp, envíe mensajes con intervalos aleatorios dinámicos y sutiles variaciones en el contenido de cada texto.
+              </p>
+              
+              <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-2)', fontWeight: 600 }}>Intervalo mínimo:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={maxDelay}
+                    value={minDelay}
+                    onChange={e => setMinDelay(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{
+                      width: '52px', background: 'var(--input-bg)', border: '1px solid var(--border)',
+                      borderRadius: '6px', padding: '0.3rem 0.5rem', color: 'var(--text)',
+                      fontSize: '0.72rem', textAlign: 'center', fontWeight: 700, outline: 'none'
+                    }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-3)' }}>seg.</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-2)', fontWeight: 600 }}>Intervalo máximo:</span>
+                  <input
+                    type="number"
+                    min={minDelay}
+                    max={3600}
+                    value={maxDelay}
+                    onChange={e => setMaxDelay(Math.max(minDelay, parseInt(e.target.value) || 60))}
+                    style={{
+                      width: '52px', background: 'var(--input-bg)', border: '1px solid var(--border)',
+                      borderRadius: '6px', padding: '0.3rem 0.5rem', color: 'var(--text)',
+                      fontSize: '0.72rem', textAlign: 'center', fontWeight: 700, outline: 'none'
+                    }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-3)' }}>seg.</span>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={useSpintax}
+                    onChange={e => setUseSpintax(e.target.checked)}
+                    style={{ accentColor: 'var(--plra-500)', cursor: 'pointer', width: '14px', height: '14px' }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-2)', fontWeight: 600 }}>
+                    Mutar textos automáticamente con spintax y marcas invisibles
+                  </span>
+                </label>
+              </div>
+            </div>
+
           </div>
         )}
 

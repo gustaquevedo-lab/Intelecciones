@@ -106,13 +106,24 @@ export const savePadronOffline = async (electors: any[], onProgress?: (pct: numb
         const electorArr = electors[i];
         if (!electorArr || !electorArr[0]) continue;
 
+        const rawLocal = (electorArr[3] || '').toString().trim();
+        const cleanLocal = (!rawLocal || rawLocal === '0' || rawLocal.toLowerCase() === 'sin local' || rawLocal.toLowerCase() === 'desconocido' || rawLocal.toLowerCase() === 'dato no registrado') 
+          ? 'DATO NO REGISTRADO' 
+          : rawLocal.toUpperCase();
+
+        const rawMesa = parseInt(electorArr[4]) || 0;
+        const cleanMesa = rawMesa === 0 ? 'DATO NO REGISTRADO' : rawMesa;
+
+        const rawOrden = parseInt(electorArr[5]) || 0;
+        const cleanOrden = rawOrden === 0 ? 'DATO NO REGISTRADO' : rawOrden;
+
         const elector = {
-          ci: electorArr[0].toString(),
-          nombre: electorArr[1] || '',
-          apellido: electorArr[2] || '',
-          local_votacion: electorArr[3] || 'DESCONOCIDO',
-          mesa: electorArr[4] || 0,
-          orden: electorArr[5] || 0,
+          ci: electorArr[0].toString().trim(),
+          nombre: electorArr[1] ? electorArr[1].toString().trim().toUpperCase() : 'SIN NOMBRE',
+          apellido: electorArr[2] ? electorArr[2].toString().trim().toUpperCase() : 'DATO NO REGISTRADO',
+          local_votacion: cleanLocal,
+          mesa: cleanMesa,
+          orden: cleanOrden,
           nombre_clean: (electorArr[1] || '').toString().toLowerCase().trim(),
           apellido_clean: (electorArr[2] || '').toString().toLowerCase().trim()
         };

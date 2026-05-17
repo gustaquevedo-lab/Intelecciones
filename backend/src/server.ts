@@ -226,7 +226,10 @@ app.get('/api/offline/padron', (req, res) => {
     const electors = db.prepare(query).all(...params);
     
     // Compact mapping: [ci, nombre, apellido, local, mesa, orden]
-    const compact = (electors as any[]).map(e => [e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden]);
+    const compact = (electors as any[]).map(e => {
+      const sanitized = sanitizeElectorData(e);
+      return [sanitized.ci, sanitized.nombre, sanitized.apellido, sanitized.local_votacion, sanitized.mesa, sanitized.orden];
+    });
     
     console.log(`[OFFLINE] Enviando ${compact.length} registros compactos.`);
     res.json(compact);
@@ -1692,7 +1695,7 @@ app.get('/api/vehicles/:id/passengers', (req, res) => {
       WHERE ec.assigned_vehicle_id = ?
       ORDER BY e.is_priority DESC, ec.timestamp ASC
     `).all(id);
-    res.json(passengers);
+    res.json((passengers as any[]).map(sanitizeElectorData));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -2377,7 +2380,7 @@ app.post('/api/logistics/complete-trip', (req, res) => {
 app.get('/api/logistics/pending', (req, res) => {
   try {
     const pending = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, v.description as vehicle_desc
+      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, e.barrio, e.is_priority, v.description as vehicle_desc
       FROM elector_captures ec
       JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN vehicles v ON ec.assigned_vehicle_id = v.id
@@ -2633,6 +2636,63 @@ app.get('/api/admin/activity', (req, res) => {
   }
 });
 
+function sanitizeElectorData(elector: any): any {
+  if (!elector) return elector;
+  const copy = { ...elector };
+
+  // Names
+  copy.nombre = copy.nombre ? copy.nombre.trim().toUpperCase() : 'SIN NOMBRE';
+  copy.apellido = copy.apellido && copy.apellido.trim() !== '' ? copy.apellido.trim().toUpperCase() : 'DATO NO REGISTRADO';
+
+  // CI
+  copy.ci = copy.ci ? copy.ci.toString().trim() : 'DATO NO REGISTRADO';
+
+  // local_votacion
+  if (!copy.local_votacion || copy.local_votacion.trim() === '' || copy.local_votacion === '0' || copy.local_votacion.toLowerCase() === 'sin local' || copy.local_votacion.toLowerCase() === 'desconocido') {
+    copy.local_votacion = 'DATO NO REGISTRADO';
+  } else {
+    copy.local_votacion = copy.local_votacion.trim().toUpperCase();
+  }
+
+  // mesa
+  const rawMesa = parseInt(copy.mesa) || 0;
+  copy.mesa = rawMesa === 0 ? 'DATO NO REGISTRADO' : rawMesa;
+
+  // orden
+  const rawOrden = parseInt(copy.orden) || 0;
+  copy.orden = rawOrden === 0 ? 'DATO NO REGISTRADO' : rawOrden;
+
+  // ciudad
+  if (!copy.ciudad || copy.ciudad.trim() === '' || copy.ciudad === '0') {
+    copy.ciudad = 'DATO NO REGISTRADO';
+  } else {
+    copy.ciudad = copy.ciudad.trim().toUpperCase();
+  }
+
+  // distrito
+  if (!copy.distrito || copy.distrito.trim() === '' || copy.distrito === '0') {
+    copy.distrito = 'DATO NO REGISTRADO';
+  } else {
+    copy.distrito = copy.distrito.trim().toUpperCase();
+  }
+
+  // barrio
+  if (!copy.barrio || copy.barrio.trim() === '' || copy.barrio === '0' || copy.barrio.toLowerCase() === 'sin barrio' || copy.barrio.toLowerCase() === 'no registrado' || copy.barrio.toLowerCase() === 'no asignado') {
+    copy.barrio = 'DATO NO REGISTRADO';
+  } else {
+    copy.barrio = copy.barrio.trim().toUpperCase();
+  }
+
+  // direccion
+  if (!copy.direccion || copy.direccion.trim() === '' || copy.direccion === '0' || copy.direccion.toLowerCase() === 'sin direccion' || copy.direccion.toLowerCase() === 'no registrada' || copy.direccion.toLowerCase() === 'no asignada') {
+    copy.direccion = 'DATO NO REGISTRADO';
+  } else {
+    copy.direccion = copy.direccion.trim().toUpperCase();
+  }
+
+  return copy;
+}
+
 app.get('/api/admin/electors/search', (req, res) => {
   const { q } = req.query;
   const user_id = req.headers['x-user-id'];
@@ -2662,7 +2722,7 @@ app.get('/api/admin/electors/search', (req, res) => {
       WHERE (e.ci LIKE ? OR e.nombre LIKE ? OR e.apellido LIKE ?) ${cityFilter}
       LIMIT 50
     `).all(`%${q}%`, `%${q}%`, `%${q}%`);
-    res.json(electors);
+    res.json((electors as any[]).map(sanitizeElectorData));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -2675,22 +2735,33 @@ app.get('/api/admin/verify-phone/:phone', (req, res) => {
     const phoneShort = phone.replace(/^595/, '0');
 
     const elector = db.prepare(`
-      SELECT e.*, ec.traffic_light, u.nombre as coordinator_name, u.role as coordinator_role
+      SELECT e.*, ec.traffic_light, ec.needs_transport, ec.lat, ec.lng,
+             u.nombre as coordinator_name, u.role as coordinator_role, u.telefono as coordinator_phone,
+             p.nombre as parent_name, p.role as parent_role, p.telefono as parent_phone,
+             gp.nombre as grandparent_name, gp.role as grandparent_role, gp.telefono as grandparent_phone,
+             l.list_number, l.candidate_nombre as candidate_name
       FROM electors e
       JOIN elector_captures ec ON e.ci = ec.elector_ci
       LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      LEFT JOIN users gp ON p.parent_id = gp.id
+      LEFT JOIN lists l ON ec.list_id = l.id
       WHERE ec.telefono LIKE ? OR ec.telefono LIKE ?
       LIMIT 1
     `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
 
     if (elector) {
-      return res.json({ type: 'ELECTOR', data: elector });
+      return res.json({ type: 'ELECTOR', data: sanitizeElectorData(elector) });
     }
 
     const user = db.prepare(`
-      SELECT id, username, role, nombre, ci, telefono 
-      FROM users 
-      WHERE telefono LIKE ? OR telefono LIKE ?
+      SELECT u.id, u.username, u.role, u.nombre, u.ci, u.telefono, u.distrito,
+             p.nombre as parent_name, p.role as parent_role, p.telefono as parent_phone,
+             gp.nombre as grandparent_name, gp.role as grandparent_role, gp.telefono as grandparent_phone
+      FROM users u
+      LEFT JOIN users p ON u.parent_id = p.id
+      LEFT JOIN users gp ON p.parent_id = gp.id
+      WHERE u.telefono LIKE ? OR u.telefono LIKE ?
       LIMIT 1
     `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
 
@@ -3601,18 +3672,48 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
   }
 });
 
+// Parse spintax formats like {Hola|Buenos días|Buenas}
+function parseSpintax(text: string): string {
+  return text.replace(/{([^{}]+)}/g, (match, choices) => {
+    const list = choices.split('|');
+    return list[Math.floor(Math.random() * list.length)];
+  });
+}
+
+// Generate subtle variations to bypass WhatsApp duplicate detection
+function addSubtleVariation(text: string): string {
+  if (!text) return text;
+  
+  // 1. Resolve spintax
+  let resolved = parseSpintax(text);
+
+  // 2. Add subtle variation: a random zero-width character to guarantee distinct message hash/string
+  const zeroWidthChars = ['\u200B', '\u200C', '\u200D', '\uFEFF'];
+  const randomChar = zeroWidthChars[Math.floor(Math.random() * zeroWidthChars.length)];
+  
+  // 3. Randomly inject subtle changes (zero-width character attachment)
+  resolved = resolved + randomChar;
+
+  return resolved;
+}
+
 app.post('/api/whatsapp/direct-message', async (req, res) => {
-  const { number, message, media_url, media_type, lat, lng, terminalId: reqTerminalId } = req.body;
+  const { number, message, media_url, media_type, lat, lng, terminalId: reqTerminalId, use_spintax } = req.body;
   const terminalId = reqTerminalId || 'default';
   try {
+    let finalMessage = message;
+    if (use_spintax && finalMessage) {
+      finalMessage = addSubtleVariation(finalMessage);
+    }
+
     if (media_type === 'VOICE') {
       await whatsappService.sendVoice(terminalId, number, media_url);
     } else if (media_type === 'LOCATION') {
-      await whatsappService.sendLocation(terminalId, number, lat, lng, message);
+      await whatsappService.sendLocation(terminalId, number, lat, lng, finalMessage);
     } else if (media_url) {
-      await whatsappService.sendMedia(terminalId, number, media_url, message);
+      await whatsappService.sendMedia(terminalId, number, media_url, finalMessage);
     } else {
-      await whatsappService.sendMessage(terminalId, number, message);
+      await whatsappService.sendMessage(terminalId, number, finalMessage);
     }
     res.json({ success: true });
   } catch (err: any) {
@@ -3731,7 +3832,7 @@ app.get('/api/whatsapp/recipients/coordinator/:id/electors', (req, res) => {
       WHERE ec.coordinator_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != ''
       ORDER BY e.nombre
     `).all(coordId);
-    res.json(electors);
+    res.json((electors as any[]).map(sanitizeElectorData));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -3757,7 +3858,7 @@ app.get('/api/whatsapp/recipients/search', (req, res) => {
       LIMIT 10
     `).all(q, q, q, q);
 
-    res.json({ users, electors });
+    res.json({ users, electors: (electors as any[]).map(sanitizeElectorData) });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
