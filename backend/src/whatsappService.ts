@@ -1,7 +1,23 @@
 // WhatsApp Service - Build Trigger
-import { Client, LocalAuth, MessageMedia, Location } from 'whatsapp-web.js';
+import type { Client as ClientType } from 'whatsapp-web.js';
+
+let Client: any = null;
+let LocalAuth: any = null;
+let MessageMedia: any = null;
+let Location: any = null;
+
+function loadWhatsappWeb() {
+  if (!Client) {
+    console.log('[WHATSAPP] Lazy loading whatsapp-web.js...');
+    const wweb = require('whatsapp-web.js');
+    Client = wweb.Client;
+    LocalAuth = wweb.LocalAuth;
+    MessageMedia = wweb.MessageMedia;
+    Location = wweb.Location;
+    console.log('[WHATSAPP] whatsapp-web.js loaded successfully!');
+  }
+}
 import qrcode from 'qrcode';
-import axios from 'axios';
 import db from './db';
 import fs from 'fs';
 import path from 'path';
@@ -15,7 +31,7 @@ interface TerminalInfo {
 }
 
 class WhatsAppManager {
-  private clients: Map<string, Client> = new Map();
+  private clients: Map<string, ClientType> = new Map();
   private terminals: Map<string, TerminalInfo> = new Map();
 
   constructor() {
@@ -106,6 +122,8 @@ class WhatsAppManager {
 
     // Clear stale Chromium lock files before every launch (Railway restart safety)
     this.clearChromiumLocks(sessionPath);
+
+    loadWhatsappWeb();
 
     const client = new Client({
       authStrategy: new LocalAuth({ dataPath: sessionPath }),
@@ -253,6 +271,7 @@ class WhatsAppManager {
   }
 
   async sendVoice(terminalId: string, number: string, mediaUrl: string) {
+    loadWhatsappWeb();
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
@@ -270,6 +289,7 @@ class WhatsAppManager {
   }
 
   async sendLocation(terminalId: string, number: string, lat: number, lng: number, message?: string) {
+    loadWhatsappWeb();
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
@@ -305,6 +325,7 @@ class WhatsAppManager {
   }
 
   async sendMedia(terminalId: string, number: string, mediaUrl: string, message?: string) {
+    loadWhatsappWeb();
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     

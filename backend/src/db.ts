@@ -120,7 +120,10 @@ if (dbVersion < currentSchemaVersion) {
         mesa INTEGER NOT NULL,
         orden INTEGER NOT NULL,
         is_priority BOOLEAN DEFAULT 0,
-        ciudad TEXT DEFAULT ''
+        ciudad TEXT DEFAULT '',
+        distrito TEXT DEFAULT '',
+        barrio TEXT DEFAULT '',
+        campaign_id INTEGER
       );
 
       CREATE TABLE IF NOT EXISTS participation_logs (
@@ -163,11 +166,20 @@ if (dbVersion < currentSchemaVersion) {
       CREATE TABLE IF NOT EXISTS capture_conflicts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         capture_id INTEGER,
+        capture_id_b INTEGER,
         elector_ci TEXT,
         list_id INTEGER,
+        list_id_a INTEGER,
+        list_id_b INTEGER,
         status TEXT DEFAULT 'PENDING',
         resolved_by_jefe_id INTEGER,
         resolved_coordinator_id INTEGER,
+        conflict_type TEXT DEFAULT 'INTERNAL',
+        jefe_decision_id INTEGER,
+        consent_a INTEGER DEFAULT 0,
+        consent_b INTEGER DEFAULT 0,
+        resolved_at DATETIME,
+        winner_capture_id INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 

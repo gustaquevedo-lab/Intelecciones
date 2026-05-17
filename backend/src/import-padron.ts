@@ -28,6 +28,7 @@ db.exec(`
     sexo TEXT,
     departamento TEXT DEFAULT 'AMAMBAY',
     distrito TEXT DEFAULT 'PEDRO JUAN CABALLERO',
+    ciudad TEXT DEFAULT 'PEDRO JUAN CABALLERO',
     local_votacion TEXT NOT NULL,
     cod_local TEXT,
     direccion TEXT,
@@ -41,7 +42,8 @@ db.exec(`
     lng REAL,
     coordinador_asignado TEXT,
     status TEXT DEFAULT 'Pendiente',
-    is_priority BOOLEAN DEFAULT 0
+    is_priority BOOLEAN DEFAULT 0,
+    campaign_id INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS tenant_electors (

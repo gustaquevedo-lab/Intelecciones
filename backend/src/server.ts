@@ -2348,7 +2348,7 @@ app.get('/api/admin/conflicts', (req, res) => {
       params.push(list_id, list_id);
     }
 
-    const conflicts = db.prepare(sql).all(...params);
+    const conflicts = db.prepare(sql).all(...params) as any[];
     console.log(`[DB] Fetched ${conflicts.length} conflicts.`);
     if (conflicts.length > 0) {
       console.log(`[DB] Sample Conflict: ID=${conflicts[0].conflict_id}, coord_a=${conflicts[0].coord_a}, coord_b=${conflicts[0].coord_b}, capture_b_id=${conflicts[0].capture_b_id}`);
@@ -2869,7 +2869,7 @@ app.get('/api/padrino/team-stats', (req, res) => {
   const sec = getSecurityFilter(req, 'u');
 
   try {
-    let whereClause = "u.role = 'COORDINADOR'";
+    let whereClause = "u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')";
     let params: any[] = [];
 
     if (padrino_id) {
@@ -2915,8 +2915,8 @@ app.get('/api/structure/padrinos', (req, res) => {
              COUNT(DISTINCT CASE WHEN ec.needs_transport=1      THEN ec.id END) AS transport_total
       FROM users u
       LEFT JOIN lists l           ON u.assigned_list_id = l.id
-      LEFT JOIN users u2          ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'
-      LEFT JOIN elector_captures ec ON ec.coordinator_id = u2.id
+      LEFT JOIN users u2          ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+      LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
       WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
       GROUP BY u.id 
       ORDER BY u.nombre
@@ -2940,7 +2940,7 @@ app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
              COUNT(CASE WHEN ec.needs_transport=1      THEN 1 END) AS transport_total
       FROM users u
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
-      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+      WHERE u.parent_id = ? AND u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
       GROUP BY u.id
       ORDER BY u.nombre
     `).all(id);
@@ -3003,7 +3003,7 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
       (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') as purple,
       (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) as transport_needed
       FROM users u
-      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+      WHERE u.parent_id = ? AND u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
     `).all(id) as any[];
 
     const fullHierarchy = coordinators.map(c => {
@@ -3194,9 +3194,9 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
              SUM(CASE WHEN ec.needs_transport=1 THEN 1 ELSE 0 END) AS needs_transport
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role = 'COORDINADOR'
-      LEFT JOIN elector_captures ec ON ec.coordinator_id = u2.id
-      WHERE u.role = 'PADRINO' ${filter.sql}
+      LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+      LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
+      WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
       GROUP BY u.id ORDER BY u.nombre
     `).all(...filter.params);
 
@@ -3238,7 +3238,7 @@ app.get('/api/my-team/padrino/:id/coordinators', requireRole('SUPERUSUARIO','JEF
 });
 
 // GET /api/campaigns/mine — campaigns the logged-in JEFE_CAMPANA owns
-app.get('/api/campaigns/mine', requireRole('SUPERUSUARIO','JEFE_CAMPANA'), (req, res) => {
+app.get('/api/campaigns/mine', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO'), (req, res) => {
   const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
   try {
