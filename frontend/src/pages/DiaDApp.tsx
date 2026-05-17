@@ -173,6 +173,7 @@ const DiaDApp: React.FC = () => {
   const [globalRegRole, setGlobalRegRole] = useState('VOCAL');
   const [membersList, setMembersList] = useState<any[]>([]);
   const [memberFilter, setMemberFilter] = useState('');
+  const [selectedMesaForSwap, setSelectedMesaForSwap] = useState<{ local: string; numero: number } | null>(null);
   const [showListModal, setShowListModal] = useState(false);
   const [newListNumber, setNewListNumber] = useState('');
   const [newListAlias, setNewListAlias] = useState('');
@@ -212,7 +213,7 @@ const DiaDApp: React.FC = () => {
   };
 
   const handleGlobalAssign = async () => {
-    if (!globalRegData || !globalRegLocal || !globalRegMesa) {
+    if (!globalRegData || !globalRegLocal || (!globalRegMesa && globalRegRole !== 'APODERADO')) {
       alert('Por favor complete todos los campos (CI, Local y Mesa)');
       return;
     }
@@ -993,111 +994,397 @@ const DiaDApp: React.FC = () => {
                                 {(r.votos || 0).toLocaleString('es-PY')} votos · {(r.porcentaje || 0).toFixed(1)}%
                               </span>
                             </motion.div>
-                          );
-                        })}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>
-                    <Award size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                    <p style={{ fontWeight: 700 }}>Sin datos de concejales</p>
-                    <p style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>Se necesitan actas cargadas con tipo CONCEJAL para calcular D'Hondt.</p>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {/* ══════════ TAB: STAFF MESAS ══════════ */}
-            {activeTab === 'miembros' && (
+                               {activeTab === 'miembros' && (
               <motion.div key="miembros" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                {/* Visual Header Stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <StatCard 
+                    label="Mesas Totales" 
+                    value={coverage.total_mesas} 
+                    color="var(--text)"
+                    icon={<Activity size={12} />} 
+                  />
+                  <StatCard 
+                    label="Mesas Constituidas" 
+                    value={membersList.filter(m => m.role !== 'APODERADO' && m.assigned_local && m.assigned_local !== 'SIN ASIGNACIÓN').length} 
+                    color="var(--green)"
+                    icon={<CheckCircle2 size={12} />} 
+                  />
+                  <StatCard 
+                    label="Mesas Vacantes" 
+                    value={Math.max(0, coverage.total_mesas - membersList.filter(m => m.role !== 'APODERADO' && m.assigned_local && m.assigned_local !== 'SIN ASIGNACIÓN').length)} 
+                    color="var(--red)"
+                    icon={<AlertCircle size={12} />} 
+                  />
+                  <StatCard 
+                    label="Suplentes en Reserva" 
+                    value={membersList.filter(m => m.role !== 'APODERADO' && (!m.assigned_local || m.assigned_local === 'SIN ASIGNACIÓN' || m.assigned_local === '---')).length} 
+                    color="var(--plra-300)"
+                    icon={<Users size={12} />} 
+                  />
+                </div>
+
+                {/* Subheader Title & Action */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                   <div>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.2rem' }}>
-                      Planilla de Miembros y Veedores
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Constitución de Mesas de Votación
                     </h3>
-                    <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>{membersList.length} personas asignadas actualmente</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>
+                      Asigne mesarios titulares y swaps rápidos con suplentes precargados del PLRA.
+                    </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div className="search-input-wrapper-premium" style={{ maxWidth: '250px' }}>
-                      <input 
-                        className="modern-input-premium-styled" 
-                        placeholder="Buscar staff..."
-                        value={memberFilter}
-                        onChange={e => setMemberFilter(e.target.value)}
-                      />
-                    </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <button 
                       onClick={() => setShowGlobalRegister(true)}
                       className="action-btn-primary" 
-                      style={{ padding: '0.65rem 1.25rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      style={{ padding: '0.6rem 1.2rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
-                      <UserPlus size={16} /> REGISTRAR MIEMBRO
+                      <UserPlus size={14} /> REGISTRAR PERSONAL
                     </button>
                   </div>
                 </div>
 
-                <div className="card-premium-styled" style={{ padding: 0, overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead style={{ background: 'var(--surface-light)', borderBottom: '1px solid var(--border)' }}>
-                      <tr>
-                        <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Nombre / CI</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Rol</th>
-                        <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Local Asignado</th>
-                        <th style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Mesa</th>
-                        <th style={{ padding: '1rem', textAlign: 'right', color: 'var(--text-3)', fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase' }}>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {membersList
-                        .filter(m => !memberFilter || m.nombre.toLowerCase().includes(memberFilter.toLowerCase()) || m.assigned_local?.toLowerCase().includes(memberFilter.toLowerCase()))
-                        .map(m => (
-                        <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '1rem' }}>
-                            <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0 }}>{m.nombre}</p>
-                            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>CI: {m.ci || 'N/A'}</p>
-                          </td>
-                          <td style={{ padding: '1rem' }}>
-                            <span style={{ 
-                              padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 800,
-                              background: m.role === 'PRESIDENTE' ? 'rgba(245,158,11,0.1)' : 
-                                          m.role === 'VEEDOR' ? 'rgba(168,85,247,0.1)' : 
-                                          'rgba(37,200,130,0.1)',
-                              color: m.role === 'PRESIDENTE' ? '#F59E0B' : 
-                                     m.role === 'VEEDOR' ? '#A855F7' : 
-                                     '#25C882',
-                              border: `1px solid ${m.role === 'PRESIDENTE' ? '#F59E0B40' : 
-                                                 m.role === 'VEEDOR' ? '#A855F730' : 
-                                                 '#25C88230'}`
-                            }}>
-                              {m.role}
+                {/* Dual-Pane Workbench Layout */}
+                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'start', width: '100%' }}>
+                  
+                  {/* Left Panel (2/3 width) - Grid of Mesas grouped by Voting Location */}
+                  <div style={{ flex: '2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {locations.map(loc => {
+                      const mesasInLoc = coverage.mesas.filter(m => m.local === loc.nombre);
+                      if (mesasInLoc.length === 0) return null;
+
+                      return (
+                        <div key={loc.cod_local} className="card-premium-styled" style={{ padding: '1.25rem' }}>
+                          {/* Location Header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.50rem' }}>
+                            <MapPin size={16} style={{ color: 'var(--plra-300)' }} />
+                            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>{loc.nombre}</span>
+                            <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', padding: '2px 8px', borderRadius: '10px', marginLeft: 'auto', fontWeight: 700 }}>
+                              {mesasInLoc.length} MESAS
                             </span>
-                          </td>
-                          <td style={{ padding: '1rem', color: 'var(--text-2)' }}>{m.assigned_local || '---'}</td>
-                          <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 800, color: 'var(--blue-lt)' }}>{m.assigned_mesa || '---'}</td>
-                          <td style={{ padding: '1rem', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                              <button 
-                                onClick={() => { setSelectedMesa({local: m.assigned_local, numero: m.assigned_mesa}); setShowAssignModal(true); fetchUsers(); }}
-                                className="action-btn-primary" style={{ padding: '0.4rem 0.75rem', fontSize: '0.65rem' }}
-                              >
-                                CAMBIAR
-                              </button>
-                              <button 
-                                onClick={async () => {
-                                  if (!confirm(`¿Liberar a ${m.nombre} de su mesa?`)) return;
-                                  await api.post('/diad/members/assign', { user_id: m.id, local: null, mesa: null });
-                                  fetchData();
-                                }}
-                                className="btn-cancel-styled" style={{ padding: '0.4rem 0.75rem', fontSize: '0.65rem', border: '1px solid var(--red-40)' }}
-                              >
-                                LIBERAR
-                              </button>
+                          </div>
+
+                          {/* Mesas Grid */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.8rem' }}>
+                            {mesasInLoc.map(mesa => {
+                              const assignedMember = membersList.find(m => m.assigned_local === loc.nombre && m.assigned_mesa === mesa.numero);
+                              const isConstituida = !!assignedMember;
+                              const isSelectedForSwap = selectedMesaForSwap?.local === loc.nombre && selectedMesaForSwap?.numero === mesa.numero;
+
+                              return (
+                                <div 
+                                  key={`${loc.cod_local}-mesa-${mesa.numero}`}
+                                  style={{
+                                    padding: '1rem',
+                                    background: isSelectedForSwap ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.02)',
+                                    border: isSelectedForSwap 
+                                      ? '2px solid var(--green)' 
+                                      : `1px solid ${isConstituida ? 'rgba(37,200,130,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.6rem',
+                                    boxShadow: isSelectedForSwap ? '0 0 15px rgba(34,197,94,0.15)' : 'none',
+                                    transition: 'all 0.2s ease',
+                                    position: 'relative'
+                                  }}
+                                >
+                                  {/* Table Card Header */}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      MESA {mesa.numero}
+                                    </span>
+                                    <span style={{ 
+                                      padding: '2px 6px', borderRadius: '6px', fontSize: '0.55rem', fontWeight: 800,
+                                      background: isConstituida ? 'rgba(37,200,130,0.1)' : 'rgba(239,68,68,0.1)',
+                                      color: isConstituida ? 'var(--green)' : 'var(--red)',
+                                      border: `1px solid ${isConstituida ? 'rgba(37,200,130,0.2)' : 'rgba(239,68,68,0.2)'}`
+                                    }}>
+                                      {isConstituida ? '● CONSTITUIDA' : '○ VACANTE'}
+                                    </span>
+                                  </div>
+
+                                  {/* Table Card Body / Assigned Mesario */}
+                                  {isConstituida ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>
+                                        {assignedMember.nombre}
+                                      </span>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.1rem' }}>
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
+                                          CI: {assignedMember.ci || '—'} · <span style={{ color: 'var(--plra-300)', fontWeight: 800 }}>{assignedMember.role}</span>
+                                        </span>
+                                      </div>
+                                      
+                                      {/* WhatsApp / Tel direct links */}
+                                      {assignedMember.telefono && (
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+                                          <a 
+                                            href={`tel:${assignedMember.telefono}`}
+                                            style={{
+                                              padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid var(--border)',
+                                              background: 'rgba(255,255,255,0.03)', color: 'var(--text-2)', fontSize: '0.6rem',
+                                              fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem'
+                                            }}
+                                          >
+                                            📞 Llamar
+                                          </a>
+                                          <a 
+                                            href={`https://wa.me/595${assignedMember.telefono.replace(/\s+/g, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                              padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid rgba(34,197,94,0.2)',
+                                              background: 'rgba(34,197,94,0.05)', color: '#4ADE80', fontSize: '0.6rem',
+                                              fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem'
+                                            }}
+                                          >
+                                            💬 WhatsApp
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div style={{ padding: '0.4rem 0', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                      <span style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                                        Sin mesario principal asignado.
+                                      </span>
+                                      <span style={{ fontSize: '0.62rem', color: 'var(--red)', fontWeight: 700 }}>
+                                        ⚠️ Reporte ausente en apertura.
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Card Quick Actions */}
+                                  <div style={{ display: 'flex', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.6rem', marginTop: '0.2rem' }}>
+                                    {isConstituida ? (
+                                      <>
+                                        <button
+                                          onClick={() => setSelectedMesaForSwap({ local: loc.nombre, numero: mesa.numero })}
+                                          style={{
+                                            flex: 1, padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border)',
+                                            background: 'rgba(255,255,255,0.02)', color: 'var(--text-2)', fontSize: '0.65rem',
+                                            fontWeight: 800, cursor: 'pointer'
+                                          }}
+                                        >
+                                          REEMPLAZAR
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            if (!confirm(`¿Liberar a ${assignedMember.nombre} de la Mesa ${mesa.numero}?`)) return;
+                                            try {
+                                              await api.post('/diad/members/assign', { user_id: assignedMember.id, local: null, mesa: null });
+                                              fetchData();
+                                            } catch (e) { console.error(e); }
+                                          }}
+                                          style={{
+                                            padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.15)',
+                                            background: 'rgba(239,68,68,0.05)', color: 'var(--red)', fontSize: '0.65rem',
+                                            fontWeight: 800, cursor: 'pointer'
+                                          }}
+                                        >
+                                          LIBERAR
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        onClick={() => setSelectedMesaForSwap({ local: loc.nombre, numero: mesa.numero })}
+                                        style={{
+                                          width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--green)',
+                                          background: isSelectedForSwap ? 'var(--green)' : 'rgba(34,197,94,0.1)',
+                                          color: isSelectedForSwap ? 'white' : '#4ADE80', fontSize: '#4ADE80',
+                                          fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer',
+                                          animation: !isConstituida && !isSelectedForSwap ? 'pulseBorder 2s infinite' : 'none'
+                                        }}
+                                      >
+                                        {isSelectedForSwap ? 'SELECCIONANDO SUPLENTE...' : '🟢 ASIGNAR SUPLENTE'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Right Panel (1/3 width) - Sticky Standby Pool (Banco de Suplentes) */}
+                  <div style={{ 
+                    flex: '1', 
+                    maxWidth: '360px',
+                    background: 'var(--surface-light)',
+                    border: selectedMesaForSwap ? '2px dashed var(--green)' : '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                    position: 'sticky',
+                    top: '20px',
+                    boxShadow: selectedMesaForSwap ? '0 0 25px rgba(34,197,94,0.12)' : 'none',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    {/* Panel Title */}
+                    <div>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <Users size={16} style={{ color: 'var(--plra-300)' }} /> Banco de Suplentes
+                      </h4>
+                      <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>
+                        Personal libre listo para reasignar.
+                      </p>
+                    </div>
+
+                    {/* Active Swap Alert Indicator */}
+                    {selectedMesaForSwap && (
+                      <motion.div 
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        style={{
+                          padding: '0.75rem', background: 'rgba(34,197,94,0.1)', border: '1px solid var(--green)',
+                          borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.2rem'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#4ADE80', textTransform: 'uppercase' }}>
+                          👉 Asignando a Mesa
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
+                          MESA {selectedMesaForSwap.numero} ({selectedMesaForSwap.local})
+                        </span>
+                        <button 
+                          onClick={() => setSelectedMesaForSwap(null)}
+                          style={{
+                            alignSelf: 'flex-start', background: 'transparent', border: 'none',
+                            color: 'var(--text-3)', fontSize: '0.6rem', fontWeight: 700, padding: 0,
+                            marginTop: '0.2rem', cursor: 'pointer', textDecoration: 'underline'
+                          }}
+                        >
+                          Cancelar Swap
+                        </button>
+                      </motion.div>
+                    )}
+
+                    {/* Standby Search */}
+                    <div className="search-input-wrapper-premium" style={{ width: '100%' }}>
+                      <input 
+                        className="modern-input-premium-styled" 
+                        placeholder="Buscar suplente..."
+                        value={memberFilter}
+                        onChange={e => setMemberFilter(e.target.value)}
+                        style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
+                      />
+                    </div>
+
+                    {/* Substitutes List */}
+                    <div style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem', paddingRight: '2px' }}>
+                      {(() => {
+                        const standby = membersList.filter(m => m.role !== 'APODERADO' && (!m.assigned_local || m.assigned_local === 'SIN ASIGNACIÓN' || m.assigned_local === '---'));
+                        const filtered = standby.filter(m => !memberFilter || m.nombre.toLowerCase().includes(memberFilter.toLowerCase()) || m.ci?.includes(memberFilter));
+
+                        if (filtered.length === 0) {
+                          return (
+                            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', textAlign: 'center', padding: '2rem' }}>
+                              No hay suplentes disponibles.
+                            </p>
+                          );
+                        }
+
+                        return filtered.map(m => (
+                          <div 
+                            key={m.id}
+                            style={{
+                              padding: '0.85rem',
+                              background: 'rgba(255,255,255,0.02)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '10px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.4rem',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', display: 'block' }}>{m.nombre}</span>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>CI: {m.ci || '—'}</span>
+                              </div>
+                              <span style={{ 
+                                padding: '1px 5px', borderRadius: '4px', fontSize: '0.5rem', fontWeight: 800,
+                                background: m.role === 'VEEDOR' ? 'rgba(168,85,247,0.1)' : 'rgba(37,200,130,0.1)',
+                                color: m.role === 'VEEDOR' ? '#A855F7' : '#25C882',
+                                border: `1px solid ${m.role === 'VEEDOR' ? 'rgba(168,85,247,0.2)' : 'rgba(37,200,130,0.2)'}`
+                              }}>
+                                {m.role}
+                              </span>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+
+                            {/* Contact Details inside Standby Card */}
+                            {m.telefono && (
+                              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.1rem' }}>
+                                <a 
+                                  href={`tel:${m.telefono}`}
+                                  style={{ fontSize: '0.6rem', color: 'var(--text-3)', textDecoration: 'none' }}
+                                >
+                                  📞 {m.telefono}
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Direct Assignment swap trigger */}
+                            {selectedMesaForSwap ? (
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={async () => {
+                                  setAssigningLoading(true);
+                                  try {
+                                    await api.post('/diad/members/assign', { 
+                                      user_id: m.id, 
+                                      local: selectedMesaForSwap.local, 
+                                      mesa: selectedMesaForSwap.numero,
+                                      role: m.role
+                                    });
+                                    setSelectedMesaForSwap(null);
+                                    fetchData();
+                                  } catch (e) { console.error(e); }
+                                  finally { setAssigningLoading(false); }
+                                }}
+                                style={{
+                                  width: '100%', padding: '0.45rem', borderRadius: '6px', border: 'none',
+                                  background: 'linear-gradient(135deg, #22C47E, #16a34a)', color: 'white',
+                                  fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', marginTop: '0.2rem',
+                                  boxShadow: '0 4px 10px rgba(34,197,94,0.25)'
+                                }}
+                              >
+                                🟢 UBICAR EN MESA {selectedMesaForSwap.numero}
+                              </motion.button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setSelectedMesa({ local: 'SIN ASIGNACIÓN', numero: 0 });
+                                  setSelectedMesa({ local: '', numero: m.assigned_mesa || 0 });
+                                  setSelectedMesa({ local: locations[0]?.nombre || '', numero: 1 });
+                                  setSelectedMesa({ local: 'BANCO_SUPLENTES', numero: m.id }); // Helper fallback standard trigger
+                                  setShowAssignModal(true);
+                                  fetchUsers();
+                                }}
+                                style={{
+                                  width: '100%', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border)',
+                                  background: 'rgba(255,255,255,0.03)', color: 'var(--text-2)', fontSize: '0.62rem',
+                                  fontWeight: 800, cursor: 'pointer', marginTop: '0.2rem'
+                                }}
+                              >
+                                ASIGNAR A...
+                              </button>
+                            )}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+
                 </div>
               </motion.div>
             )}
@@ -1452,11 +1739,14 @@ const DiaDApp: React.FC = () => {
                 <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                   <label>Función en la Mesa</label>
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    {['PRESIDENTE', 'VOCAL', 'VEEDOR'].map(r => (
+                    {['PRESIDENTE', 'VOCAL', 'VEEDOR', 'APODERADO'].map(r => (
                       <button
                         key={r}
                         type="button"
-                        onClick={() => setGlobalRegRole(r)}
+                        onClick={() => {
+                          setGlobalRegRole(r);
+                          if (r === 'APODERADO') setGlobalRegMesa(null);
+                        }}
                         style={{
                           flex: 1, padding: '0.65rem', borderRadius: '10px', border: '1px solid',
                           fontSize: '0.68rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
@@ -1487,21 +1777,31 @@ const DiaDApp: React.FC = () => {
                   </div>
                   <div className="form-group">
                     <label>Mesa Asignada</label>
-                    <select 
-                      className="modern-input-premium-styled" 
-                      value={globalRegMesa || ''}
-                      onChange={e => setGlobalRegMesa(parseInt(e.target.value))}
-                      disabled={!globalRegLocal}
-                    >
-                      <option value="">Seleccione Mesa...</option>
-                      {coverage.mesas
-                        .filter(m => m.local === globalRegLocal)
-                        .map(m => (
-                          <option key={`${m.local}-${m.numero}`} value={m.numero}>
-                            Mesa {m.numero} {m.operativa ? '(Ocupada)' : '(Libre)'}
-                          </option>
-                        ))}
-                    </select>
+                    {globalRegRole === 'APODERADO' ? (
+                      <div style={{
+                        padding: '0.65rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
+                        borderRadius: '10px', fontSize: '0.72rem', color: 'var(--plra-300)', fontWeight: 700,
+                        display: 'flex', alignItems: 'center', height: '38px'
+                      }}>
+                        📝 Cubre todo el Local (N/A)
+                      </div>
+                    ) : (
+                      <select 
+                        className="modern-input-premium-styled" 
+                        value={globalRegMesa || ''}
+                        onChange={e => setGlobalRegMesa(parseInt(e.target.value))}
+                        disabled={!globalRegLocal}
+                      >
+                        <option value="">Seleccione Mesa...</option>
+                        {coverage.mesas
+                          .filter(m => m.local === globalRegLocal)
+                          .map(m => (
+                            <option key={`${m.local}-${m.numero}`} value={m.numero}>
+                              Mesa {m.numero} {m.operativa ? '(Ocupada)' : '(Libre)'}
+                            </option>
+                          ))}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1512,7 +1812,7 @@ const DiaDApp: React.FC = () => {
                   type="button" 
                   onClick={handleGlobalAssign} 
                   className="btn-confirm-styled"
-                  disabled={assigningLoading || !globalRegData || !globalRegLocal || !globalRegMesa}
+                  disabled={assigningLoading || !globalRegData || !globalRegLocal || (globalRegRole !== 'APODERADO' && !globalRegMesa)}
                 >
                   {assigningLoading ? 'PROCESANDO...' : 'ASIGNAR MIEMBRO'}
                 </button>

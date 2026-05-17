@@ -269,9 +269,16 @@ if (dbVersion < currentSchemaVersion) {
         driver_name TEXT,
         driver_ci TEXT,
         driver_phone TEXT,
+        driver_photo TEXT DEFAULT '',
         capacity INTEGER DEFAULT 4,
         status TEXT DEFAULT 'AVAILABLE',
-        assigned_list_id INTEGER
+        assigned_list_id INTEGER,
+        assigned_user_id INTEGER,
+        type TEXT,
+        plate TEXT,
+        lat REAL,
+        lng REAL,
+        last_update DATETIME
       );
 
       CREATE TABLE IF NOT EXISTS login_attempts (
@@ -373,6 +380,13 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
     addColumnIfNotExists("whatsapp_messages", "campaign_id", "INTEGER");
     addColumnIfNotExists("voting_locations", "campaign_id", "INTEGER");
+    addColumnIfNotExists("vehicles", "lat", "REAL");
+    addColumnIfNotExists("vehicles", "lng", "REAL");
+    addColumnIfNotExists("vehicles", "last_update", "DATETIME");
+    addColumnIfNotExists("vehicles", "driver_photo", "TEXT DEFAULT ''");
+    addColumnIfNotExists("vehicles", "assigned_user_id", "INTEGER");
+    addColumnIfNotExists("vehicles", "type", "TEXT");
+    addColumnIfNotExists("vehicles", "plate", "TEXT");
 
     // Indexes for better JOIN performance
     db.exec(`

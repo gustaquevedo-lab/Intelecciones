@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  MapPin, CheckSquare, Check, Minus, Plus, Camera, Upload, Send, FileText 
+  MapPin, CheckSquare, Check, Minus, Plus, Camera, Upload, Send, FileText,
+  Users, RefreshCw, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
@@ -46,6 +47,11 @@ const VeedorApp = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'veeduria' | 'acta'>('veeduria');
   const isMiembroMesa = user?.role === 'MIEMBRO_DE_MESA';
+  const isApoderado = user?.role === 'APODERADO';
+
+  if (isApoderado) {
+    return <ApoderadoPanel user={user} />;
+  }
 
   return (
     <MainLayout title="Panel de Mesa" userName={user?.nombre || 'Veedor'}>
@@ -666,6 +672,382 @@ const ActaFinalTab = () => {
         {submitting ? 'Enviando...' : <><Send size={20} /> ENVIAR RESULTADOS</>}
       </motion.button>
     </form>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   APODERADO PANEL COMPONENT (MOBILE WORKBENCH)
+   ───────────────────────────────────────────── */
+const ApoderadoPanel = ({ user }: { user: any }) => {
+  const [mesas, setMesas] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMesa, setSelectedMesa] = useState<number | null>(null);
+  const [showSwapDrawer, setShowSwapDrawer] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [covRes, memRes] = await Promise.all([
+        api.get('/api/diad/coverage'),
+        api.get('/api/diad/members')
+      ]);
+      
+      // Filter mesas belonging to the apoderado's school
+      const schoolName = user?.assigned_local || '';
+      const schoolMesas = covRes.data.mesas.filter((m: any) => m.local === schoolName);
+      setMesas(schoolMesas);
+      setMembers(memRes.data);
+    } catch (err) {
+      console.error('Error loading apoderado data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
+
+  const handleAssign = async (memberId: number, memberRole: string) => {
+    if (!selectedMesa) return;
+    setActionLoading(true);
+    try {
+      await api.post('/diad/members/assign', {
+        user_id: memberId,
+        local: user.assigned_local,
+        mesa: selectedMesa,
+        role: memberRole
+      });
+      setShowSwapDrawer(false);
+      setSelectedMesa(null);
+      await loadData();
+    } catch (err) {
+      console.error('Error assigning member:', err);
+      alert('Error al asignar mesario.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleLiberate = async (memberId: number, mesaNum: number) => {
+    if (!window.confirm(`¿Liberar al mesario de la Mesa ${mesaNum}?`)) return;
+    setActionLoading(true);
+    try {
+      await api.post('/diad/members/assign', {
+        user_id: memberId,
+        local: null,
+        mesa: null
+      });
+      await loadData();
+    } catch (err) {
+      console.error('Error liberating member:', err);
+      alert('Error al liberar mesario.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const standbyPool = members.filter(m => !m.assigned_local || m.assigned_local === 'SIN ASIGNACIÓN' || m.assigned_local === '---');
+  const filteredStandby = standbyPool.filter(m => !searchQuery || m.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || m.ci?.includes(searchQuery));
+
+  const totalMesas = mesas.length;
+  const constituidas = mesas.filter(m => {
+    const assigned = members.find(mem => mem.assigned_local === user.assigned_local && mem.assigned_mesa === m.numero);
+    return !!assigned;
+  }).length;
+  const vacantes = totalMesas - constituidas;
+
+  return (
+    <MainLayout title="Control de Local" userName={user?.nombre || 'Apoderado'}>
+      <div style={{ padding: '1rem', maxWidth: '500px', margin: '0 auto', minHeight: 'calc(100vh - 70px)' }}>
+        
+        {/* School Header */}
+        <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <MapPin size={18} style={{ color: 'var(--plra-300)' }} />
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', margin: 0 }}>
+              {user?.assigned_local || 'Sin Local Asignado'}
+            </h2>
+          </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '1rem' }}>
+            Panel móvil de Apoderado de Local · PLRA Internas 2026
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: 1, padding: '0.6rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '10px', textAlign: 'center' }}>
+              <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{totalMesas}</span>
+              <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Mesas</span>
+            </div>
+            <div style={{ flex: 1, padding: '0.6rem', background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '10px', textAlign: 'center' }}>
+              <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: 900, color: 'var(--green)' }}>{constituidas}</span>
+              <span style={{ fontSize: '0.55rem', color: 'var(--green)', fontWeight: 800, textTransform: 'uppercase' }}>OK</span>
+            </div>
+            <div style={{ flex: 1, padding: '0.6rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', textAlign: 'center' }}>
+              <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: 900, color: 'var(--red)' }}>{vacantes}</span>
+              <span style={{ fontSize: '0.55rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase' }}>Vacantes</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mesas List */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0 0.25rem' }}>
+          <h3 style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Mesas de Votación
+          </h3>
+          <button 
+            onClick={loadData}
+            style={{ background: 'transparent', border: 'none', color: 'var(--plra-300)', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}
+          >
+            <RefreshCw size={12} /> Actualizar
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '3rem' }}>
+            <div className="loading-spinner" style={{ margin: '0 auto' }} />
+            <p style={{ marginTop: '1rem', color: 'var(--text-3)', fontSize: '0.8rem' }}>Cargando mesas...</p>
+          </div>
+        ) : mesas.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)' }}>
+            <p>No se encontraron mesas configuradas para este local.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '3rem' }}>
+            {mesas.map(mesa => {
+              const assigned = members.find(mem => mem.assigned_local === user.assigned_local && mem.assigned_mesa === mesa.numero);
+              const isOK = !!assigned;
+
+              return (
+                <div 
+                  key={mesa.numero}
+                  className="card-premium-styled"
+                  style={{
+                    padding: '1rem',
+                    border: isOK ? '1px solid rgba(37,200,130,0.15)' : '1px solid rgba(239,68,68,0.2)',
+                    background: 'rgba(255,255,255,0.01)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.6rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>
+                      MESA {mesa.numero}
+                    </span>
+                    <span style={{
+                      padding: '2px 8px', borderRadius: '6px', fontSize: '0.55rem', fontWeight: 900,
+                      background: isOK ? 'rgba(37,200,130,0.1)' : 'rgba(239,68,68,0.1)',
+                      color: isOK ? 'var(--green)' : 'var(--red)',
+                      border: `1px solid ${isOK ? 'rgba(37,200,130,0.2)' : 'rgba(239,68,68,0.2)'}`
+                    }}>
+                      {isOK ? 'CONSTITUIDA' : 'FALTA VOTO CONTROL'}
+                    </span>
+                  </div>
+
+                  {isOK ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>
+                        {assigned.nombre}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
+                        CI: {assigned.ci || '—'} · <span style={{ color: 'var(--plra-300)', fontWeight: 800 }}>{assigned.role}</span>
+                      </span>
+
+                      {/* Call/WhatsApp Actions */}
+                      {assigned.telefono && (
+                        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+                          <a 
+                            href={`tel:${assigned.telefono}`}
+                            style={{
+                              padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border)',
+                              background: 'rgba(255,255,255,0.03)', color: 'var(--text-2)', fontSize: '0.62rem',
+                              fontWeight: 700, textDecoration: 'none'
+                            }}
+                          >
+                            📞 Llamar
+                          </a>
+                          <a 
+                            href={`https://wa.me/595${assigned.telefono.replace(/\s+/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(34,197,94,0.2)',
+                              background: 'rgba(34,197,94,0.05)', color: '#4ADE80', fontSize: '0.62rem',
+                              fontWeight: 700, textDecoration: 'none'
+                            }}
+                          >
+                            💬 WhatsApp
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ padding: '0.25rem 0' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                        Sin mesario designado.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Actions row */}
+                  <div style={{ display: 'flex', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.6rem', marginTop: '0.2rem' }}>
+                    {isOK ? (
+                      <>
+                        <button
+                          onClick={() => { setSelectedMesa(mesa.numero); setShowSwapDrawer(true); }}
+                          style={{
+                            flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)',
+                            background: 'rgba(255,255,255,0.02)', color: 'var(--text-2)', fontSize: '0.7rem',
+                            fontWeight: 800, cursor: 'pointer'
+                          }}
+                        >
+                          CAMBIAR STAFF
+                        </button>
+                        <button
+                          onClick={() => handleLiberate(assigned.id, mesa.numero)}
+                          style={{
+                            padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.15)',
+                            background: 'rgba(239,68,68,0.05)', color: 'var(--red)', fontSize: '0.7rem',
+                            fontWeight: 800, cursor: 'pointer'
+                          }}
+                        >
+                          LIBERAR
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => { setSelectedMesa(mesa.numero); setShowSwapDrawer(true); }}
+                        style={{
+                          width: '100%', padding: '0.6rem', borderRadius: '8px', border: 'none',
+                          background: 'linear-gradient(135deg, #22C47E, #16a34a)', color: 'white',
+                          fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(34,197,94,0.2)'
+                        }}
+                      >
+                        🟢 ASIGNAR DE RESERVA
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Bottom Drawer: Standby Substitutes Pool (Gamified Mobile Overlay) */}
+        <AnimatePresence>
+          {showSwapDrawer && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+              zIndex: 9999, display: 'flex', alignItems: 'flex-end'
+            }}>
+              {/* Back close click mask */}
+              <div 
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '60%', cursor: 'pointer' }}
+                onClick={() => { setShowSwapDrawer(false); setSelectedMesa(null); }}
+              />
+
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                style={{
+                  width: '100%', height: '70%',
+                  background: 'var(--surface-light)',
+                  borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
+                  borderTop: '1px solid var(--border)',
+                  padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem',
+                  boxShadow: '0 -10px 40px rgba(0,0,0,0.5)'
+                }}
+              >
+                {/* Drawer Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white', margin: 0 }}>
+                      Asignar Suplente a Mesa {selectedMesa}
+                    </h4>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>
+                      Seleccione personal libre del banco de reserva del local.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => { setShowSwapDrawer(false); setSelectedMesa(null); }}
+                    style={{
+                      width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)',
+                      border: 'none', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Drawer Search */}
+                <div className="search-input-wrapper-premium" style={{ width: '100%' }}>
+                  <input 
+                    className="modern-input-premium-styled" 
+                    placeholder="Buscar por nombre o CI..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem' }}
+                  />
+                </div>
+
+                {/* Substitutes List */}
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem', paddingBottom: '1rem' }}>
+                  {actionLoading ? (
+                    <div style={{ textAlign: 'center', padding: '3rem' }}>
+                      <div className="loading-spinner" style={{ margin: '0 auto' }} />
+                      <p style={{ marginTop: '1rem', color: 'var(--text-3)', fontSize: '0.75rem' }}>Efectuando swap...</p>
+                    </div>
+                  ) : filteredStandby.length === 0 ? (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', textAlign: 'center', padding: '2rem' }}>
+                      No hay suplentes disponibles en reserva.
+                    </p>
+                  ) : (
+                    filteredStandby.map(m => (
+                      <div 
+                        key={m.id}
+                        onClick={() => handleAssign(m.id, m.role)}
+                        style={{
+                          padding: '0.85rem', background: 'rgba(255,255,255,0.02)',
+                          border: '1px solid var(--border)', borderRadius: '12px',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                      >
+                        <div>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', display: 'block' }}>{m.nombre}</span>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>CI: {m.ci || '—'}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ 
+                            padding: '1px 5px', borderRadius: '4px', fontSize: '0.5rem', fontWeight: 800,
+                            background: m.role === 'VEEDOR' ? 'rgba(168,85,247,0.1)' : 'rgba(37,200,130,0.1)',
+                            color: m.role === 'VEEDOR' ? '#A855F7' : '#25C882',
+                            border: `1px solid ${m.role === 'VEEDOR' ? 'rgba(168,85,247,0.2)' : 'rgba(37,200,130,0.2)'}`
+                          }}>
+                            {m.role}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--green)', fontWeight: 900 }}>➔ Asignar</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+      </div>
+    </MainLayout>
   );
 };
 

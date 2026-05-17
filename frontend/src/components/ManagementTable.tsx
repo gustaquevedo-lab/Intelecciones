@@ -75,6 +75,18 @@ export function ManagementTable<T extends { id?: number | string }>({
       borderRadius: '12px',
       overflow: 'hidden',
     }}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes tableShimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .shimmer-bar {
+          background: linear-gradient(90deg, var(--border) 25%, var(--surface-light) 50%, var(--border) 75%);
+          background-size: 200% 100%;
+          animation: tableShimmer 1.5s infinite linear;
+          border-radius: 4px;
+        }
+      `}} />
       <div style={{ 
         width: '100%', 
         overflowX: 'auto', 
@@ -135,11 +147,21 @@ export function ManagementTable<T extends { id?: number | string }>({
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={columns.length} style={{ padding: '3rem', textAlign: 'center' }}>
-                  <div className="spinner" style={{ margin: '0 auto' }}></div>
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, rowIdx) => (
+                <tr key={`skeleton-${rowIdx}`} style={{ borderBottom: '1px solid var(--border)' }}>
+                  {columns.map((col, colIdx) => (
+                    <td key={`skeleton-col-${colIdx}`} style={{ padding: '1.15rem 1.25rem' }}>
+                      <div 
+                        className="shimmer-bar"
+                        style={{
+                          height: '14px',
+                          width: colIdx === 0 ? '45%' : colIdx === 1 ? '75%' : '60%',
+                        }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : sortedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-3)' }}>

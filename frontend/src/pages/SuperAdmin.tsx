@@ -461,7 +461,7 @@ Status: ${error.response?.status || 'N/A'}
         'WHATSAPP', 'WA_BROADCAST', 'WA_CONTACTS', 'WA_TEMPLATES',
         'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
       ]);
-      fetchData();
+      fetchData(true);
     } catch (err) { console.error(err); }
   };
 
@@ -491,7 +491,7 @@ Status: ${error.response?.status || 'N/A'}
         'WHATSAPP', 'WA_BROADCAST', 'WA_CONTACTS', 'WA_TEMPLATES',
         'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
       ]);
-      fetchData();
+      fetchData(true);
     } catch (err) { console.error(err); }
   };
 
@@ -499,7 +499,7 @@ Status: ${error.response?.status || 'N/A'}
     if (!confirm('¿Estás seguro de eliminar esta campaña y TODAS sus listas y coordinadores asociados?')) return;
     try {
       await api.delete(`/campaigns/${id}`);
-      fetchData();
+      fetchData(true);
     } catch (err) { console.error(err); }
   };
 
@@ -519,7 +519,7 @@ Status: ${error.response?.status || 'N/A'}
         photo_url: candidatePreview?.photo_url || listPhotoUrl
       });
       setShowModal(null);
-      fetchData();
+      fetchData(true);
     } catch (err) { console.error(err); }
   };
 
@@ -542,7 +542,7 @@ Status: ${error.response?.status || 'N/A'}
       if (res.data.success) {
         setShowModal(null);
         setEditingList(null);
-        fetchData();
+        fetchData(true);
       } else {
         alert("Error al actualizar: " + (res.data.error || "Desconocido"));
       }
@@ -556,7 +556,7 @@ Status: ${error.response?.status || 'N/A'}
     if (!confirm('¿Eliminar esta lista?')) return;
     try {
       await api.delete(`/lists/${id}`);
-      fetchData();
+      fetchData(true);
     } catch (err) { console.error(err); }
   };
 
@@ -593,7 +593,7 @@ Status: ${error.response?.status || 'N/A'}
       setNewUserLocal('');
       setNewUserMesa(null);
       setNewUserTelefono('');
-      fetchData();
+      fetchData(true);
     } catch (err: any) { 
       console.error(err); 
       alert('Error: ' + (err.response?.data?.error || 'No se pudo crear el usuario.'));
@@ -638,7 +638,7 @@ Status: ${error.response?.status || 'N/A'}
     if (!window.confirm('¿Está seguro de eliminar este operador?')) return;
     try {
       await api.delete(`/users/${id}`);
-      fetchData();
+      fetchData(true);
     } catch (err: any) { 
       console.error(err); 
       alert('No se pudo eliminar el usuario: ' + (err.response?.data?.error || 'Error interno del servidor'));
@@ -650,7 +650,7 @@ Status: ${error.response?.status || 'N/A'}
     try {
       await api.post(`/admin/users/${id}/reset-password`);
       alert('Reset exitoso. El usuario deberá asignar una nueva clave al entrar.');
-      fetchData();
+      fetchData(true);
     } catch (err) { console.error(err); }
   };
 
@@ -771,7 +771,7 @@ Status: ${error.response?.status || 'N/A'}
       setNewVehicleCapacity(4);
       setNewVehicleStatus('AVAILABLE');
       setNewVehicleList('');
-      fetchData();
+      fetchData(true);
     } catch (err) { console.error(err); }
   };
 
@@ -910,8 +910,8 @@ Status: ${error.response?.status || 'N/A'}
     }
   }, [selectedCampaignId, campaigns]);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       if (activeTab === 'overview') {
         const [summary, predictionsRes, allCaptures, allLocales, allUsers, allLists, allCamps] = await Promise.all([

@@ -46,7 +46,7 @@ const LogisticsApp: React.FC = () => {
         api.get(`/users?${queryStr}`),
         api.get(`/logistics/stats?${queryStr}`),
         api.get(`/logistics/clusters?${queryStr}`),
-        api.get('/voting-locations')
+        api.get(`/voting-locations?${queryStr}`)
       ]);
       setVehicles(v.data);
       setPendingLogistics(p.data);

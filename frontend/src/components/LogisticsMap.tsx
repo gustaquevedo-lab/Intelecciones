@@ -86,13 +86,49 @@ const MapHandler = ({ district, locales }: { district: string | undefined, local
       const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
         'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
         'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
+        'ASUNCIÓN': { lat: -25.2637, lng: -57.5759, zoom: 13 },
         'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
         'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+        'ENCARNACIÓN': { lat: -27.3308, lng: -55.8667, zoom: 14 },
+        'LUQUE': { lat: -25.2708, lng: -57.4872, zoom: 14 },
+        'SAN LORENZO': { lat: -25.3400, lng: -57.5094, zoom: 14 },
+        'LAMBARE': { lat: -25.3469, lng: -57.6064, zoom: 14 },
+        'LAMBARÉ': { lat: -25.3469, lng: -57.6064, zoom: 14 },
+        'FERNANDO DE LA MORA': { lat: -25.3390, lng: -57.5230, zoom: 14 },
+        'CAPIATA': { lat: -25.3556, lng: -57.4437, zoom: 14 },
+        'CAPIATÁ': { lat: -25.3556, lng: -57.4437, zoom: 14 },
+        'ITAUGUA': { lat: -25.3889, lng: -57.3536, zoom: 14 },
+        'ITAUGUÁ': { lat: -25.3889, lng: -57.3536, zoom: 14 },
+        'CAAGUAZU': { lat: -25.4722, lng: -56.0178, zoom: 14 },
+        'CAAGUAZÚ': { lat: -25.4722, lng: -56.0178, zoom: 14 },
+        'CORONEL OVIEDO': { lat: -25.4492, lng: -56.4419, zoom: 14 },
+        'VILLARRICA': { lat: -25.7500, lng: -56.4333, zoom: 14 },
         'CONCEPCION': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+        'CONCEPCIÓN': { lat: -23.4055, lng: -57.4340, zoom: 14 },
+        'MARIANO ROQUE ALONSO': { lat: -25.2017, lng: -57.5275, zoom: 14 },
+        'ÑEMBY': { lat: -25.3964, lng: -57.5383, zoom: 14 },
+        'VILLA ELISA': { lat: -25.3750, lng: -57.5917, zoom: 14 },
+        'LIMPIO': { lat: -25.1667, lng: -57.4833, zoom: 14 },
+        'AREGUA': { lat: -25.3130, lng: -57.3900, zoom: 14 },
+        'AREGUÁ': { lat: -25.3130, lng: -57.3900, zoom: 14 },
+        'PILAR': { lat: -26.8625, lng: -58.3125, zoom: 14 },
+        'SALTO DEL GUAIRA': { lat: -24.0611, lng: -54.3067, zoom: 14 },
+        'SALTO DEL GUAIRÁ': { lat: -24.0611, lng: -54.3067, zoom: 14 },
+        'HERNANDARIAS': { lat: -25.3971, lng: -54.6430, zoom: 14 },
+        'PRESIDENTE FRANCO': { lat: -25.5500, lng: -54.6167, zoom: 14 },
+        'MINGA GUAZU': { lat: -25.4833, lng: -54.7667, zoom: 14 },
+        'MINGA GUAZÚ': { lat: -25.4833, lng: -54.7667, zoom: 14 },
+        'SAN ESTANISLAO': { lat: -24.0000, lng: -56.4333, zoom: 14 },
+        'SAN PEDRO DE YCUAMANDIYU': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+        'SAN PEDRO DE YCUAMANDIYÚ': { lat: -24.0933, lng: -57.0828, zoom: 14 },
+        'SAN LAZARO': { lat: -22.1833, lng: -57.9333, zoom: 14 },
         'CAPITAN BADO': { lat: -23.2652, lng: -55.5323, zoom: 14 },
+        'CAPITÁN BADO': { lat: -23.2652, lng: -55.5323, zoom: 14 },
         'BELLA VISTA NORTE': { lat: -22.1287, lng: -56.5204, zoom: 14 },
         'ZANJA PYTA': { lat: -22.6186, lng: -55.6795, zoom: 14 },
-        'KARAPAI': { lat: -23.4194, lng: -55.8458, zoom: 14 }
+        'ZANJA PYTÃ': { lat: -22.6186, lng: -55.6795, zoom: 14 },
+        'KARAPAI': { lat: -23.4194, lng: -55.8458, zoom: 14 },
+        'KARAPAÍ': { lat: -23.4194, lng: -55.8458, zoom: 14 },
       };
 
       if (CIUDADES_PARAGUAY[city]) {
@@ -101,7 +137,7 @@ const MapHandler = ({ district, locales }: { district: string | undefined, local
       } else if (locales && locales.length > 0) {
         const validLocales = locales.filter(l => l.lat != null && l.lng != null);
         if (validLocales.length > 0) {
-          const bounds = L.latLngBounds(validLocales.map(l => [l.lat, l.lng]));
+          const bounds = L.latLngBounds(validLocales.map(l => [parseFloat(l.lat), parseFloat(l.lng)]));
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
           setLastDistrict(district);
         } else {
@@ -182,11 +218,11 @@ const LogisticsMap: React.FC<LogisticsMapProps> = ({
 
         {/* Locales de Votación */}
         {locales
-          .filter(l => l.distrito === activeDistrict && l.lat && l.lng)
+          .filter(l => l.lat && l.lng)
           .map(local => (
             <Marker 
               key={`local-${local.cod_local}`} 
-              position={[local.lat, local.lng]}
+              position={[parseFloat(local.lat), parseFloat(local.lng)]}
               draggable={true}
               eventHandlers={{
                 dragend: (e) => {
@@ -217,8 +253,8 @@ const LogisticsMap: React.FC<LogisticsMapProps> = ({
             // Apply jitter to avoid overlap
             const jitter = 0.00003 * Math.sqrt(idx);
             const angle = idx * 137.5;
-            const lat = req.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
-            const lng = req.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
+            const lat = parseFloat(req.lat) + (Math.cos(angle * (Math.PI / 180)) * jitter);
+            const lng = parseFloat(req.lng) + (Math.sin(angle * (Math.PI / 180)) * jitter);
 
             return (
                 <Marker 
@@ -247,30 +283,123 @@ const LogisticsMap: React.FC<LogisticsMapProps> = ({
         {clusters.map((cluster, idx) => (
           <Circle
             key={`cluster-${idx}`}
-            center={[cluster.lat, cluster.lng]}
+            center={[parseFloat(cluster.lat), parseFloat(cluster.lng)]}
             radius={250}
             pathOptions={{ color: 'var(--plra-400)', fillColor: 'var(--plra-400)', fillOpacity: 0.1 }}
           />
         ))}
 
         {/* Vehicles */}
-        {vehicles.filter(v => v.lat && v.lng).map(v => (
-          <Marker 
-            key={`v-${v.id}`} 
-            position={[v.lat, v.lng]}
-            icon={createCustomIcon('var(--green)', 'Car')}
-          >
-            <Popup>
-              <div style={{ padding: '0.2rem' }}>
-                <p style={{ fontWeight: 800, margin: 0 }}>Móvil: {v.description}</p>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.8rem' }}>Chofer: {v.driver_name}</p>
-                <span className={`badge ${v.status === 'AVAILABLE' ? 'badge-green' : 'badge-yellow'}`}>
-                  {v.status === 'AVAILABLE' ? 'DISPONIBLE' : 'EN RUTA'}
-                </span>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {vehicles.filter(v => v.lat && v.lng).map(v => {
+          const defaultDriverPhoto = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+          const defaultCoordPhoto = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80';
+          
+          const driverPhoto = v.driver_photo || defaultDriverPhoto;
+          const coordPhoto = v.coordinator_photo || defaultCoordPhoto;
+
+          return (
+            <Marker 
+              key={`v-${v.id}`} 
+              position={[parseFloat(v.lat), parseFloat(v.lng)]}
+              icon={createCustomIcon('#10B981', 'Car')}
+            >
+              <Popup>
+                <div style={{ 
+                  fontFamily: 'Outfit, sans-serif',
+                  padding: '0.4rem', 
+                  minWidth: '260px',
+                  color: 'white',
+                  borderRadius: '12px'
+                }}>
+                  {/* Header Title */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: 'white', letterSpacing: '0.5px' }}>
+                        Móvil: {v.plate || 'CHOFER'}
+                      </h4>
+                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{v.description}</span>
+                    </div>
+                    <span style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 800, 
+                      padding: '0.15rem 0.4rem', 
+                      borderRadius: '6px', 
+                      background: v.status === 'AVAILABLE' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                      color: v.status === 'AVAILABLE' ? '#10B981' : '#F59E0B',
+                      border: `1px solid ${v.status === 'AVAILABLE' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                    }}>
+                      {v.status === 'AVAILABLE' ? 'DISPONIBLE' : 'EN RUTA'}
+                    </span>
+                  </div>
+
+                  {/* Team Avatars Section */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    {/* Driver Card */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <div style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #10B981', overflow: 'hidden', marginBottom: '0.25rem' }}>
+                        <img src={driverPhoto} alt={v.driver_name || 'Chofer'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase' }}>Chofer</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'white', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{v.driver_name || 'Sin Asignar'}</span>
+                    </div>
+
+                    {/* Coordinator Card */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <div style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #3B82F6', overflow: 'hidden', marginBottom: '0.25rem' }}>
+                        <img src={coordPhoto} alt={v.coordinator_name || 'Coordinador'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase' }}>Coordinador</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'white', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{v.coordinator_name || 'Sin Asignar'}</span>
+                    </div>
+                  </div>
+
+                  {/* Electoral Uber Trip Card */}
+                  {v.passengers_in_transit ? (
+                    <div style={{ 
+                      background: 'rgba(16, 185, 129, 0.08)', 
+                      border: '1px solid rgba(16, 185, 129, 0.2)', 
+                      borderRadius: '8px', 
+                      padding: '0.5rem 0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.15rem' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Llevando en Viaje</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'white' }}>
+                        {v.passengers_in_transit}
+                      </p>
+                    </div>
+                  ) : v.passengers_pending ? (
+                    <div style={{ 
+                      background: 'rgba(59, 130, 246, 0.08)', 
+                      border: '1px solid rgba(59, 130, 246, 0.2)', 
+                      borderRadius: '8px', 
+                      padding: '0.5rem 0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.15rem' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3B82F6' }} />
+                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Buscando a</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: 'white' }}>
+                        {v.passengers_pending}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      background: 'rgba(255,255,255,0.02)', 
+                      border: '1px solid rgba(255,255,255,0.05)', 
+                      borderRadius: '8px', 
+                      padding: '0.5rem 0.75rem',
+                      textAlign: 'center'
+                    }}>
+                      <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Vehículo sin viajes asignados</span>
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
 
       {/* OVERLAYS */}

@@ -14,6 +14,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// --- IN-MEMORY CACHE FOR HIGH-VOLUME AND HEAVY DATABASE QUERIES ---
+export const electorsCountCache = new Map<string, { count: number; ts: number }>();
+export const totalElectorsCache = new Map<string, { count: number; ts: number }>();
+export const electorCountsByLocalCache = new Map<string, { data: Map<string, number>; ts: number }>();
+export const ELECTORS_COUNT_TTL = 300_000; // 5 minutes cache TTL for static elector calculations
+export const clearElectorsCache = () => {
+  console.log('[CACHE] Clearing all electors-related cache maps...');
+  electorsCountCache.clear();
+  totalElectorsCache.clear();
+  electorCountsByLocalCache.clear();
+};
+
+
+
 const ALLOWED_ORIGINS = [
   'https://intelecciones.vercel.app',
   'http://localhost:5173',
@@ -1136,6 +1150,7 @@ app.post('/api/admin/locales/sync-from-padron', (req, res) => {
     });
 
     transaction(rawLocales);
+    clearElectorsCache();
     res.json({ success: true, added });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1621,6 +1636,81 @@ app.put('/api/vehicles/:id/status', (req, res) => {
   }
 });
 
+// Real-time Vehicle Location reporting from Driver Mobile App
+app.post('/api/vehicles/:id/location', (req, res) => {
+  const { id } = req.params;
+  const { lat, lng } = req.body;
+  try {
+    db.prepare('UPDATE vehicles SET lat = ?, lng = ?, last_update = CURRENT_TIMESTAMP WHERE id = ?').run(lat, lng, id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Driver Mobile Login (Operational convenience via Plate or Driver CI)
+app.post('/api/vehicles/login', (req, res) => {
+  const { plate, driver_ci } = req.body;
+  try {
+    let vehicle = null;
+    if (plate) {
+      vehicle = db.prepare(`
+        SELECT v.*, u.nombre as coordinator_name, u.telefono as coordinator_phone, u.photo_url as coordinator_photo
+        FROM vehicles v
+        LEFT JOIN users u ON v.assigned_user_id = u.id
+        WHERE UPPER(REPLACE(v.plate, '-', '')) = UPPER(REPLACE(?, '-', ''))
+      `).get(plate) as any;
+    } else if (driver_ci) {
+      vehicle = db.prepare(`
+        SELECT v.*, u.nombre as coordinator_name, u.telefono as coordinator_phone, u.photo_url as coordinator_photo
+        FROM vehicles v
+        LEFT JOIN users u ON v.assigned_user_id = u.id
+        WHERE REPLACE(v.driver_ci, '.', '') = REPLACE(?, '.', '')
+      `).get(driver_ci) as any;
+    }
+
+    if (!vehicle) {
+      return res.status(404).json({ error: 'Vehículo o chofer no registrado en el sistema' });
+    }
+
+    res.json(vehicle);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all passengers (electors) assigned to a specific vehicle
+app.get('/api/vehicles/:id/passengers', (req, res) => {
+  const { id } = req.params;
+  try {
+    const passengers = db.prepare(`
+      SELECT ec.id as capture_id, ec.transport_status, ec.telefono as contact_phone,
+             e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden, e.barrio,
+             ec.lat, ec.lng, e.is_priority
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.assigned_vehicle_id = ?
+      ORDER BY e.is_priority DESC, ec.timestamp ASC
+    `).all(id);
+    res.json(passengers);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update individual elector transport status (e.g. mark picked up or completed)
+app.put('/api/logistics/passenger/:capture_id/status', (req, res) => {
+  const { capture_id } = req.params;
+  const { status } = req.body;
+  try {
+    db.prepare("UPDATE elector_captures SET transport_status = ? WHERE id = ?").run(status, capture_id);
+    logAction(1, 'UPDATE_PASSENGER_TRANSPORT', 'CAPTURE', capture_id, `Updated passenger ${capture_id} transport status to ${status}`);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/logistics/pending', (req, res) => {
   const list_id = getListId(req);
   const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
@@ -2020,8 +2110,20 @@ app.get('/api/stats/summary', (req, res) => {
     const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${getSecurityFilter(req, 'c').sql}`).get(...getSecurityFilter(req, 'c').params) as any;
     console.log('[STATS] Fetching listsCount...');
     const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${getSecurityFilter(req, 'l').sql}`).get(...getSecurityFilter(req, 'l').params) as any;
-    console.log('[STATS] Fetching electorsCount...');
-    const electorsCount = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${getSecurityFilter(req, 'e').sql}`).get(...getSecurityFilter(req, 'e').params) as any;
+    
+    console.log('[STATS] Fetching electorsCount (using robust cache)...');
+    const secE = getSecurityFilter(req, 'e');
+    const cacheKey = JSON.stringify({ sql: secE.sql, params: secE.params });
+    const cachedE = electorsCountCache.get(cacheKey);
+    let electorsCountVal = 0;
+    const now = Date.now();
+    if (cachedE && (now - cachedE.ts < ELECTORS_COUNT_TTL)) {
+      electorsCountVal = cachedE.count;
+    } else {
+      const res = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${secE.sql}`).get(...secE.params) as any;
+      electorsCountVal = res?.count || 0;
+      electorsCountCache.set(cacheKey, { count: electorsCountVal, ts: now });
+    }
     
     console.log('[STATS] Fetching capturesCount...');
     const capturesCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`).get(...params) as any;
@@ -2039,7 +2141,7 @@ app.get('/api/stats/summary', (req, res) => {
       users: usersCount.count,
       campaigns: campaignsCount.count,
       lists: listsCount.count,
-      electors: electorsCount.count,
+      electors: electorsCountVal,
       captures: capturesCount.count,
       transportNeeded: transportNeeded.count,
       transportAssigned: transportAssigned.count,
@@ -2208,8 +2310,16 @@ app.post('/api/settings', (req, res) => {
 app.get('/api/vehicles', (req, res) => {
   try {
     const vehicles = db.prepare(`
-      SELECT v.*, u.nombre as coordinator_name, l.list_number,
-             (SELECT COUNT(*) FROM elector_captures WHERE assigned_vehicle_id = v.id AND transport_status = 'IN_TRANSIT') as current_passengers
+      SELECT v.*, u.nombre as coordinator_name, u.photo_url as coordinator_photo, u.telefono as coordinator_phone, u.distrito as coordinator_distrito, l.list_number,
+             (SELECT COUNT(*) FROM elector_captures WHERE assigned_vehicle_id = v.id AND transport_status != 'COMPLETED') as current_passengers,
+             (SELECT GROUP_CONCAT(e.nombre || ' ' || e.apellido, ', ')
+              FROM elector_captures ec
+              JOIN electors e ON ec.elector_ci = e.ci
+              WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'IN_TRANSIT') as passengers_in_transit,
+             (SELECT GROUP_CONCAT(e.nombre || ' ' || e.apellido, ', ')
+              FROM elector_captures ec
+              JOIN electors e ON ec.elector_ci = e.ci
+              WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'PENDING') as passengers_pending
       FROM vehicles v
       LEFT JOIN users u ON v.assigned_user_id = u.id
       LEFT JOIN lists l ON u.assigned_list_id = l.id
@@ -2245,7 +2355,7 @@ app.delete('/api/vehicles/:id', (req, res) => {
 app.post('/api/logistics/assign', (req, res) => {
   const { capture_id, vehicle_id } = req.body;
   try {
-    db.prepare("UPDATE elector_captures SET assigned_vehicle_id = ?, transport_status = 'IN_TRANSIT' WHERE id = ?").run(vehicle_id, capture_id);
+    db.prepare("UPDATE elector_captures SET assigned_vehicle_id = ?, transport_status = 'PENDING' WHERE id = ?").run(vehicle_id, capture_id);
     logAction(1, 'ASSIGN_TRANSPORT', 'CAPTURE', capture_id, `Assigned vehicle ${vehicle_id} to capture ${capture_id}`);
     res.json({ success: true });
   } catch (err: any) {
@@ -2653,6 +2763,7 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     });
 
     transaction(data);
+    clearElectorsCache();
     fs.unlinkSync(req.file.path);
 
     const actorId = requesterId ? parseInt(requesterId) : 1;
@@ -2788,57 +2899,96 @@ app.get('/api/stats/command', (req, res) => {
       SELECT COUNT(*) as count ${captureJoins} ${captureWhere}
     `).get(...captureParams) as any;
 
-    // Total electors (separate filter — no list/hierarchy filter needed)
+    // --- OPTIMIZED STATIC/LIVE HYBRID ELECTORS CALCULATION ---
     const secElectors = getSecurityFilter(req, 'e');
     const electorParams = [...(secElectors.params || []), ...localFilterParams];
-    const totalElectors = db.prepare(`
-      SELECT COUNT(*) as count FROM electors e
-      WHERE 1=1 ${localFilterSql} ${secElectors.sql}
-    `).get(...electorParams) as any;
+    const now = Date.now();
 
-    // Location stats
-    const locationStatsQuery = `
-      SELECT
-        loc.cod_local,
-        loc.nombre,
-        COALESCE(e_counts.total, 0)  as total_electors,
-        COALESCE(ec_counts.total, 0) as total_captures,
-        COALESCE(ec_counts.green, 0) as green_captures
-      FROM voting_locations loc
-      LEFT JOIN (
+    // 1. Cached Total Electors
+    const cacheKeyTotal = JSON.stringify({ sql: secElectors.sql, params: secElectors.params, localFilterSql, localFilterParams });
+    let totalEl = 0;
+    const cachedTotal = totalElectorsCache.get(cacheKeyTotal);
+    if (cachedTotal && (now - cachedTotal.ts < ELECTORS_COUNT_TTL)) {
+      totalEl = cachedTotal.count;
+    } else {
+      const res = db.prepare(`
+        SELECT COUNT(*) as count FROM electors e
+        WHERE 1=1 ${localFilterSql} ${secElectors.sql}
+      `).get(...electorParams) as any;
+      totalEl = res?.count || 0;
+      totalElectorsCache.set(cacheKeyTotal, { count: totalEl, ts: now });
+    }
+
+    // 2. Cached Elector Counts per Location
+    const cacheKeyByLocal = JSON.stringify({ sql: secElectors.sql, params: secElectors.params });
+    let electorCountsMap = new Map<string, number>();
+    const cachedByLocal = electorCountsByLocalCache.get(cacheKeyByLocal);
+    if (cachedByLocal && (now - cachedByLocal.ts < ELECTORS_COUNT_TTL)) {
+      electorCountsMap = cachedByLocal.data;
+    } else {
+      const rows = db.prepare(`
         SELECT local_votacion, COUNT(*) as total
         FROM electors e WHERE 1=1 ${secElectors.sql}
         GROUP BY local_votacion
-      ) e_counts ON loc.nombre = e_counts.local_votacion
-      LEFT JOIN (
-        SELECT e.local_votacion,
-          COUNT(ec.id) as total,
-          SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
-        FROM elector_captures ec
-        JOIN electors e ON ec.elector_ci = e.ci
-        LEFT JOIN users u ON ec.coordinator_id = u.id
-        LEFT JOIN lists l ON ec.list_id = l.id
-        LEFT JOIN campaigns c ON l.campaign_id = c.id
-        WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${hierarchyFilterSql}
-        GROUP BY e.local_votacion
-      ) ec_counts ON loc.nombre = ec_counts.local_votacion
-      WHERE 1=1 ${secLoc.sql}
+      `).all(...secElectors.params) as { local_votacion: string; total: number }[];
+      
+      const newMap = new Map<string, number>();
+      rows.forEach(r => {
+        if (r.local_votacion) newMap.set(r.local_votacion.toUpperCase().trim(), r.total);
+      });
+      electorCountsMap = newMap;
+      electorCountsByLocalCache.set(cacheKeyByLocal, { data: newMap, ts: now });
+    }
+
+    // 3. Live Capture Counts per Location (Highly indexed, lightning fast)
+    const capturesQuery = `
+      SELECT e.local_votacion,
+        COUNT(ec.id) as total,
+        SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
+      FROM elector_captures ec
+      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${hierarchyFilterSql}
+      GROUP BY e.local_votacion
     `;
-    const locParams = [
-      ...(secElectors.params || []),
+    const capturesParams = [
       ...(sec.params || []),
       ...listFilterParams,
-      ...hierarchyFilterParams,
-      ...(secLoc.params || []),
+      ...hierarchyFilterParams
     ];
-    const locationStats = db.prepare(locationStatsQuery).all(...locParams) as any[];
+    const liveCapturesList = db.prepare(capturesQuery).all(...capturesParams) as any[];
+    
+    const capturesMap = new Map<string, { total: number; green: number }>();
+    liveCapturesList.forEach(c => {
+      if (c.local_votacion) {
+        capturesMap.set(c.local_votacion.toUpperCase().trim(), { total: c.total, green: c.green || 0 });
+      }
+    });
+
+    // 4. Fetch voting locations
+    const locations = db.prepare(`SELECT cod_local, nombre FROM voting_locations loc WHERE 1=1 ${secLoc.sql}`).all(...(secLoc.params || [])) as any[];
+
+    // 5. Merge stats in memory (O(N) lookup)
+    const locationStats = locations.map(loc => {
+      const nameKey = (loc.nombre || '').toUpperCase().trim();
+      const total_electors = electorCountsMap.get(nameKey) || 0;
+      const capInfo = capturesMap.get(nameKey) || { total: 0, green: 0 };
+      return {
+        cod_local: loc.cod_local,
+        nombre: loc.nombre,
+        total_electors,
+        total_captures: capInfo.total,
+        green_captures: capInfo.green
+      };
+    });
 
     const transportNeeded = db.prepare(`
       SELECT COUNT(*) as count ${captureJoins} ${captureWhere} AND ec.needs_transport = 1
     `).get(...captureParams) as any;
 
     const totalCap = totalCaptures?.count || 0;
-    const totalEl  = totalElectors?.count  || 0;
     res.json({
       green:   stats.find(s => s.traffic_light === 'GREEN')?.count  || 0,
       yellow:  stats.find(s => s.traffic_light === 'YELLOW')?.count || 0,
@@ -3849,9 +3999,9 @@ app.get('/api/diad/actas', (req, res) => {
 app.get('/api/diad/members', (req, res) => {
   try {
     const members = db.prepare(`
-      SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.role
+      SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.role, u.ci, u.telefono
       FROM users u
-      WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA')
+      WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')
     `).all();
     res.json(members);
   } catch (err: any) {
@@ -4007,6 +4157,7 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
       }
     })();
 
+    clearElectorsCache();
     res.json({ success: true, message: distrito && distrito !== 'ALL' ? `Datos del distrito ${distrito} purgados` : 'Sistema purgado globalmente' });
   } catch (err: any) {
     console.error('[WIPE ERROR]', err);
