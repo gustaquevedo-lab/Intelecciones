@@ -306,6 +306,16 @@ const HeaderConnectionStatus = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const checkPending = async () => {
+    try {
+      const { getPendingActions } = await import('../services/offlineDb');
+      const actions = await getPendingActions();
+      setPendingCount(actions.length);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -324,16 +334,6 @@ const HeaderConnectionStatus = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    const checkPending = async () => {
-      try {
-        const { getPendingActions } = await import('../services/offlineDb');
-        const actions = await getPendingActions();
-        setPendingCount(actions.length);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-
     checkPending();
     const interval = setInterval(checkPending, 4000); // Check every 4 seconds
 
@@ -344,12 +344,40 @@ const HeaderConnectionStatus = () => {
     };
   }, []);
 
+  const handleManualSync = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    try {
+      const { syncPendingActions } = await import('../services/syncService');
+      const res = await syncPendingActions();
+      
+      if (res.totalProcessed === 0) {
+        window.alert("ℹ️ Todo al día: No hay registros pendientes por subir en este dispositivo.");
+      } else if (res.successCount > 0 && res.failedCount === 0) {
+        window.alert(`✅ ¡Sincronización Exitosa!\n\nSe subieron ${res.successCount} registros pendientes al servidor de forma segura.`);
+      } else if (res.successCount > 0 && res.failedCount > 0) {
+        window.alert(`⚠️ Sincronización Parcial:\n\nSe subieron ${res.successCount} registros con éxito.\nQuedan ${res.failedCount} registros resguardados localmente por mala señal o congestión.`);
+      } else {
+        window.alert(`❌ Conexión Fallida:\n\nNo se pudo establecer conexión estable con el servidor. Tus ${res.failedCount} registros pendientes siguen totalmente a salvo en la memoria local del teléfono.`);
+      }
+    } catch (err) {
+      console.error(err);
+      window.alert("❌ Ocurrió un error inesperado al sincronizar los registros de campo.");
+    } finally {
+      setIsSyncing(false);
+      checkPending();
+    }
+  };
+
   const isPending = pendingCount > 0;
 
   if (!isOnline) {
     return (
       <div 
         className="connection-status-badge offline"
+        onClick={handleManualSync}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -364,11 +392,13 @@ const HeaderConnectionStatus = () => {
           fontSize: '0.68rem',
           letterSpacing: '0.04em',
           flexShrink: 0,
-          boxShadow: '0 0 10px rgba(245,158,11,0.1)'
+          boxShadow: '0 0 10px rgba(245,158,11,0.1)',
+          cursor: isSyncing ? 'not-allowed' : 'pointer',
+          userSelect: 'none'
         }}
-        title={`Sin conexión. ${pendingCount} registros guardados localmente.`}
+        title={`Sin conexión. ${pendingCount} registros guardados localmente. Haz clic para intentar sincronizar manualmente.`}
       >
-        <WifiOff size={11} className="animate-pulse" />
+        <WifiOff size={11} className={isSyncing ? '' : 'animate-pulse'} />
         <span className="connection-status-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
           OFFLINE {isPending && <span style={{ fontSize: '0.6rem', background: '#F59E0B', color: '#000000', padding: '1px 4px', borderRadius: '4px', fontWeight: 900 }}>{pendingCount}</span>}
         </span>
@@ -380,6 +410,7 @@ const HeaderConnectionStatus = () => {
     return (
       <div 
         className="connection-status-badge syncing"
+        onClick={handleManualSync}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -394,12 +425,14 @@ const HeaderConnectionStatus = () => {
           fontSize: '0.68rem',
           letterSpacing: '0.04em',
           flexShrink: 0,
-          boxShadow: '0 0 12px rgba(59,130,246,0.2)'
+          boxShadow: '0 0 12px rgba(59,130,246,0.2)',
+          cursor: isSyncing ? 'not-allowed' : 'pointer',
+          userSelect: 'none'
         }}
-        title={`Sincronizando ${pendingCount} acciones pendientes con el servidor...`}
+        title={`Sincronizando ${pendingCount} acciones pendientes con el servidor... Haz clic para forzar.`}
       >
         <RefreshCw size={11} style={{ animation: 'spin 1.5s linear infinite' }} />
-        <span className="connection-status-text">ENVIANDO ({pendingCount})</span>
+        <span className="connection-status-text">{isSyncing ? 'ENVIANDO...' : `ENVIANDO (${pendingCount})`}</span>
       </div>
     );
   }
@@ -407,6 +440,7 @@ const HeaderConnectionStatus = () => {
   return (
     <div 
       className="connection-status-badge online"
+      onClick={handleManualSync}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -421,9 +455,11 @@ const HeaderConnectionStatus = () => {
         fontSize: '0.68rem',
         letterSpacing: '0.04em',
         flexShrink: 0,
-        boxShadow: '0 0 10px rgba(34,197,94,0.1)'
+        boxShadow: '0 0 10px rgba(34,197,94,0.1)',
+        cursor: 'pointer',
+        userSelect: 'none'
       }}
-      title="Conectado en tiempo real con el servidor."
+      title="Conectado en tiempo real con el servidor. Haz clic para forzar sincronización manual."
     >
       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px #22C55E' }} />
       <span className="connection-status-text">EN LÍNEA</span>
