@@ -2774,7 +2774,27 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     const workbook = XLSX.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const data: any[] = XLSX.utils.sheet_to_json(sheet);
+    
+    // 1. Dynamically locate the header row (skips title or blank rows at the top)
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+    let headerRowIndex = 0;
+    
+    for (let r = 0; r < Math.min(rows.length, 20); r++) {
+      const row = rows[r];
+      if (!row) continue;
+      const isHeader = row.some(cell => {
+        if (cell === null || cell === undefined) return false;
+        const s = cell.toString().toUpperCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[º°]/g, "");
+        return s === 'CEDULA' || s === 'CI' || s === 'DOCUMENTO' || s === 'APELLIDO' || s === 'NOMBRE' || s === 'MESA';
+      });
+      if (isHeader) {
+        headerRowIndex = r;
+        break;
+      }
+    }
+    
+    // 2. Read the sheet content starting at the detected header row
+    const data: any[] = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
 
     if (data.length === 0) {
       return res.status(400).json({ error: 'El archivo está vacío o tiene un formato incorrecto' });
@@ -2789,7 +2809,8 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
       for (const row of rows) {
         const normalizedRow: any = {};
         for (const key in row) {
-          const cleanKey = key.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim().replace(/\s+/g, "_").replace(/\./g, "");
+          // Normalize and strip standard unicode markers like º and °
+          const cleanKey = key.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[º°]/g, "").trim().replace(/\s+/g, "_").replace(/\./g, "");
           normalizedRow[cleanKey] = row[key];
         }
 
@@ -2798,39 +2819,41 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
         const apellido = normalizedRow['APELLIDO'] || normalizedRow['APELLIDOS'];
         const local = normalizedRow['LOCAL'] || normalizedRow['LOCAL_VOTACION'] || normalizedRow['LOCAL_DE_VOTACION'] || normalizedRow['RECINTO'] || normalizedRow['COLEGIO'];
         
-        // Exhaustive fallbacks for MESA
-        const mesa = normalizedRow['MESA'] || 
-                     normalizedRow['NRO_MESA'] || 
-                     normalizedRow['NUMERO_MESA'] || 
-                     normalizedRow['MESA_NRO'] || 
-                     normalizedRow['MESANRO'] || 
-                     normalizedRow['MESA_NUM'] || 
-                     normalizedRow['MESAS'] || 
-                     0;
+        // Exhaustive fallbacks for MESA with integer coercion
+        const rawMesa = normalizedRow['MESA'] || 
+                        normalizedRow['NRO_MESA'] || 
+                        normalizedRow['NUMERO_MESA'] || 
+                        normalizedRow['MESA_NRO'] || 
+                        normalizedRow['MESANRO'] || 
+                        normalizedRow['MESA_NUM'] || 
+                        normalizedRow['MESAS'] || 
+                        0;
+        const mesa = parseInt(rawMesa.toString().trim()) || 0;
         
-        // Exhaustive fallbacks for ORDEN (supporting standard TSJE sheet layouts)
-        const orden = normalizedRow['ORD_MESA'] || 
-                      normalizedRow['ORDEN'] || 
-                      normalizedRow['ORDEN_MESA'] || 
-                      normalizedRow['NRO_ORDEN'] || 
-                      normalizedRow['ORD'] || 
-                      normalizedRow['NROORDEN'] || 
-                      normalizedRow['ORDMESA'] || 
-                      normalizedRow['NUMERO_ORDEN'] || 
-                      normalizedRow['NUM_ORDEN'] || 
-                      normalizedRow['NRO_ORD'] || 
-                      normalizedRow['N_ORD'] || 
-                      normalizedRow['N_ORDEN'] || 
-                      normalizedRow['ORD_LOC'] || 
-                      normalizedRow['ORD_NAC'] || 
-                      normalizedRow['ORDEN_LOCAL'] || 
-                      normalizedRow['ORDEN_NACIONAL'] || 
-                      normalizedRow['NRO'] || 
-                      normalizedRow['N'] || 
-                      normalizedRow['LINEA'] || 
-                      normalizedRow['POSICION'] || 
-                      normalizedRow['POS'] || 
-                      0;
+        // Exhaustive fallbacks for ORDEN (supporting all standard TSJE layouts) with integer coercion
+        const rawOrden = normalizedRow['ORD_MESA'] || 
+                         normalizedRow['ORDEN'] || 
+                         normalizedRow['ORDEN_MESA'] || 
+                         normalizedRow['NRO_ORDEN'] || 
+                         normalizedRow['ORD'] || 
+                         normalizedRow['NROORDEN'] || 
+                         normalizedRow['ORDMESA'] || 
+                         normalizedRow['NUMERO_ORDEN'] || 
+                         normalizedRow['NUM_ORDEN'] || 
+                         normalizedRow['NRO_ORD'] || 
+                         normalizedRow['N_ORD'] || 
+                         normalizedRow['N_ORDEN'] || 
+                         normalizedRow['ORD_LOC'] || 
+                         normalizedRow['ORD_NAC'] || 
+                         normalizedRow['ORDEN_LOCAL'] || 
+                         normalizedRow['ORDEN_NACIONAL'] || 
+                         normalizedRow['NRO'] || 
+                         normalizedRow['N'] || 
+                         normalizedRow['LINEA'] || 
+                         normalizedRow['POSICION'] || 
+                         normalizedRow['POS'] || 
+                         0;
+        const orden = parseInt(rawOrden.toString().trim()) || 0;
 
         if (ci && (nombre || apellido)) {
           insertStmt.run(ci.toString().trim(), nombre || '', apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito, finalDistrito, effectiveCampaignId);
@@ -2844,7 +2867,30 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
 
     const actorId = requesterId ? parseInt(requesterId) : 1;
     logAction(actorId, 'IMPORT', 'PADRON', null, `Importados ${data.length} electores para ${finalDistrito} (campaign_id: ${effectiveCampaignId ?? 'global'})`);
-    res.json({ success: true, count: data.length, campaign_id: effectiveCampaignId });
+    
+    // Add parsed sample for debugging and confirmation in the API response
+    const sample = data.slice(0, 5).map(row => {
+      const normalizedRow: any = {};
+      for (const key in row) {
+        const cleanKey = key.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[º°]/g, "").trim().replace(/\s+/g, "_").replace(/\./g, "");
+        normalizedRow[cleanKey] = row[key];
+      }
+      const rawOrden = normalizedRow['ORD_MESA'] || normalizedRow['ORDEN'] || normalizedRow['ORDEN_MESA'] || normalizedRow['NRO_ORDEN'] || normalizedRow['ORD'] || normalizedRow['NROORDEN'] || normalizedRow['ORDMESA'] || normalizedRow['NUMERO_ORDEN'] || normalizedRow['N'] || 0;
+      return {
+        ci: normalizedRow['CEDULA'] || normalizedRow['CI'] || normalizedRow['DOCUMENTO'],
+        nombre: normalizedRow['NOMBRE'] || normalizedRow['NOMBRES'],
+        apellido: normalizedRow['APELLIDO'] || normalizedRow['APELLIDOS'],
+        mesa: parseInt(normalizedRow['MESA'] || 0),
+        orden: parseInt(rawOrden.toString().trim()) || 0
+      };
+    });
+
+    res.json({ 
+      success: true, 
+      count: data.length, 
+      campaign_id: effectiveCampaignId,
+      sample
+    });
   } catch (err: any) {
     if (req.file) try { fs.unlinkSync(req.file.path); } catch {}
     res.status(500).json({ error: err.message });
