@@ -894,15 +894,23 @@ const TeamPanel = () => {
       {/* Dynamic Print-Only Stylesheet Injection */}
       <style>{`
         @media print {
-          /* Hide all page content except the printable report */
-          body * {
+          /* Force colors and backgrounds to print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          /* Hide all page content by default at body level */
+          body {
             visibility: hidden !important;
             background: white !important;
-            color: black !important;
           }
+          
+          /* Only make the printable report container visible */
           #printable-report-area, #printable-report-area * {
             visibility: visible !important;
           }
+          
           #printable-report-area {
             position: absolute !important;
             left: 0 !important;

@@ -538,31 +538,28 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
         const d = effectiveDistrict; 
         console.log(`[SECURITY] Applying district filter: ${d} for table ${tableAlias}`);
         
-        // Robust accent-insensitive matching helper
-        const accentFold = (col: string) => `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(${col}),'Á','A'),'É','E'),'Í','I'),'Ó','O'),'Ú','U'),'á','A'),'é','E'),'í','I'),'ó','O'),'ú','U')`;
-
         if (tableAlias === 'u') {
           sql += ` AND (
-            ${accentFold('u.distrito')} = ? OR 
-            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND ${accentFold('l2.ciudad')} = ?) OR 
-            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND ${accentFold('c2.distrito')} = ?)
+            u.distrito = ? OR 
+            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND l2.ciudad = ?) OR 
+            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND c2.distrito = ?)
           )`;
           params.push(d, d, d);
         } else if (tableAlias === 'ec') {
-          sql += ` AND (${accentFold('e.ciudad')} = ? OR ${accentFold('e.distrito')} = ?)`;
+          sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
           params.push(d, d);
         } else {
           // Determine which column to use based on table schema
           let col = 'distrito';
           if (tableAlias === 'l' || tableAlias === 'e') col = 'ciudad';
           
-          sql += ` AND ${accentFold(`${tableAlias}.${col}`)} = ?`;
+          sql += ` AND ${tableAlias}.${col} = ?`;
           params.push(d);
           
           // Fallback for tables that have both or might use either
           if (tableAlias === 'e' || tableAlias === 'loc') {
              sql = sql.slice(0, -1); // remove the last '?'
-             sql = sql.replace(` AND ${accentFold(`${tableAlias}.${col}`)} = `, ` AND (${accentFold(`${tableAlias}.ciudad`)} = ? OR ${accentFold(`${tableAlias}.distrito`)} = ?)`);
+             sql = sql.replace(` AND ${tableAlias}.${col} = `, ` AND (${tableAlias}.ciudad = ? OR ${tableAlias}.distrito = ?)`);
              params.push(d); // add second param for the OR
           }
         }
@@ -635,7 +632,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       targetCol = 'ciudad';
     }
 
-    let sql = ` AND UPPER(${targetAlias}.${targetCol}) = UPPER(?)`;
+    let sql = ` AND ${targetAlias}.${targetCol} = ?`;
     let params: any[] = [user.distrito];
 
     if ((tableAlias === 'e') && user.campaign_id) {
