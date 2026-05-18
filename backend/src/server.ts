@@ -1490,9 +1490,9 @@ app.get('/api/conflicts', (req, res) => {
   
   try {
     const conflicts = db.prepare(`
-      SELECT ec.*, e.nombre as elector_nombre, l.list_number
+      SELECT ec.*, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as elector_nombre, l.list_number
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN lists l ON ec.list_id = l.id
       JOIN campaigns c ON l.campaign_id = c.id
       WHERE ec.elector_ci IN (
@@ -1512,9 +1512,9 @@ app.get('/api/activities', (req, res) => {
 
   try {
     const activities = db.prepare(`
-      SELECT ec.*, e.nombre as elector_nombre, u.username as coordinator_name, l.list_number
+      SELECT ec.*, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as elector_nombre, u.username as coordinator_name, l.list_number
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       JOIN lists l ON ec.list_id = l.id
       JOIN campaigns c ON l.campaign_id = c.id
@@ -1553,12 +1553,16 @@ app.get('/api/captures', (req, res) => {
     const captures = db.prepare(`
       SELECT 
         ec.*, 
-        e.nombre, e.apellido, e.local_votacion, 
+        COALESCE(e.nombre, 'ELECTOR') as nombre, 
+        COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
+        COALESCE(e.mesa, 0) as mesa, 
+        COALESCE(e.orden, 0) as orden, 
         u.nombre as coordinator_name, u.role as coordinator_role, 
         p.nombre as padrino_name,
         l.list_number, l.campaign_id, c.name as campaign_name
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       LEFT JOIN users p ON u.parent_id = p.id
       LEFT JOIN lists l ON ec.list_id = l.id
@@ -1584,10 +1588,10 @@ app.get('/api/logistics/stats', (req, res) => {
       SELECT
         COUNT(*) as total_requests,
         SUM(CASE WHEN ec.assigned_vehicle_id IS NOT NULL THEN 1 ELSE 0 END) as assigned,
-        SUM(CASE WHEN e.is_priority = 1 THEN 1 ELSE 0 END) as priority
+        SUM(CASE WHEN COALESCE(e.is_priority, 0) = 1 THEN 1 ELSE 0 END) as priority
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 ${filterSql} ${district ? 'AND (UPPER(e.ciudad) = UPPER(?) OR UPPER(e.distrito) = UPPER(?))' : ''}
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
+      WHERE ec.needs_transport = 1 ${filterSql} ${district ? 'AND (UPPER(COALESCE(e.ciudad, \'\')) = UPPER(?) OR UPPER(COALESCE(e.distrito, \'\')) = UPPER(?))' : ''}
     `).get(...filterParams, ...(district ? [district, district] : [])) as any;
 
     const fleet = db.prepare(`
@@ -1618,7 +1622,7 @@ app.get('/api/logistics/clusters', (req, res) => {
         AVG(ec.lat) as lat,
         AVG(ec.lng) as lng
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
       GROUP BY COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio')
     `).all(...filterParams);
@@ -1688,12 +1692,18 @@ app.get('/api/vehicles/:id/passengers', (req, res) => {
   try {
     const passengers = db.prepare(`
       SELECT ec.id as capture_id, ec.transport_status, ec.telefono as contact_phone,
-             e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden, e.barrio,
-             ec.lat, ec.lng, e.is_priority
+             COALESCE(e.ci, ec.elector_ci) as ci, 
+             COALESCE(e.nombre, 'ELECTOR') as nombre, 
+             COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+             COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
+             COALESCE(e.mesa, 0) as mesa, 
+             COALESCE(e.orden, 0) as orden, 
+             COALESCE(e.barrio, 'REGISTRO DE CAMPO') as barrio,
+             ec.lat, ec.lng, COALESCE(e.is_priority, 0) as is_priority
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.assigned_vehicle_id = ?
-      ORDER BY e.is_priority DESC, ec.timestamp ASC
+      ORDER BY COALESCE(e.is_priority, 0) DESC, ec.timestamp ASC
     `).all(id);
     res.json((passengers as any[]).map(sanitizeElectorData));
   } catch (err: any) {
@@ -1720,13 +1730,16 @@ app.get('/api/logistics/pending', (req, res) => {
   const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
   try {
     const pending = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion,
-        COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio') as barrio,
-        e.is_priority
+      SELECT ec.*, 
+        COALESCE(e.nombre, 'ELECTOR') as nombre, 
+        COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
+        COALESCE(NULLIF(e.barrio, ''), 'REGISTRO DE CAMPO') as barrio,
+        COALESCE(e.is_priority, 0) as is_priority
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
-      ORDER BY e.is_priority DESC, ec.timestamp ASC
+      ORDER BY COALESCE(e.is_priority, 0) DESC, ec.timestamp ASC
     `).all(...filterParams);
     res.json(pending);
   } catch (err: any) {
@@ -1767,9 +1780,14 @@ app.delete('/api/captures/:id', (req, res) => {
 app.get('/api/coordinators/:id/history', (req, res) => {
   try {
     const history = db.prepare(`
-      SELECT c.*, e.nombre, e.apellido, e.local_votacion, e.mesa
+      SELECT c.*, 
+             COALESCE(e.nombre, 'ELECTOR') as nombre, 
+             COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+             COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
+             COALESCE(e.mesa, 0) as mesa,
+             COALESCE(e.orden, 0) as orden
       FROM elector_captures c
-      JOIN electors e ON c.elector_ci = e.ci
+      LEFT JOIN electors e ON c.elector_ci = e.ci
       WHERE c.coordinator_id = ?
       ORDER BY c.timestamp DESC
     `).all(req.params.id);
@@ -2129,16 +2147,16 @@ app.get('/api/stats/summary', (req, res) => {
     }
     
     console.log('[STATS] Fetching capturesCount...');
-    const capturesCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`).get(...params) as any;
+    const capturesCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`).get(...params) as any;
     console.log('[STATS] Fetching transport...');
-    const transportNeeded = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 ${sec.sql}`).get(...params) as any;
-    const transportAssigned = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NOT NULL ${sec.sql}`).get(...params) as any;
+    const transportNeeded = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 ${sec.sql}`).get(...params) as any;
+    const transportAssigned = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NOT NULL ${sec.sql}`).get(...params) as any;
 
     console.log('[STATS] Fetching traffic lights...');
-    const greenCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'GREEN' ${sec.sql}`).get(...params) as any;
-    const yellowCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'YELLOW' ${sec.sql}`).get(...params) as any;
-    const redCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'RED' ${sec.sql}`).get(...params) as any;
-    const purpleCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'PURPLE' ${sec.sql}`).get(...params) as any;
+    const greenCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'GREEN' ${sec.sql}`).get(...params) as any;
+    const yellowCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'YELLOW' ${sec.sql}`).get(...params) as any;
+    const redCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'RED' ${sec.sql}`).get(...params) as any;
+    const purpleCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'PURPLE' ${sec.sql}`).get(...params) as any;
 
     res.json({
       users: usersCount.count,
@@ -2315,13 +2333,13 @@ app.get('/api/vehicles', (req, res) => {
     const vehicles = db.prepare(`
       SELECT v.*, u.nombre as coordinator_name, u.photo_url as coordinator_photo, u.telefono as coordinator_phone, u.distrito as coordinator_distrito, l.list_number,
              (SELECT COUNT(*) FROM elector_captures WHERE assigned_vehicle_id = v.id AND transport_status != 'COMPLETED') as current_passengers,
-             (SELECT GROUP_CONCAT(e.nombre || ' ' || e.apellido, ', ')
+             (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
               FROM elector_captures ec
-              JOIN electors e ON ec.elector_ci = e.ci
+              LEFT JOIN electors e ON ec.elector_ci = e.ci
               WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'IN_TRANSIT') as passengers_in_transit,
-             (SELECT GROUP_CONCAT(e.nombre || ' ' || e.apellido, ', ')
+             (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
               FROM elector_captures ec
-              JOIN electors e ON ec.elector_ci = e.ci
+              LEFT JOIN electors e ON ec.elector_ci = e.ci
               WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'PENDING') as passengers_pending
       FROM vehicles v
       LEFT JOIN users u ON v.assigned_user_id = u.id
@@ -2380,9 +2398,15 @@ app.post('/api/logistics/complete-trip', (req, res) => {
 app.get('/api/logistics/pending', (req, res) => {
   try {
     const pending = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, e.barrio, e.is_priority, v.description as vehicle_desc
+      SELECT ec.*, 
+             COALESCE(e.nombre, 'ELECTOR') as nombre, 
+             COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+             COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
+             COALESCE(e.barrio, 'REGISTRO DE CAMPO') as barrio, 
+             COALESCE(e.is_priority, 0) as is_priority, 
+             v.description as vehicle_desc
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN vehicles v ON ec.assigned_vehicle_id = v.id
       WHERE ec.needs_transport = 1 AND ec.transport_status != 'COMPLETED'
     `).all();
@@ -2488,16 +2512,16 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         cc.id as conflict_id,
         cc.status as conflict_status,
         cc.resolved_at,
-        e.ci as elector_ci,
-        e.nombre as elector_nombre,
-        e.apellido as elector_apellido,
-        e.local_votacion,
-        e.mesa,
+        COALESCE(e.ci, cc.elector_ci) as elector_ci,
+        COALESCE(e.nombre, 'ELECTOR') as elector_nombre,
+        COALESCE(e.apellido, 'NO REGISTRADO') as elector_apellido,
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
+        COALESCE(e.mesa, 0) as mesa,
         
         u_win.nombre as winner_name,
         u_win.role as winner_role
       FROM capture_conflicts cc
-      JOIN electors e ON cc.elector_ci = e.ci
+      LEFT JOIN electors e ON cc.elector_ci = e.ci
       LEFT JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
       LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
       WHERE cc.status = 'RESOLVED'
@@ -3079,7 +3103,7 @@ app.get('/api/stats/command', (req, res) => {
     // LEFT JOINs on lists/campaigns so captures without list_id are still counted
     const captureJoins = `
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN users u ON ec.coordinator_id = u.id
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
@@ -3139,16 +3163,16 @@ app.get('/api/stats/command', (req, res) => {
 
     // 3. Live Capture Counts per Location (Highly indexed, lightning fast)
     const capturesQuery = `
-      SELECT e.local_votacion,
+      SELECT COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
         COUNT(ec.id) as total,
         SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN users u ON ec.coordinator_id = u.id
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
       WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${hierarchyFilterSql}
-      GROUP BY e.local_votacion
+      GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO')
     `;
     const capturesParams = [
       ...(sec.params || []),
@@ -3317,10 +3341,15 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
   const { id } = req.params;
   try {
     const electors = db.prepare(`
-      SELECT e.nombre, e.apellido, e.ci as elector_ci, e.local_votacion, e.mesa, e.orden,
-      ec.traffic_light, ec.needs_transport, ec.telefono
+      SELECT COALESCE(e.nombre, 'ELECTOR') as nombre, 
+             COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+             ec.elector_ci, 
+             COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
+             COALESCE(e.mesa, 0) as mesa, 
+             COALESCE(e.orden, 0) as orden,
+             ec.traffic_light, ec.needs_transport, ec.telefono
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.coordinator_id = ?
     `).all(id);
     res.json(electors);
@@ -3355,10 +3384,15 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
 
     const fullHierarchy = coordinators.map(c => {
       const electors = db.prepare(`
-        SELECT e.nombre, e.apellido, e.ci as elector_ci, e.local_votacion, e.mesa, e.orden,
-        ec.traffic_light, ec.needs_transport, ec.telefono
+        SELECT COALESCE(e.nombre, 'ELECTOR') as nombre, 
+               COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+               ec.elector_ci, 
+               COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
+               COALESCE(e.mesa, 0) as mesa, 
+               COALESCE(e.orden, 0) as orden,
+               ec.traffic_light, ec.needs_transport, ec.telefono
         FROM elector_captures ec
-        JOIN electors e ON ec.elector_ci = e.ci
+        LEFT JOIN electors e ON ec.elector_ci = e.ci
         WHERE ec.coordinator_id = ?
       `).all(c.id);
       return { ...c, electors };
@@ -3378,9 +3412,14 @@ app.get('/api/coordinator/:id/captures', (req, res) => {
   const { id } = req.params;
   try {
     const captures = db.prepare(`
-      SELECT ec.*, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden
+      SELECT ec.*, 
+             COALESCE(e.nombre, 'ELECTOR') as nombre, 
+             COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+             COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
+             COALESCE(e.mesa, 0) as mesa, 
+             COALESCE(e.orden, 0) as orden
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.coordinator_id = ?
       ORDER BY ec.timestamp DESC
     `).all(id);
@@ -3468,9 +3507,9 @@ app.get('/api/admin/activity', (req, res) => {
 
   try {
     const query = `
-      SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, e.nombre || ' ' || e.apellido as entity_name, 'Nueva Captura' as detail
+      SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Nueva Captura' as detail
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       WHERE 1=1 ${sec.sql}
       
@@ -3483,9 +3522,9 @@ app.get('/api/admin/activity', (req, res) => {
       
       UNION ALL
       
-      SELECT 'CONFLICT' as type, cc.timestamp, 'Sistema' as user_name, e.nombre || ' ' || e.apellido as entity_name, 'Doble Captura' as detail
+      SELECT 'CONFLICT' as type, cc.timestamp, 'Sistema' as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Doble Captura' as detail
       FROM capture_conflicts cc
-      JOIN electors e ON cc.elector_ci = e.ci
+      LEFT JOIN electors e ON cc.elector_ci = e.ci
       JOIN elector_captures ec ON cc.capture_id = ec.id
       JOIN users u ON ec.coordinator_id = u.id
       WHERE 1=1 ${sec.sql}
@@ -3715,9 +3754,9 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
     } else if (traffic_light) {
       // Targets are electors from captures - JOIN with electors to get names and voting data
       let query = `
-        SELECT ec.telefono, e.nombre, ec.elector_ci, e.local_votacion, e.mesa, e.orden
+        SELECT ec.telefono, COALESCE(e.nombre, 'ELECTOR') as nombre, ec.elector_ci, COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden
         FROM elector_captures ec
-        JOIN electors e ON ec.elector_ci = e.ci
+        LEFT JOIN electors e ON ec.elector_ci = e.ci
         WHERE ec.telefono IS NOT NULL AND ec.telefono != ""
       `;
       const params: any[] = [];
@@ -3932,13 +3971,14 @@ app.get('/api/whatsapp/recipients/padrinos/:id/team', (req, res) => {
 
     const electorsRaw = db.prepare(`
       SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
-        e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden,
+        COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden,
         u.id as coordinator_id, u.nombre as coordinator_nombre
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       WHERE u.parent_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != ''
-      ORDER BY u.nombre, e.nombre
+      ORDER BY u.nombre, COALESCE(e.nombre, 'ELECTOR')
     `).all(padrinoId);
 
     res.json({ coordinators, electors: electorsRaw });
@@ -3952,11 +3992,12 @@ app.get('/api/whatsapp/recipients/coordinator/:id/electors', (req, res) => {
   try {
     const electors = db.prepare(`
       SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
-        e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden
+        COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.coordinator_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != ''
-      ORDER BY e.nombre
+      ORDER BY COALESCE(e.nombre, 'ELECTOR')
     `).all(coordId);
     res.json((electors as any[]).map(sanitizeElectorData));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -3976,11 +4017,12 @@ app.get('/api/whatsapp/recipients/search', (req, res) => {
 
     const electors = db.prepare(`
       SELECT ec.elector_ci, ec.telefono, ec.traffic_light,
-        e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden
+        COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.telefono IS NOT NULL AND ec.telefono != ''
-        AND (e.nombre LIKE ? OR e.apellido LIKE ? OR ec.telefono LIKE ? OR ec.elector_ci LIKE ?)
+        AND (COALESCE(e.nombre, '') LIKE ? OR COALESCE(e.apellido, '') LIKE ? OR ec.telefono LIKE ? OR ec.elector_ci LIKE ?)
       LIMIT 10
     `).all(q, q, q, q);
 
@@ -3996,15 +4038,18 @@ app.get('/api/admin/disputes/global', (req, res) => {
     const sec = getSecurityFilter(req, 'e');
     const disputes = db.prepare(`
       SELECT 
-        e.ci, e.nombre, e.apellido, e.local_votacion,
+        COALESCE(e.ci, ec.elector_ci) as ci, 
+        COALESCE(e.nombre, 'ELECTOR') as nombre, 
+        COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
         GROUP_CONCAT('Lista ' || l.list_number || ' (' || u.nombre || ')|' || ec.lat || '|' || ec.lng) as details,
         COUNT(DISTINCT ec.list_id) as list_count
       FROM elector_captures ec
-      JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN lists l ON ec.list_id = l.id
       JOIN users u ON ec.coordinator_id = u.id
       WHERE 1=1 ${sec.sql}
-      GROUP BY e.ci
+      GROUP BY COALESCE(e.ci, ec.elector_ci)
       HAVING list_count > 1
     `).all(...sec.params);
     res.json(disputes);
