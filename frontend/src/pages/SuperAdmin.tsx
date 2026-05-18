@@ -912,24 +912,58 @@ Status: ${error.response?.status || 'N/A'}
 
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
+    setApiError(null);
     try {
       if (activeTab === 'overview') {
+        let hasErrors = false;
+        let lastErrorMessage = '';
+
+        const safeGet = async (url: string, fallback: any = null, retries = 2) => {
+          for (let attempt = 1; attempt <= retries + 1; attempt++) {
+            try {
+              const res = await api.get(url);
+              return res.data;
+            } catch (err: any) {
+              console.error(`Attempt ${attempt} failed for ${url}:`, err);
+              // Handle SQLite database lock transient errors with exponential delay
+              if (attempt <= retries) {
+                const delay = Math.pow(2, attempt) * 150;
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+              }
+              hasErrors = true;
+              lastErrorMessage = err.response?.data?.error || err.message || 'Error de conexión';
+              return fallback;
+            }
+          }
+        };
+
         const [summary, predictionsRes, allCaptures, allLocales, allUsers, allLists, allCamps] = await Promise.all([
-          api.get('/stats/summary'),
-          api.get('/stats/predictions'),
-          api.get('/captures'),
-          api.get('/voting-locations'),
-          api.get('/users'),
-          api.get('/lists'),
-          api.get('/campaigns')
+          safeGet('/stats/summary'),
+          safeGet('/stats/predictions'),
+          safeGet('/captures', []),
+          safeGet('/voting-locations', []),
+          safeGet('/users', []),
+          safeGet('/lists', []),
+          safeGet('/campaigns', [])
         ]);
-        setStats(summary.data || null);
-        setPredictions(predictionsRes.data || null);
-        setCaptures(Array.isArray(allCaptures.data) ? allCaptures.data : []);
-        setLocales(Array.isArray(allLocales.data) ? allLocales.data : []);
-        setUsers(Array.isArray(allUsers.data) ? allUsers.data : []);
-        setLists(Array.isArray(allLists.data) ? allLists.data : []);
-        setCampaigns(Array.isArray(allCamps.data) ? allCamps.data : []);
+
+        if (summary) {
+          setStats(summary);
+        } else {
+          // Trigger technical alert overlay if the central SaaS summary fails
+          setApiError({
+            message: 'No se pudieron recuperar las estadísticas principales del servidor. Esto puede ocurrir debido a problemas de concurrencia de la base de datos o microcortes de red en el móvil.',
+            details: lastErrorMessage || 'Conexión interrumpida'
+          });
+        }
+
+        if (predictionsRes) setPredictions(predictionsRes);
+        setCaptures(Array.isArray(allCaptures) ? allCaptures : []);
+        setLocales(Array.isArray(allLocales) ? allLocales : []);
+        setUsers(Array.isArray(allUsers) ? allUsers : []);
+        setLists(Array.isArray(allLists) ? allLists : []);
+        setCampaigns(Array.isArray(allCamps) ? allCamps : []);
       } else if (activeTab === 'campaigns') {
         const res = await api.get('/campaigns');
         setCampaigns(Array.isArray(res.data) ? res.data : []);
@@ -976,8 +1010,12 @@ Status: ${error.response?.status || 'N/A'}
         if (res.data.share_message) setShareMessage(res.data.share_message);
         if (res.data.share_message_footer) setShareMessageFooter(res.data.share_message_footer);
       }
-    } catch (err) {
-      console.error("Error fetching data", err);
+    } catch (err: any) {
+      console.error("Critical error fetching data", err);
+      setApiError({
+        message: 'Ocurrió un error crítico inesperado al procesar los datos de administración.',
+        details: err.message || 'Error desconocido'
+      });
     } finally {
       setIsLoading(false);
     }
