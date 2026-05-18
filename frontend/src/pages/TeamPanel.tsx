@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, FileText, Printer, Download, Award, Activity } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -43,10 +43,16 @@ interface ElectorRow {
   padrino_name: string;
   list_number: string;
   campaign_name: string;
+  elector_district?: string;
+  coordinator_district?: string;
+  coordinator_list_id?: number;
+  padrino_id?: string;
+  coordinator_id?: string;
 }
 
 interface LocalRow {
   local_votacion: string;
+  distrito?: string;
   total_captures: number;
   green: number;
   yellow: number;
@@ -362,7 +368,7 @@ const CreateUserModal = ({
 
           {allLists.length > 0 && (
             <div>
-              <label style={labelStyle}>Lista Electoral</label>
+              <label style={labelStyle}>Lista de Concejales</label>
               <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.assigned_list_id} onChange={e => {
                 const listId = e.target.value;
                 const list = allLists.find(l => l.id.toString() === listId);
@@ -372,10 +378,10 @@ const CreateUserModal = ({
                   assigned_campaign_id: list?.campaign_id?.toString() || f.assigned_campaign_id
                 }));
               }}>
-                <option value="">Sin lista específica</option>
+                <option value="">Sin lista de concejales específica</option>
                 {allLists.map(l => (
                   <option key={l.id} value={l.id}>
-                    Lista {l.list_number}{l.candidate_alias ? ` — ${l.candidate_alias}` : ''} ({l.campaign_name})
+                    Lista {l.list_number} (Concejales){l.candidate_alias ? ` — ${l.candidate_alias}` : ''} ({l.campaign_name})
                   </option>
                 ))}
               </select>
@@ -625,8 +631,108 @@ const TeamPanel = () => {
   const [loadingReports, setLoadingReports] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Advanced Filters
+  const [selectedDistrictFilter, setSelectedDistrictFilter] = useState('ALL');
+  const [selectedListFilter, setSelectedListFilter] = useState('ALL');
+  const [selectedPadrinoFilter, setSelectedPadrinoFilter] = useState('ALL');
+  const [selectedCoordinatorFilter, setSelectedCoordinatorFilter] = useState('ALL');
+
   const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
   const isPadrino = user?.role === 'PADRINO' || user?.role === 'SUBJEFE';
+
+  // Available options derived dynamically
+  const availableDistricts = useMemo(() => {
+    if (!reportData) return [];
+    const set = new Set<string>();
+    if (reportData.padrinos) reportData.padrinos.forEach(p => p.distrito && set.add(p.distrito));
+    if (reportData.coordinators) reportData.coordinators.forEach(c => c.distrito && set.add(c.distrito));
+    if (reportData.locales) reportData.locales.forEach(l => l.distrito && set.add(l.distrito));
+    return Array.from(set).sort();
+  }, [reportData]);
+
+  const availableLists = useMemo(() => {
+    if (!reportData) return [];
+    const set = new Set<string>();
+    if (reportData.padrinos) reportData.padrinos.forEach(p => p.list_number && set.add(String(p.list_number)));
+    if (reportData.coordinators) reportData.coordinators.forEach(c => c.list_number && set.add(String(c.list_number)));
+    if (reportData.electors) reportData.electors.forEach(e => e.list_number && set.add(String(e.list_number)));
+    return Array.from(set).sort();
+  }, [reportData]);
+
+  const availablePadrinos = useMemo(() => {
+    if (!reportData) return [];
+    return reportData.padrinos.filter(p => {
+      if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
+      if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
+      return true;
+    }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [reportData, selectedDistrictFilter, selectedListFilter]);
+
+  const availableCoordinators = useMemo(() => {
+    if (!reportData) return [];
+    return reportData.coordinators.filter(c => {
+      if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
+      if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
+      if (selectedPadrinoFilter !== 'ALL' && c.parent_id !== selectedPadrinoFilter) return false;
+      return true;
+    }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter]);
+
+  // Filtered datasets for screen render & Excel/CSV export
+  const filteredPadrinos = useMemo(() => {
+    if (!reportData) return [];
+    return reportData.padrinos.filter(p => {
+      if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
+      if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return p.nombre.toLowerCase().includes(q) || (p.ci && p.ci.includes(q)) || (p.username && p.username.includes(q));
+      }
+      return true;
+    });
+  }, [reportData, selectedDistrictFilter, selectedListFilter, searchQuery]);
+
+  const filteredCoordinators = useMemo(() => {
+    if (!reportData) return [];
+    return reportData.coordinators.filter(c => {
+      if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
+      if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
+      if (selectedPadrinoFilter !== 'ALL' && c.parent_id !== selectedPadrinoFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return c.nombre.toLowerCase().includes(q) || (c.ci && c.ci.includes(q)) || (c.username && c.username.includes(q));
+      }
+      return true;
+    });
+  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, searchQuery]);
+
+  const filteredElectors = useMemo(() => {
+    if (!reportData) return [];
+    return reportData.electors.filter(e => {
+      if (selectedDistrictFilter !== 'ALL') {
+        if (e.elector_district !== selectedDistrictFilter && e.coordinator_district !== selectedDistrictFilter) return false;
+      }
+      if (selectedListFilter !== 'ALL' && String(e.list_number) !== selectedListFilter) return false;
+      if (selectedPadrinoFilter !== 'ALL' && e.padrino_id !== selectedPadrinoFilter) return false;
+      if (selectedCoordinatorFilter !== 'ALL' && e.coordinator_id !== selectedCoordinatorFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return e.nombre.toLowerCase().includes(q) || e.apellido.toLowerCase().includes(q) || (e.elector_ci && e.elector_ci.includes(q));
+      }
+      return true;
+    });
+  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter, searchQuery]);
+
+  const filteredLocales = useMemo(() => {
+    if (!reportData) return [];
+    return reportData.locales.filter(l => {
+      if (selectedDistrictFilter !== 'ALL' && l.distrito !== selectedDistrictFilter) return false;
+      if (searchQuery) {
+        return l.local_votacion.toLowerCase().includes(searchQuery.toLowerCase());
+      }
+      return true;
+    });
+  }, [reportData, selectedDistrictFilter, searchQuery]);
 
   // Load team data
   const load = useCallback(async () => {
@@ -674,7 +780,7 @@ const TeamPanel = () => {
 
     if (reportType === 'padrinos') {
       headers = ["Nombre", "Cédula", "Teléfono", "Coordinadores", "Total Capturas", "Verdes (Seguros)", "Amarillos", "Rojos", "Morados", "Necesita Transporte"];
-      rows = reportData.padrinos.map(p => [
+      rows = filteredPadrinos.map(p => [
         p.nombre,
         p.ci || p.username,
         p.telefono || "",
@@ -688,7 +794,7 @@ const TeamPanel = () => {
       ]);
     } else if (reportType === 'coordinators') {
       headers = ["Nombre", "Cédula", "Teléfono", "Padrino Asignado", "Total Capturas", "Verdes (Seguros)", "Amarillos", "Rojos", "Morados", "Necesita Transporte"];
-      rows = reportData.coordinators.map(c => [
+      rows = filteredCoordinators.map(c => [
         c.nombre,
         c.ci || c.username,
         c.telefono || "",
@@ -702,7 +808,7 @@ const TeamPanel = () => {
       ]);
     } else if (reportType === 'electors') {
       headers = ["Nombre", "Apellido", "Cédula", "Teléfono", "Local de Votación", "Mesa", "Orden", "Semáforo", "Necesita Transporte", "Coordinador", "Padrino"];
-      rows = reportData.electors.map(e => [
+      rows = filteredElectors.map(e => [
         e.nombre,
         e.apellido,
         e.elector_ci,
@@ -717,7 +823,7 @@ const TeamPanel = () => {
       ]);
     } else if (reportType === 'locales') {
       headers = ["Local de Votación", "Total Electores Captados", "Verdes (Seguros)", "Amarillos", "Rojos", "Morados", "Necesita Transporte"];
-      rows = reportData.locales.map(l => [
+      rows = filteredLocales.map(l => [
         l.local_votacion,
         l.total_captures,
         l.green,
@@ -1010,7 +1116,11 @@ const TeamPanel = () => {
               ].filter(t => t.visible).map(t => (
                 <button
                   key={t.id}
-                  onClick={() => setReportType(t.id as any)}
+                  onClick={() => {
+                    setReportType(t.id as any);
+                    setSelectedPadrinoFilter('ALL');
+                    setSelectedCoordinatorFilter('ALL');
+                  }}
                   style={{
                     padding: '0.5rem 0.9rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 900,
                     cursor: 'pointer', transition: 'all 0.2s',
@@ -1058,6 +1168,27 @@ const TeamPanel = () => {
               </button>
 
               <button
+                onClick={() => {
+                  // Pre-print instructions for ideal PDF output
+                  const guideMsg = "✍️ INSTRUCCIONES DE EXPORTACIÓN (PDF):\n\n1. En la ventana que se abrirá, selecciona 'Guardar como PDF' (Save as PDF) en el Destino.\n2. Asegúrate de activar la casilla 'Gráficos de fondo' (Background Graphics) en la sección 'Más opciones' para conservar los hermosos colores y diseños del semáforo.\n3. ¡Haz clic en Guardar!";
+                  alert(guideMsg);
+                  window.print();
+                }}
+                disabled={loadingReports || !reportData}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  background: '#EF4444', border: 'none',
+                  borderRadius: '10px', color: 'white', padding: '0.5rem 1.1rem',
+                  fontSize: '0.78rem', fontWeight: 850, cursor: 'pointer', transition: 'all 0.2s',
+                  boxShadow: '0 4px 10px rgba(239,68,68,0.3)'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <FileText size={14} /> Exportar PDF
+              </button>
+
+              <button
                 onClick={handlePrint}
                 disabled={loadingReports || !reportData}
                 style={{
@@ -1074,6 +1205,95 @@ const TeamPanel = () => {
               </button>
             </div>
           </div>
+
+          {/* Dynamic Filters Bar */}
+          {!loadingReports && reportData && (
+            <div className="no-print" style={{
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem',
+              padding: '1.25rem', background: 'var(--surface-hover)', borderRadius: '16px',
+              border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box'
+            }}>
+              {/* District Filter */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Distrito</span>
+                <select
+                  value={selectedDistrictFilter}
+                  onChange={(e) => {
+                    setSelectedDistrictFilter(e.target.value);
+                    setSelectedPadrinoFilter('ALL');
+                    setSelectedCoordinatorFilter('ALL');
+                  }}
+                  disabled={user?.role === 'SUBJEFE' || user?.role === 'PADRINO'}
+                  style={{
+                    width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
+                    border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                  }}
+                >
+                  <option value="ALL">Todos los Distritos ({availableDistricts.length})</option>
+                  {availableDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+
+              {/* List Filter */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Lista de Concejales</span>
+                <select
+                  value={selectedListFilter}
+                  onChange={(e) => {
+                    setSelectedListFilter(e.target.value);
+                    setSelectedPadrinoFilter('ALL');
+                    setSelectedCoordinatorFilter('ALL');
+                  }}
+                  style={{
+                    width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
+                    border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                  }}
+                >
+                  <option value="ALL">Todas las Listas de Concejales</option>
+                  {availableLists.map(l => <option key={l} value={l}>Lista {l} (Concejales)</option>)}
+                </select>
+              </div>
+
+              {/* Padrino Filter */}
+              {reportType !== 'padrinos' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Padrino Asignado</span>
+                  <select
+                    value={selectedPadrinoFilter}
+                    onChange={(e) => {
+                      setSelectedPadrinoFilter(e.target.value);
+                      setSelectedCoordinatorFilter('ALL');
+                    }}
+                    style={{
+                      width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
+                      border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    <option value="ALL">Todos los Padrinos ({availablePadrinos.length})</option>
+                    {availablePadrinos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {/* Coordinator Filter */}
+              {reportType === 'electors' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coordinador de Campo</span>
+                  <select
+                    value={selectedCoordinatorFilter}
+                    onChange={(e) => setSelectedCoordinatorFilter(e.target.value)}
+                    style={{
+                      width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
+                      border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    <option value="ALL">Todos los Coordinadores ({availableCoordinators.length})</option>
+                    {availableCoordinators.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Loading reports state */}
           {loadingReports && (
@@ -1119,7 +1339,7 @@ const TeamPanel = () => {
                       <rect x="15" y="47" width="50" height="29" rx="3" fill="white" />
                     </svg>
                     <div>
-                      <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#1e3a6e', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                      <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: '#1e3a6e' }}>
                         Inte<span style={{ color: '#10b981' }}>lecciones</span>
                       </h1>
                       <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#666' }}>
@@ -1134,10 +1354,10 @@ const TeamPanel = () => {
                       Reporte de Campaña
                     </div>
                     <div style={{ fontSize: '0.68rem', color: '#555', marginTop: '2px' }}>
-                      Distrito: <span style={{ fontWeight: 700 }}>{reportData.district}</span>
+                      Distrito: <span style={{ fontWeight: 700 }}>{selectedDistrictFilter === 'ALL' ? 'Todos los Distritos' : selectedDistrictFilter}</span>
                     </div>
                     <div style={{ fontSize: '0.68rem', color: '#555' }}>
-                      Campaña: <span style={{ fontWeight: 700 }}>{campaigns[0]?.name || 'Electoral General'}</span>
+                      Lista de Concejales: <span style={{ fontWeight: 700 }}>{selectedListFilter === 'ALL' ? 'Todas las Listas de Concejales' : `Lista ${selectedListFilter} (Concejales)`}</span>
                     </div>
                     <div style={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', marginTop: '4px' }}>
                       Fecha Imp.: {new Date().toLocaleString('es-PY')}
@@ -1182,39 +1402,37 @@ const TeamPanel = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {reportData.padrinos
-                        .filter(p => !searchQuery || p.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || p.ci.includes(searchQuery))
-                        .map(p => (
-                          <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
-                            <td style={{ padding: '4px 6px' }}>
-                              <div className="avatar-print" style={{
-                                width: '22px', height: '22px', borderRadius: '50%',
-                                background: p.photo_url ? `url(${getImageUrl(p.photo_url)}) center/cover` : '#eee',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px'
-                              }}>
-                                {!p.photo_url && '👤'}
-                              </div>
-                            </td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>
-                              <div>{p.nombre}</div>
-                              <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {p.ci || p.username}</div>
-                            </td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#334155' }}>{p.telefono || "—"}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700, color: '#a855f7' }}>
-                              {p.list_number ? `Lista ${p.list_number}` : "—"}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#475569' }}>
-                              {p.coordinator_count || 0}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
-                              {p.total_captures || 0}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#16a34a' }}>{p.green || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#d97706' }}>{p.yellow || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>{p.red || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>{p.purple || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>{p.needs_transport || 0}</td>
-                          </tr>
+                      {filteredPadrinos.map(p => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
+                          <td style={{ padding: '4px 6px' }}>
+                            <div className="avatar-print" style={{
+                              width: '22px', height: '22px', borderRadius: '50%',
+                              background: p.photo_url ? `url(${getImageUrl(p.photo_url)}) center/cover` : '#eee',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px'
+                            }}>
+                              {!p.photo_url && '👤'}
+                            </div>
+                          </td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>
+                            <div>{p.nombre}</div>
+                            <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {p.ci || p.username}</div>
+                          </td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#334155' }}>{p.telefono || "—"}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700, color: '#a855f7' }}>
+                            {p.list_number ? `Lista ${p.list_number}` : "—"}
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#475569' }}>
+                            {p.coordinator_count || 0}
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                            {p.total_captures || 0}
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#16a34a' }}>{p.green || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#d97706' }}>{p.yellow || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>{p.red || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>{p.purple || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>{p.needs_transport || 0}</td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -1238,36 +1456,34 @@ const TeamPanel = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {reportData.coordinators
-                        .filter(c => !searchQuery || c.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || c.ci.includes(searchQuery))
-                        .map(c => (
-                          <tr key={c.id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
-                            <td style={{ padding: '4px 6px' }}>
-                              <div className="avatar-print" style={{
-                                width: '22px', height: '22px', borderRadius: '50%',
-                                background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : '#eee',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px'
-                              }}>
-                                {!c.photo_url && '👤'}
-                              </div>
-                            </td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>
-                              <div>{c.nombre}</div>
-                              <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {c.ci || c.username}</div>
-                            </td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.68rem', fontWeight: 600, color: '#6b21a8' }}>
-                              {c.parent_name || "Sin Padrino"}
-                            </td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#334155' }}>{c.telefono || "—"}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
-                              {c.total_captures || 0}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#16a34a' }}>{c.green || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#d97706' }}>{c.yellow || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>{c.red || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>{c.purple || 0}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>{c.needs_transport || 0}</td>
-                          </tr>
+                      {filteredCoordinators.map(c => (
+                        <tr key={c.id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
+                          <td style={{ padding: '4px 6px' }}>
+                            <div className="avatar-print" style={{
+                              width: '22px', height: '22px', borderRadius: '50%',
+                              background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : '#eee',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px'
+                            }}>
+                              {!c.photo_url && '👤'}
+                            </div>
+                          </td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>
+                            <div>{c.nombre}</div>
+                            <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {c.ci || c.username}</div>
+                          </td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.68rem', fontWeight: 600, color: '#6b21a8' }}>
+                            {c.parent_name || "Sin Padrino"}
+                          </td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#334155' }}>{c.telefono || "—"}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                            {c.total_captures || 0}
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#16a34a' }}>{c.green || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#d97706' }}>{c.yellow || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>{c.red || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>{c.purple || 0}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>{c.needs_transport || 0}</td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -1289,36 +1505,34 @@ const TeamPanel = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {reportData.electors
-                        .filter(e => !searchQuery || e.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || e.apellido.toLowerCase().includes(searchQuery.toLowerCase()) || e.elector_ci.includes(searchQuery) || e.coordinator_name.toLowerCase().includes(searchQuery.toLowerCase()))
-                        .map(e => (
-                          <tr key={e.capture_id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
-                            <td style={{ padding: '4px 6px', fontSize: '0.7rem', fontWeight: 700, color: '#0f172a' }}>
-                              <div>{e.nombre} {e.apellido}</div>
-                              <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {e.elector_ci}</div>
-                            </td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#334155' }}>{e.elector_telefono || "—"}</td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#475569', fontWeight: 500 }}>
-                              {e.local_votacion}
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700 }}>{e.mesa || "—"}</td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700 }}>{e.orden || "—"}</td>
-                            <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#0f172a' }}>
-                              <div style={{ fontWeight: 600 }}>{e.coordinator_name}</div>
-                              <div style={{ fontSize: '0.58rem', color: '#a855f7', fontWeight: 700 }}>
-                                {e.padrino_name ? `Padrino: ${e.padrino_name}` : "Asignación Directa"}
-                              </div>
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                              <span style={{
-                                display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%',
-                                background: TRAFFIC_COLORS[e.traffic_light] || '#ccc'
-                              }} title={e.traffic_light} />
-                            </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700, color: e.needs_transport ? '#2563eb' : '#64748b' }}>
-                              {e.needs_transport ? "SÍ" : "NO"}
-                            </td>
-                          </tr>
+                      {filteredElectors.map(e => (
+                        <tr key={e.capture_id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
+                          <td style={{ padding: '4px 6px', fontSize: '0.7rem', fontWeight: 700, color: '#0f172a' }}>
+                            <div>{e.nombre} {e.apellido}</div>
+                            <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {e.elector_ci}</div>
+                          </td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#334155' }}>{e.elector_telefono || "—"}</td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#475569', fontWeight: 500 }}>
+                            {e.local_votacion}
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700 }}>{e.mesa || "—"}</td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700 }}>{e.orden || "—"}</td>
+                          <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#0f172a' }}>
+                            <div style={{ fontWeight: 600 }}>{e.coordinator_name}</div>
+                            <div style={{ fontSize: '0.58rem', color: '#a855f7', fontWeight: 700 }}>
+                              {e.padrino_name ? `Padrino: ${e.padrino_name}` : "Asignación Directa"}
+                            </div>
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                            <span style={{
+                              display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%',
+                              background: TRAFFIC_COLORS[e.traffic_light] || '#ccc'
+                            }} title={e.traffic_light} />
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700, color: e.needs_transport ? '#2563eb' : '#64748b' }}>
+                            {e.needs_transport ? "SÍ" : "NO"}
+                          </td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -1340,29 +1554,33 @@ const TeamPanel = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {reportData.locales
-                        .filter(l => !searchQuery || l.local_votacion.toLowerCase().includes(searchQuery.toLowerCase()))
-                        .map((l, index) => {
-                          const total = l.total_captures || 1;
-                          const pctGreen = Math.round((l.green / total) * 100);
-                          return (
-                            <tr key={index} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
-                              <td style={{ padding: '4px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#1e3a6e' }}>
-                                {l.local_votacion}
-                              </td>
-                              <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800 }}>
-                                {l.total_captures}
-                              </td>
-                              <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#16a34a' }}>
-                                {l.green}
-                              </td>
-                              <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#d97706' }}>
-                                {l.yellow}
-                              </td>
-                              <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>
-                                {l.red}
-                              </td>
-                              <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>
+                      {filteredLocales.map((l, index) => {
+                        const total = l.total_captures || 1;
+                        const pctGreen = Math.round((l.green / total) * 100);
+                        return (
+                          <tr key={index} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
+                            <td style={{ padding: '4px 6px', fontSize: '0.72rem', fontWeight: 700, color: '#1e3a6e' }}>
+                              {l.local_votacion}
+                            </td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800 }}>
+                              {l.total_captures}
+                            </td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#16a34a' }}>
+                              {l.green}
+                            </td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#d97706' }}>
+                              {l.yellow}
+                            </td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#dc2626' }}>
+                              {l.red}
+                            </td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>
+                              {l.purple}
+                            </td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>
+                              {l.needs_transport}
+                            </td>
+                            <td style={{ padding: '4px 6px', textAlign: 'center' }}>le={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>
                                 {l.purple}
                               </td>
                               <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>

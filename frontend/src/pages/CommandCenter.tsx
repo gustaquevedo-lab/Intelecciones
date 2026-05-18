@@ -268,7 +268,7 @@ const SidebarContent = ({ stats, activities, conflicts, onResolve, settings, onF
           />
           <StatMiniCard 
             label="Meta" 
-            value={settings?.campaign_goal || 1500} 
+            value={stats?.campaign_goal ?? settings?.campaign_goal ?? 1500} 
             color="var(--text-2)" 
             icon={<Shield size={14} />} 
           />

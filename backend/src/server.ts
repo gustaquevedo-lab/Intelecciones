@@ -3059,10 +3059,16 @@ app.get('/api/stats/command', (req, res) => {
   const secL = getSecurityFilter(req, 'l');
   const secLoc = getSecurityFilter(req, 'loc');
     
-  // Dynamic goal: SUM(goal) from lists filtered by district/security
-  const listsGoal = db.prepare(`SELECT SUM(goal) as total FROM lists l WHERE 1=1 ${secL.sql}`).get(...secL.params) as any;
-  const dbGoalSetting = db.prepare("SELECT value FROM settings WHERE key = 'goal'").get() as any;
-  const globalGoal = Math.max(1, parseInt(listsGoal?.total || '0') || parseInt(dbGoalSetting?.value || '1000'));
+  // Dynamic goal: SUM(goal) from lists filtered by district/security, or specific list if requested
+  let globalGoal = 1000;
+  if (list_id && !isNaN(list_id)) {
+    const listGoalRow = db.prepare(`SELECT goal FROM lists WHERE id = ?`).get(list_id) as any;
+    globalGoal = listGoalRow?.goal || 1000;
+  } else {
+    const listsGoal = db.prepare(`SELECT SUM(goal) as total FROM lists l WHERE 1=1 ${secL.sql}`).get(...secL.params) as any;
+    const dbGoalSetting = db.prepare("SELECT value FROM settings WHERE key = 'goal'").get() as any;
+    globalGoal = Math.max(1, parseInt(listsGoal?.total || '0') || parseInt(dbGoalSetting?.value || '1000'));
+  }
   console.time(`STATS_COMMAND_${requesterId}`);
   try {
     // --- Parameterized list filter (avoids = NULL bug and SQL injection) ---
@@ -3225,6 +3231,7 @@ app.get('/api/stats/command', (req, res) => {
       transport_needed: transportNeeded?.count || 0,
       total_captures: totalCap,
       total_electors: totalEl,
+      campaign_goal: globalGoal,
       percentage: totalEl > 0 ? ((totalCap / totalEl) * 100).toFixed(1) : '0',
       locations: locationStats.map(loc => ({
         ...loc,
@@ -3600,6 +3607,7 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
 });
 
 // GET /api/my-team/reports — structured data for A4 premium reports
+// GET /api/my-team/reports — structured data for A4 premium reports
 app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), (req, res) => {
   const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
@@ -3613,7 +3621,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
     let padrinos: any[] = [];
     if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
       padrinos = db.prepare(`
-        SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
+        SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
                u.assigned_list_id, l.list_number, l.candidate_alias,
                COUNT(DISTINCT u2.id) AS coordinator_count,
                COUNT(DISTINCT ec.id) AS total_captures,
@@ -3622,19 +3630,19 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
                SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) AS yellow,
                SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) AS red,
                SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) AS purple
-        FROM users u
-        LEFT JOIN lists l ON u.assigned_list_id = l.id
-        LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
-        LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
-        WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
-        GROUP BY u.id ORDER BY u.nombre
+         FROM users u
+         LEFT JOIN lists l ON u.assigned_list_id = l.id
+         LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+         LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
+         WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
+         GROUP BY u.id ORDER BY u.nombre
       `).all(...filter.params);
     }
 
     // 2. Fetch Coordinators list
     let coordinators: any[] = [];
     let coordSql = `
-      SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
+      SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
              u.parent_id, p.nombre as parent_name, p.ci as parent_ci,
              u.assigned_list_id, l.list_number,
              COUNT(ec.id) AS total_captures,
@@ -3670,7 +3678,10 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
              COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
              COALESCE(e.mesa, 0) as mesa, 
              COALESCE(e.orden, 0) as orden,
+             COALESCE(e.distrito, 'REGISTRO DE CAMPO') as elector_district,
              u.nombre as coordinator_name, u.role as coordinator_role, u.photo_url as coordinator_photo,
+             u.distrito as coordinator_district, u.assigned_list_id as coordinator_list_id,
+             u.parent_id as padrino_id, ec.coordinator_id,
              p.nombre as padrino_name,
              l.list_number, c.name as campaign_name
       FROM elector_captures ec
@@ -3697,6 +3708,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
     let locales: any[] = [];
     let localesSql = `
       SELECT COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
+             COALESCE(e.distrito, 'REGISTRO DE CAMPO') as distrito,
              COUNT(ec.id) as total_captures,
              SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
              SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
@@ -3717,7 +3729,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       localesSql += ` ${filterU.sql}`;
       localesParams.push(...filterU.params);
     }
-    localesSql += ` GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') ORDER BY total_captures DESC`;
+    localesSql += ` GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO'), COALESCE(e.distrito, 'REGISTRO DE CAMPO') ORDER BY total_captures DESC`;
     locales = db.prepare(localesSql).all(...localesParams);
 
     res.json({
