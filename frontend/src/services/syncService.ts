@@ -23,10 +23,14 @@ export const syncPendingActions = async () => {
       
       await removePendingAction(action.id);
       console.log(`[SYNC] Acción ${action.id} (${action.type}) sincronizada con éxito.`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(`[SYNC] Error al sincronizar acción ${action.id}:`, err);
-      // Stop syncing on first error to preserve order? 
-      // Or continue? For electoral data, order might matter.
+      if (err.response && err.response.status < 500) {
+        console.warn(`[SYNC] Eliminando acción defectuosa de la cola para no bloquear la sincronización:`, action);
+        await removePendingAction(action.id);
+        continue;
+      }
+      // Stop syncing on network or server error to preserve order
       break; 
     }
   }

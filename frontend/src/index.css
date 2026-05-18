@@ -1145,6 +1145,8 @@ select option:active {
   .header-center    { display: none; }
   .header-countdown { display: none; }
   .header-row1 { padding: 0 0.75rem; gap: 0.35rem; }
+  .connection-status-text { display: none !important; }
+  .connection-status-badge { padding: 0.35rem !important; gap: 0 !important; }
 }
 
 /* ── Header Row 3 — mobile-only compact filter bar ─────────── */

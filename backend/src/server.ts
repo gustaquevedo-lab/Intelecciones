@@ -308,6 +308,8 @@ const CaptureSchema = z.object({
   needs_transport: z.boolean().optional(),
   telefono: z.string().min(6, "El teléfono es obligatorio"),
   elector_nombre: z.string().optional(),
+  photo_ci_frente: z.string().optional(),
+  photo_ci_verso: z.string().optional(),
 });
 
 
@@ -844,15 +846,17 @@ app.post('/api/captures', (req, res) => {
       const apellido = parts.slice(1).join(' ') || 'No Registrado';
       
       db.prepare(`
-        INSERT INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito, campaign_id)
-        VALUES (?, ?, ?, 'REGISTRO DE CAMPO', 0, 0, ?, ?, ?)
+        INSERT INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito, campaign_id, photo_ci_frente, photo_ci_verso)
+        VALUES (?, ?, ?, 'REGISTRO DE CAMPO', 0, 0, ?, ?, ?, ?, ?)
       `).run(
         capture.elector_ci,
         nombre,
         apellido,
         userDistrict,
         userDistrict,
-        campaign_id
+        campaign_id,
+        capture.photo_ci_frente || null,
+        capture.photo_ci_verso || null
       );
       
       clearElectorsCache();
@@ -869,9 +873,9 @@ app.post('/api/captures', (req, res) => {
           db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE elector_ci = ? AND list_id = ?').run(capture.elector_ci, list_id);
           
           const result = db.prepare(`
-            INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-          `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
+            INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport, photo_ci_frente, photo_ci_verso)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+          `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
 
           db.prepare(`
             INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
@@ -883,9 +887,9 @@ app.post('/api/captures', (req, res) => {
           // Update own capture
           db.prepare(`
             UPDATE elector_captures 
-            SET lat = ?, lng = ?, traffic_light = ?, needs_transport = ?, timestamp = CURRENT_TIMESTAMP
+            SET lat = ?, lng = ?, traffic_light = ?, needs_transport = ?, photo_ci_frente = ?, photo_ci_verso = ?, timestamp = CURRENT_TIMESTAMP
             WHERE elector_ci = ? AND coordinator_id = ? AND list_id = ?
-          `).run(capture.lat, capture.lng, capture.traffic_light, capture.needs_transport ? 1 : 0, capture.elector_ci, capture.coordinator_id, list_id);
+          `).run(capture.lat, capture.lng, capture.traffic_light, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null, capture.elector_ci, capture.coordinator_id, list_id);
           
           logAction(capture.coordinator_id, 'UPDATE', 'CAPTURE', capture.elector_ci, `Updated capture for ${capture.elector_ci}`);
           return { success: true, message: 'Captura actualizada correctamente.', is_disputed: intraListCapture.is_disputed === 1 };
@@ -904,9 +908,9 @@ app.post('/api/captures', (req, res) => {
         db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE id = ?').run(interListCapture.id);
         
         const result = db.prepare(`
-          INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-        `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
+          INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport, photo_ci_frente, photo_ci_verso)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+        `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
 
         db.prepare(`
           INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
@@ -919,9 +923,9 @@ app.post('/api/captures', (req, res) => {
 
       // 3. New clean capture
       db.prepare(`
-        INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, telefono, needs_transport)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0);
+        INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, telefono, needs_transport, photo_ci_frente, photo_ci_verso)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
       
       logAction(capture.coordinator_id, 'CREATE', 'CAPTURE', capture.elector_ci, `Captured elector ${capture.elector_ci} as ${capture.traffic_light}`);
       
@@ -1374,11 +1378,14 @@ app.put('/api/captures/:id', (req, res) => {
   }
 });
 
-// Migrations for missing columns
 try { db.prepare('ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE voting_locations ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE electors ADD COLUMN photo_ci_frente TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE electors ADD COLUMN photo_ci_verso TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE elector_captures ADD COLUMN photo_ci_frente TEXT DEFAULT ""').run(); } catch(e) {}
+try { db.prepare('ALTER TABLE elector_captures ADD COLUMN photo_ci_verso TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE campaigns ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE lists ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
 try { db.prepare('ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}

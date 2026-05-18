@@ -183,6 +183,11 @@ const CoordinatorApp = () => {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [customIsSubmitted, setCustomIsSubmitted] = useState(false);
   
+  const [photoFrente, setPhotoFrente] = useState<string | null>(null);
+  const [photoVerso, setPhotoVerso] = useState<string | null>(null);
+  const [isUploadingFrente, setIsUploadingFrente] = useState(false);
+  const [isUploadingVerso, setIsUploadingVerso] = useState(false);
+  
   const [offlineCount, setOfflineCount] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -664,6 +669,31 @@ const CoordinatorApp = () => {
     );
   };
 
+  const handleUploadCustomElectorPhoto = async (file: File, type: 'FRENTE' | 'VERSO') => {
+    if (type === 'FRENTE') setIsUploadingFrente(true);
+    else setIsUploadingVerso(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      const res = await api.post('/upload-photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (type === 'FRENTE') {
+        setPhotoFrente(res.data.photo_url);
+      } else {
+        setPhotoVerso(res.data.photo_url);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setError('Error al subir la foto de la cédula. Intente de nuevo.');
+    } finally {
+      if (type === 'FRENTE') setIsUploadingFrente(false);
+      else setIsUploadingVerso(false);
+    }
+  };
+
   const handleSaveCustomElector = async () => {
     if (!customElectorName.trim()) {
       setError('El nombre completo es obligatorio.');
@@ -707,7 +737,9 @@ const CoordinatorApp = () => {
       telefono: customElectorTelefono.replace(/\s/g, ''),
       timestamp: new Date().toISOString(),
       elector_nombre: customElectorName.trim(),
-      category: categoryText
+      category: categoryText,
+      photo_ci_frente: photoFrente,
+      photo_ci_verso: photoVerso
     };
 
     try {
@@ -733,6 +765,9 @@ const CoordinatorApp = () => {
         setCustomElectorTelefono('');
         setCustomActionPill(null);
         setCustomIsSubmitted(false);
+        setIsConfirmed(false);
+        setPhotoFrente(null);
+        setPhotoVerso(null);
       }, 2000);
     } catch (err) {
       console.error(err);
@@ -2291,6 +2326,79 @@ const CoordinatorApp = () => {
                           fontWeight: 700,
                         }}
                       />
+                    </div>
+
+                    {/* CI Photo capture front and back */}
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem' }}>
+                      {/* Photo CI Frente */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
+                        <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Foto C.I. Frente</label>
+                        <div style={{ position: 'relative', width: '100%', height: '80px', borderRadius: '12px', border: '1px dashed var(--border-mid)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {isUploadingFrente ? (
+                            <Spinner size={16} />
+                          ) : photoFrente ? (
+                            <>
+                              <img src={photoFrente} alt="Frente C.I." style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <button 
+                                onClick={() => setPhotoFrente(null)}
+                                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              >
+                                <X size={8} />
+                              </button>
+                            </>
+                          ) : (
+                            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-3)' }}>
+                              <Camera size={18} style={{ color: 'var(--plra-300)' }} />
+                              <span style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tomar Frente</span>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                capture="environment" 
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleUploadCustomElectorPhoto(file, 'FRENTE');
+                                }} 
+                                style={{ display: 'none' }} 
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Photo CI Verso */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
+                        <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Foto C.I. Verso</label>
+                        <div style={{ position: 'relative', width: '100%', height: '80px', borderRadius: '12px', border: '1px dashed var(--border-mid)', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          {isUploadingVerso ? (
+                            <Spinner size={16} />
+                          ) : photoVerso ? (
+                            <>
+                              <img src={photoVerso} alt="Verso C.I." style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <button 
+                                onClick={() => setPhotoVerso(null)}
+                                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              >
+                                <X size={8} />
+                              </button>
+                            </>
+                          ) : (
+                            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-3)' }}>
+                              <Camera size={18} style={{ color: 'var(--plra-300)' }} />
+                              <span style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tomar Verso</span>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                capture="environment" 
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleUploadCustomElectorPhoto(file, 'VERSO');
+                                }} 
+                                style={{ display: 'none' }} 
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Action Pills */}

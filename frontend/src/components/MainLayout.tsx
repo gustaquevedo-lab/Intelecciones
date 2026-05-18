@@ -349,6 +349,7 @@ const HeaderConnectionStatus = () => {
   if (!isOnline) {
     return (
       <div 
+        className="connection-status-badge offline"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -368,7 +369,7 @@ const HeaderConnectionStatus = () => {
         title={`Sin conexión. ${pendingCount} registros guardados localmente.`}
       >
         <WifiOff size={11} className="animate-pulse" />
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+        <span className="connection-status-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
           OFFLINE {isPending && <span style={{ fontSize: '0.6rem', background: '#F59E0B', color: '#000000', padding: '1px 4px', borderRadius: '4px', fontWeight: 900 }}>{pendingCount}</span>}
         </span>
       </div>
@@ -378,6 +379,7 @@ const HeaderConnectionStatus = () => {
   if (isPending || isSyncing) {
     return (
       <div 
+        className="connection-status-badge syncing"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -397,13 +399,14 @@ const HeaderConnectionStatus = () => {
         title={`Sincronizando ${pendingCount} acciones pendientes con el servidor...`}
       >
         <RefreshCw size={11} style={{ animation: 'spin 1.5s linear infinite' }} />
-        <span>ENVIANDO ({pendingCount})</span>
+        <span className="connection-status-text">ENVIANDO ({pendingCount})</span>
       </div>
     );
   }
 
   return (
     <div 
+      className="connection-status-badge online"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -423,7 +426,7 @@ const HeaderConnectionStatus = () => {
       title="Conectado en tiempo real con el servidor."
     >
       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px #22C55E' }} />
-      <span>EN LÍNEA</span>
+      <span className="connection-status-text">EN LÍNEA</span>
     </div>
   );
 };
