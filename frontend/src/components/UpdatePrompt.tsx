@@ -116,7 +116,19 @@ const UpdatePrompt = () => {
 
           {needUpdate && (
             <button
-              onClick={() => updateServiceWorker(true)}
+              onClick={async () => {
+                try {
+                  console.log("[PWA] Iniciando skipWaiting en Service Worker...");
+                  await updateServiceWorker(true);
+                  // Recarga de seguridad garantizada en 300ms
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 300);
+                } catch (e) {
+                  console.warn("[PWA] Error al actualizar, recargando de todos modos...", e);
+                  window.location.reload();
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '0.75rem',

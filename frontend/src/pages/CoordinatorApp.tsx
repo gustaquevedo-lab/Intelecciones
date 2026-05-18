@@ -173,6 +173,15 @@ const CoordinatorApp = () => {
   const [newCoordName, setNewCoordName] = useState('');
   const [newCoordRealName, setNewCoordRealName] = useState('');
   const [newCoordPhoto, setNewCoordPhoto] = useState<string | null>(null);
+
+  // States for dynamic unregistered elector capture modal
+  const [showUnregisteredModal, setShowUnregisteredModal] = useState(false);
+  const [customElectorCI, setCustomElectorCI] = useState('');
+  const [customElectorName, setCustomElectorName] = useState('');
+  const [customElectorTelefono, setCustomElectorTelefono] = useState('');
+  const [customActionPill, setCustomActionPill] = useState<'TRASLADO' | 'AFILIARSE' | 'GENERALES' | null>(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [customIsSubmitted, setCustomIsSubmitted] = useState(false);
   
   const [offlineCount, setOfflineCount] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -578,14 +587,24 @@ const CoordinatorApp = () => {
           }
         }
       } else {
-        setError('Elector no encontrado en el padrón.');
+        setCustomElectorCI(ci);
+        setCustomElectorName('');
+        setCustomElectorTelefono('');
+        setCustomActionPill(null);
+        setIsConfirmed(false);
+        setShowUnregisteredModal(true);
       }
     } catch {
       const localResults = await searchElectorOffline(ci);
       if (localResults.length > 0) {
         setElector(localResults[0]);
       } else {
-        setError('Error al buscar elector. Verifique su conexión.');
+        setCustomElectorCI(ci);
+        setCustomElectorName('');
+        setCustomElectorTelefono('');
+        setCustomActionPill(null);
+        setIsConfirmed(false);
+        setShowUnregisteredModal(true);
       }
     } finally {
       setIsLoading(false);
@@ -643,6 +662,84 @@ const CoordinatorApp = () => {
       },
       geoOptions
     );
+  };
+
+  const handleSaveCustomElector = async () => {
+    if (!customElectorName.trim()) {
+      setError('El nombre completo es obligatorio.');
+      return;
+    }
+    if (!customElectorTelefono || customElectorTelefono.length < 10) {
+      setError('El número de teléfono es obligatorio.');
+      return;
+    }
+    if (!customActionPill) {
+      setError('Por favor, selecciona una acción.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    
+    // Map custom category to traffic light and text category
+    let color: 'GREEN' | 'YELLOW' | 'RED' = 'GREEN';
+    let categoryText = '';
+    
+    if (customActionPill === 'TRASLADO') {
+      color = 'RED';
+      categoryText = 'AFILIADO - traslado/actualización';
+    } else if (customActionPill === 'AFILIARSE') {
+      color = 'YELLOW';
+      categoryText = 'NO AFILIADO - necesita afiliarse';
+    } else if (customActionPill === 'GENERALES') {
+      color = 'GREEN';
+      categoryText = 'NO AFILIADO - apoya generales';
+    }
+
+    const activeLocation = location || { lat: 0, lng: 0 };
+    const captureData = {
+      elector_ci: customElectorCI,
+      coordinator_id: user?.id,
+      lat: activeLocation.lat,
+      lng: activeLocation.lng,
+      traffic_light: color,
+      needs_transport: false,
+      telefono: customElectorTelefono.replace(/\s/g, ''),
+      timestamp: new Date().toISOString(),
+      elector_nombre: customElectorName.trim(),
+      category: categoryText
+    };
+
+    try {
+      const { safePost } = await import('../services/syncService');
+      const res = await safePost('CAPTURE', '/captures', captureData);
+      
+      if (res.data.offline) {
+        setSuccessMsg('⚠️ Sin conexión. Registro de campo encolado localmente.');
+      } else {
+        setSuccessMsg('¡Elector registrado y captado con éxito!');
+      }
+
+      setShowUnregisteredModal(false);
+      setCustomIsSubmitted(true);
+      
+      // Cleanup
+      setTimeout(() => {
+        setCi('');
+        setElector(null);
+        setSuccessMsg('');
+        setCustomElectorCI('');
+        setCustomElectorName('');
+        setCustomElectorTelefono('');
+        setCustomActionPill(null);
+        setCustomIsSubmitted(false);
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      setError('Error al registrar elector personalizado.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCapture = async (color: 'GREEN' | 'YELLOW' | 'RED' | 'PURPLE') => {
@@ -1985,6 +2082,311 @@ const CoordinatorApp = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ══════════════════════════════════════════════════════
+          UNREGISTERED ELECTOR CAPTURE WIZARD MODAL
+      ══════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showUnregisteredModal && (
+          <motion.div
+            key="unreg-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9100,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              padding: '0 0 env(safe-area-inset-bottom)',
+              background: 'var(--surface)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+          >
+            <motion.div
+              key="unreg-modal-sheet"
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+              style={{
+                width: '100%',
+                maxWidth: '480px',
+                background: 'var(--surface)',
+                borderTopLeftRadius: '2rem',
+                borderTopRightRadius: '2rem',
+                border: '1px solid var(--border-mid)',
+                borderBottom: 'none',
+                boxShadow: '0 -20px 60px rgba(0,0,0,0.7)',
+                overflow: 'hidden',
+                paddingBottom: '2.5rem'
+              }}
+            >
+              {/* Handle bar */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0 0.5rem' }}>
+                <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--border)' }} />
+              </div>
+
+              {/* Close Button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 1.5rem' }}>
+                <button
+                  onClick={() => {
+                    setShowUnregisteredModal(false);
+                    setIsConfirmed(false);
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: 'none',
+                    color: 'var(--text-3)',
+                    cursor: 'pointer',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {!isConfirmed ? (
+                /* PHASE 1: CI VERIFICATION QUESTION */
+                <div style={{ padding: '0 1.5rem 1.5rem', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                    <div style={{
+                      background: 'rgba(245,158,11,0.1)',
+                      color: '#F59E0B',
+                      padding: '16px',
+                      borderRadius: '50%',
+                      boxShadow: '0 0 20px rgba(245,158,11,0.15)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <HelpCircle size={40} className="animate-pulse" />
+                    </div>
+                  </div>
+
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 0.5rem', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>
+                    Cédula no encontrada
+                  </h3>
+                  
+                  <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', lineHeight: '1.4', margin: '0 0 1.5rem' }}>
+                    El documento <strong style={{ color: 'var(--text)', fontSize: '1rem' }}>{customElectorCI}</strong> no figura en el padrón electoral oficial.
+                  </p>
+
+                  <div style={{
+                    background: 'rgba(0,0,0,0.15)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: '1.2rem',
+                    marginBottom: '2rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                    textAlign: 'left'
+                  }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pregunta de seguridad:</span>
+                    <span style={{ fontSize: '0.92rem', color: 'var(--text)', fontWeight: 700, lineHeight: '1.3' }}>
+                      ¿Confirmas que la cédula ha sido ingresada de manera correcta y sin errores tipográficos?
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button
+                      onClick={() => {
+                        setShowUnregisteredModal(false);
+                        setIsConfirmed(false);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '1rem',
+                        borderRadius: '14px',
+                        border: '1px solid var(--border)',
+                        background: 'transparent',
+                        color: 'var(--text-2)',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      No, corregir CI
+                    </button>
+                    
+                    <button
+                      onClick={() => setIsConfirmed(true)}
+                      style={{
+                        flex: 1,
+                        padding: '1rem',
+                        borderRadius: '14px',
+                        border: 'none',
+                        background: 'var(--plra-500)',
+                        color: '#FFFFFF',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(0, 71, 171, 0.35)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Sí, es correcta
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* PHASE 2: NAME INPUT & PILLS SELECTION */
+                <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 0.5rem', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>
+                    Registro Rápido de Campo
+                  </h3>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.75rem', margin: '0 0 1.25rem' }}>
+                    Registraremos los datos de este elector y quedará asociado a tu campaña.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                    {/* Full Name Input */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Nombre y Apellido Completo</label>
+                      <input
+                        type="text"
+                        placeholder="ej. Juan Pérez"
+                        value={customElectorName}
+                        onChange={(e) => setCustomElectorName(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.85rem 1rem',
+                          borderRadius: '12px',
+                          border: '1px solid var(--border-mid)',
+                          background: 'rgba(255,255,255,0.03)',
+                          color: '#FFFFFF',
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase'
+                        }}
+                      />
+                    </div>
+
+                    {/* Telefono Input */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Número de Teléfono</label>
+                      <input
+                        type="tel"
+                        placeholder="+595 981 123456"
+                        value={customElectorTelefono}
+                        onChange={(e) => handlePhoneChange(e.target.value, setCustomElectorTelefono)}
+                        style={{
+                          width: '100%',
+                          padding: '0.85rem 1rem',
+                          borderRadius: '12px',
+                          border: '1px solid var(--border-mid)',
+                          background: 'rgba(255,255,255,0.03)',
+                          color: '#FFFFFF',
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                        }}
+                      />
+                    </div>
+
+                    {/* Action Pills */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem' }}>
+                      <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Acción de Campaña (Selecciona una)</label>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {[
+                          { key: 'TRASLADO', label: 'AFILIADO: necesita traslado o actualización', colorColor: 'var(--red)', borderClr: 'rgba(239,68,68,0.3)', bgClr: 'rgba(239,68,68,0.08)', activeBg: 'linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.4) 100%)', activeBorder: '#EF4444' },
+                          { key: 'AFILIARSE', label: 'NO AFILIADO: necesita afiliarse', colorColor: 'var(--yellow)', borderClr: 'rgba(245,158,11,0.3)', bgClr: 'rgba(245,158,11,0.08)', activeBg: 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(245,158,11,0.4) 100%)', activeBorder: '#FBBF24' },
+                          { key: 'GENERALES', label: 'NO AFILIADO: Apoya en las generales', colorColor: 'var(--green)', borderClr: 'rgba(34,197,94,0.3)', bgClr: 'rgba(34,197,94,0.08)', activeBg: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(34,197,94,0.4) 100%)', activeBorder: '#22C55E' },
+                        ].map((pill) => {
+                          const isActive = customActionPill === pill.key;
+                          return (
+                            <button
+                              key={pill.key}
+                              onClick={() => setCustomActionPill(pill.key as any)}
+                              style={{
+                                width: '100%',
+                                padding: '0.85rem 1rem',
+                                borderRadius: '12px',
+                                background: isActive ? pill.activeBg : pill.bgClr,
+                                border: `1px solid ${isActive ? pill.activeBorder : pill.borderClr}`,
+                                color: pill.colorColor,
+                                fontWeight: 800,
+                                fontSize: '0.78rem',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                transition: 'all 0.2s',
+                                boxShadow: isActive ? `0 0 15px ${pill.borderClr}` : 'none'
+                              }}
+                            >
+                              <div style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                border: `2px solid ${pill.colorColor}`,
+                                background: isActive ? pill.colorColor : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }} />
+                              <span>{pill.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--red)', padding: '0.75rem 1rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, marginBottom: '1.25rem' }}>
+                      <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleSaveCustomElector}
+                    disabled={isLoading || !customElectorName.trim() || !customElectorTelefono || !customActionPill}
+                    style={{
+                      width: '100%',
+                      padding: '1rem',
+                      borderRadius: '14px',
+                      border: 'none',
+                      background: 'var(--plra-500)',
+                      color: '#FFFFFF',
+                      fontWeight: 800,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(0, 71, 171, 0.35)',
+                      opacity: (isLoading || !customElectorName.trim() || !customElectorTelefono || !customActionPill) ? 0.55 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {isLoading ? <Spinner size={18} /> : (
+                      <>
+                        <UserPlus size={16} /> Registrar y Captar Elector
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ══════════════════════════════════════════════════════
           COORDINATOR CREATION MODAL (PADRINO)
       ══════════════════════════════════════════════════════ */}

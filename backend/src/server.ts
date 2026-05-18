@@ -307,6 +307,7 @@ const CaptureSchema = z.object({
   traffic_light: z.enum(['GREEN', 'YELLOW', 'RED', 'PURPLE']),
   needs_transport: z.boolean().optional(),
   telefono: z.string().min(6, "El teléfono es obligatorio"),
+  elector_nombre: z.string().optional(),
 });
 
 
@@ -827,11 +828,35 @@ app.post('/api/captures', (req, res) => {
     const rawCapture = CaptureSchema.parse(req.body);
     const capture = { ...rawCapture, elector_ci: rawCapture.elector_ci.replace(/\./g, '').replace(/,/g, '').trim() };
     
-    const user = db.prepare('SELECT assigned_list_id, assigned_campaign_id FROM users WHERE id = ?').get(capture.coordinator_id) as any;
+    const user = db.prepare('SELECT assigned_list_id, assigned_campaign_id, distrito FROM users WHERE id = ?').get(capture.coordinator_id) as any;
     const list_id = user?.assigned_list_id;
     const campaign_id = user?.assigned_campaign_id;
+    const userDistrict = user?.distrito || 'DESCONOCIDO';
 
     if (!list_id) return res.status(403).json({ error: 'El usuario no tiene una lista asignada.' });
+
+    // Dynamic registration for unregistered field electors
+    const electorExists = db.prepare('SELECT ci FROM electors WHERE ci = ?').get(capture.elector_ci);
+    if (!electorExists) {
+      const fullName = capture.elector_nombre || 'Elector No Registrado';
+      const parts = fullName.trim().split(/\s+/);
+      const nombre = parts[0] || 'Elector';
+      const apellido = parts.slice(1).join(' ') || 'No Registrado';
+      
+      db.prepare(`
+        INSERT INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito, campaign_id)
+        VALUES (?, ?, ?, 'REGISTRO DE CAMPO', 0, 0, ?, ?, ?)
+      `).run(
+        capture.elector_ci,
+        nombre,
+        apellido,
+        userDistrict,
+        userDistrict,
+        campaign_id
+      );
+      
+      clearElectorsCache();
+    }
 
     const transaction = db.transaction(() => {
       // 1. Check for conflict in the SAME LIST
