@@ -3791,10 +3791,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       electorParams.push(...filterE.params);
     }
 
-    if (selectedDistrict && selectedDistrict !== 'ALL') {
-      electorSql += ` AND (u.distrito = ? OR e.distrito = ?)`;
-      electorParams.push(selectedDistrict, selectedDistrict);
-    }
+    // Removed SQL cross-table OR district filter to eliminate SQLite index-scan bottlenecks
     if (selectedList && selectedList !== 'ALL') {
       electorSql += ` AND l.list_number = ?`;
       electorParams.push(selectedList);
@@ -3810,6 +3807,14 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
     electorSql += ` ORDER BY ec.timestamp DESC`;
     electors = db.prepare(electorSql).all(...electorParams);
+
+    // Apply high-performance district filter in memory using JS
+    if (selectedDistrict && selectedDistrict !== 'ALL') {
+      electors = electors.filter((e: any) => 
+        (e.elector_district && e.elector_district.toUpperCase().trim() === selectedDistrict.toUpperCase().trim()) || 
+        (e.coordinator_district && e.coordinator_district.toUpperCase().trim() === selectedDistrict.toUpperCase().trim())
+      );
+    }
 
     // 4. Suggested report: Resumen por Locales de Votación
     let locales: any[] = [];
@@ -3839,10 +3844,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       localesParams.push(...filterU.params);
     }
 
-    if (selectedDistrict && selectedDistrict !== 'ALL') {
-      localesSql += ` AND (u.distrito = ? OR e.distrito = ?)`;
-      localesParams.push(selectedDistrict, selectedDistrict);
-    }
+    // Removed SQL cross-table OR district filter to eliminate SQLite index-scan bottlenecks
     if (selectedList && selectedList !== 'ALL') {
       localesSql += ` AND l.list_number = ?`;
       localesParams.push(selectedList);
@@ -3858,6 +3860,13 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
     localesSql += ` GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO'), COALESCE(e.distrito, 'REGISTRO DE CAMPO') ORDER BY total_captures DESC`;
     locales = db.prepare(localesSql).all(...localesParams);
+
+    // Apply high-performance district filter in memory using JS
+    if (selectedDistrict && selectedDistrict !== 'ALL') {
+      locales = locales.filter((l: any) => 
+        l.distrito && l.distrito.toUpperCase().trim() === selectedDistrict.toUpperCase().trim()
+      );
+    }
 
     res.json({
       district: districtName,

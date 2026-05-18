@@ -900,33 +900,43 @@ const TeamPanel = () => {
             print-color-adjust: exact !important;
           }
           
-          /* Hide all page content by default at body level */
-          body {
-            visibility: hidden !important;
-            background: white !important;
+          /* Hide standard layout navigation, headers and buttons completely */
+          header, .main-header, footer, nav, aside, .no-print, button, input, select {
+            display: none !important;
           }
           
-          /* Only make the printable report container visible */
-          #printable-report-area, #printable-report-area * {
-            visibility: visible !important;
-          }
-          
-          #printable-report-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 210mm !important;
-            min-height: 297mm !important;
-            margin: 0 !important;
-            padding: 15mm !important;
+          /* Reset root containers layout, heights, scrollbars, flex and grids */
+          html, body, #root, main, div:not(#printable-report-area):not(#printable-report-area *) {
             background: white !important;
             color: black !important;
             box-shadow: none !important;
             border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
           }
-          .no-print {
-            display: none !important;
+          
+          /* Render A4 vertical layout with exact page dimensions */
+          #printable-report-area {
+            display: block !important;
+            position: relative !important;
+            margin: 0 auto !important;
+            padding: 15mm !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
+            background: white !important;
+            color: black !important;
+            box-shadow: none !important;
+            border: none !important;
+            box-sizing: border-box !important;
+            page-break-after: avoid !important;
           }
+          
           table {
             width: 100% !important;
             border-collapse: collapse !important;
@@ -1256,7 +1266,7 @@ const TeamPanel = () => {
                   disabled={user?.role === 'SUBJEFE' || user?.role === 'PADRINO'}
                   style={{
                     width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
-                    border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                    border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
                   }}
                 >
                   <option value="ALL">Todos los Distritos ({availableDistricts.length})</option>
@@ -1276,7 +1286,7 @@ const TeamPanel = () => {
                   }}
                   style={{
                     width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
-                    border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                    border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
                   }}
                 >
                   <option value="ALL">Todas las Listas de Concejales</option>
@@ -1296,7 +1306,7 @@ const TeamPanel = () => {
                     }}
                     style={{
                       width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
-                      border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                      border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
                     }}
                   >
                     <option value="ALL">Todos los Padrinos ({availablePadrinos.length})</option>
@@ -1314,7 +1324,7 @@ const TeamPanel = () => {
                     onChange={(e) => setSelectedCoordinatorFilter(e.target.value)}
                     style={{
                       width: '100%', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)',
-                      border: '1px solid var(--border)', color: 'white', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                      border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
                     }}
                   >
                     <option value="ALL">Todos los Coordinadores ({availableCoordinators.length})</option>
