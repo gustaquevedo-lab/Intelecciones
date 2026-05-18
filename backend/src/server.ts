@@ -1057,44 +1057,6 @@ app.get('/api/admin/audit', (req, res) => {
   }
 });
 
-// 📥 BULK IMPORT PADRON
-app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No se subió ningún archivo' });
-  
-  try {
-    const workbook = XLSX.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as any[];
-    
-    const insert = db.prepare(`
-      INSERT OR REPLACE INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const transaction = db.transaction((rows) => {
-      for (const row of rows) {
-        insert.run(
-          row.ci?.toString() || '',
-          row.nombre || '',
-          row.apellido || '',
-          row.local || row.local_votacion || '',
-          parseInt(row.mesa || '0'),
-          parseInt(row.orden || '0'),
-          row.ciudad || '',
-          row.distrito || row.ciudad || ''
-        );
-      }
-    });
-
-    transaction(data);
-    res.json({ success: true, count: data.length });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-  }
-});
-
 // Voting Locations
 app.get('/api/voting-locations', (req, res) => {
   const sec = getSecurityFilter(req, 'loc');
@@ -2835,8 +2797,40 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
         const nombre = normalizedRow['NOMBRE'] || normalizedRow['NOMBRES'];
         const apellido = normalizedRow['APELLIDO'] || normalizedRow['APELLIDOS'];
         const local = normalizedRow['LOCAL'] || normalizedRow['LOCAL_VOTACION'] || normalizedRow['LOCAL_DE_VOTACION'] || normalizedRow['RECINTO'] || normalizedRow['COLEGIO'];
-        const mesa = normalizedRow['MESA'] || normalizedRow['NRO_MESA'] || normalizedRow['NUMERO_MESA'] || 0;
-        const orden = normalizedRow['ORD_MESA'] || normalizedRow['ORDEN'] || normalizedRow['ORDEN_MESA'] || normalizedRow['NRO_ORDEN'] || 0;
+        
+        // Exhaustive fallbacks for MESA
+        const mesa = normalizedRow['MESA'] || 
+                     normalizedRow['NRO_MESA'] || 
+                     normalizedRow['NUMERO_MESA'] || 
+                     normalizedRow['MESA_NRO'] || 
+                     normalizedRow['MESANRO'] || 
+                     normalizedRow['MESA_NUM'] || 
+                     normalizedRow['MESAS'] || 
+                     0;
+        
+        // Exhaustive fallbacks for ORDEN (supporting standard TSJE sheet layouts)
+        const orden = normalizedRow['ORD_MESA'] || 
+                      normalizedRow['ORDEN'] || 
+                      normalizedRow['ORDEN_MESA'] || 
+                      normalizedRow['NRO_ORDEN'] || 
+                      normalizedRow['ORD'] || 
+                      normalizedRow['NROORDEN'] || 
+                      normalizedRow['ORDMESA'] || 
+                      normalizedRow['NUMERO_ORDEN'] || 
+                      normalizedRow['NUM_ORDEN'] || 
+                      normalizedRow['NRO_ORD'] || 
+                      normalizedRow['N_ORD'] || 
+                      normalizedRow['N_ORDEN'] || 
+                      normalizedRow['ORD_LOC'] || 
+                      normalizedRow['ORD_NAC'] || 
+                      normalizedRow['ORDEN_LOCAL'] || 
+                      normalizedRow['ORDEN_NACIONAL'] || 
+                      normalizedRow['NRO'] || 
+                      normalizedRow['N'] || 
+                      normalizedRow['LINEA'] || 
+                      normalizedRow['POSICION'] || 
+                      normalizedRow['POS'] || 
+                      0;
 
         if (ci && (nombre || apellido)) {
           insertStmt.run(ci.toString().trim(), nombre || '', apellido || '', local || 'DESCONOCIDO', mesa, orden, finalDistrito, finalDistrito, effectiveCampaignId);
