@@ -2929,6 +2929,12 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
                         normalizedRow['MESANRO'] || 
                         normalizedRow['MESA_NUM'] || 
                         normalizedRow['MESAS'] || 
+                        normalizedRow['NRO_DE_MESA'] || 
+                        normalizedRow['NUMERO_DE_MESA'] || 
+                        normalizedRow['MESA_DE_VOTACION'] || 
+                        normalizedRow['MESAS_NRO'] || 
+                        normalizedRow['N_MESA'] || 
+                        normalizedRow['N_DE_MESA'] || 
                         0;
         const mesa = parseInt(rawMesa.toString().trim()) || 0;
         
@@ -2954,6 +2960,12 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
                          normalizedRow['LINEA'] || 
                          normalizedRow['POSICION'] || 
                          normalizedRow['POS'] || 
+                         normalizedRow['NRO_DE_ORDEN'] || 
+                         normalizedRow['ORDEN_DE_MESA'] || 
+                         normalizedRow['ORD_DE_MESA'] || 
+                         normalizedRow['NROORD'] || 
+                         normalizedRow['ORD_MESA_NRO'] || 
+                         normalizedRow['ORDEN_MESA_NRO'] || 
                          0;
         const orden = parseInt(rawOrden.toString().trim()) || 0;
 
@@ -2981,12 +2993,53 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
         const cleanKey = key.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[º°]/g, "").trim().replace(/\s+/g, "_").replace(/\./g, "");
         normalizedRow[cleanKey] = row[key];
       }
-      const rawOrden = normalizedRow['ORD_MESA'] || normalizedRow['ORDEN'] || normalizedRow['ORDEN_MESA'] || normalizedRow['NRO_ORDEN'] || normalizedRow['ORD'] || normalizedRow['NROORDEN'] || normalizedRow['ORDMESA'] || normalizedRow['NUMERO_ORDEN'] || normalizedRow['N'] || 0;
+      const rawMesa = normalizedRow['MESA'] || 
+                      normalizedRow['NRO_MESA'] || 
+                      normalizedRow['NUMERO_MESA'] || 
+                      normalizedRow['MESA_NRO'] || 
+                      normalizedRow['MESANRO'] || 
+                      normalizedRow['MESA_NUM'] || 
+                      normalizedRow['MESAS'] || 
+                      normalizedRow['NRO_DE_MESA'] || 
+                      normalizedRow['NUMERO_DE_MESA'] || 
+                      normalizedRow['MESA_DE_VOTACION'] || 
+                      normalizedRow['MESAS_NRO'] || 
+                      normalizedRow['N_MESA'] || 
+                      normalizedRow['N_DE_MESA'] || 
+                      0;
+      const rawOrden = normalizedRow['ORD_MESA'] || 
+                       normalizedRow['ORDEN'] || 
+                       normalizedRow['ORDEN_MESA'] || 
+                       normalizedRow['NRO_ORDEN'] || 
+                       normalizedRow['ORD'] || 
+                       normalizedRow['NROORDEN'] || 
+                       normalizedRow['ORDMESA'] || 
+                       normalizedRow['NUMERO_ORDEN'] || 
+                       normalizedRow['NUM_ORDEN'] || 
+                       normalizedRow['NRO_ORD'] || 
+                       normalizedRow['N_ORD'] || 
+                       normalizedRow['N_ORDEN'] || 
+                       normalizedRow['ORD_LOC'] || 
+                       normalizedRow['ORD_NAC'] || 
+                       normalizedRow['ORDEN_LOCAL'] || 
+                       normalizedRow['ORDEN_NACIONAL'] || 
+                       normalizedRow['NRO'] || 
+                       normalizedRow['N'] || 
+                       normalizedRow['LINEA'] || 
+                       normalizedRow['POSICION'] || 
+                       normalizedRow['POS'] || 
+                       normalizedRow['NRO_DE_ORDEN'] || 
+                       normalizedRow['ORDEN_DE_MESA'] || 
+                       normalizedRow['ORD_DE_MESA'] || 
+                       normalizedRow['NROORD'] || 
+                       normalizedRow['ORD_MESA_NRO'] || 
+                       normalizedRow['ORDEN_MESA_NRO'] || 
+                       0;
       return {
         ci: normalizedRow['CEDULA'] || normalizedRow['CI'] || normalizedRow['DOCUMENTO'],
         nombre: normalizedRow['NOMBRE'] || normalizedRow['NOMBRES'],
         apellido: normalizedRow['APELLIDO'] || normalizedRow['APELLIDOS'],
-        mesa: parseInt(normalizedRow['MESA'] || 0),
+        mesa: parseInt(rawMesa.toString().trim()) || 0,
         orden: parseInt(rawOrden.toString().trim()) || 0
       };
     });

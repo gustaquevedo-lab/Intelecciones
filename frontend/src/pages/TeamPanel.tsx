@@ -1580,20 +1580,14 @@ const TeamPanel = () => {
                             <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>
                               {l.needs_transport}
                             </td>
-                            <td style={{ padding: '4px 6px', textAlign: 'center' }}>le={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#7c3aed' }}>
-                                {l.purple}
-                              </td>
-                              <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#2563eb' }}>
-                                {l.needs_transport}
-                              </td>
-                              <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                  <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#16a34a' }}>{pctGreen}%</span>
-                                  <div style={{ width: '30px', height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div style={{ width: `${pctGreen}%`, height: '100%', background: '#16a34a' }} />
-                                  </div>
+                            <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#16a34a' }}>{pctGreen}%</span>
+                                <div style={{ width: '30px', height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${pctGreen}%`, height: '100%', background: '#16a34a' }} />
                                 </div>
-                              </td>
+                              </div>
+                            </td>
                             </tr>
                           );
                         })}
