@@ -169,6 +169,19 @@ const upload = multer({
 });
 
 // 📱 OFFLINE SYNC ENDPOINT
+app.get('/api/offline/padron/status', (req, res) => {
+  try {
+    const lastUpdated = db.prepare("SELECT value FROM settings WHERE key = 'padron_last_updated'").get() as any;
+    const totalElectors = db.prepare("SELECT COUNT(*) as count FROM electors").get() as any;
+    res.json({
+      last_updated: lastUpdated ? parseInt(lastUpdated.value) : 0,
+      total: totalElectors?.count || 0
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/offline/padron', (req, res) => {
   const user_id = req.headers['x-user-id'];
   const role = req.headers['x-user-role'];
@@ -2687,14 +2700,47 @@ app.get('/api/admin/electors/search', (req, res) => {
       }
     }
 
-    const electors = db.prepare(`
-      SELECT e.*, ec.traffic_light, ec.id as capture_id, ec.telefono, ec.needs_transport, ec.lat, ec.lng, ec.coordinator_id, u.nombre as coordinator_name, u.role as coordinator_role
-      FROM electors e
-      LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
-      LEFT JOIN users u ON ec.coordinator_id = u.id
-      WHERE (e.ci LIKE ? OR e.nombre LIKE ? OR e.apellido LIKE ?) ${cityFilter}
-      LIMIT 50
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`);
+    const queryStr = q ? q.toString().trim() : '';
+    const isNumber = /^\d+$/.test(queryStr);
+    
+    let electors;
+    if (isNumber) {
+      // Direct, indexed search by Primary Key CI - extremely fast (0ms)
+      electors = db.prepare(`
+        SELECT e.*, ec.traffic_light, ec.id as capture_id, ec.telefono, ec.needs_transport, ec.lat, ec.lng, ec.coordinator_id, u.nombre as coordinator_name, u.role as coordinator_role
+        FROM electors e
+        LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
+        LEFT JOIN users u ON ec.coordinator_id = u.id
+        WHERE e.ci = ? ${cityFilter}
+        LIMIT 50
+      `).all(queryStr);
+    } else {
+      // Split search term by spaces to search by both first and last name if provided, which is much faster and more precise!
+      const parts = queryStr.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        // Search by first term in name, second in surname, or vice versa
+        const p1 = `%${parts[0]}%`;
+        const p2 = `%${parts[1]}%`;
+        electors = db.prepare(`
+          SELECT e.*, ec.traffic_light, ec.id as capture_id, ec.telefono, ec.needs_transport, ec.lat, ec.lng, ec.coordinator_id, u.nombre as coordinator_name, u.role as coordinator_role
+          FROM electors e
+          LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
+          LEFT JOIN users u ON ec.coordinator_id = u.id
+          WHERE ((e.nombre LIKE ? AND e.apellido LIKE ?) OR (e.nombre LIKE ? AND e.apellido LIKE ?)) ${cityFilter}
+          LIMIT 50
+        `).all(p1, p2, p2, p1);
+      } else {
+        const term = `%${queryStr}%`;
+        electors = db.prepare(`
+          SELECT e.*, ec.traffic_light, ec.id as capture_id, ec.telefono, ec.needs_transport, ec.lat, ec.lng, ec.coordinator_id, u.nombre as coordinator_name, u.role as coordinator_role
+          FROM electors e
+          LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
+          LEFT JOIN users u ON ec.coordinator_id = u.id
+          WHERE (e.nombre LIKE ? OR e.apellido LIKE ? OR e.ci LIKE ?) ${cityFilter}
+          LIMIT 50
+        `).all(term, term, term);
+      }
+    }
     res.json((electors as any[]).map(sanitizeElectorData));
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2862,6 +2908,10 @@ app.post('/api/admin/import-padron', upload.single('file'), (req, res) => {
     });
 
     transaction(data);
+    
+    // Update padron last updated settings for PWA offline detection
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('padron_last_updated', ?)").run(Date.now().toString());
+    
     clearElectorsCache();
     fs.unlinkSync(req.file.path);
 

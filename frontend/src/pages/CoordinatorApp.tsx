@@ -178,11 +178,8 @@ const CoordinatorApp = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
 
-  useEffect(() => {
-    getOfflineStats().then(setOfflineCount);
-  }, []);
-
-  const handleDownloadPadron = async () => {
+  // Hoisted function to download padron
+  async function handleDownloadPadron() {
     const targetDistrict = activeDistrict || user?.distrito;
     const confirmMsg = targetDistrict 
       ? `¿Desea descargar el padrón de ${targetDistrict.toUpperCase()} para uso offline?\n\nEsto optimizará el espacio en su móvil.`
@@ -211,6 +208,10 @@ const CoordinatorApp = () => {
       setDownloadProgress(100);
       const count = await getOfflineStats();
       setOfflineCount(count);
+      
+      // Store current timestamp as the last synchronized version
+      localStorage.setItem('last_padron_sync_timestamp', Date.now().toString());
+      
       alert(`Padrón descargado con éxito: ${count} electores disponibles offline.`);
       setIsStatsLoading(false);
     } catch (err: any) {
@@ -221,7 +222,36 @@ const CoordinatorApp = () => {
       setIsDownloading(false);
       setDownloadProgress(0);
     }
-  };
+  }
+
+  useEffect(() => {
+    getOfflineStats().then(setOfflineCount);
+    
+    // Auto-detect padron updates in the background when online
+    const checkPadronVersion = async () => {
+      try {
+        const res = await api.get('/offline/padron/status');
+        const lastSync = localStorage.getItem('last_padron_sync_timestamp') || '0';
+        const declinedVersion = localStorage.getItem('declined_padron_version') || '0';
+        
+        if (res.data.last_updated > parseInt(lastSync) && res.data.last_updated.toString() !== declinedVersion) {
+          const confirmed = window.confirm(
+            `📢 ¡Hay una nueva actualización del padrón electoral disponible!\n\nSe han cargado datos actualizados. ¿Deseas descargar la última versión para trabajar sin conexión?`
+          );
+          if (confirmed) {
+            handleDownloadPadron();
+          } else {
+            localStorage.setItem('declined_padron_version', res.data.last_updated.toString());
+          }
+        }
+      } catch (e) {
+        console.log('Error checking padron version', e);
+      }
+    };
+    
+    const timer = setTimeout(checkPadronVersion, 3500);
+    return () => clearTimeout(timer);
+  }, [activeDistrict, user]);
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
   
