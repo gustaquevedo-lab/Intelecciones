@@ -3665,6 +3665,11 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
   const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
   
+  const selectedDistrict = req.query.district as string;
+  const selectedList = req.query.list_number as string;
+  const selectedPadrino = req.query.padrino_id as string;
+  const selectedCoordinator = req.query.coordinator_id as string;
+
   try {
     const requester = getCachedUserInfo(requesterId);
     const filter = getSecurityFilter(req, 'u');
@@ -3673,7 +3678,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
     // 1. Fetch Padrinos list with full detailed metrics
     let padrinos: any[] = [];
     if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
-      padrinos = db.prepare(`
+      let padrinoSql = `
         SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
                u.assigned_list_id, l.list_number, l.candidate_alias,
                COUNT(DISTINCT u2.id) AS coordinator_count,
@@ -3688,8 +3693,24 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
          LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
          LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
          WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
-         GROUP BY u.id ORDER BY u.nombre
-      `).all(...filter.params);
+      `;
+      const padrinoParams = [...filter.params];
+
+      if (selectedDistrict && selectedDistrict !== 'ALL') {
+        padrinoSql += ` AND u.distrito = ?`;
+        padrinoParams.push(selectedDistrict);
+      }
+      if (selectedList && selectedList !== 'ALL') {
+        padrinoSql += ` AND l.list_number = ?`;
+        padrinoParams.push(selectedList);
+      }
+      if (selectedPadrino && selectedPadrino !== 'ALL') {
+        padrinoSql += ` AND u.id = ?`;
+        padrinoParams.push(parseInt(selectedPadrino));
+      }
+
+      padrinoSql += ` GROUP BY u.id ORDER BY u.nombre`;
+      padrinos = db.prepare(padrinoSql).all(...padrinoParams);
     }
 
     // 2. Fetch Coordinators list
@@ -3718,6 +3739,24 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       coordSql += ` ${filter.sql}`;
       coordParams.push(...filter.params);
     }
+
+    if (selectedDistrict && selectedDistrict !== 'ALL') {
+      coordSql += ` AND u.distrito = ?`;
+      coordParams.push(selectedDistrict);
+    }
+    if (selectedList && selectedList !== 'ALL') {
+      coordSql += ` AND l.list_number = ?`;
+      coordParams.push(selectedList);
+    }
+    if (selectedPadrino && selectedPadrino !== 'ALL') {
+      coordSql += ` AND u.parent_id = ?`;
+      coordParams.push(parseInt(selectedPadrino));
+    }
+    if (selectedCoordinator && selectedCoordinator !== 'ALL') {
+      coordSql += ` AND u.id = ?`;
+      coordParams.push(parseInt(selectedCoordinator));
+    }
+
     coordSql += ` GROUP BY u.id ORDER BY u.nombre`;
     coordinators = db.prepare(coordSql).all(...coordParams);
 
@@ -3754,6 +3793,24 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       electorSql += ` ${filterE.sql}`;
       electorParams.push(...filterE.params);
     }
+
+    if (selectedDistrict && selectedDistrict !== 'ALL') {
+      electorSql += ` AND (u.distrito = ? OR e.distrito = ?)`;
+      electorParams.push(selectedDistrict, selectedDistrict);
+    }
+    if (selectedList && selectedList !== 'ALL') {
+      electorSql += ` AND l.list_number = ?`;
+      electorParams.push(selectedList);
+    }
+    if (selectedPadrino && selectedPadrino !== 'ALL') {
+      electorSql += ` AND u.parent_id = ?`;
+      electorParams.push(parseInt(selectedPadrino));
+    }
+    if (selectedCoordinator && selectedCoordinator !== 'ALL') {
+      electorSql += ` AND ec.coordinator_id = ?`;
+      electorParams.push(parseInt(selectedCoordinator));
+    }
+
     electorSql += ` ORDER BY ec.timestamp DESC`;
     electors = db.prepare(electorSql).all(...electorParams);
 
@@ -3771,6 +3828,8 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       FROM elector_captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      LEFT JOIN lists l ON ec.list_id = l.id
       WHERE 1=1
     `;
     let localesParams: any[] = [];
@@ -3782,6 +3841,24 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       localesSql += ` ${filterU.sql}`;
       localesParams.push(...filterU.params);
     }
+
+    if (selectedDistrict && selectedDistrict !== 'ALL') {
+      localesSql += ` AND (u.distrito = ? OR e.distrito = ?)`;
+      localesParams.push(selectedDistrict, selectedDistrict);
+    }
+    if (selectedList && selectedList !== 'ALL') {
+      localesSql += ` AND l.list_number = ?`;
+      localesParams.push(selectedList);
+    }
+    if (selectedPadrino && selectedPadrino !== 'ALL') {
+      localesSql += ` AND u.parent_id = ?`;
+      localesParams.push(parseInt(selectedPadrino));
+    }
+    if (selectedCoordinator && selectedCoordinator !== 'ALL') {
+      localesSql += ` AND ec.coordinator_id = ?`;
+      localesParams.push(parseInt(selectedCoordinator));
+    }
+
     localesSql += ` GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO'), COALESCE(e.distrito, 'REGISTRO DE CAMPO') ORDER BY total_captures DESC`;
     locales = db.prepare(localesSql).all(...localesParams);
 

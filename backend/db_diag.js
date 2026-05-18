@@ -19,8 +19,11 @@ function inspect(dbPath) {
 
 const rootDb = path.join(__dirname, '..', 'intellecciones.db');
 const backendDb = path.join(__dirname, 'intellecciones.db');
+const recoveredDb = path.join(__dirname, 'recovered_intellecciones.db');
 
 console.log('--- ROOT DB ---');
 console.log(JSON.stringify(inspect(rootDb), null, 2));
 console.log('\n--- BACKEND DB ---');
 console.log(JSON.stringify(inspect(backendDb), null, 2));
+console.log('\n--- RECOVERED DB ---');
+console.log(JSON.stringify(inspect(recoveredDb), null, 2));

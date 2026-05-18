@@ -640,43 +640,54 @@ const TeamPanel = () => {
   const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
   const isPadrino = user?.role === 'PADRINO' || user?.role === 'SUBJEFE';
 
-  // Available options derived dynamically
+  // Available options derived dynamically (with immediate fallback to local lists when reportData is loading)
   const availableDistricts = useMemo(() => {
-    if (!reportData) return [];
     const set = new Set<string>();
-    if (reportData.padrinos) reportData.padrinos.forEach(p => p.distrito && set.add(p.distrito));
-    if (reportData.coordinators) reportData.coordinators.forEach(c => c.distrito && set.add(c.distrito));
-    if (reportData.locales) reportData.locales.forEach(l => l.distrito && set.add(l.distrito));
+    if (reportData) {
+      if (reportData.padrinos) reportData.padrinos.forEach(p => p.distrito && set.add(p.distrito));
+      if (reportData.coordinators) reportData.coordinators.forEach(c => c.distrito && set.add(c.distrito));
+      if (reportData.locales) reportData.locales.forEach(l => l.distrito && set.add(l.distrito));
+    } else {
+      padrinos.forEach(p => p.distrito && set.add(p.distrito));
+      myCoordinators.forEach(c => c.distrito && set.add(c.distrito));
+    }
     return Array.from(set).sort();
-  }, [reportData]);
+  }, [reportData, padrinos, myCoordinators]);
 
   const availableLists = useMemo(() => {
-    if (!reportData) return [];
     const set = new Set<string>();
-    if (reportData.padrinos) reportData.padrinos.forEach(p => p.list_number && set.add(String(p.list_number)));
-    if (reportData.coordinators) reportData.coordinators.forEach(c => c.list_number && set.add(String(c.list_number)));
-    if (reportData.electors) reportData.electors.forEach(e => e.list_number && set.add(String(e.list_number)));
+    if (reportData) {
+      if (reportData.padrinos) reportData.padrinos.forEach(p => p.list_number && set.add(String(p.list_number)));
+      if (reportData.coordinators) reportData.coordinators.forEach(c => c.list_number && set.add(String(c.list_number)));
+      if (reportData.electors) reportData.electors.forEach(e => e.list_number && set.add(String(e.list_number)));
+    } else {
+      campaigns.forEach(camp => {
+        if (camp.lists) camp.lists.forEach((l: any) => l.list_number && set.add(String(l.list_number)));
+      });
+      padrinos.forEach(p => p.list_number && set.add(String(p.list_number)));
+      myCoordinators.forEach(c => c.list_number && set.add(String(c.list_number)));
+    }
     return Array.from(set).sort();
-  }, [reportData]);
+  }, [reportData, campaigns, padrinos, myCoordinators]);
 
   const availablePadrinos = useMemo(() => {
-    if (!reportData) return [];
-    return reportData.padrinos.filter(p => {
+    const list = reportData ? reportData.padrinos : padrinos;
+    return list.filter(p => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
       return true;
     }).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [reportData, selectedDistrictFilter, selectedListFilter]);
+  }, [reportData, padrinos, selectedDistrictFilter, selectedListFilter]);
 
   const availableCoordinators = useMemo(() => {
-    if (!reportData) return [];
-    return reportData.coordinators.filter(c => {
+    const list = reportData ? reportData.coordinators : myCoordinators;
+    return list.filter(c => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
       if (selectedPadrinoFilter !== 'ALL' && c.parent_id !== selectedPadrinoFilter) return false;
       return true;
     }).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter]);
+  }, [reportData, myCoordinators, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter]);
 
   // Filtered datasets for screen render & Excel/CSV export
   const filteredPadrinos = useMemo(() => {
@@ -755,20 +766,30 @@ const TeamPanel = () => {
   const loadReportsData = useCallback(async () => {
     setLoadingReports(true);
     try {
-      const res = await api.get('/my-team/reports');
+      const queryParams = new URLSearchParams();
+      if (selectedDistrictFilter !== 'ALL') queryParams.append('district', selectedDistrictFilter);
+      if (selectedListFilter !== 'ALL') queryParams.append('list_number', selectedListFilter);
+      if (selectedPadrinoFilter !== 'ALL') queryParams.append('padrino_id', selectedPadrinoFilter);
+      if (selectedCoordinatorFilter !== 'ALL') queryParams.append('coordinator_id', selectedCoordinatorFilter);
+
+      const res = await api.get(`/my-team/reports?${queryParams.toString()}`);
       setReportData(res.data);
     } catch (err) {
       console.error('Error fetching reports data', err);
     } finally {
       setLoadingReports(false);
     }
-  }, []);
+  }, [selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter]);
 
   useEffect(() => {
     if (activeTab === 'reports') {
-      loadReportsData();
+      const isSuper = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+      // Auto-load only for non-super admins (tiny dataset) or if a specific district is already filtered
+      if (!isSuper || selectedDistrictFilter !== 'ALL') {
+        loadReportsData();
+      }
     }
-  }, [activeTab, loadReportsData]);
+  }, [activeTab, selectedDistrictFilter, loadReportsData]);
 
   // Pure JavaScript CSV Exporter
   const exportToCSV = () => {
@@ -1207,11 +1228,12 @@ const TeamPanel = () => {
           </div>
 
           {/* Dynamic Filters Bar */}
-          {!loadingReports && reportData && (
+          {activeTab === 'reports' && (
             <div className="no-print" style={{
               display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem',
               padding: '1.25rem', background: 'var(--surface-hover)', borderRadius: '16px',
-              border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box'
+              border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box',
+              marginBottom: '1.5rem'
             }}>
               {/* District Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -1292,6 +1314,31 @@ const TeamPanel = () => {
                   </select>
                 </div>
               )}
+
+              {/* Action Button: Compile/Generate Report */}
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={loadReportsData}
+                  disabled={loadingReports}
+                  style={{
+                    width: '100%', padding: '0.6rem 1rem', borderRadius: '10px',
+                    background: '#10B981', border: 'none', color: 'white',
+                    fontSize: '0.8rem', fontWeight: 850, outline: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                    boxShadow: '0 4px 10px rgba(16,185,129,0.2)', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  {loadingReports ? (
+                    <Loader size={14} className="spin" />
+                  ) : (
+                    <>
+                      <FileText size={14} /> {reportData ? 'Actualizar' : 'Generar Reporte'}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1304,7 +1351,7 @@ const TeamPanel = () => {
           )}
 
           {/* Simulated A4 Vertical Paper Sheet on Screen */}
-          {!loadingReports && reportData && (
+          {!loadingReports && reportData ? (
             <div style={{ overflowX: 'auto', padding: '0.5rem' }}>
               <div 
                 id="printable-report-area"
@@ -1606,6 +1653,33 @@ const TeamPanel = () => {
                 </div>
 
               </div>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '4rem 2rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)',
+              borderRadius: '16px', color: 'var(--text-3)', textAlign: 'center', marginTop: '1rem',
+              boxSizing: 'border-box', width: '100%'
+            }}>
+              <FileText size={48} style={{ color: 'var(--text-3)', marginBottom: '1.25rem', opacity: 0.7 }} />
+              <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)' }}>
+                Generador de Reportes de Alta Fidelidad
+              </h3>
+              <p style={{ margin: '0 0 1.5rem', fontSize: '0.8rem', color: 'var(--text-2)', maxWidth: '400px', lineHeight: 1.5 }}>
+                Selecciona los filtros deseados en el panel superior y haz clic en <strong>Generar Reporte</strong> para compilar el documento en formato premium A4 imprimible.
+              </p>
+              <button
+                onClick={loadReportsData}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid var(--border)', borderRadius: '10px', color: 'white', padding: '0.55rem 1.25rem',
+                  fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+              >
+                <FileText size={14} /> Comenzar Compilación
+              </button>
             </div>
           )}
 

@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
-const dbPath = 'c:\\Users\\Gustavo Quevedo\\OneDrive\\Dev\\Intelecciones\\intellecciones.db';
+const path = require('path');
+const dbPath = path.join(__dirname, '..', 'intellecciones.db');
 const db = new Database(dbPath);
 
 try {

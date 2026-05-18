@@ -2,18 +2,15 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-// Consistently use root directory for development, /app/data for production
-const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
-const dbPath = path.join(dbDir, 'intellecciones.db');
-
-// Migration/Bridge: If the DB exists in 'backend/' but not in root, copy it (Dev safety)
+// Consistently use backend folder for development, /app/data for production
+let dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
 if (process.env.NODE_ENV !== 'production') {
-  const legacyPath = path.join(process.cwd(), 'backend', 'intellecciones.db');
-  if (fs.existsSync(legacyPath) && !fs.existsSync(dbPath)) {
-    console.log("BRIDGE: Moving database from backend/ to root...");
-    fs.copyFileSync(legacyPath, dbPath);
+  const rootBackendPath = path.join(process.cwd(), 'backend');
+  if (fs.existsSync(rootBackendPath) && fs.statSync(rootBackendPath).isDirectory()) {
+    dbDir = rootBackendPath;
   }
 }
+const dbPath = path.join(dbDir, 'intellecciones.db');
 
 
 

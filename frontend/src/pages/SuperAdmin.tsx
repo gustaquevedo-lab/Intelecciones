@@ -914,30 +914,30 @@ Status: ${error.response?.status || 'N/A'}
     if (!silent) setIsLoading(true);
     setApiError(null);
     try {
-      if (activeTab === 'overview') {
-        let hasErrors = false;
-        let lastErrorMessage = '';
+      let hasErrors = false;
+      let lastErrorMessage = '';
 
-        const safeGet = async (url: string, fallback: any = null, retries = 2) => {
-          for (let attempt = 1; attempt <= retries + 1; attempt++) {
-            try {
-              const res = await api.get(url);
-              return res.data;
-            } catch (err: any) {
-              console.error(`Attempt ${attempt} failed for ${url}:`, err);
-              // Handle SQLite database lock transient errors with exponential delay
-              if (attempt <= retries) {
-                const delay = Math.pow(2, attempt) * 150;
-                await new Promise(resolve => setTimeout(resolve, delay));
-                continue;
-              }
-              hasErrors = true;
-              lastErrorMessage = err.response?.data?.error || err.message || 'Error de conexión';
-              return fallback;
+      const safeGet = async (url: string, fallback: any = null, retries = 2) => {
+        for (let attempt = 1; attempt <= retries + 1; attempt++) {
+          try {
+            const res = await api.get(url);
+            return res.data;
+          } catch (err: any) {
+            console.error(`Attempt ${attempt} failed for ${url}:`, err);
+            // Handle SQLite database lock transient errors with exponential delay
+            if (attempt <= retries) {
+              const delay = Math.pow(2, attempt) * 150;
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
             }
+            hasErrors = true;
+            lastErrorMessage = err.response?.data?.error || err.message || 'Error de conexión';
+            return fallback;
           }
-        };
+        }
+      };
 
+      if (activeTab === 'overview') {
         const [summary, predictionsRes, allCaptures, allLocales, allUsers, allLists, allCamps] = await Promise.all([
           safeGet('/stats/summary'),
           safeGet('/stats/predictions'),
@@ -965,50 +965,61 @@ Status: ${error.response?.status || 'N/A'}
         setLists(Array.isArray(allLists) ? allLists : []);
         setCampaigns(Array.isArray(allCamps) ? allCamps : []);
       } else if (activeTab === 'campaigns') {
-        const res = await api.get('/campaigns');
-        setCampaigns(Array.isArray(res.data) ? res.data : []);
+        const res = await safeGet('/campaigns', []);
+        setCampaigns(Array.isArray(res) ? res : []);
       } else if (activeTab === 'lists') {
-        const res = await api.get('/lists');
-        setLists(Array.isArray(res.data) ? res.data : []);
-        const camps = await api.get('/campaigns');
-        setCampaigns(Array.isArray(camps.data) ? camps.data : []);
+        const [lts, camps] = await Promise.all([
+          safeGet('/lists', []),
+          safeGet('/campaigns', [])
+        ]);
+        setLists(Array.isArray(lts) ? lts : []);
+        setCampaigns(Array.isArray(camps) ? camps : []);
       } else if (activeTab === 'users') {
         const [res, lts, camps] = await Promise.all([
-          api.get('/users'),
-          api.get('/lists'),
-          api.get('/campaigns')
+          safeGet('/users', []),
+          safeGet('/lists', []),
+          safeGet('/campaigns', [])
         ]);
-        setUsers(Array.isArray(res.data) ? res.data : []);
-        setLists(Array.isArray(lts.data) ? lts.data : []);
-        setCampaigns(Array.isArray(camps.data) ? camps.data : []);
+        setUsers(Array.isArray(res) ? res : []);
+        setLists(Array.isArray(lts) ? lts : []);
+        setCampaigns(Array.isArray(camps) ? camps : []);
       } else if (activeTab === 'audit') {
         await fetchAuditData();
       } else if (activeTab === 'logistics') {
-        const [v, p] = await Promise.all([
-          api.get('/vehicles'),
-          api.get('/logistics/pending')
+        const [v, p, lts] = await Promise.all([
+          safeGet('/vehicles', []),
+          safeGet('/logistics/pending', []),
+          safeGet('/lists', [])
         ]);
-        setVehicles(Array.isArray(v.data) ? v.data : []);
-        setPendingLogistics(Array.isArray(p.data) ? p.data : []);
-        const lts = await api.get('/lists');
-        setLists(Array.isArray(lts.data) ? lts.data : []);
+        setVehicles(Array.isArray(v) ? v : []);
+        setPendingLogistics(Array.isArray(p) ? p : []);
+        setLists(Array.isArray(lts) ? lts : []);
       } else if (activeTab === 'locales') {
-        const res = await api.get('/voting-locations');
-        setLocales(Array.isArray(res.data) ? res.data : []);
+        const res = await safeGet('/voting-locations', []);
+        setLocales(Array.isArray(res) ? res : []);
       } else if (activeTab === 'settings') {
-        const res = await api.get('/settings');
-        if (res.data.election_date) {
-          const dateOnly = res.data.election_date.split('T')[0];
-          setElectionDate(dateOnly);
+        const res = await safeGet('/settings');
+        if (res) {
+          if (res.election_date) {
+            const dateOnly = res.election_date.split('T')[0];
+            setElectionDate(dateOnly);
+          }
+          if (res.election_end_time) setElectionEndTime(res.election_end_time);
+          const goal = parseInt(res.global_goal);
+          setGlobalGoal(isNaN(goal) ? 10000 : goal);
+          if (res.master_key) setMasterKey(res.master_key);
+          if (res.app_name) setAppPlatformName(res.app_name);
+          if (res.app_logo_url) setAppLogoUrl(res.app_logo_url);
+          if (res.share_message) setShareMessage(res.share_message);
+          if (res.share_message_footer) setShareMessageFooter(res.share_message_footer);
         }
-        if (res.data.election_end_time) setElectionEndTime(res.data.election_end_time);
-        const goal = parseInt(res.data.global_goal);
-        setGlobalGoal(isNaN(goal) ? 10000 : goal);
-        if (res.data.master_key) setMasterKey(res.data.master_key);
-        if (res.data.app_name) setAppPlatformName(res.data.app_name);
-        if (res.data.app_logo_url) setAppLogoUrl(res.data.app_logo_url);
-        if (res.data.share_message) setShareMessage(res.data.share_message);
-        if (res.data.share_message_footer) setShareMessageFooter(res.data.share_message_footer);
+      }
+
+      if (hasErrors && !silent) {
+        setApiError({
+          message: 'Algunos datos del panel no pudieron cargarse de forma completa. Esto suele deberse a bloqueos por concurrencia en la base de datos sqlite o microcortes temporales de red en el móvil.',
+          details: lastErrorMessage || 'Error de sincronización'
+        });
       }
     } catch (err: any) {
       console.error("Critical error fetching data", err);
