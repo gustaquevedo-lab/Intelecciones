@@ -10,21 +10,7 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /.*\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              },
-              networkTimeoutSeconds: 5
-            }
-          }
-        ]
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
       },
       manifest: {
         name: 'Intelecciones - Comando Electoral',

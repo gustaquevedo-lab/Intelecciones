@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Logo } from './Logo';
-import { LogOut, Shield, Moon, Sun, Monitor, Menu, Clock } from 'lucide-react';
+import { LogOut, Shield, Moon, Sun, Monitor, Menu, Clock, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { ModuleSwitcher } from './ModuleSwitcher';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -22,6 +22,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const { theme, setTheme } = useTheme();
   const { settings } = useSettings();
   const [lists, setLists] = useState<any[]>([]);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO' || user?.role === 'SUBJEFE') {
@@ -145,12 +157,22 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
             </div>
 
             <HeaderCountdown targetDate={settings.election_date} />
+            <HeaderConnectionStatus />
 
             {/* User info — hidden on small mobile */}
             <div className="header-user-info">
               <span className="header-user-name">{userName}</span>
               <span className="header-user-role">
-                <span className="header-online-dot" />
+                <span 
+                  className="header-online-dot" 
+                  style={{ 
+                    background: isOnline ? '#22C55E' : '#F59E0B',
+                    boxShadow: isOnline ? '0 0 6px #22C55E' : '0 0 6px #F59E0B',
+                    width: '6px',
+                    height: '6px',
+                    transition: 'all 0.3s ease'
+                  }} 
+                />
                 {currentRoleLabel}
               </span>
             </div>
@@ -274,6 +296,134 @@ const HeaderCountdown = ({ targetDate }: { targetDate: string }) => {
     <div className={`header-countdown${closed ? ' closed' : ''}`}>
       <Clock size={12} className={!closed ? 'animate-pulse' : ''} />
       <span>{timeLeft}</span>
+    </div>
+  );
+};
+
+/* ── Glowing Real-time Connection & Sync Status Badge ──────────────── */
+const HeaderConnectionStatus = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Auto-trigger sync on reconnect
+      setIsSyncing(true);
+      import('../services/syncService').then(({ syncPendingActions }) => {
+        syncPendingActions().finally(() => {
+          setIsSyncing(false);
+          checkPending();
+        });
+      });
+    };
+    
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const checkPending = async () => {
+      try {
+        const { getPendingActions } = await import('../services/offlineDb');
+        const actions = await getPendingActions();
+        setPendingCount(actions.length);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    checkPending();
+    const interval = setInterval(checkPending, 4000); // Check every 4 seconds
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const isPending = pendingCount > 0;
+
+  if (!isOnline) {
+    return (
+      <div 
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          padding: '0.35rem 0.6rem',
+          borderRadius: '9px',
+          background: 'rgba(245,158,11,0.12)',
+          border: '1px solid rgba(245,158,11,0.3)',
+          color: '#F59E0B',
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: '0.68rem',
+          letterSpacing: '0.04em',
+          flexShrink: 0,
+          boxShadow: '0 0 10px rgba(245,158,11,0.1)'
+        }}
+        title={`Sin conexión. ${pendingCount} registros guardados localmente.`}
+      >
+        <WifiOff size={11} className="animate-pulse" />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+          OFFLINE {isPending && <span style={{ fontSize: '0.6rem', background: '#F59E0B', color: '#000000', padding: '1px 4px', borderRadius: '4px', fontWeight: 900 }}>{pendingCount}</span>}
+        </span>
+      </div>
+    );
+  }
+
+  if (isPending || isSyncing) {
+    return (
+      <div 
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          padding: '0.35rem 0.6rem',
+          borderRadius: '9px',
+          background: 'rgba(59,130,246,0.12)',
+          border: '1px solid rgba(59,130,246,0.3)',
+          color: '#3B82F6',
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: '0.68rem',
+          letterSpacing: '0.04em',
+          flexShrink: 0,
+          boxShadow: '0 0 12px rgba(59,130,246,0.2)'
+        }}
+        title={`Sincronizando ${pendingCount} acciones pendientes con el servidor...`}
+      >
+        <RefreshCw size={11} style={{ animation: 'spin 1.5s linear infinite' }} />
+        <span>ENVIANDO ({pendingCount})</span>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+        padding: '0.35rem 0.6rem',
+        borderRadius: '9px',
+        background: 'rgba(34,197,94,0.12)',
+        border: '1px solid rgba(34,197,94,0.3)',
+        color: '#22C55E',
+        fontFamily: 'var(--font-display)',
+        fontWeight: 800,
+        fontSize: '0.68rem',
+        letterSpacing: '0.04em',
+        flexShrink: 0,
+        boxShadow: '0 0 10px rgba(34,197,94,0.1)'
+      }}
+      title="Conectado en tiempo real con el servidor."
+    >
+      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px #22C55E' }} />
+      <span>EN LÍNEA</span>
     </div>
   );
 };
