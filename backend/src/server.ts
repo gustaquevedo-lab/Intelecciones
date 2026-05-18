@@ -3634,20 +3634,27 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
       return res.json({ role: 'PADRINO', padrinos: [], coordinators });
     }
 
-    // JEFE_CAMPANA / SUBJEFE / SUPERUSUARIO: list view
+    // JEFE_CAMPANA / SUBJEFE / SUPERUSUARIO: list view with index-friendly subqueries
     const filter = getSecurityFilter(req, 'u');
     const padrinos = db.prepare(`
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
              u.assigned_list_id, l.list_number, l.candidate_alias,
-             COUNT(DISTINCT u2.id) AS coordinator_count,
-             COUNT(DISTINCT ec.id) AS total_captures,
-             SUM(CASE WHEN ec.needs_transport=1 THEN 1 ELSE 0 END) AS needs_transport
+             (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
+             (
+               SELECT COUNT(*) FROM elector_captures ec 
+               WHERE ec.coordinator_id = u.id 
+                  OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
+             ) AS total_captures,
+             (
+               SELECT COUNT(*) FROM elector_captures ec 
+               WHERE ec.needs_transport = 1 
+                 AND (ec.coordinator_id = u.id 
+                      OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+             ) AS needs_transport
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
-      LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
       WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
-      GROUP BY u.id ORDER BY u.nombre
+      ORDER BY u.nombre
     `).all(...filter.params);
 
     res.json({ role, padrinos, coordinators });
@@ -3678,17 +3685,44 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       let padrinoSql = `
         SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
                u.assigned_list_id, l.list_number, l.candidate_alias,
-               COUNT(DISTINCT u2.id) AS coordinator_count,
-               COUNT(DISTINCT ec.id) AS total_captures,
-               SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) AS needs_transport,
-               SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) AS green,
-               SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) AS yellow,
-               SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) AS red,
-               SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) AS purple
+               (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
+               (
+                 SELECT COUNT(*) FROM elector_captures ec 
+                 WHERE ec.coordinator_id = u.id 
+                    OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
+               ) AS total_captures,
+               (
+                 SELECT COUNT(*) FROM elector_captures ec 
+                 WHERE ec.needs_transport = 1 
+                   AND (ec.coordinator_id = u.id 
+                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+               ) AS needs_transport,
+               (
+                 SELECT COUNT(*) FROM elector_captures ec 
+                 WHERE ec.traffic_light = 'GREEN' 
+                   AND (ec.coordinator_id = u.id 
+                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+               ) AS green,
+               (
+                 SELECT COUNT(*) FROM elector_captures ec 
+                 WHERE ec.traffic_light = 'YELLOW' 
+                   AND (ec.coordinator_id = u.id 
+                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+               ) AS yellow,
+               (
+                 SELECT COUNT(*) FROM elector_captures ec 
+                 WHERE ec.traffic_light = 'RED' 
+                   AND (ec.coordinator_id = u.id 
+                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+               ) AS red,
+               (
+                 SELECT COUNT(*) FROM elector_captures ec 
+                 WHERE ec.traffic_light = 'PURPLE' 
+                   AND (ec.coordinator_id = u.id 
+                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+               ) AS purple
          FROM users u
          LEFT JOIN lists l ON u.assigned_list_id = l.id
-         LEFT JOIN users u2 ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
-         LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
          WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
       `;
       const padrinoParams = [...filter.params];
