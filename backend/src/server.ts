@@ -2129,14 +2129,10 @@ app.get('/api/stats/summary', (req, res) => {
   const params = sec.params || [];
   
   try {
-    console.log('[STATS] Fetching usersCount...');
     const usersCount = db.prepare(`SELECT COUNT(*) as count FROM users u WHERE 1=1 ${getSecurityFilter(req, 'u').sql}`).get(...getSecurityFilter(req, 'u').params) as any;
-    console.log('[STATS] Fetching campaignsCount...');
     const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${getSecurityFilter(req, 'c').sql}`).get(...getSecurityFilter(req, 'c').params) as any;
-    console.log('[STATS] Fetching listsCount...');
     const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${getSecurityFilter(req, 'l').sql}`).get(...getSecurityFilter(req, 'l').params) as any;
     
-    console.log('[STATS] Fetching electorsCount (using robust cache)...');
     const secE = getSecurityFilter(req, 'e');
     const cacheKey = JSON.stringify({ sql: secE.sql, params: secE.params });
     const cachedE = electorsCountCache.get(cacheKey);
@@ -2150,30 +2146,33 @@ app.get('/api/stats/summary', (req, res) => {
       electorsCountCache.set(cacheKey, { count: electorsCountVal, ts: now });
     }
     
-    console.log('[STATS] Fetching capturesCount...');
-    const capturesCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`).get(...params) as any;
-    console.log('[STATS] Fetching transport...');
-    const transportNeeded = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 ${sec.sql}`).get(...params) as any;
-    const transportAssigned = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NOT NULL ${sec.sql}`).get(...params) as any;
-
-    console.log('[STATS] Fetching traffic lights...');
-    const greenCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'GREEN' ${sec.sql}`).get(...params) as any;
-    const yellowCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'YELLOW' ${sec.sql}`).get(...params) as any;
-    const redCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'RED' ${sec.sql}`).get(...params) as any;
-    const purpleCount = db.prepare(`SELECT COUNT(*) as count FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.traffic_light = 'PURPLE' ${sec.sql}`).get(...params) as any;
+    // Collapsed 7 separate heavy queries into a single aggregated JOIN query
+    const capturesStats = db.prepare(`
+      SELECT 
+        COUNT(*) as captures,
+        SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as transportNeeded,
+        SUM(CASE WHEN ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NOT NULL THEN 1 ELSE 0 END) as transportAssigned,
+        SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
+        SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
+        SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+        SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple
+      FROM elector_captures ec 
+      LEFT JOIN electors e ON ec.elector_ci = e.ci 
+      WHERE 1=1 ${sec.sql}
+    `).get(...params) as any;
 
     res.json({
       users: usersCount.count,
       campaigns: campaignsCount.count,
       lists: listsCount.count,
       electors: electorsCountVal,
-      captures: capturesCount.count,
-      transportNeeded: transportNeeded.count,
-      transportAssigned: transportAssigned.count,
-      green: greenCount.count,
-      yellow: yellowCount.count,
-      red: redCount.count,
-      purple: purpleCount.count
+      captures: capturesStats?.captures || 0,
+      transportNeeded: capturesStats?.transportNeeded || 0,
+      transportAssigned: capturesStats?.transportAssigned || 0,
+      green: capturesStats?.green || 0,
+      yellow: capturesStats?.yellow || 0,
+      red: capturesStats?.red || 0,
+      purple: capturesStats?.purple || 0
     });
   } catch (err: any) {
     console.error('[STATS ERROR]', err);
@@ -3637,19 +3636,28 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
     // JEFE_CAMPANA / SUBJEFE / SUPERUSUARIO: list view with index-friendly subqueries
     const filter = getSecurityFilter(req, 'u');
     const padrinos = db.prepare(`
+      WITH coord_stats AS (
+        SELECT 
+          coordinator_id,
+          COUNT(*) as total_captures,
+          SUM(CASE WHEN needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport
+        FROM elector_captures
+        GROUP BY coordinator_id
+      )
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
              u.assigned_list_id, l.list_number, l.candidate_alias,
              (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
              (
-               SELECT COUNT(*) FROM elector_captures ec 
-               WHERE ec.coordinator_id = u.id 
-                  OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
+               SELECT COALESCE(SUM(total_captures), 0) 
+               FROM coord_stats 
+               WHERE coordinator_id = u.id 
+                  OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
              ) AS total_captures,
              (
-               SELECT COUNT(*) FROM elector_captures ec 
-               WHERE ec.needs_transport = 1 
-                 AND (ec.coordinator_id = u.id 
-                      OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+               SELECT COALESCE(SUM(needs_transport), 0) 
+               FROM coord_stats 
+               WHERE coordinator_id = u.id 
+                  OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
              ) AS needs_transport
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
@@ -3683,43 +3691,56 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
     let padrinos: any[] = [];
     if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
       let padrinoSql = `
+        WITH coord_stats AS (
+          SELECT 
+            coordinator_id,
+            COUNT(*) as total_captures,
+            SUM(CASE WHEN needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport,
+            SUM(CASE WHEN traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
+            SUM(CASE WHEN traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
+            SUM(CASE WHEN traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+            SUM(CASE WHEN traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple
+          FROM elector_captures
+          GROUP BY coordinator_id
+        )
         SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
                u.assigned_list_id, l.list_number, l.candidate_alias,
                (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
                (
-                 SELECT COUNT(*) FROM elector_captures ec 
-                 WHERE ec.coordinator_id = u.id 
-                    OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
+                 SELECT COALESCE(SUM(total_captures), 0) 
+                 FROM coord_stats 
+                 WHERE coordinator_id = u.id 
+                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
                ) AS total_captures,
                (
-                 SELECT COUNT(*) FROM elector_captures ec 
-                 WHERE ec.needs_transport = 1 
-                   AND (ec.coordinator_id = u.id 
-                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+                 SELECT COALESCE(SUM(needs_transport), 0) 
+                 FROM coord_stats 
+                 WHERE coordinator_id = u.id 
+                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
                ) AS needs_transport,
                (
-                 SELECT COUNT(*) FROM elector_captures ec 
-                 WHERE ec.traffic_light = 'GREEN' 
-                   AND (ec.coordinator_id = u.id 
-                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+                 SELECT COALESCE(SUM(green), 0) 
+                 FROM coord_stats 
+                 WHERE coordinator_id = u.id 
+                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
                ) AS green,
                (
-                 SELECT COUNT(*) FROM elector_captures ec 
-                 WHERE ec.traffic_light = 'YELLOW' 
-                   AND (ec.coordinator_id = u.id 
-                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+                 SELECT COALESCE(SUM(yellow), 0) 
+                 FROM coord_stats 
+                 WHERE coordinator_id = u.id 
+                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
                ) AS yellow,
                (
-                 SELECT COUNT(*) FROM elector_captures ec 
-                 WHERE ec.traffic_light = 'RED' 
-                   AND (ec.coordinator_id = u.id 
-                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+                 SELECT COALESCE(SUM(red), 0) 
+                 FROM coord_stats 
+                 WHERE coordinator_id = u.id 
+                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
                ) AS red,
                (
-                 SELECT COUNT(*) FROM elector_captures ec 
-                 WHERE ec.traffic_light = 'PURPLE' 
-                   AND (ec.coordinator_id = u.id 
-                        OR ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))
+                 SELECT COALESCE(SUM(purple), 0) 
+                 FROM coord_stats 
+                 WHERE coordinator_id = u.id 
+                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
                ) AS purple
          FROM users u
          LEFT JOIN lists l ON u.assigned_list_id = l.id

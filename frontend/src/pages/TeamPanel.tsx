@@ -1124,7 +1124,14 @@ const TeamPanel = () => {
       doc.text(`Página ${i} de ${pageCount}`, 195, 290, { align: 'right' });
     }
     
-    const cleanDistrict = (selectedDistrictFilter === 'ALL' ? 'global' : selectedDistrictFilter.toLowerCase().replace(/\s+/g, '-'));
+    const cleanDistrict = (selectedDistrictFilter === 'ALL' 
+      ? 'global' 
+      : String(selectedDistrictFilter)
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+    );
     const cleanType = reportType.toLowerCase();
     const filename = `reporte-${cleanType}-${cleanDistrict}.pdf`;
     
@@ -1150,41 +1157,25 @@ const TeamPanel = () => {
             print-color-adjust: exact !important;
           }
           
-          /* Hide standard layout navigation, headers and buttons completely */
-          header, .main-header, footer, nav, aside, .no-print, button, input, select {
-            display: none !important;
+          /* Gold-standard print pattern: hide everything, show only the report area */
+          body * {
+            visibility: hidden !important;
           }
           
-          /* Reset root containers layout, heights, scrollbars, flex and grids */
-          html, body, #root, main, div:not(#printable-report-area):not(#printable-report-area *) {
-            background: white !important;
-            color: black !important;
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            height: auto !important;
-            min-height: 0 !important;
-            overflow: visible !important;
-            display: block !important;
-            position: static !important;
-            width: 100% !important;
+          #printable-report-area, #printable-report-area * {
+            visibility: visible !important;
           }
           
-          /* Render A4 vertical layout with exact page dimensions */
           #printable-report-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
             display: block !important;
-            position: relative !important;
-            margin: 0 auto !important;
-            padding: 15mm !important;
-            width: 210mm !important;
-            min-height: 297mm !important;
             background: white !important;
             color: black !important;
-            box-shadow: none !important;
-            border: none !important;
-            box-sizing: border-box !important;
-            page-break-after: avoid !important;
           }
           
           table {
