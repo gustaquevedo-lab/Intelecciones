@@ -698,18 +698,54 @@ app.post('/api/login', (req, res) => {
   
   let user: any = null;
 
-  // MODO RESCATE PARA GUSTAVO
-  if (cleanUsername === '3657834' && cleanPassword === '123') {
-    const rescueUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(cleanUsername, cleanUsername) as any;
+  // MODO RESCATE Y USUARIOS GENÉRICOS EN PRODUCCIÓN
+  const genericUsers: Record<string, { role: string, nombre: string, parentUsername?: string }> = {
+    '3657834': { role: 'SUPERUSUARIO', nombre: 'Gustavo Quevedo' },
+    '3512586': { role: 'SUBJEFE', nombre: 'Subjefe Pedro' },
+    '1234567': { role: 'PADRINO', nombre: 'Padrino Juan', parentUsername: '3512586' },
+    '8765432': { role: 'COORDINADOR', nombre: 'Coordinador Zulma', parentUsername: '1234567' }
+  };
+
+  if (genericUsers[cleanUsername] && cleanPassword === '123') {
+    const config = genericUsers[cleanUsername];
+    let rescueUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(cleanUsername, cleanUsername) as any;
+    
     if (!rescueUser) {
+      let parentId: number | null = null;
+      if (config.parentUsername) {
+        let parentUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(config.parentUsername, config.parentUsername) as any;
+        if (!parentUser) {
+          const parentConfig = genericUsers[config.parentUsername];
+          let grandparentId: number | null = null;
+          if (parentConfig.parentUsername) {
+            let gpUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(parentConfig.parentUsername, parentConfig.parentUsername) as any;
+            if (!gpUser) {
+              const gpConfig = genericUsers[parentConfig.parentUsername];
+              db.prepare(`
+                INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change, status)
+                VALUES (?, ?, ?, ?, ?, ?, 1, 'ACTIVE')
+              `).run(Date.now() - 2000, parentConfig.parentUsername, '123', gpConfig.role, gpConfig.nombre, parentConfig.parentUsername);
+              gpUser = db.prepare('SELECT * FROM users WHERE ci = ?').get(parentConfig.parentUsername);
+            }
+            grandparentId = gpUser?.id || null;
+          }
+          db.prepare(`
+            INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change, parent_id, status)
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'ACTIVE')
+          `).run(Date.now() - 1000, config.parentUsername, '123', parentConfig.role, parentConfig.nombre, config.parentUsername, grandparentId);
+          parentUser = db.prepare('SELECT * FROM users WHERE ci = ?').get(config.parentUsername);
+        }
+        parentId = parentUser?.id || null;
+      }
+
       db.prepare(`
-  INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change) 
-  VALUES (?, ?, ?, ?, ?, ?, 1)
-`).run(Date.now(), '3657834', '123', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834');
-      user = db.prepare('SELECT * FROM users WHERE ci = ?').get('3657834');
-    } else {
-      user = rescueUser;
+        INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change, parent_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'ACTIVE')
+      `).run(Date.now(), cleanUsername, '123', config.role, config.nombre, cleanUsername, parentId);
+      
+      rescueUser = db.prepare('SELECT * FROM users WHERE ci = ?').get(cleanUsername);
     }
+    user = rescueUser;
   }
 
   if (!user) {
@@ -726,7 +762,7 @@ app.post('/api/login', (req, res) => {
   const normalizedSavedPassword = user?.password?.toString().replace(/\./g, '');
   const normalizedInputPassword = cleanPassword.replace(/\./g, '');
 
-  const isSuccess = user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword || (cleanUsername === '3657834' && cleanPassword === '123'));
+  const isSuccess = user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword || (genericUsers[cleanUsername] && cleanPassword === '123'));
 
   // LOG LOGIN ATTEMPT
   try {
@@ -2146,8 +2182,8 @@ app.get('/api/stats/summary', (req, res) => {
       electorsCountCache.set(cacheKey, { count: electorsCountVal, ts: now });
     }
     
-    // Collapsed 7 separate heavy queries into a single aggregated JOIN query
-    const capturesStats = db.prepare(`
+    // Dynamic optimization: Skip heavy join on electors table if no district/elector filtering is active
+    let query = `
       SELECT 
         COUNT(*) as captures,
         SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as transportNeeded,
@@ -2156,10 +2192,16 @@ app.get('/api/stats/summary', (req, res) => {
         SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
         SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
         SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple
-      FROM elector_captures ec 
-      LEFT JOIN electors e ON ec.elector_ci = e.ci 
-      WHERE 1=1 ${sec.sql}
-    `).get(...params) as any;
+      FROM elector_captures ec
+    `;
+
+    if (sec.sql.includes('e.ciudad') || sec.sql.includes('e.distrito') || sec.sql.includes('e.ci')) {
+      query += ` LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`;
+    } else {
+      query += ` WHERE 1=1 ${sec.sql.replace(/\be\./g, 'ec.')}`;
+    }
+
+    const capturesStats = db.prepare(query).get(...params) as any;
 
     res.json({
       users: usersCount.count,
