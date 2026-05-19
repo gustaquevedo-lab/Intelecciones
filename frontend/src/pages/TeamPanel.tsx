@@ -631,6 +631,7 @@ const TeamPanel = () => {
     locales: LocalRow[];
   } | null>(null);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Advanced Filters
@@ -885,7 +886,11 @@ const TeamPanel = () => {
 
   const exportToPDF = () => {
     if (!reportData) return;
-    
+    setGeneratingPDF(true);
+
+    // Defer to next frame so the UI updates before heavy work
+    setTimeout(() => {
+    try {
     // Create new A4 PDF instance
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -1029,6 +1034,14 @@ const TeamPanel = () => {
       });
     }
     
+    // Cap rows to prevent browser freeze on massive datasets
+    const PDF_ROW_LIMIT = 500;
+    const totalRowCount = tableRows.length;
+    const truncated = totalRowCount > PDF_ROW_LIMIT;
+    if (truncated) {
+      tableRows = tableRows.slice(0, PDF_ROW_LIMIT);
+    }
+
     // Inject Table using autoTable
     autoTable(doc, {
       head: tableHeaders,
@@ -1124,8 +1137,19 @@ const TeamPanel = () => {
       doc.text(`Página ${i} de ${pageCount}`, 195, 290, { align: 'right' });
     }
     
-    const cleanDistrict = (selectedDistrictFilter === 'ALL' 
-      ? 'global' 
+    // Add truncation notice if data was capped
+    if (truncated) {
+      const pageCount2 = (doc as any).internal.getNumberOfPages();
+      doc.setPage(pageCount2);
+      const lastY = (doc as any).lastAutoTable?.finalY || 270;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(220, 38, 38);
+      doc.text(`\u26a0 Este reporte muestra ${PDF_ROW_LIMIT} de ${totalRowCount} registros. Use filtros para acotar resultados o exporte CSV para datos completos.`, 15, Math.min(lastY + 6, 278));
+    }
+
+    const cleanDistrict = (selectedDistrictFilter === 'ALL'
+      ? 'global'
       : String(selectedDistrictFilter)
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
@@ -1134,8 +1158,24 @@ const TeamPanel = () => {
     );
     const cleanType = reportType.toLowerCase();
     const filename = `reporte-${cleanType}-${cleanDistrict}.pdf`;
-    
-    doc.save(filename);
+
+    // Explicit blob download to guarantee .pdf extension and correct MIME type
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 200);
+
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+    } finally {
+      setGeneratingPDF(false);
+    }
+    }, 50);
   };
 
   if (loading) return (
@@ -1167,15 +1207,18 @@ const TeamPanel = () => {
           }
           
           #printable-report-area {
-            position: absolute !important;
+            position: fixed !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
+            height: auto !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 12mm 10mm !important;
             display: block !important;
             background: white !important;
             color: black !important;
+            overflow: visible !important;
+            z-index: 999999 !important;
           }
           
           table {
@@ -1449,18 +1492,18 @@ const TeamPanel = () => {
 
               <button
                 onClick={exportToPDF}
-                disabled={loadingReports || !reportData}
+                disabled={loadingReports || !reportData || generatingPDF}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  background: '#EF4444', border: 'none',
+                  background: generatingPDF ? '#999' : '#EF4444', border: 'none',
                   borderRadius: '10px', color: 'white', padding: '0.5rem 1.1rem',
-                  fontSize: '0.78rem', fontWeight: 850, cursor: 'pointer', transition: 'all 0.2s',
-                  boxShadow: '0 4px 10px rgba(239,68,68,0.3)'
+                  fontSize: '0.78rem', fontWeight: 850, cursor: generatingPDF ? 'wait' : 'pointer', transition: 'all 0.2s',
+                  boxShadow: generatingPDF ? 'none' : '0 4px 10px rgba(239,68,68,0.3)'
                 }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseEnter={e => { if (!generatingPDF) e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                <FileText size={14} /> Exportar PDF
+                <FileText size={14} /> {generatingPDF ? 'Generando...' : 'Exportar PDF'}
               </button>
 
               <button

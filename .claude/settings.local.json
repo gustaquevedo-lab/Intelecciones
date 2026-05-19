@@ -22,7 +22,8 @@
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "Bash(git commit -m 'Fix: crash en startup — migrar columna terminal_id en whatsapp_messages antes de crear índice *)",
       "Bash(python3)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(git log *)"
     ]
   }
 }

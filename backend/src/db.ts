@@ -30,7 +30,7 @@ db.pragma('auto_vacuum = INCREMENTAL');
 db.pragma('page_size = 4096');
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 13; // Update this to trigger migrations
+const currentSchemaVersion = 14; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -402,6 +402,7 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_elector_captures_coord_light ON elector_captures(coordinator_id, traffic_light, needs_transport);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC);
     `);

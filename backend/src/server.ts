@@ -3729,63 +3729,40 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
     const filter = getSecurityFilter(req, 'u');
     const districtName = requester?.distrito || getDistrict(req) || 'GLOBAL';
 
-    // 1. Fetch Padrinos list with full detailed metrics
+    // 1. Fetch Padrinos list with full detailed metrics (optimized single-pass aggregation)
     let padrinos: any[] = [];
     if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
       let padrinoSql = `
-        WITH coord_stats AS (
-          SELECT 
-            coordinator_id,
-            COUNT(*) as total_captures,
-            SUM(CASE WHEN needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport,
-            SUM(CASE WHEN traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
-            SUM(CASE WHEN traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
-            SUM(CASE WHEN traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
-            SUM(CASE WHEN traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple
-          FROM elector_captures
-          GROUP BY coordinator_id
+        WITH team_map AS (
+          SELECT id as member_id,
+                 CASE WHEN role IN ('PADRINO','SUBJEFE') THEN id ELSE parent_id END as padrino_id
+          FROM users
+          WHERE role IN ('PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA')
+        ),
+        padrino_stats AS (
+          SELECT tm.padrino_id,
+                 COUNT(ec.id) as total_captures,
+                 SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport,
+                 SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
+                 SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
+                 SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+                 SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple
+          FROM team_map tm
+          INNER JOIN elector_captures ec ON ec.coordinator_id = tm.member_id
+          GROUP BY tm.padrino_id
         )
         SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
                u.assigned_list_id, l.list_number, l.candidate_alias,
                (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
-               (
-                 SELECT COALESCE(SUM(total_captures), 0) 
-                 FROM coord_stats 
-                 WHERE coordinator_id = u.id 
-                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
-               ) AS total_captures,
-               (
-                 SELECT COALESCE(SUM(needs_transport), 0) 
-                 FROM coord_stats 
-                 WHERE coordinator_id = u.id 
-                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
-               ) AS needs_transport,
-               (
-                 SELECT COALESCE(SUM(green), 0) 
-                 FROM coord_stats 
-                 WHERE coordinator_id = u.id 
-                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
-               ) AS green,
-               (
-                 SELECT COALESCE(SUM(yellow), 0) 
-                 FROM coord_stats 
-                 WHERE coordinator_id = u.id 
-                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
-               ) AS yellow,
-               (
-                 SELECT COALESCE(SUM(red), 0) 
-                 FROM coord_stats 
-                 WHERE coordinator_id = u.id 
-                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
-               ) AS red,
-               (
-                 SELECT COALESCE(SUM(purple), 0) 
-                 FROM coord_stats 
-                 WHERE coordinator_id = u.id 
-                    OR coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA'))
-               ) AS purple
+               COALESCE(ps.total_captures, 0) AS total_captures,
+               COALESCE(ps.needs_transport, 0) AS needs_transport,
+               COALESCE(ps.green, 0) AS green,
+               COALESCE(ps.yellow, 0) AS yellow,
+               COALESCE(ps.red, 0) AS red,
+               COALESCE(ps.purple, 0) AS purple
          FROM users u
          LEFT JOIN lists l ON u.assigned_list_id = l.id
+         LEFT JOIN padrino_stats ps ON ps.padrino_id = u.id
          WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
       `;
       const padrinoParams = [...filter.params];
@@ -3803,7 +3780,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
         padrinoParams.push(parseInt(selectedPadrino));
       }
 
-      padrinoSql += ` GROUP BY u.id ORDER BY u.nombre`;
+      padrinoSql += ` ORDER BY u.nombre`;
       padrinos = db.prepare(padrinoSql).all(...padrinoParams);
     }
 
@@ -3902,13 +3879,13 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       electorParams.push(parseInt(selectedCoordinator));
     }
 
-    electorSql += ` ORDER BY ec.timestamp DESC`;
+    electorSql += ` ORDER BY ec.timestamp DESC LIMIT 3000`;
     electors = db.prepare(electorSql).all(...electorParams);
 
     // Apply high-performance district filter in memory using JS
     if (selectedDistrict && selectedDistrict !== 'ALL') {
-      electors = electors.filter((e: any) => 
-        (e.elector_district && e.elector_district.toUpperCase().trim() === selectedDistrict.toUpperCase().trim()) || 
+      electors = electors.filter((e: any) =>
+        (e.elector_district && e.elector_district.toUpperCase().trim() === selectedDistrict.toUpperCase().trim()) ||
         (e.coordinator_district && e.coordinator_district.toUpperCase().trim() === selectedDistrict.toUpperCase().trim())
       );
     }
