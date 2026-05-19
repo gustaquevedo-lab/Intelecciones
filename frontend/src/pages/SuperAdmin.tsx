@@ -866,50 +866,6 @@ Status: ${error.response?.status || 'N/A'}
     }
   }, []);
 
-  useEffect(() => {
-    if (activeTab === 'audit') {
-      if (activeAuditTab === 'logs') fetchAuditData();
-      else fetchLoginAttempts();
-    }
-  }, [activeTab, activeAuditTab, fetchAuditData, fetchLoginAttempts]);
-
-  useEffect(() => {
-    if (!loading && !authUser) {
-      navigate('/login');
-    } else if (authUser && authUser.role === 'COORDINADOR') {
-      navigate('/coordinador');
-    }
-  }, [authUser, loading, navigate]);
-
-  useEffect(() => {
-    if (authUser) fetchData();
-  }, [authUser, activeTab, activeListId, activeDistrict]);
-
-  if (loading) return null;
-
-  const handleSyncLocales = async () => {
-    try {
-      const res = await api.post('/admin/locales/sync-from-padron');
-      alert(`Sincronización completada. Se agregaron ${res.data.added} nuevos locales.`);
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      alert('Error al sincronizar locales.');
-    }
-  };
-
-  useEffect(() => {
-    if (selectedCampaignId === 'all') return;
-    const campaign = campaigns.find(c => c.id.toString() === selectedCampaignId);
-    if (campaign && campaign.distrito) {
-      const city = campaign.distrito.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      if (CIUDADES_PARAGUAY[city]) {
-        setMapCenter([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng]);
-        setMapZoom(CIUDADES_PARAGUAY[city].zoom);
-      }
-    }
-  }, [selectedCampaignId, campaigns]);
-
   const fetchData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     setApiError(null);
@@ -1031,6 +987,48 @@ Status: ${error.response?.status || 'N/A'}
       setIsLoading(false);
     }
   };
+
+  const handleSyncLocales = async () => {
+    try {
+      const res = await api.post('/admin/locales/sync-from-padron');
+      alert(`Sincronización completada. Se agregaron ${res.data.added} nuevos locales.`);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Error al sincronizar locales.');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      if (activeAuditTab === 'logs') fetchAuditData();
+      else fetchLoginAttempts();
+    }
+  }, [activeTab, activeAuditTab, fetchAuditData, fetchLoginAttempts]);
+
+  useEffect(() => {
+    if (!loading && !authUser) {
+      navigate('/login');
+    } else if (authUser && authUser.role === 'COORDINADOR') {
+      navigate('/coordinador');
+    }
+  }, [authUser, loading, navigate]);
+
+  useEffect(() => {
+    if (authUser) fetchData();
+  }, [authUser, activeTab, activeListId, activeDistrict]);
+
+  useEffect(() => {
+    if (selectedCampaignId === 'all') return;
+    const campaign = campaigns.find(c => c.id.toString() === selectedCampaignId);
+    if (campaign && campaign.distrito) {
+      const city = campaign.distrito.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (CIUDADES_PARAGUAY[city]) {
+        setMapCenter([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng]);
+        setMapZoom(CIUDADES_PARAGUAY[city].zoom);
+      }
+    }
+  }, [selectedCampaignId, campaigns]);
 
   const renderOverview = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -2554,6 +2552,8 @@ Status: ${error.response?.status || 'N/A'}
       </div>
     </div>
   );
+
+  if (loading) return null;
 
   return (
     <MainLayout 

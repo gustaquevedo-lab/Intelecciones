@@ -643,58 +643,58 @@ const TeamPanel = () => {
   const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
   const isPadrino = user?.role === 'PADRINO' || user?.role === 'SUBJEFE';
 
-  // Available options derived dynamically (with immediate fallback to local lists when reportData is loading)
   const availableDistricts = useMemo(() => {
     const set = new Set<string>();
-    if (reportData) {
-      if (reportData.padrinos) reportData.padrinos.forEach(p => p.distrito && set.add(p.distrito));
-      if (reportData.coordinators) reportData.coordinators.forEach(c => c.distrito && set.add(c.distrito));
-      if (reportData.locales) reportData.locales.forEach(l => l.distrito && set.add(l.distrito));
-    } else {
-      padrinos.forEach(p => p.distrito && set.add(p.distrito));
-      myCoordinators.forEach(c => c.distrito && set.add(c.distrito));
-    }
+    const fp = reportData?.filterPadrinos || padrinos;
+    const fc = reportData?.filterCoordinators || myCoordinators;
+    fp.forEach((p: any) => p.distrito && set.add(p.distrito));
+    fc.forEach((c: any) => c.distrito && set.add(c.distrito));
+    if (reportData?.electors) reportData.electors.forEach((e: any) => {
+      if (e.elector_district && e.elector_district !== 'REGISTRO DE CAMPO') set.add(e.elector_district);
+      if (e.coordinator_district) set.add(e.coordinator_district);
+    });
+    if (reportData?.locales) reportData.locales.forEach((l: any) => {
+      if (l.distrito && l.distrito !== 'REGISTRO DE CAMPO') set.add(l.distrito);
+    });
     return Array.from(set).sort();
   }, [reportData, padrinos, myCoordinators]);
 
   const availableLists = useMemo(() => {
     const set = new Set<string>();
-    if (reportData) {
-      if (reportData.padrinos) reportData.padrinos.forEach(p => p.list_number && set.add(String(p.list_number)));
-      if (reportData.coordinators) reportData.coordinators.forEach(c => c.list_number && set.add(String(c.list_number)));
-      if (reportData.electors) reportData.electors.forEach(e => e.list_number && set.add(String(e.list_number)));
-    } else {
+    const fp = reportData?.filterPadrinos || padrinos;
+    const fc = reportData?.filterCoordinators || myCoordinators;
+    fp.forEach((p: any) => p.list_number && set.add(String(p.list_number)));
+    fc.forEach((c: any) => c.list_number && set.add(String(c.list_number)));
+    if (!reportData) {
       campaigns.forEach(camp => {
         if (camp.lists) camp.lists.forEach((l: any) => l.list_number && set.add(String(l.list_number)));
       });
-      padrinos.forEach(p => p.list_number && set.add(String(p.list_number)));
-      myCoordinators.forEach(c => c.list_number && set.add(String(c.list_number)));
     }
     return Array.from(set).sort();
   }, [reportData, campaigns, padrinos, myCoordinators]);
 
   const availablePadrinos = useMemo(() => {
-    const list = (reportData && reportData.padrinos && reportData.padrinos.length > 0) ? reportData.padrinos : padrinos;
-    return list.filter(p => {
+    const list = reportData?.filterPadrinos?.length ? reportData.filterPadrinos : padrinos;
+    return list.filter((p: any) => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
       return true;
-    }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
   }, [reportData, padrinos, selectedDistrictFilter, selectedListFilter]);
 
   const availableCoordinators = useMemo(() => {
-    const list = (reportData && reportData.coordinators && reportData.coordinators.length > 0) ? reportData.coordinators : myCoordinators;
-    return list.filter(c => {
+    const list = reportData?.filterCoordinators?.length ? reportData.filterCoordinators : myCoordinators;
+    return list.filter((c: any) => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
-      if (selectedPadrinoFilter !== 'ALL' && c.parent_id !== selectedPadrinoFilter) return false;
+      if (selectedPadrinoFilter !== 'ALL' && String(c.parent_id) !== String(selectedPadrinoFilter)) return false;
       return true;
-    }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
   }, [reportData, myCoordinators, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter]);
 
   // Filtered datasets for screen render & Excel/CSV export
   const filteredPadrinos = useMemo(() => {
-    if (!reportData) return [];
+    if (!reportData || !reportData.padrinos) return [];
     return reportData.padrinos.filter(p => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
@@ -707,11 +707,11 @@ const TeamPanel = () => {
   }, [reportData, selectedDistrictFilter, selectedListFilter, searchQuery]);
 
   const filteredCoordinators = useMemo(() => {
-    if (!reportData) return [];
+    if (!reportData || !reportData.coordinators) return [];
     return reportData.coordinators.filter(c => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
-      if (selectedPadrinoFilter !== 'ALL' && c.parent_id !== selectedPadrinoFilter) return false;
+      if (selectedPadrinoFilter !== 'ALL' && String(c.parent_id) !== String(selectedPadrinoFilter)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return c.nombre.toLowerCase().includes(q) || (c.ci && c.ci.includes(q)) || (c.username && c.username.includes(q));
@@ -721,14 +721,14 @@ const TeamPanel = () => {
   }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, searchQuery]);
 
   const filteredElectors = useMemo(() => {
-    if (!reportData) return [];
+    if (!reportData || !reportData.electors) return [];
     return reportData.electors.filter(e => {
       if (selectedDistrictFilter !== 'ALL') {
         if (e.elector_district !== selectedDistrictFilter && e.coordinator_district !== selectedDistrictFilter) return false;
       }
       if (selectedListFilter !== 'ALL' && String(e.list_number) !== selectedListFilter) return false;
-      if (selectedPadrinoFilter !== 'ALL' && e.padrino_id !== selectedPadrinoFilter) return false;
-      if (selectedCoordinatorFilter !== 'ALL' && e.coordinator_id !== selectedCoordinatorFilter) return false;
+      if (selectedPadrinoFilter !== 'ALL' && String(e.padrino_id) !== String(selectedPadrinoFilter)) return false;
+      if (selectedCoordinatorFilter !== 'ALL' && String(e.coordinator_id) !== String(selectedCoordinatorFilter)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return e.nombre.toLowerCase().includes(q) || e.apellido.toLowerCase().includes(q) || (e.elector_ci && e.elector_ci.includes(q));
@@ -738,7 +738,7 @@ const TeamPanel = () => {
   }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter, searchQuery]);
 
   const filteredLocales = useMemo(() => {
-    if (!reportData) return [];
+    if (!reportData || !reportData.locales) return [];
     return reportData.locales.filter(l => {
       if (selectedDistrictFilter !== 'ALL' && l.distrito !== selectedDistrictFilter) return false;
       if (searchQuery) {
@@ -777,7 +777,7 @@ const TeamPanel = () => {
       if (selectedCoordinatorFilter !== 'ALL') queryParams.append('coordinator_id', selectedCoordinatorFilter);
 
       const res = await api.get(`/my-team/reports?${queryParams.toString()}`);
-      setReportData(prev => prev ? { ...prev, ...res.data } : res.data);
+      setReportData(res.data);
     } catch (err) {
       console.error('Error fetching reports data', err);
     } finally {
@@ -787,13 +787,9 @@ const TeamPanel = () => {
 
   useEffect(() => {
     if (activeTab === 'reports') {
-      const isSuper = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
-      // Auto-load only for non-super admins (tiny dataset) or if a specific district is already filtered
-      if (!isSuper || selectedDistrictFilter !== 'ALL') {
-        loadReportsData();
-      }
+      loadReportsData();
     }
-  }, [activeTab, selectedDistrictFilter, loadReportsData]);
+  }, [activeTab, loadReportsData]);
 
   // Pure JavaScript CSV Exporter
   const exportToCSV = () => {
@@ -1428,7 +1424,7 @@ const TeamPanel = () => {
 
               {/* List Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Lista de Concejales</span>
+                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Lista</span>
                 <select
                   value={selectedListFilter}
                   onChange={(e) => {
@@ -1441,8 +1437,8 @@ const TeamPanel = () => {
                     border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
                   }}
                 >
-                  <option value="ALL">Todas las Listas de Concejales</option>
-                  {availableLists.map(l => <option key={l} value={l}>Lista {l} (Concejales)</option>)}
+                  <option value="ALL">Todas las Listas ({availableLists.length})</option>
+                  {availableLists.map(l => <option key={l} value={l}>Lista {l}</option>)}
                 </select>
               </div>
 
@@ -1468,7 +1464,7 @@ const TeamPanel = () => {
               )}
 
               {/* Coordinator Filter */}
-              {reportType === 'electors' && (
+              {(reportType === 'electors' || reportType === 'coordinators') && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coordinador de Campo</span>
                   <select
