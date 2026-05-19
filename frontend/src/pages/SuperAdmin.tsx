@@ -253,6 +253,7 @@ const SuperAdmin = () => {
   const [isCandidateVerified, setIsCandidateVerified] = useState(false);
   const [isVehicleDriverVerified, setIsVehicleDriverVerified] = useState(false);
   const [apiError, setApiError] = useState<{ message: string; details?: string } | null>(null);
+  const [apiCriticalError, setApiCriticalError] = useState<Error | null>(null);
 
   const cities = Array.from(new Set([
     ...(Array.isArray(lists) ? lists.map(l => l.ciudad) : []),
@@ -907,11 +908,11 @@ Status: ${error.response?.status || 'N/A'}
         if (summary) {
           setStats(summary);
         } else {
-          // Trigger technical alert overlay if the central SaaS summary fails
-          setApiError({
-            message: 'No se pudieron recuperar las estadísticas principales del servidor. Esto puede ocurrir debido a problemas de concurrencia de la base de datos o microcortes de red en el móvil.',
-            details: lastErrorMessage || 'Conexión interrumpida'
-          });
+          setApiCriticalError(new Error(
+            `API_ERROR: No se pudieron recuperar las estadísticas principales del servidor.\n` +
+            `Servidor: ${lastErrorMessage || 'Timeout o concurrencia de base de datos'}\n` +
+            `Timestamp: ${new Date().toISOString()}`
+          ));
         }
 
         if (predictionsRes) setPredictions(predictionsRes);
@@ -972,17 +973,19 @@ Status: ${error.response?.status || 'N/A'}
       }
 
       if (hasErrors && !silent) {
-        setApiError({
-          message: 'Algunos datos del panel no pudieron cargarse de forma completa. Esto suele deberse a bloqueos por concurrencia en la base de datos sqlite o microcortes temporales de red en el móvil.',
-          details: lastErrorMessage || 'Error de sincronización'
-        });
+        setApiCriticalError(new Error(
+          `API_ERROR: Algunos datos del panel no pudieron cargarse de forma completa.\n` +
+          `Servidor: ${lastErrorMessage || 'Error de sincronización o concurrencia SQLite'}\n` +
+          `Timestamp: ${new Date().toISOString()}`
+        ));
       }
     } catch (err: any) {
       console.error("Critical error fetching data", err);
-      setApiError({
-        message: 'Ocurrió un error crítico inesperado al procesar los datos de administración.',
-        details: err.message || 'Error desconocido'
-      });
+      setApiCriticalError(new Error(
+        `API_CRITICAL_ERROR: Ocurrió un error crítico inesperado al procesar los datos de administración.\n` +
+        `Detalles: ${err.message || 'Error desconocido'}\n` +
+        `Stack: ${err.stack || 'No disponible'}`
+      ));
     } finally {
       setIsLoading(false);
     }
@@ -2552,6 +2555,10 @@ Status: ${error.response?.status || 'N/A'}
       </div>
     </div>
   );
+
+  if (apiCriticalError) {
+    throw apiCriticalError;
+  }
 
   if (loading) return null;
 

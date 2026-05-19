@@ -613,6 +613,11 @@ const PadrinoRow = ({
 const TeamPanel = () => {
   const { user, activeDistrict } = useAuth();
   const [activeTab, setActiveTab] = useState<'structure' | 'reports'>('structure');
+  const [apiCriticalError, setApiCriticalError] = useState<Error | null>(null);
+  
+  if (apiCriticalError) {
+    throw apiCriticalError;
+  }
   
   // Regular Team states
   const [padrinos, setPadrinos] = useState<TeamUser[]>([]);
@@ -759,7 +764,14 @@ const TeamPanel = () => {
       setPadrinos(teamRes.data.padrinos || []);
       setMyCoordinators(teamRes.data.coordinators || []);
       setCampaigns(campaignsRes.data || []);
-    } catch {}
+    } catch (err: any) {
+      console.error('Error fetching team structure:', err);
+      setApiCriticalError(new Error(
+        `API_ERROR: No se pudo recuperar la estructura de tu equipo.\n` +
+        `Servidor: ${err.response?.data?.error || err.message || 'Error de sincronización con la base de datos'}\n` +
+        `Timestamp: ${new Date().toISOString()}`
+      ));
+    }
     setLoading(false);
   }, [activeDistrict]);
 
@@ -778,8 +790,13 @@ const TeamPanel = () => {
 
       const res = await api.get(`/my-team/reports?${queryParams.toString()}`);
       setReportData(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching reports data', err);
+      setApiCriticalError(new Error(
+        `API_ERROR: No se pudieron cargar los reportes de tu equipo.\n` +
+        `Servidor: ${err.response?.data?.error || err.message || 'Error de sincronización con la base de datos'}\n` +
+        `Timestamp: ${new Date().toISOString()}`
+      ));
     } finally {
       setLoadingReports(false);
     }
