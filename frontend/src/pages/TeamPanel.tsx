@@ -674,7 +674,7 @@ const TeamPanel = () => {
   }, [reportData, campaigns, padrinos, myCoordinators]);
 
   const availablePadrinos = useMemo(() => {
-    const list = reportData ? reportData.padrinos : padrinos;
+    const list = (reportData && reportData.padrinos && reportData.padrinos.length > 0) ? reportData.padrinos : padrinos;
     return list.filter(p => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
@@ -683,7 +683,7 @@ const TeamPanel = () => {
   }, [reportData, padrinos, selectedDistrictFilter, selectedListFilter]);
 
   const availableCoordinators = useMemo(() => {
-    const list = reportData ? reportData.coordinators : myCoordinators;
+    const list = (reportData && reportData.coordinators && reportData.coordinators.length > 0) ? reportData.coordinators : myCoordinators;
     return list.filter(c => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
@@ -909,36 +909,102 @@ const TeamPanel = () => {
     try {
       const A4_W_MM = 210;
       const A4_H_MM = 297;
+      const FOOTER_H_MM = 8;
       const SCALE = 2;
 
-      const canvas = await html2canvas(el, {
-        scale: SCALE,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
+      const footerEl = el.querySelector('[data-report-footer]') as HTMLElement;
+      if (footerEl) footerEl.style.display = 'none';
+
+      const avatars = el.querySelectorAll('.avatar-print') as NodeListOf<HTMLElement>;
+      const originalBgs: string[] = [];
+      avatars.forEach((av, i) => {
+        originalBgs[i] = av.style.background;
+        if (av.style.background.includes('url(')) av.style.background = '#e2e8f0';
       });
 
-      const pxPerMm = (canvas.width / A4_W_MM);
-      const pageHeightPx = A4_H_MM * pxPerMm;
-      const totalPages = Math.ceil(canvas.height / pageHeightPx);
+      const headerEl = el.querySelector('.print-header') as HTMLElement;
+      const elRect = el.getBoundingClientRect();
+      let headerAreaPx = 0;
+      if (headerEl) {
+        const headerRect = headerEl.getBoundingClientRect();
+        headerAreaPx = Math.ceil((headerRect.bottom - elRect.top + 20) * SCALE);
+      }
+
+      let fullCanvas: HTMLCanvasElement;
+      try {
+        fullCanvas = await html2canvas(el, {
+          scale: SCALE, useCORS: true, allowTaint: true,
+          backgroundColor: '#ffffff', logging: false, imageTimeout: 5000, removeContainer: true,
+        });
+      } finally {
+        avatars.forEach((av, i) => { av.style.background = originalBgs[i]; });
+        if (footerEl) footerEl.style.display = '';
+      }
+
+      if (!fullCanvas || fullCanvas.width === 0 || fullCanvas.height === 0) {
+        throw new Error('html2canvas produced an empty canvas');
+      }
+
+      const pxPerMm = fullCanvas.width / A4_W_MM;
+      const usableHeightPx = (A4_H_MM - FOOTER_H_MM) * pxPerMm;
+      const contentPerSubPage = usableHeightPx - headerAreaPx;
+
+      let totalPages = 1;
+      let remaining = fullCanvas.height - usableHeightPx;
+      while (remaining > 0) {
+        totalPages++;
+        remaining -= contentPerSubPage;
+      }
 
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) doc.addPage();
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = Math.min(pageHeightPx, canvas.height - page * pageHeightPx);
-        const ctx = sliceCanvas.getContext('2d')!;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-        ctx.drawImage(canvas, 0, page * pageHeightPx, canvas.width, sliceCanvas.height, 0, 0, sliceCanvas.width, sliceCanvas.height);
-        doc.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, sliceCanvas.height / pxPerMm);
+
+        if (page === 0) {
+          const sliceH = Math.min(usableHeightPx, fullCanvas.height);
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = fullCanvas.width;
+          sliceCanvas.height = sliceH;
+          const ctx = sliceCanvas.getContext('2d')!;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          ctx.drawImage(fullCanvas, 0, 0, fullCanvas.width, sliceH, 0, 0, fullCanvas.width, sliceH);
+          doc.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, sliceH / pxPerMm);
+        } else {
+          const contentStartPx = usableHeightPx + (page - 1) * contentPerSubPage;
+          const headerMM = headerAreaPx / pxPerMm;
+
+          if (headerAreaPx > 0) {
+            const hCanvas = document.createElement('canvas');
+            hCanvas.width = fullCanvas.width;
+            hCanvas.height = headerAreaPx;
+            const hCtx = hCanvas.getContext('2d')!;
+            hCtx.fillStyle = '#ffffff';
+            hCtx.fillRect(0, 0, hCanvas.width, hCanvas.height);
+            hCtx.drawImage(fullCanvas, 0, 0, fullCanvas.width, headerAreaPx, 0, 0, fullCanvas.width, headerAreaPx);
+            doc.addImage(hCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, headerMM);
+          }
+
+          const contentSliceH = Math.min(contentPerSubPage, fullCanvas.height - contentStartPx);
+          if (contentSliceH > 0) {
+            const cCanvas = document.createElement('canvas');
+            cCanvas.width = fullCanvas.width;
+            cCanvas.height = contentSliceH;
+            const cCtx = cCanvas.getContext('2d')!;
+            cCtx.fillStyle = '#ffffff';
+            cCtx.fillRect(0, 0, cCanvas.width, cCanvas.height);
+            cCtx.drawImage(fullCanvas, 0, contentStartPx, fullCanvas.width, contentSliceH, 0, 0, fullCanvas.width, contentSliceH);
+            doc.addImage(cCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, headerMM, A4_W_MM, contentSliceH / pxPerMm);
+          }
+        }
+
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(6.2);
+        doc.setFontSize(5);
         doc.setTextColor(100, 116, 139);
-        doc.text(`Página ${page + 1} de ${totalPages}`, 195, 292, { align: 'right' });
+        doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial de uso interno`, 15, A4_H_MM - 5);
+        doc.setFontSize(6.2);
+        doc.text(`Página ${page + 1} de ${totalPages}`, A4_W_MM - 15, A4_H_MM - 5, { align: 'right' });
       }
 
       const cleanDistrict = (selectedDistrictFilter === 'ALL'
@@ -960,8 +1026,9 @@ const TeamPanel = () => {
       document.body.appendChild(link);
       link.click();
       setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 200);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error generating PDF:', err);
+      alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
     } finally {
       setGeneratingPDF(false);
     }
@@ -1746,13 +1813,12 @@ const TeamPanel = () => {
                 )}
 
                 {/* ── REPORT EMBEDDED FOOTER ── */}
-                <div style={{
+                <div data-report-footer style={{
                   marginTop: '30px', borderTop: '1px solid #cbd5e1', paddingTop: '10px',
                   display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', color: '#64748b'
                 }}>
                   <span>© {new Date().getFullYear()} Intelecciones. Todos los derechos reservados.</span>
                   <span>Documento de carácter estrictamente confidencial y de uso interno de campaña.</span>
-                  <span>Pág. 1 de 1</span>
                 </div>
 
               </div>

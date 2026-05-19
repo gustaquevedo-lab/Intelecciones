@@ -3732,7 +3732,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
     // 1. Fetch Padrinos list with full detailed metrics (optimized single-pass aggregation)
     let padrinos: any[] = [];
-    if ((reportType === 'all' || reportType === 'padrinos') && (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE')) {
+    if ((reportType === 'all' || reportType === 'padrinos' || reportType === 'coordinators' || reportType === 'electors') && (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE')) {
       let padrinoSql = `
         WITH team_map AS (
           SELECT id as member_id,

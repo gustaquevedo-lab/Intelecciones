@@ -28,7 +28,10 @@
       "Bash(git hash-object *)",
       "Bash(git ls-tree *)",
       "Bash(awk '{print $3}')",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(node -e \"const h = require\\('./node_modules/html2canvas/dist/html2canvas.js'\\); console.log\\(typeof h, typeof h.default\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(node --input-type=module -e ' *)"
     ]
   }
 }
