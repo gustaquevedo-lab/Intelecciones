@@ -4,7 +4,7 @@ import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 interface TeamUser {
   id: number;
@@ -881,301 +881,89 @@ const TeamPanel = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const el = document.getElementById('printable-report-area');
+    if (!el) { window.print(); return; }
+
+    const printWindow = window.open('', '_blank', 'width=800,height=1100');
+    if (!printWindow) { window.print(); return; }
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Reporte Intelecciones</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: white; color: #1a1a1a; }
+        @page { size: A4 portrait; margin: 10mm; }
+      </style></head><body>${el.outerHTML}</body></html>`);
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      setTimeout(() => { printWindow.print(); printWindow.close(); }, 300);
+    };
   };
 
-  const exportToPDF = () => {
-    if (!reportData) return;
+  const exportToPDF = async () => {
+    const el = document.getElementById('printable-report-area');
+    if (!reportData || !el) return;
     setGeneratingPDF(true);
 
-    // Defer to next frame so the UI updates before heavy work
-    setTimeout(() => {
     try {
-    // Create new A4 PDF instance
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-    
-    // Header Logo/Design
-    doc.setFillColor(30, 58, 110);
-    doc.rect(15, 15, 6, 6, 'F');
-    doc.setFillColor(16, 185, 129);
-    doc.rect(22, 15, 3, 6, 'F');
-    
-    // Title
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(30, 58, 110);
-    doc.text('Intelecciones', 28, 20);
-    
-    // Subtitle
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.setTextColor(102, 102, 102);
-    doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 28, 24);
-    
-    // Metadata Right-Aligned
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 58, 110);
-    doc.text('REPORTE DE CAMPAÑA', 195, 19, { align: 'right' });
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(85, 85, 85);
-    const distText = `Distrito: ${selectedDistrictFilter === 'ALL' ? 'Todos los Distritos' : selectedDistrictFilter}`;
-    doc.text(distText, 195, 23, { align: 'right' });
-    
-    const listText = `Lista: ${selectedListFilter === 'ALL' ? 'Todas las Listas' : `Lista ${selectedListFilter}`}`;
-    doc.text(listText, 195, 27, { align: 'right' });
-    
-    const pyDateText = `Fecha Imp.: ${new Date().toLocaleString('es-PY')}`;
-    doc.text(pyDateText, 195, 31, { align: 'right' });
-    
-    // Horizontal separator line
-    doc.setDrawColor(30, 58, 110);
-    doc.setLineWidth(0.6);
-    doc.line(15, 34, 195, 34);
-    
-    // Report Title & Desc
-    let reportTitle = '';
-    let reportDesc = '';
-    if (reportType === 'padrinos') {
-      reportTitle = 'LISTADO Y REPORTE DE ESTRUCTURA DE PADRINOS';
-      reportDesc = 'Resumen consolidado de la cúpula de padrinos activos en el distrito, incluyendo sus respectivas redes de coordinadores y cobertura de capturas de campo.';
-    } else if (reportType === 'coordinators') {
-      reportTitle = 'LISTADO Y REPORTE DE ESTRUCTURA DE COORDINADORES';
-      reportDesc = 'Detalle completo de coordinadores de campo asignados, sus padrinos directos y la cuantificación cromática de sus gestiones de captación.';
-    } else if (reportType === 'electors') {
-      reportTitle = 'REGISTRO GLOBAL DE ELECTORES CAPTADOS';
-      reportDesc = 'Listado detallado de electores ingresados y verificados en calle, indicando su nivel de compromiso (Semáforo de Intención) y su asignación logística de transporte.';
-    } else if (reportType === 'locales') {
-      reportTitle = 'RESUMEN DE COBERTURA Y SEMÁFORO POR LOCALES DE VOTACIÓN';
-      reportDesc = 'Auditoría de cobertura geográfica y territorial. Distribución de capturas y porcentaje de electores seguros en cada colegio electoral oficial.';
-    }
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.setTextColor(17, 17, 17);
-    doc.text(reportTitle, 15, 41);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(102, 102, 102);
-    const splitDesc = doc.splitTextToSize(reportDesc, 180);
-    doc.text(splitDesc, 15, 45);
-    
-    // Define Table Columns and Rows dynamically
-    let tableHeaders: string[][] = [];
-    let tableRows: any[][] = [];
-    const TRAFFIC_COLORS_HEX: Record<string, string> = {
-      'GREEN': 'Verde',
-      'YELLOW': 'Amarillo',
-      'RED': 'Rojo',
-      'PURPLE': 'Morado'
-    };
-    
-    if (reportType === 'padrinos') {
-      tableHeaders = [['Padrino / Cédula', 'Teléfono', 'Lista', 'Coords', 'Total', 'Verde', 'Amar.', 'Rojo', 'Mor.', 'Transp.']];
-      tableRows = filteredPadrinos.map(p => [
-        `${p.nombre}\nCI: ${p.ci || p.username}`,
-        p.telefono || '—',
-        p.list_number ? `Lista ${p.list_number}` : '—',
-        p.coordinator_count || 0,
-        p.total_captures || 0,
-        p.green || 0,
-        p.yellow || 0,
-        p.red || 0,
-        p.purple || 0,
-        p.needs_transport || 0
-      ]);
-    } else if (reportType === 'coordinators') {
-      tableHeaders = [['Coordinador / CI', 'Padrino Asignado', 'Teléfono', 'Total', 'Verde', 'Amar.', 'Rojo', 'Mor.', 'Transp.']];
-      tableRows = filteredCoordinators.map(c => [
-        `${c.nombre}\nCI: ${c.ci || c.username}`,
-        c.parent_name || 'Sin Padrino',
-        c.telefono || '—',
-        c.total_captures || 0,
-        c.green || 0,
-        c.yellow || 0,
-        c.red || 0,
-        c.purple || 0,
-        c.needs_transport || 0
-      ]);
-    } else if (reportType === 'electors') {
-      tableHeaders = [['Elector / CI', 'Teléfono', 'Local de Votación', 'Mesa', 'Orden', 'Captado Por', 'Semáforo', 'Transp.']];
-      tableRows = filteredElectors.map(e => [
-        `${e.nombre} ${e.apellido}\nCI: ${e.elector_ci}`,
-        e.elector_telefono || '—',
-        e.local_votacion,
-        e.mesa || '—',
-        e.orden || '—',
-        `${e.coordinator_name}\n${e.padrino_name ? `Padrino: ${e.padrino_name}` : 'Directo'}`,
-        TRAFFIC_COLORS_HEX[e.traffic_light] || e.traffic_light,
-        e.needs_transport ? 'SÍ' : 'NO'
-      ]);
-    } else if (reportType === 'locales') {
-      tableHeaders = [['Colegio Electoral', 'Total Capt.', 'Verde', 'Amar.', 'Rojo', 'Mor.', 'Transp.', 'Cobertura']];
-      tableRows = filteredLocales.map(l => {
-        const total = l.total_captures || 1;
-        const pctGreen = Math.round((l.green / total) * 100);
-        return [
-          l.local_votacion,
-          l.total_captures,
-          l.green,
-          l.yellow,
-          l.red,
-          l.purple,
-          l.needs_transport,
-          `${pctGreen}%`
-        ];
+      const A4_W_MM = 210;
+      const A4_H_MM = 297;
+      const SCALE = 2;
+
+      const canvas = await html2canvas(el, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
       });
-    }
-    
-    // Cap rows to prevent browser freeze on massive datasets
-    const PDF_ROW_LIMIT = 500;
-    const totalRowCount = tableRows.length;
-    const truncated = totalRowCount > PDF_ROW_LIMIT;
-    if (truncated) {
-      tableRows = tableRows.slice(0, PDF_ROW_LIMIT);
-    }
 
-    // Inject Table using autoTable
-    autoTable(doc, {
-      head: tableHeaders,
-      body: tableRows,
-      startY: 52,
-      margin: { left: 15, right: 15, bottom: 20 },
-      styles: {
-        fontSize: 7.5,
-        cellPadding: 3,
-        valign: 'middle',
-        font: 'helvetica'
-      },
-      headStyles: {
-        fillColor: [248, 250, 252],
-        textColor: [51, 65, 85],
-        fontStyle: 'bold',
-        lineWidth: 0.1,
-        lineColor: [203, 213, 225]
-      },
-      bodyStyles: {
-        lineWidth: 0.1,
-        lineColor: [226, 232, 240],
-        textColor: [15, 23, 42]
-      },
-      columnStyles: {
-        0: { fontStyle: 'bold' }
-      },
-      didParseCell: (data) => {
-        if (data.section === 'body') {
-          if (reportType === 'electors' && data.column.index === 6) {
-            const val = String(data.cell.raw);
-            if (val === 'Verde' || val === 'GREEN') data.cell.styles.textColor = [22, 163, 74];
-            else if (val === 'Amarillo' || val === 'YELLOW') data.cell.styles.textColor = [217, 119, 6];
-            else if (val === 'Rojo' || val === 'RED') data.cell.styles.textColor = [220, 38, 38];
-            else if (val === 'Morado' || val === 'PURPLE') data.cell.styles.textColor = [124, 58, 237];
-            data.cell.styles.fontStyle = 'bold';
-          }
-          
-          if (reportType === 'electors' && data.column.index === 7) {
-            const val = String(data.cell.raw);
-            if (val === 'SÍ') {
-              data.cell.styles.textColor = [37, 99, 235];
-              data.cell.styles.fontStyle = 'bold';
-            }
-          }
-          
-          if ((reportType === 'padrinos' || reportType === 'coordinators')) {
-            const colIndex = data.column.index;
-            if (colIndex === 5) data.cell.styles.textColor = [22, 163, 74]; // green
-            else if (colIndex === 6) data.cell.styles.textColor = [217, 119, 6]; // yellow
-            else if (colIndex === 7) data.cell.styles.textColor = [220, 38, 38]; // red
-            else if (colIndex === 8) data.cell.styles.textColor = [124, 58, 237]; // purple
-            else if (colIndex === 9) data.cell.styles.textColor = [37, 99, 235]; // transport
-            
-            if (colIndex >= 5 && colIndex <= 9) {
-              data.cell.styles.fontStyle = 'bold';
-            }
-          }
-          
-          if (reportType === 'locales') {
-            const colIndex = data.column.index;
-            if (colIndex === 2) data.cell.styles.textColor = [22, 163, 74]; // green
-            else if (colIndex === 3) data.cell.styles.textColor = [217, 119, 6]; // yellow
-            else if (colIndex === 4) data.cell.styles.textColor = [220, 38, 38]; // red
-            else if (colIndex === 5) data.cell.styles.textColor = [124, 58, 237]; // purple
-            else if (colIndex === 6) data.cell.styles.textColor = [37, 99, 235]; // transport
-            else if (colIndex === 7) { // coverage pct
-              data.cell.styles.textColor = [22, 163, 74];
-              data.cell.styles.fontStyle = 'bold';
-            }
-            
-            if (colIndex >= 2 && colIndex <= 6) {
-              data.cell.styles.fontStyle = 'bold';
-            }
-          }
-        }
+      const pxPerMm = (canvas.width / A4_W_MM);
+      const pageHeightPx = A4_H_MM * pxPerMm;
+      const totalPages = Math.ceil(canvas.height / pageHeightPx);
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) doc.addPage();
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = Math.min(pageHeightPx, canvas.height - page * pageHeightPx);
+        const ctx = sliceCanvas.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(canvas, 0, page * pageHeightPx, canvas.width, sliceCanvas.height, 0, 0, sliceCanvas.width, sliceCanvas.height);
+        doc.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, sliceCanvas.height / pxPerMm);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.2);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Página ${page + 1} de ${totalPages}`, 195, 292, { align: 'right' });
       }
-    });
-    
-    // Add page numbers and footer dynamically on all pages
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.25);
-      doc.line(15, 282, 195, 282);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.2);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`© ${new Date().getFullYear()} Intelecciones. Todos los derechos reservados.`, 15, 286);
-      doc.text('Documento de carácter estrictamente confidencial y de uso interno.', 195, 286, { align: 'right' });
-      doc.text(`Página ${i} de ${pageCount}`, 195, 290, { align: 'right' });
-    }
-    
-    // Add truncation notice if data was capped
-    if (truncated) {
-      const pageCount2 = (doc as any).internal.getNumberOfPages();
-      doc.setPage(pageCount2);
-      const lastY = (doc as any).lastAutoTable?.finalY || 270;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7);
-      doc.setTextColor(220, 38, 38);
-      doc.text(`\u26a0 Este reporte muestra ${PDF_ROW_LIMIT} de ${totalRowCount} registros. Use filtros para acotar resultados o exporte CSV para datos completos.`, 15, Math.min(lastY + 6, 278));
-    }
 
-    const cleanDistrict = (selectedDistrictFilter === 'ALL'
-      ? 'global'
-      : String(selectedDistrictFilter)
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-    );
-    const cleanType = reportType.toLowerCase();
-    const filename = `reporte-${cleanType}-${cleanDistrict}.pdf`;
+      const cleanDistrict = (selectedDistrictFilter === 'ALL'
+        ? 'global'
+        : String(selectedDistrictFilter)
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+      );
+      const filename = `reporte-${reportType.toLowerCase()}-${cleanDistrict}.pdf`;
 
-    // Explicit blob download to guarantee .pdf extension and correct MIME type
-    const pdfBlob = doc.output('blob');
-    const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 200);
-
+      const pdfBlob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 200);
     } catch (err) {
       console.error('Error generating PDF:', err);
     } finally {
       setGeneratingPDF(false);
     }
-    }, 50);
   };
 
   if (loading) return (
@@ -1197,51 +985,68 @@ const TeamPanel = () => {
             print-color-adjust: exact !important;
           }
           
-          /* Gold-standard print pattern: hide everything, show only the report area */
-          body * {
-            visibility: hidden !important;
+          /* Hide the entire app UI */
+          body > * {
+            display: none !important;
           }
-          
-          #printable-report-area, #printable-report-area * {
-            visibility: visible !important;
-          }
-          
+
+          /* Re-show only the report area by injecting it as a direct child of body via fixed positioning */
           #printable-report-area {
+            display: block !important;
+            visibility: visible !important;
             position: fixed !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
+            width: 210mm !important;
             height: auto !important;
             margin: 0 !important;
-            padding: 12mm 10mm !important;
-            display: block !important;
+            padding: 15mm 12mm !important;
             background: white !important;
-            color: black !important;
+            color: #1a1a1a !important;
             overflow: visible !important;
             z-index: 999999 !important;
+            box-shadow: none !important;
+            border: none !important;
+            font-family: system-ui, -apple-system, sans-serif !important;
           }
-          
-          table {
+
+          #printable-report-area, #printable-report-area * {
+            visibility: visible !important;
+          }
+
+          /* Preserve the header design exactly as on screen */
+          #printable-report-area .print-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: flex-start !important;
+            border-bottom: 2.5px solid #1e3a6e !important;
+            padding-bottom: 10px !important;
+            margin-bottom: 20px !important;
+          }
+
+          #printable-report-area svg {
+            display: inline-block !important;
+            visibility: visible !important;
+          }
+
+          #printable-report-area table {
             width: 100% !important;
             border-collapse: collapse !important;
           }
-          th, td {
-            border-bottom: 1px solid #ddd !important;
-            color: black !important;
-            font-size: 8pt !important;
-            padding: 6px 4px !important;
+
+          #printable-report-area th {
+            background-color: #f8fafc !important;
+            font-weight: 800 !important;
+            color: #334155 !important;
           }
-          th {
-            background-color: #f5f5f5 !important;
-            font-weight: bold !important;
-          }
-          .print-header {
-            border-bottom: 3px double #333 !important;
-            padding-bottom: 8px !important;
-            margin-bottom: 15px !important;
-          }
-          .avatar-print {
+
+          #printable-report-area .avatar-print {
             border: 1px solid #ccc !important;
+          }
+
+          @page {
+            size: A4 portrait;
+            margin: 8mm;
           }
         }
       `}</style>
