@@ -3723,6 +3723,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
   const selectedList = req.query.list_number as string;
   const selectedPadrino = req.query.padrino_id as string;
   const selectedCoordinator = req.query.coordinator_id as string;
+  const reportType = (req.query.report_type as string) || 'all';
 
   try {
     const requester = getCachedUserInfo(requesterId);
@@ -3731,7 +3732,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
     // 1. Fetch Padrinos list with full detailed metrics (optimized single-pass aggregation)
     let padrinos: any[] = [];
-    if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
+    if ((reportType === 'all' || reportType === 'padrinos') && (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE')) {
       let padrinoSql = `
         WITH team_map AS (
           SELECT id as member_id,
@@ -3786,6 +3787,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
     // 2. Fetch Coordinators list
     let coordinators: any[] = [];
+    if (reportType === 'all' || reportType === 'coordinators') {
     let coordSql = `
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
              u.parent_id, p.nombre as parent_name, p.ci as parent_ci,
@@ -3830,9 +3832,11 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
     coordSql += ` GROUP BY u.id ORDER BY u.nombre`;
     coordinators = db.prepare(coordSql).all(...coordParams);
+    }
 
     // 3. Fetch Electors list
     let electors: any[] = [];
+    if (reportType === 'all' || reportType === 'electors') {
     let electorSql = `
       SELECT ec.id as capture_id, ec.elector_ci, ec.telefono as elector_telefono, 
              ec.traffic_light, ec.needs_transport, ec.timestamp,
@@ -3889,9 +3893,11 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
         (e.coordinator_district && e.coordinator_district.toUpperCase().trim() === selectedDistrict.toUpperCase().trim())
       );
     }
+    }
 
     // 4. Suggested report: Resumen por Locales de Votación
     let locales: any[] = [];
+    if (reportType === 'all' || reportType === 'locales') {
     let localesSql = `
       SELECT COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
              COALESCE(e.distrito, 'REGISTRO DE CAMPO') as distrito,
@@ -3940,6 +3946,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       locales = locales.filter((l: any) => 
         l.distrito && l.distrito.toUpperCase().trim() === selectedDistrict.toUpperCase().trim()
       );
+    }
     }
 
     res.json({

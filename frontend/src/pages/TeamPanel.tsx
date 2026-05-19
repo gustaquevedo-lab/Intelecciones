@@ -770,19 +770,20 @@ const TeamPanel = () => {
     setLoadingReports(true);
     try {
       const queryParams = new URLSearchParams();
+      queryParams.append('report_type', reportType);
       if (selectedDistrictFilter !== 'ALL') queryParams.append('district', selectedDistrictFilter);
       if (selectedListFilter !== 'ALL') queryParams.append('list_number', selectedListFilter);
       if (selectedPadrinoFilter !== 'ALL') queryParams.append('padrino_id', selectedPadrinoFilter);
       if (selectedCoordinatorFilter !== 'ALL') queryParams.append('coordinator_id', selectedCoordinatorFilter);
 
       const res = await api.get(`/my-team/reports?${queryParams.toString()}`);
-      setReportData(res.data);
+      setReportData(prev => prev ? { ...prev, ...res.data } : res.data);
     } catch (err) {
       console.error('Error fetching reports data', err);
     } finally {
       setLoadingReports(false);
     }
-  }, [selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter]);
+  }, [reportType, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter]);
 
   useEffect(() => {
     if (activeTab === 'reports') {
