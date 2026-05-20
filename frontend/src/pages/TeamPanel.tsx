@@ -1395,7 +1395,7 @@ const TeamPanel = () => {
                     padrino={p}
                     campaigns={campaigns}
                     onRefresh={load}
-                    canCreate={true}
+                    canCreate={canEditUser(user, p)}
                     onEditUser={handleEditUser}
                     onDeleteUser={handleDeleteUser}
                   />

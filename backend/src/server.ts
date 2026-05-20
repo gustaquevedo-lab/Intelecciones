@@ -1959,12 +1959,14 @@ app.post('/api/users', (req, res) => {
 
   // JEFE_CAMPANA/PADRINO/SUBJEFE: force campaign_id to their own, prevent cross-tenant creation
   let forcedCampaignId: number | null = null;
+  let forcedListId: number | null = null;
   if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
     const requesterInfo = getCachedUserInfo(requesterId);
     if (!requesterInfo?.campaign_id) {
       return res.status(403).json({ error: 'No tienes una campaña asignada. Contacta al administrador.' });
     }
     forcedCampaignId = requesterInfo.campaign_id;
+    forcedListId = requesterInfo.assigned_list_id;
     const bodyAssigned = assigned_campaign_id || campaign_id;
     if (bodyAssigned && parseInt(bodyAssigned) !== forcedCampaignId) {
       return res.status(403).json({ error: 'No puedes crear usuarios en otra campaña.' });
@@ -1989,7 +1991,52 @@ app.post('/api/users', (req, res) => {
       return res.status(403).json({ error: 'No tienes permisos para asignar el superior/padre indicado para este usuario.' });
     }
   }
-  // ─────────────────────────────────────────────────────────────────────────
+
+  // Inherit list and campaign if not provided
+  const inputListId = assigned_list_id || list_id;
+  let finalAssignedListId = (inputListId !== undefined && inputListId !== null && inputListId !== '') ? Number(inputListId) : null;
+  
+  if (!finalAssignedListId) {
+    if (forcedListId) {
+      finalAssignedListId = forcedListId;
+    } else if (requesterId) {
+      const requesterInfo = getCachedUserInfo(requesterId);
+      if (requesterInfo?.assigned_list_id) {
+        finalAssignedListId = requesterInfo.assigned_list_id;
+      }
+    }
+    if (!finalAssignedListId && finalParentId) {
+      const parentInfo = db.prepare('SELECT assigned_list_id FROM users WHERE id = ?').get(finalParentId) as any;
+      if (parentInfo?.assigned_list_id) {
+        finalAssignedListId = parentInfo.assigned_list_id;
+      }
+    }
+  }
+
+  let finalCampaignId = (assigned_campaign_id || campaign_id) ? Number(assigned_campaign_id || campaign_id) : null;
+  if (forcedCampaignId) {
+    finalCampaignId = forcedCampaignId;
+  }
+  if (!finalCampaignId) {
+    if (requesterId) {
+      const requesterInfo = getCachedUserInfo(requesterId);
+      if (requesterInfo?.campaign_id) {
+        finalCampaignId = requesterInfo.campaign_id;
+      }
+    }
+    if (!finalCampaignId && finalParentId) {
+      const parentInfo = db.prepare('SELECT assigned_campaign_id FROM users WHERE id = ?').get(finalParentId) as any;
+      if (parentInfo?.assigned_campaign_id) {
+        finalCampaignId = parentInfo.assigned_campaign_id;
+      }
+    }
+    if (!finalCampaignId && finalAssignedListId) {
+      const listInfo = db.prepare('SELECT campaign_id FROM lists WHERE id = ?').get(finalAssignedListId) as any;
+      if (listInfo?.campaign_id) {
+        finalCampaignId = listInfo.campaign_id;
+      }
+    }
+  }
 
   const rawCI = ci || username; // Fallback to username if CI is not provided explicitly
   const cleanCI = rawCI ? rawCI.toString().replace(/\./g, '') : null;
@@ -2004,15 +2051,24 @@ app.post('/api/users', (req, res) => {
       }
     }
 
-    const effectiveCampaignId = forcedCampaignId ?? (assigned_campaign_id || campaign_id || null);
-
     let distrito = req.body.distrito;
-    if (!distrito && (effectiveCampaignId || assigned_list_id || list_id)) {
-      const lstId = assigned_list_id || list_id;
-      const origin = effectiveCampaignId
-        ? db.prepare('SELECT distrito FROM campaigns WHERE id = ?').get(effectiveCampaignId)
-        : db.prepare('SELECT ciudad as distrito FROM lists WHERE id = ?').get(lstId);
-      distrito = (origin as any)?.distrito;
+    if (!distrito) {
+      if (finalAssignedListId) {
+        const origin = db.prepare('SELECT ciudad as distrito FROM lists WHERE id = ?').get(finalAssignedListId) as any;
+        distrito = origin?.distrito;
+      }
+      if (!distrito && finalCampaignId) {
+        const origin = db.prepare('SELECT distrito FROM campaigns WHERE id = ?').get(finalCampaignId) as any;
+        distrito = origin?.distrito;
+      }
+      if (!distrito && requesterId) {
+        const requesterInfo = getCachedUserInfo(requesterId);
+        distrito = requesterInfo?.distrito;
+      }
+      if (!distrito && finalParentId) {
+        const parentInfo = db.prepare('SELECT distrito FROM users WHERE id = ?').get(finalParentId) as any;
+        distrito = parentInfo?.distrito;
+      }
     }
 
     const result = db.prepare(`
@@ -2022,8 +2078,8 @@ app.post('/api/users', (req, res) => {
       finalUsername,
       finalPassword,
       role,
-      assigned_list_id || list_id || null,
-      effectiveCampaignId,
+      finalAssignedListId,
+      finalCampaignId,
       req.body.assigned_local || null,
       req.body.assigned_mesa || null,
       nombre,
@@ -2166,7 +2222,7 @@ app.put('/api/users/:id', (req, res) => {
     }
   }
 
-  const { role, assigned_list_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
+  const { role, nombre, photo_url, parent_id, telefono, ci } = req.body;
 
   if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
     const ALLOWED_ROLES_TO_CREATE: Record<string, string[]> = {
@@ -2187,28 +2243,105 @@ app.put('/api/users/:id', (req, res) => {
       }
     }
   }
+
+  const existingUser = db.prepare('SELECT role, assigned_list_id, assigned_campaign_id, parent_id, distrito FROM users WHERE id = ?').get(req.params.id) as any;
+  if (!existingUser) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
   const cleanCI = ci ? ci.toString().replace(/\./g, '') : null;
+  
+  // Parent:
+  let finalParentId = parent_id !== undefined ? (parent_id ? Number(parent_id) : null) : existingUser.parent_id;
+
+  // List assignment:
+  let finalAssignedListId = existingUser.assigned_list_id;
+  const incomingListId = req.body.assigned_list_id;
+  if (incomingListId !== undefined && incomingListId !== null && incomingListId !== '') {
+    finalAssignedListId = Number(incomingListId);
+  } else if (!finalAssignedListId) {
+    if (requesterId) {
+      const requesterInfo = getCachedUserInfo(requesterId);
+      if (requesterInfo?.assigned_list_id) {
+        finalAssignedListId = requesterInfo.assigned_list_id;
+      }
+    }
+    if (!finalAssignedListId && finalParentId) {
+      const parentInfo = db.prepare('SELECT assigned_list_id FROM users WHERE id = ?').get(finalParentId) as any;
+      if (parentInfo?.assigned_list_id) {
+        finalAssignedListId = parentInfo.assigned_list_id;
+      }
+    }
+  }
+
+  // Campaign assignment:
+  let finalCampaignId = existingUser.assigned_campaign_id;
+  const incomingCampaignId = req.body.assigned_campaign_id || req.body.campaign_id;
+  if (incomingCampaignId !== undefined && incomingCampaignId !== null && incomingCampaignId !== '') {
+    finalCampaignId = Number(incomingCampaignId);
+  } else if (!finalCampaignId) {
+    if (requesterId) {
+      const requesterInfo = getCachedUserInfo(requesterId);
+      if (requesterInfo?.campaign_id) {
+        finalCampaignId = requesterInfo.campaign_id;
+      }
+    }
+    if (!finalCampaignId && finalParentId) {
+      const parentInfo = db.prepare('SELECT assigned_campaign_id FROM users WHERE id = ?').get(finalParentId) as any;
+      if (parentInfo?.assigned_campaign_id) {
+        finalCampaignId = parentInfo.assigned_campaign_id;
+      }
+    }
+    if (!finalCampaignId && finalAssignedListId) {
+      const listInfo = db.prepare('SELECT campaign_id FROM lists WHERE id = ?').get(finalAssignedListId) as any;
+      if (listInfo?.campaign_id) {
+        finalCampaignId = listInfo.campaign_id;
+      }
+    }
+  }
+
+  // District assignment:
+  let distrito = req.body.distrito || existingUser.distrito;
+  if (!distrito) {
+    if (finalAssignedListId) {
+      const origin = db.prepare('SELECT ciudad as distrito FROM lists WHERE id = ?').get(finalAssignedListId) as any;
+      distrito = origin?.distrito;
+    }
+    if (!distrito && finalCampaignId) {
+      const origin = db.prepare('SELECT distrito FROM campaigns WHERE id = ?').get(finalCampaignId) as any;
+      distrito = origin?.distrito;
+    }
+    if (!distrito && requesterId) {
+      const requesterInfo = getCachedUserInfo(requesterId);
+      distrito = requesterInfo?.distrito;
+    }
+    if (!distrito && finalParentId) {
+      const parentInfo = db.prepare('SELECT distrito FROM users WHERE id = ?').get(finalParentId) as any;
+      distrito = parentInfo?.distrito;
+    }
+  }
+
   try {
     db.prepare(`
       UPDATE users 
       SET role = ?, assigned_list_id = ?, assigned_campaign_id = ?, assigned_local = ?, assigned_mesa = ?, nombre = ?, photo_url = ?, parent_id = ?, telefono = ?, ci = ?, distrito = COALESCE(?, distrito)
       WHERE id = ?
     `).run(
-      role, 
-      assigned_list_id || null, 
-      req.body.assigned_campaign_id || null, 
+      role || existingUser.role, 
+      finalAssignedListId, 
+      finalCampaignId, 
       req.body.assigned_local || null, 
       req.body.assigned_mesa || null, 
       nombre, 
       photo_url, 
-      parent_id || null, 
+      finalParentId, 
       telefono || null, 
       cleanCI, 
-      req.body.distrito || null,
+      distrito || null,
       req.params.id
     );
     clearUserCache(req.params.id); // invalidate cache after update
-    logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role})`);
+    logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role || existingUser.role})`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
