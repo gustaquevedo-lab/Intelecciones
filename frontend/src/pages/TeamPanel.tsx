@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, FileText, Printer, Download, Award, Activity } from 'lucide-react';
+import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, FileText, Printer, Download, Edit, Trash2, Key } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
@@ -25,6 +25,7 @@ interface TeamUser {
   purple?: number;
   needs_transport?: number;
   transport_total?: number;
+  distrito?: string;
 }
 
 interface ElectorRow {
@@ -99,25 +100,88 @@ const StatDot = ({ count, color }: { count: number; color: string }) => (
   </span>
 );
 
+export const canEditUser = (currentUser: any, target: any, targetParent?: any) => {
+  if (!currentUser) return false;
+  if (currentUser.role === 'SUPERUSUARIO') return true;
+  if (currentUser.id === target.id) return true;
+
+  // Direct creator can edit
+  if (target.parent_id === currentUser.id) return true;
+
+  // Subjefe hierarchy: can edit if target's parent is a Padrino and that Padrino's parent is current user.
+  if (currentUser.role === 'SUBJEFE') {
+    if (targetParent && targetParent.role === 'PADRINO' && targetParent.parent_id === currentUser.id) {
+      return true;
+    }
+  }
+
+  // Jefe de Campaña hierarchy: can edit if target's parent is a Padrino and that Padrino's parent is current user.
+  if (currentUser.role === 'JEFE_CAMPANA' || currentUser.role === 'CANDIDATO') {
+    if (targetParent && targetParent.role === 'PADRINO' && targetParent.parent_id === currentUser.id) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+export const actionButtonStyle = {
+  background: 'transparent',
+  border: 'none',
+  color: 'var(--text-3)',
+  cursor: 'pointer',
+  padding: '0.25rem',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '6px',
+  transition: 'all 0.15s',
+};
+
+export const handleResetPassword = async (targetUser: any) => {
+  if (!window.confirm(`¿Está seguro de que desea restablecer la contraseña de ${targetUser.nombre} al valor por defecto (su C.I./usuario)?`)) return;
+  try {
+    const res = await api.post(`/admin/users/${targetUser.id}/reset-password`);
+    alert(res.data.message || 'Contraseña restablecida con éxito.');
+  } catch (err: any) {
+    alert(err.response?.data?.error || 'Error al restablecer la contraseña.');
+  }
+};
+
 // ── Create User Modal ─────────────────────────────────────────────────────────
 const CreateUserModal = ({
-  onClose, onCreated, defaultRole, defaultParentId, campaigns
+  onClose, onCreated, defaultRole, defaultParentId, campaigns, editingUser
 }: {
   onClose: () => void;
   onCreated: () => void;
-  defaultRole: 'PADRINO' | 'COORDINADOR' | 'MIEMBRO_DE_MESA';
+  defaultRole?: 'PADRINO' | 'COORDINADOR' | 'MIEMBRO_DE_MESA';
   defaultParentId?: number;
   campaigns: Campaign[];
+  editingUser?: any;
 }) => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({
-    nombre: '', ci: '', telefono: '',
-    role: defaultRole,
-    assigned_list_id: '',
-    parent_id: defaultParentId?.toString() || '',
-    assigned_campaign_id: '',
-    photo_url: '',
+  const [form, setForm] = useState(() => {
+    if (editingUser) {
+      return {
+        nombre: editingUser.nombre || '',
+        ci: editingUser.ci || editingUser.username || '',
+        telefono: editingUser.telefono || '',
+        role: editingUser.role,
+        assigned_list_id: editingUser.assigned_list_id?.toString() || '',
+        parent_id: editingUser.parent_id?.toString() || '',
+        assigned_campaign_id: editingUser.assigned_campaign_id?.toString() || '',
+        photo_url: editingUser.photo_url || '',
+      };
+    }
+    return {
+      nombre: '', ci: '', telefono: '',
+      role: defaultRole || 'COORDINADOR',
+      assigned_list_id: '',
+      parent_id: defaultParentId?.toString() || '',
+      assigned_campaign_id: '',
+      photo_url: '',
+    };
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -218,11 +282,15 @@ const CreateUserModal = ({
         parent_id: form.parent_id ? parseInt(form.parent_id) : null,
         photo_url: form.photo_url || null,
       };
-      await api.post('/users', payload);
+      if (editingUser) {
+        await api.put(`/users/${editingUser.id}`, payload);
+      } else {
+        await api.post('/users', payload);
+      }
       onCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al crear usuario');
+      setError(err.response?.data?.error || err.message || 'Error al guardar usuario');
     } finally {
       setLoading(false);
     }
@@ -290,10 +358,10 @@ const CreateUserModal = ({
           </div>
 
           <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.4rem' }}>
-            Nuevo Miembro de Equipo
+            {editingUser ? 'Editar Miembro de Equipo' : 'Nuevo Miembro de Equipo'}
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', maxWidth: '300px', margin: '0 auto' }}>
-            Completa los datos para integrar un nuevo integrante a tu estructura.
+            {editingUser ? 'Modifica los datos del integrante de tu estructura.' : 'Completa los datos para integrar un nuevo integrante a tu estructura.'}
           </p>
         </div>
 
@@ -313,7 +381,7 @@ const CreateUserModal = ({
           </div>
 
           <div>
-            <label style={labelStyle}>Nombre Completo *</label>
+            <label style={labelStyle}>Nombre y Apellido *</label>
             <input 
               style={inputStyle} 
               placeholder="Ej: Juan Pérez" 
@@ -325,7 +393,7 @@ const CreateUserModal = ({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
             <div>
-              <label style={labelStyle}>Teléfono WhatsApp</label>
+              <label style={labelStyle}>Teléfono</label>
               <div style={{ position: 'relative' }}>
                 <Phone size={16} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
                 <input 
@@ -428,7 +496,7 @@ const CreateUserModal = ({
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
             transition: 'all 0.3s', boxShadow: loading ? 'none' : '0 10px 20px rgba(59,130,246,0.3)'
           }} onMouseEnter={e => !loading && (e.currentTarget.style.transform = 'translateY(-2px)')} onMouseLeave={e => !loading && (e.currentTarget.style.transform = 'translateY(0)')}>
-            {loading ? <><Loader size={20} className="spin" /> Procesando...</> : <><CheckCircle size={20} /> Confirmar Alta</>}
+            {loading ? <><Loader size={20} className="spin" /> Procesando...</> : <><CheckCircle size={20} /> {editingUser ? 'Guardar Cambios' : 'Confirmar Alta'}</>}
           </button>
         </form>
       </div>
@@ -446,10 +514,13 @@ const CreateUserModal = ({
 
 // ── Padrino Row ────────────────────────────────────────────────────────────────
 const PadrinoRow = ({
-  padrino, campaigns, onRefresh, canCreate
+  padrino, campaigns, onRefresh, canCreate, onEditUser, onDeleteUser
 }: {
   padrino: TeamUser; campaigns: Campaign[]; onRefresh: () => void; canCreate: boolean;
+  onEditUser: (user: any, onSave: () => void) => void;
+  onDeleteUser: (user: any, onDelete: () => void) => void;
 }) => {
+  const { user: currentUser } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [coordinators, setCoordinators] = useState<TeamUser[]>([]);
   const [loadingCoords, setLoadingCoords] = useState(false);
@@ -519,6 +590,37 @@ const PadrinoRow = ({
             <div style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 700 }}>Logística</div>
             <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--yellow)' }}>{padrino.needs_transport ?? 0}</div>
           </div>
+          {canEditUser(currentUser, padrino) && (
+            <div style={{ display: 'flex', gap: '0.2rem' }} onClick={e => e.stopPropagation()}>
+              <button 
+                title="Editar Usuario"
+                onClick={() => onEditUser(padrino, onRefresh)}
+                style={actionButtonStyle}
+                onMouseEnter={e => e.currentTarget.style.color = '#3B82F6'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+              >
+                <Edit size={14} />
+              </button>
+              <button 
+                title="Restablecer Contraseña"
+                onClick={() => handleResetPassword(padrino)}
+                style={actionButtonStyle}
+                onMouseEnter={e => e.currentTarget.style.color = '#F59E0B'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+              >
+                <Key size={14} />
+              </button>
+              <button 
+                title="Eliminar Usuario"
+                onClick={() => onDeleteUser(padrino, onRefresh)}
+                style={actionButtonStyle}
+                onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          )}
           {expanded ? <ChevronDown size={16} style={{ color: 'var(--text-3)' }} /> : <ChevronRight size={16} style={{ color: 'var(--text-3)' }} />}
         </div>
       </div>
@@ -550,49 +652,91 @@ const PadrinoRow = ({
             </div>
           )}
 
-          {coordinators.map(c => (
-            <div key={c.id} style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-              padding: '0.75rem 1rem',
-              background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.1)',
-              borderRadius: '10px', marginBottom: '0.35rem'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
-                border: '2px solid rgba(59,130,246,0.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem'
+          {coordinators.map(c => {
+            const canEditC = canEditUser(currentUser, c, padrino);
+            return (
+              <div key={c.id} style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                padding: '0.75rem 1rem',
+                background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.1)',
+                borderRadius: '10px', marginBottom: '0.35rem'
               }}>
-                {!c.photo_url && '👤'}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text)' }}>{c.nombre}</span>
-                  <RolePill role="COORDINADOR" />
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+                  background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
+                  border: '2px solid rgba(59,130,246,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem'
+                }}>
+                  {!c.photo_url && '👤'}
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2' + 'rem', flexWrap: 'wrap' }}>
-                  {c.ci && <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>CI: {c.ci}</span>}
-                  {c.telefono && (
-                    <a href={`https://wa.me/595${c.telefono.replace(/\D/g,'').replace(/^0/,'')}`} target="_blank" rel="noreferrer"
-                      style={{ fontSize: '0.65rem', color: '#22C55E', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
-                      onClick={e => e.stopPropagation()}>
-                      <Phone size={10} /> {c.telefono}
-                    </a>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text)' }}>{c.nombre}</span>
+                    <RolePill role="COORDINADOR" />
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                    {c.ci && <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>CI: {c.ci}</span>}
+                    {c.telefono && (
+                      <a href={`https://wa.me/595${c.telefono.replace(/\D/g,'').replace(/^0/,'')}`} target="_blank" rel="noreferrer"
+                        style={{ fontSize: '0.65rem', color: '#22C55E', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                        onClick={e => e.stopPropagation()}>
+                        <Phone size={10} /> {c.telefono}
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                  <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                    <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>{c.total_captures ?? 0}</div>
+                  </div>
+                  <StatDot count={c.green || 0} color="#22C55E" />
+                  <StatDot count={c.yellow || 0} color="#EAB308" />
+                  <StatDot count={c.red || 0} color="#EF4444" />
+                  <StatDot count={c.transport_total || 0} color="var(--plra-300)" />
+                  {canEditC && (
+                    <div style={{ display: 'flex', gap: '0.2rem' }} onClick={e => e.stopPropagation()}>
+                      <button 
+                        title="Editar Coordinador"
+                        onClick={() => onEditUser(c, () => {
+                          setCoordinators([]);
+                          loadCoordinators();
+                          onRefresh();
+                        })}
+                        style={actionButtonStyle}
+                        onMouseEnter={e => e.currentTarget.style.color = '#3B82F6'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button 
+                        title="Restablecer Contraseña"
+                        onClick={() => handleResetPassword(c)}
+                        style={actionButtonStyle}
+                        onMouseEnter={e => e.currentTarget.style.color = '#F59E0B'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                      >
+                        <Key size={14} />
+                      </button>
+                      <button 
+                        title="Eliminar Coordinador"
+                        onClick={() => onDeleteUser(c, () => {
+                          setCoordinators([]);
+                          loadCoordinators();
+                          onRefresh();
+                        })}
+                        style={actionButtonStyle}
+                        onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
-                  <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)' }}>{c.total_captures ?? 0}</div>
-                </div>
-                <StatDot count={c.green || 0} color="#22C55E" />
-                <StatDot count={c.yellow || 0} color="#EAB308" />
-                <StatDot count={c.red || 0} color="#EF4444" />
-                <StatDot count={c.transport_total || 0} color="var(--plra-300)" />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -625,6 +769,27 @@ const TeamPanel = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreatePadrino, setShowCreatePadrino] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const handleDeleteUser = async (targetUser: any, onDeleted: () => void) => {
+    if (!window.confirm(`¿Está seguro de que desea eliminar a ${targetUser.nombre} de su equipo? Esta acción no se puede deshacer.`)) return;
+    try {
+      await api.delete(`/users/${targetUser.id}`);
+      onDeleted();
+      alert('Usuario eliminado correctamente.');
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Error al eliminar usuario');
+    }
+  };
+
+  const handleEditUser = (targetUser: any, onSave: () => void) => {
+    setEditingUser({
+      ...targetUser,
+      onSave,
+    });
+    setShowEditModal(true);
+  };
 
   // Reports states
   const [reportType, setReportType] = useState<'padrinos' | 'coordinators' | 'electors' | 'locales'>('padrinos');
@@ -650,8 +815,8 @@ const TeamPanel = () => {
 
   const availableDistricts = useMemo(() => {
     const set = new Set<string>();
-    const fp = reportData?.filterPadrinos || padrinos;
-    const fc = reportData?.filterCoordinators || myCoordinators;
+    const fp = reportData?.padrinos || padrinos;
+    const fc = reportData?.coordinators || myCoordinators;
     fp.forEach((p: any) => p.distrito && set.add(p.distrito));
     fc.forEach((c: any) => c.distrito && set.add(c.distrito));
     if (reportData?.electors) reportData.electors.forEach((e: any) => {
@@ -666,8 +831,8 @@ const TeamPanel = () => {
 
   const availableLists = useMemo(() => {
     const set = new Set<string>();
-    const fp = reportData?.filterPadrinos || padrinos;
-    const fc = reportData?.filterCoordinators || myCoordinators;
+    const fp = reportData?.padrinos || padrinos;
+    const fc = reportData?.coordinators || myCoordinators;
     fp.forEach((p: any) => p.list_number && set.add(String(p.list_number)));
     fc.forEach((c: any) => c.list_number && set.add(String(c.list_number)));
     if (!reportData) {
@@ -679,7 +844,7 @@ const TeamPanel = () => {
   }, [reportData, campaigns, padrinos, myCoordinators]);
 
   const availablePadrinos = useMemo(() => {
-    const list = reportData?.filterPadrinos?.length ? reportData.filterPadrinos : padrinos;
+    const list = reportData?.padrinos?.length ? reportData.padrinos : padrinos;
     return list.filter((p: any) => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
@@ -688,7 +853,7 @@ const TeamPanel = () => {
   }, [reportData, padrinos, selectedDistrictFilter, selectedListFilter]);
 
   const availableCoordinators = useMemo(() => {
-    const list = reportData?.filterCoordinators?.length ? reportData.filterCoordinators : myCoordinators;
+    const list = reportData?.coordinators?.length ? reportData.coordinators : myCoordinators;
     return list.filter((c: any) => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
@@ -1231,6 +1396,8 @@ const TeamPanel = () => {
                     campaigns={campaigns}
                     onRefresh={load}
                     canCreate={true}
+                    onEditUser={handleEditUser}
+                    onDeleteUser={handleDeleteUser}
                   />
                 ))
               )}
@@ -1261,46 +1428,80 @@ const TeamPanel = () => {
                   <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No tienes coordinadores asignados todavía.</p>
                 </div>
               ) : (
-                myCoordinators.map(c => (
-                  <div key={c.id} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                    padding: '0.9rem 1.1rem',
-                    background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.12)',
-                    borderRadius: '12px', marginBottom: '0.4rem'
-                  }}>
-                    <div style={{
-                      width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
-                      background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
-                      border: '2px solid rgba(59,130,246,0.3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem'
+                myCoordinators.map(c => {
+                  const canEditC = canEditUser(user, c);
+                  return (
+                    <div key={c.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      padding: '0.9rem 1.1rem',
+                      background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.12)',
+                      borderRadius: '12px', marginBottom: '0.4rem'
                     }}>
-                      {!c.photo_url && '👤'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.9rem' }}>{c.nombre}</span>
-                        <RolePill role="COORDINADOR" />
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
+                        background: c.photo_url ? `url(${getImageUrl(c.photo_url)}) center/cover` : 'rgba(59,130,246,0.2)',
+                        border: '2px solid rgba(59,130,246,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem'
+                      }}>
+                        {!c.photo_url && '👤'}
                       </div>
-                      {c.telefono && (
-                        <a href={`https://wa.me/595${c.telefono.replace(/\D/g,'').replace(/^0/,'')}`}
-                          target="_blank" rel="noreferrer"
-                          style={{ fontSize: '0.68rem', color: '#22C55E', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-                          <Phone size={10} /> {c.telefono}
-                        </a>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                      <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
-                        <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)' }}>{c.total_captures ?? 0}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.9rem' }}>{c.nombre}</span>
+                          <RolePill role="COORDINADOR" />
+                        </div>
+                        {c.telefono && (
+                          <a href={`https://wa.me/595${c.telefono.replace(/\D/g,'').replace(/^0/,'')}`}
+                            target="_blank" rel="noreferrer"
+                            style={{ fontSize: '0.68rem', color: '#22C55E', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
+                            <Phone size={10} /> {c.telefono}
+                          </a>
+                        )}
                       </div>
-                      <StatDot count={c.green || 0} color="#22C55E" />
-                      <StatDot count={c.yellow || 0} color="#EAB308" />
-                      <StatDot count={c.red || 0} color="#EF4444" />
-                      <StatDot count={c.transport_total || 0} color="var(--plra-300)" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                        <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                          <div style={{ fontSize: '0.45rem', color: 'var(--text-3)', fontWeight: 800 }}>TOTAL</div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)' }}>{c.total_captures ?? 0}</div>
+                        </div>
+                        <StatDot count={c.green || 0} color="#22C55E" />
+                        <StatDot count={c.yellow || 0} color="#EAB308" />
+                        <StatDot count={c.red || 0} color="#EF4444" />
+                        <StatDot count={c.transport_total || 0} color="var(--plra-300)" />
+                        {canEditC && (
+                          <div style={{ display: 'flex', gap: '0.2rem' }} onClick={e => e.stopPropagation()}>
+                            <button 
+                              title="Editar Coordinador"
+                              onClick={() => handleEditUser(c, load)}
+                              style={actionButtonStyle}
+                              onMouseEnter={e => e.currentTarget.style.color = '#3B82F6'}
+                              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button 
+                              title="Restablecer Contraseña"
+                              onClick={() => handleResetPassword(c)}
+                              style={actionButtonStyle}
+                              onMouseEnter={e => e.currentTarget.style.color = '#F59E0B'}
+                              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                            >
+                              <Key size={14} />
+                            </button>
+                            <button 
+                              title="Eliminar Coordinador"
+                              onClick={() => handleDeleteUser(c, load)}
+                              style={actionButtonStyle}
+                              onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
+                              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </>
           )}
@@ -1876,6 +2077,24 @@ const TeamPanel = () => {
           campaigns={campaigns}
           onClose={() => setShowCreatePadrino(false)}
           onCreated={load}
+        />
+      )}
+
+      {showEditModal && editingUser && (
+        <CreateUserModal
+          editingUser={editingUser}
+          campaigns={campaigns}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingUser(null);
+          }}
+          onCreated={() => {
+            if (editingUser.onSave) {
+              editingUser.onSave();
+            } else {
+              load();
+            }
+          }}
         />
       )}
     </div>

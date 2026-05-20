@@ -1837,6 +1837,103 @@ app.get('/api/coordinators/:id/history', (req, res) => {
   }
 });
 
+const canModifyUser = (requesterId: string | number | undefined, requesterRole: string, targetUserId: string | number): boolean => {
+  const reqRole = requesterRole.toUpperCase().trim();
+  if (reqRole === 'SUPERUSUARIO' || reqRole === 'SUPER_ADMIN') {
+    return true;
+  }
+  if (!requesterId) return false;
+
+  const reqId = Number(requesterId);
+  const targetId = Number(targetUserId);
+
+  if (reqId === targetId) return true;
+
+  try {
+    const target = db.prepare('SELECT role, parent_id, assigned_campaign_id FROM users WHERE id = ?').get(targetId) as any;
+    if (!target) return false;
+
+    // First, campaign isolation check: target must be in the same campaign (unless requester is superuser, handled above)
+    const requesterInfo = getCachedUserInfo(String(reqId));
+    if (target.assigned_campaign_id && requesterInfo?.campaign_id && target.assigned_campaign_id !== requesterInfo.campaign_id) {
+      return false;
+    }
+
+    // 1. Direct parent sovereignty: if the requester is the direct parent of target, they can edit.
+    if (target.parent_id === reqId) return true;
+
+    // 2. Subjefe hierarchy: can edit if target's parent is a PADRINO and that PADRINO's parent is the requester.
+    if (reqRole === 'SUBJEFE') {
+      if (target.parent_id) {
+        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(target.parent_id) as any;
+        if (parent && parent.role === 'PADRINO' && parent.parent_id === reqId) {
+          return true;
+        }
+      }
+    }
+
+    // 3. Jefe de Campaña hierarchy: can edit if target's parent is a PADRINO and that PADRINO's parent is the requester.
+    if (reqRole === 'JEFE_CAMPANA' || reqRole === 'CANDIDATO') {
+      if (target.parent_id) {
+        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(target.parent_id) as any;
+        if (parent && parent.role === 'PADRINO' && parent.parent_id === reqId) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  } catch (err) {
+    console.error('Error in canModifyUser check:', err);
+    return false;
+  }
+};
+
+const isAllowedParent = (requesterId: string | number, requesterRole: string, parentId: string | number | null, createdRole: string): boolean => {
+  const reqRole = requesterRole.toUpperCase().trim();
+  if (reqRole === 'SUPERUSUARIO' || reqRole === 'SUPER_ADMIN') {
+    return true;
+  }
+  
+  const reqId = Number(requesterId);
+  const pId = parentId ? Number(parentId) : null;
+  
+  // 1. If requester is PADRINO:
+  if (reqRole === 'PADRINO') {
+    return pId === reqId;
+  }
+
+  // 2. If requester is SUBJEFE:
+  if (reqRole === 'SUBJEFE') {
+    if (createdRole === 'PADRINO') {
+      return pId === reqId;
+    }
+    if (createdRole === 'COORDINADOR' || createdRole === 'MIEMBRO_DE_MESA') {
+      if (pId === reqId) return true;
+      if (pId) {
+        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(pId) as any;
+        return parent && parent.role === 'PADRINO' && parent.parent_id === reqId;
+      }
+    }
+  }
+
+  // 3. If requester is JEFE_CAMPANA:
+  if (reqRole === 'JEFE_CAMPANA' || reqRole === 'CANDIDATO') {
+    if (createdRole === 'SUBJEFE' || createdRole === 'PADRINO') {
+      return pId === reqId;
+    }
+    if (createdRole === 'COORDINADOR' || createdRole === 'MIEMBRO_DE_MESA') {
+      if (pId === reqId) return true;
+      if (pId) {
+        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(pId) as any;
+        return parent && parent.role === 'PADRINO' && parent.parent_id === reqId;
+      }
+    }
+  }
+
+  return false;
+};
+
 app.post('/api/users', (req, res) => {
   const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
   const requesterId   = req.headers['x-user-id'] as string;
@@ -1871,6 +1968,25 @@ app.post('/api/users', (req, res) => {
     const bodyAssigned = assigned_campaign_id || campaign_id;
     if (bodyAssigned && parseInt(bodyAssigned) !== forcedCampaignId) {
       return res.status(403).json({ error: 'No puedes crear usuarios en otra campaña.' });
+    }
+  }
+
+  // Auto-assign and validate parent_id based on creator
+  let finalParentId = parent_id ? Number(parent_id) : null;
+  if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
+    const reqId = Number(requesterId);
+    if (!finalParentId) {
+      if (requesterRole === 'PADRINO') {
+        finalParentId = reqId;
+      } else if (requesterRole === 'SUBJEFE' && role === 'PADRINO') {
+        finalParentId = reqId;
+      } else if ((requesterRole === 'JEFE_CAMPANA' || requesterRole === 'CANDIDATO') && (role === 'SUBJEFE' || role === 'PADRINO')) {
+        finalParentId = reqId;
+      }
+    }
+
+    if (!isAllowedParent(reqId, requesterRole, finalParentId, role)) {
+      return res.status(403).json({ error: 'No tienes permisos para asignar el superior/padre indicado para este usuario.' });
     }
   }
   // ─────────────────────────────────────────────────────────────────────────
@@ -1912,7 +2028,7 @@ app.post('/api/users', (req, res) => {
       req.body.assigned_mesa || null,
       nombre,
       photo_url || null,
-      parent_id || null,
+      finalParentId,
       telefono || null,
       cleanCI,
       distrito || null
@@ -1962,7 +2078,10 @@ app.get('/api/users', (req, res) => {
 });
 
 app.delete('/api/users/:id', (req, res) => {
+  const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+  const requesterId   = req.headers['x-user-id'] as string;
   const userId = req.params.id;
+
   try {
     const userToDelete = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
     if (userToDelete?.username === 'admin') {
@@ -1972,6 +2091,12 @@ app.delete('/api/users/:id', (req, res) => {
     const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
+      if (!canModifyUser(requesterId, requesterRole, userId)) {
+        return res.status(403).json({ error: 'No tienes permisos para eliminar este usuario.' });
+      }
     }
 
     const transaction = db.transaction(() => {
@@ -2035,16 +2160,33 @@ app.put('/api/users/:id', (req, res) => {
   const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
   const requesterId   = req.headers['x-user-id'] as string;
 
-  // JEFE_CAMPANA / PADRINO: only edit users within their own campaign
   if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
-    const requesterInfo = getCachedUserInfo(requesterId);
-    const targetUser = db.prepare('SELECT assigned_campaign_id FROM users WHERE id = ?').get(req.params.id) as any;
-    if (targetUser && requesterInfo?.campaign_id && targetUser.assigned_campaign_id !== requesterInfo.campaign_id) {
-      return res.status(403).json({ error: 'No puedes editar usuarios de otra campaña.' });
+    if (!canModifyUser(requesterId, requesterRole, req.params.id)) {
+      return res.status(403).json({ error: 'No tienes permisos para modificar este usuario.' });
     }
   }
 
   const { role, assigned_list_id, nombre, photo_url, parent_id, telefono, ci } = req.body;
+
+  if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
+    const ALLOWED_ROLES_TO_CREATE: Record<string, string[]> = {
+      JEFE_CAMPANA: ['PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA'],
+      PADRINO:      ['SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA'],
+      SUBJEFE:      ['PADRINO','COORDINADOR','MIEMBRO_DE_MESA'],
+    };
+    const allowed = ALLOWED_ROLES_TO_CREATE[requesterRole] || [];
+    if (role && !allowed.includes(role.toUpperCase())) {
+      return res.status(403).json({ error: `Tu rol (${requesterRole}) no puede asignar el rol ${role}.` });
+    }
+
+    if (parent_id !== undefined) {
+      const finalParentId = parent_id ? Number(parent_id) : null;
+      const targetRole = role || (db.prepare('SELECT role FROM users WHERE id = ?').get(req.params.id) as any)?.role;
+      if (!isAllowedParent(Number(requesterId), requesterRole, finalParentId, targetRole)) {
+        return res.status(403).json({ error: 'No tienes permisos para asignar el superior/padre indicado para este usuario.' });
+      }
+    }
+  }
   const cleanCI = ci ? ci.toString().replace(/\./g, '') : null;
   try {
     db.prepare(`
@@ -2075,6 +2217,15 @@ app.put('/api/users/:id', (req, res) => {
 
 
 app.post('/api/admin/users/:id/reset-password', (req, res) => {
+  const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+  const requesterId   = req.headers['x-user-id'] as string;
+
+  if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
+    if (!canModifyUser(requesterId, requesterRole, req.params.id)) {
+      return res.status(403).json({ error: 'No tienes permisos para resetear la contraseña de este usuario.' });
+    }
+  }
+
   try {
     const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.params.id) as any;
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
