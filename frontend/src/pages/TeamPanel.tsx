@@ -4,7 +4,7 @@ import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import 'jspdf-autotable';
 
 interface TeamUser {
   id: number;
@@ -1064,210 +1064,294 @@ const TeamPanel = () => {
   };
 
   const exportToPDF = async () => {
-    const el = document.getElementById('printable-report-area');
-    if (!reportData || !el) return;
+    if (!reportData) return;
     setGeneratingPDF(true);
 
     try {
       const A4_W_MM = 210;
       const A4_H_MM = 297;
-      const FOOTER_H_MM = 8;
-      const SCALE = 2;
-
-      const footerEl = el.querySelector('[data-report-footer]') as HTMLElement;
-      if (footerEl) footerEl.style.display = 'none';
-
-      const avatars = el.querySelectorAll('.avatar-print') as NodeListOf<HTMLElement>;
-
-      // Pre-load all avatar images to avoid CORS issues with html2canvas
-      const imageLoadPromises: Promise<void>[] = [];
-      avatars.forEach((av) => {
-        const bg = av.style.background;
-        const urlMatch = bg.match(/url\(["']?([^"')]+)["']?\)/);
-        if (urlMatch && urlMatch[1]) {
-          const imgUrl = urlMatch[1];
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          imageLoadPromises.push(new Promise((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            img.src = imgUrl;
-          }));
-        }
-      });
-
-      // Wait for all images to load (max 3 seconds)
-      await Promise.race([
-        Promise.all(imageLoadPromises),
-        new Promise(resolve => setTimeout(resolve, 3000))
-      ]);
-
-      const headerEl = el.querySelector('.print-header') as HTMLElement;
-      const tableEl = el.querySelector('table') as HTMLElement;
-      const tableOffsetTop = tableEl ? tableEl.offsetTop : 0;
-
-      let headerAreaPx = 0;
-      if (headerEl) {
-        headerAreaPx = Math.ceil((headerEl.offsetTop + headerEl.offsetHeight + 15) * SCALE);
-      }
-
-      let fullCanvas: HTMLCanvasElement;
-      try {
-        fullCanvas = await html2canvas(el, {
-          scale: SCALE, 
-          useCORS: true, 
-          allowTaint: true,
-          backgroundColor: '#ffffff', 
-          logging: false, 
-          imageTimeout: 5000, 
-          removeContainer: true,
-          width: el.scrollWidth,
-          height: el.scrollHeight,
-          windowWidth: el.scrollWidth > 1100 ? el.scrollWidth : 1200
-        });
-      } finally {
-        if (footerEl) footerEl.style.display = '';
-      }
-
-      if (!fullCanvas || fullCanvas.width === 0 || fullCanvas.height === 0) {
-        throw new Error('html2canvas produced an empty canvas');
-      }
-
-      const pxPerMm = fullCanvas.width / A4_W_MM;
-      const usableHeightPx = (A4_H_MM - FOOTER_H_MM) * pxPerMm;
       
-      // Calculate repeat-header size and repeat-thead size
-      let contentPerSubPage = usableHeightPx - headerAreaPx;
-      let theadAreaPx = 0;
-      const theadEl = el.querySelector('thead') as HTMLElement;
-      if (theadEl) {
-        theadAreaPx = Math.ceil(theadEl.offsetHeight * SCALE);
-        contentPerSubPage -= theadAreaPx;
-      }
-
-      // Pre-capture the thead canvas to repeat it on subsequent pages
-      let theadCanvas: HTMLCanvasElement | null = null;
-      if (theadEl && theadAreaPx > 0) {
-        const theadRelTop = theadEl.offsetTop + tableOffsetTop;
-        theadCanvas = document.createElement('canvas');
-        theadCanvas.width = fullCanvas.width;
-        theadCanvas.height = theadAreaPx;
-        const tCtx = theadCanvas.getContext('2d')!;
-        tCtx.fillStyle = '#ffffff';
-        tCtx.fillRect(0, 0, theadCanvas.width, theadCanvas.height);
-        tCtx.drawImage(
-          fullCanvas,
-          0, Math.floor(theadRelTop * SCALE),
-          fullCanvas.width, theadAreaPx,
-          0, 0,
-          fullCanvas.width, theadAreaPx
-        );
-      }
-
-      // Collect bounding positions of all table rows to prevent cutting them
-      const rowElements = el.querySelectorAll('tbody tr');
-      const rowPositions = Array.from(rowElements).map((row) => {
-        const rEl = row as HTMLElement;
-        const relTop = rEl.offsetTop + tableOffsetTop;
-        const relBottom = relTop + rEl.offsetHeight;
-        return {
-          top: relTop * SCALE,
-          bottom: relBottom * SCALE,
-          height: rEl.offsetHeight * SCALE
-        };
-      });
-
-      // Compute optimal page cuts
-      const pageCuts: number[] = [0];
-      let currentY = 0;
-      let isFirstPage = true;
-
-      while (currentY < fullCanvas.height) {
-        const limit = isFirstPage ? usableHeightPx : contentPerSubPage;
-        const targetY = currentY + limit;
-
-        if (targetY >= fullCanvas.height) {
-          pageCuts.push(fullCanvas.height);
-          break;
-        }
-
-        // Find the last row that fits completely within the page budget
-        const candidates = rowPositions.filter(
-          r => r.top >= currentY - 2 && r.bottom <= targetY + 2
-        );
-
-        let cutY = -1;
-        if (candidates.length > 0) {
-          cutY = candidates[candidates.length - 1].bottom;
-        }
-
-        // Fallback: if no candidates or no progress, use targetY
-        if (cutY <= currentY) {
-          cutY = targetY;
-        }
-
-        pageCuts.push(cutY);
-        currentY = cutY;
-        isFirstPage = false;
-      }
-
-      const totalPages = pageCuts.length - 1;
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const totalPagesExp = '{total_pages_count_string}';
 
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) doc.addPage();
+      // Title & Subtitle block
+      let title = '';
+      let subtitle = '';
+      if (reportType === 'padrinos') {
+        title = 'Listado y Reporte de Estructura de Padrinos';
+        subtitle = 'Resumen consolidado de la cúpula de padrinos activos en el distrito, incluyendo sus respectivas redes de coordinadores y cobertura de capturas de campo.';
+      } else if (reportType === 'coordinators') {
+        title = 'Listado y Reporte de Estructura de Coordinadores';
+        subtitle = 'Detalle completo de coordinadores de campo asignados, sus padrinos directos y la cuantificación cromática de sus gestiones de captación.';
+      } else if (reportType === 'electors') {
+        title = 'Registro Global de Electores Captados';
+        subtitle = 'Listado detallado de electores ingresados y verificados en calle, indicando su nivel de compromiso (Semáforo de Intención) y su asignación logística de transporte.';
+      } else if (reportType === 'locales') {
+        title = 'Resumen de Cobertura y Semáforo por Locales de Votación';
+        subtitle = 'Auditoría de cobertura geográfica y territorial. Distribución de capturas y porcentaje de electores seguros en cada colegio electoral oficial.';
+      }
 
-        const startY = pageCuts[page];
-        const endY = pageCuts[page + 1];
-        const sliceH = endY - startY;
-
-        if (page === 0) {
-          // Page 1 contains everything from 0 to pageCuts[1]
-          const sliceCanvas = document.createElement('canvas');
-          sliceCanvas.width = fullCanvas.width;
-          sliceCanvas.height = sliceH;
-          const ctx = sliceCanvas.getContext('2d')!;
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-          ctx.drawImage(fullCanvas, 0, 0, fullCanvas.width, sliceH, 0, 0, fullCanvas.width, sliceH);
-          doc.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, sliceH / pxPerMm);
-        } else {
-          // Page > 1: repeat header + repeat table headers + draw content slice
-          const headerMM = headerAreaPx / pxPerMm;
-          if (headerAreaPx > 0) {
-            const hCanvas = document.createElement('canvas');
-            hCanvas.width = fullCanvas.width;
-            hCanvas.height = headerAreaPx;
-            const hCtx = hCanvas.getContext('2d')!;
-            hCtx.fillStyle = '#ffffff';
-            hCtx.fillRect(0, 0, hCanvas.width, hCanvas.height);
-            hCtx.drawImage(fullCanvas, 0, 0, fullCanvas.width, headerAreaPx, 0, 0, fullCanvas.width, headerAreaPx);
-            doc.addImage(hCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, headerMM);
-          }
-
-          const theadMM = theadAreaPx / pxPerMm;
-          if (theadCanvas && theadAreaPx > 0) {
-            doc.addImage(theadCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, headerMM, A4_W_MM, theadMM);
-          }
-
-          if (sliceH > 0) {
-            const cCanvas = document.createElement('canvas');
-            cCanvas.width = fullCanvas.width;
-            cCanvas.height = sliceH;
-            const cCtx = cCanvas.getContext('2d')!;
-            cCtx.fillStyle = '#ffffff';
-            cCtx.fillRect(0, 0, cCanvas.width, cCanvas.height);
-            cCtx.drawImage(fullCanvas, 0, startY, fullCanvas.width, sliceH, 0, 0, fullCanvas.width, sliceH);
-            doc.addImage(cCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, headerMM + theadMM, A4_W_MM, sliceH / pxPerMm);
-          }
+      // Helper for column alignments and styles
+      const getColumnStyles = (type: string) => {
+        if (type === 'padrinos') {
+          return {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
+            1: { halign: 'left' },
+            2: { halign: 'center', fontStyle: 'bold', textColor: [124, 58, 237] },
+            3: { halign: 'center' },
+            4: { halign: 'center', fontStyle: 'bold' },
+            5: { halign: 'center', textColor: [22, 163, 74], fontStyle: 'bold' },
+            6: { halign: 'center', textColor: [217, 119, 6], fontStyle: 'bold' },
+            7: { halign: 'center', textColor: [220, 38, 38], fontStyle: 'bold' },
+            8: { halign: 'center', textColor: [124, 58, 237], fontStyle: 'bold' },
+            9: { halign: 'center', textColor: [37, 99, 235], fontStyle: 'bold' },
+          };
         }
+        if (type === 'coordinators') {
+          return {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
+            1: { fontStyle: 'bold', textColor: [107, 33, 168] },
+            2: { halign: 'left' },
+            3: { halign: 'center', fontStyle: 'bold' },
+            4: { halign: 'center', textColor: [22, 163, 74], fontStyle: 'bold' },
+            5: { halign: 'center', textColor: [217, 119, 6], fontStyle: 'bold' },
+            6: { halign: 'center', textColor: [220, 38, 38], fontStyle: 'bold' },
+            7: { halign: 'center', textColor: [124, 58, 237], fontStyle: 'bold' },
+            8: { halign: 'center', textColor: [37, 99, 235], fontStyle: 'bold' },
+          };
+        }
+        if (type === 'electors') {
+          return {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
+            1: { halign: 'left' },
+            2: { halign: 'left' },
+            3: { halign: 'center', fontStyle: 'bold' },
+            4: { halign: 'center', fontStyle: 'bold' },
+            5: { halign: 'left' },
+            6: { halign: 'center' },
+            7: { halign: 'center', fontStyle: 'bold' },
+          };
+        }
+        if (type === 'locales') {
+          return {
+            0: { fontStyle: 'bold', textColor: [30, 58, 110] },
+            1: { halign: 'left' },
+            2: { halign: 'center', fontStyle: 'bold' },
+            3: { halign: 'center', textColor: [22, 163, 74], fontStyle: 'bold' },
+            4: { halign: 'center', textColor: [217, 119, 6], fontStyle: 'bold' },
+            5: { halign: 'center', textColor: [220, 38, 38], fontStyle: 'bold' },
+            6: { halign: 'center', textColor: [124, 58, 237], fontStyle: 'bold' },
+            7: { halign: 'center', textColor: [37, 99, 235], fontStyle: 'bold' },
+            8: { halign: 'center', fontStyle: 'bold', textColor: [30, 58, 110] },
+          };
+        }
+        return {};
+      };
+
+      // 1. Draw page header logo & text (vector format)
+      const drawHeader = () => {
+        // Rounded blue box logo
+        doc.setFillColor(30, 58, 110);
+        doc.roundedRect(15, 12, 10, 10, 2, 2, 'F');
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.6);
+        doc.line(17, 17, 19, 19);
+        doc.line(19, 19, 23, 14);
+
+        // Branding
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.setTextColor(30, 58, 110);
+        doc.text('Inte', 27, 17.5);
+        doc.setTextColor(16, 185, 129);
+        doc.text('lecciones', 36.2, 17.5);
 
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(5);
+        doc.setFontSize(6.8);
         doc.setTextColor(100, 116, 139);
-        doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial de uso interno`, 15, A4_H_MM - 5);
-        doc.setFontSize(6.2);
-        doc.text(`Página ${page + 1} de ${totalPages}`, A4_W_MM - 15, A4_H_MM - 5, { align: 'right' });
+        doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 27, 21.2);
+
+        // Metadata Right Block
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(30, 58, 110);
+        doc.text('REPORTE DE CAMPAÑA', 195, 15, { align: 'right' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(71, 85, 105);
+        const districtText = selectedDistrictFilter === 'ALL' ? 'Todos los Distritos' : selectedDistrictFilter;
+        doc.text(`Distrito: ${districtText}`, 195, 19, { align: 'right' });
+        const listText = selectedListFilter === 'ALL' ? 'Todas las Listas' : `Lista ${selectedListFilter}`;
+        doc.text(`Lista de Concejales: ${listText}`, 195, 22.5, { align: 'right' });
+        doc.text(`Fecha Imp.: ${new Date().toLocaleString('es-PY')}`, 195, 26, { align: 'right' });
+
+        // Divider
+        doc.setDrawColor(30, 58, 110);
+        doc.setLineWidth(0.6);
+        doc.line(15, 29, 195, 29);
+      };
+
+      drawHeader();
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(title.toUpperCase(), 15, 36);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      const splitSubtitle = doc.splitTextToSize(subtitle, 180);
+      doc.text(splitSubtitle, 15, 40);
+
+      // Generate Table Headers and Rows
+      let headers: string[] = [];
+      let rows: any[][] = [];
+
+      if (reportType === 'padrinos') {
+        headers = ['Padrino / Cédula', 'Teléfono', 'Lista', 'Coords', 'Total', 'Verde', 'Amarillo', 'Rojo', 'Morado', 'Transp.'];
+        rows = filteredPadrinos.map(p => [
+          `${p.nombre}\nCI: ${p.ci || p.username}`,
+          p.telefono || '—',
+          p.list_number ? `Lista ${p.list_number}` : '—',
+          p.coordinator_count || 0,
+          p.total_captures || 0,
+          p.green || 0,
+          p.yellow || 0,
+          p.red || 0,
+          p.purple || 0,
+          p.needs_transport || 0
+        ]);
+      } else if (reportType === 'coordinators') {
+        headers = ['Coordinador / CI', 'Padrino Asignado', 'Teléfono', 'Total', 'Verde', 'Amarillo', 'Rojo', 'Morado', 'Transp.'];
+        rows = filteredCoordinators.map(c => [
+          `${c.nombre}\nCI: ${c.ci || c.username}`,
+          c.parent_name || 'Sin Padrino',
+          c.telefono || '—',
+          c.total_captures || 0,
+          c.green || 0,
+          c.yellow || 0,
+          c.red || 0,
+          c.purple || 0,
+          c.needs_transport || 0
+        ]);
+      } else if (reportType === 'electors') {
+        headers = ['Elector / CI', 'Teléfono', 'Local de Votación', 'Mesa', 'Orden', 'Captado Por', 'Intención', 'Transp.'];
+        rows = filteredElectors.map(e => [
+          `${e.nombre} ${e.apellido}\nCI: ${e.elector_ci}`,
+          e.elector_telefono || '—',
+          e.local_votacion,
+          e.mesa || '—',
+          e.orden || '—',
+          `${e.coordinator_name}\n${e.padrino_name ? `Padrino: ${e.padrino_name}` : 'Asignación Directa'}`,
+          e.traffic_light,
+          e.needs_transport ? 'SÍ' : 'NO'
+        ]);
+      } else if (reportType === 'locales') {
+        headers = ['Local de Votación', 'Distrito', 'Total Captados', 'Verde', 'Amarillo', 'Rojo', 'Morado', 'Recl. Transp.', 'Cobertura'];
+        rows = filteredLocales.map(l => {
+          const total = l.total_captures || 1;
+          const pctGreen = Math.round((l.green / total) * 100);
+          return [
+            l.local_votacion,
+            l.distrito,
+            l.total_captures,
+            l.green,
+            l.yellow,
+            l.red,
+            l.purple,
+            l.needs_transport,
+            `${pctGreen}%`
+          ];
+        });
+      }
+
+      // Draw the table
+      (doc as any).autoTable({
+        startY: 47,
+        head: [headers],
+        body: rows,
+        margin: { top: 22, left: 15, right: 15, bottom: 15 },
+        styles: {
+          fontSize: 7.2,
+          cellPadding: 2.5,
+          font: 'helvetica',
+          textColor: [51, 65, 85],
+          lineColor: [226, 232, 240],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: [248, 250, 252],
+          textColor: [15, 23, 42],
+          fontStyle: 'bold',
+          lineWidth: 0.2,
+          lineColor: [203, 213, 225],
+        },
+        alternateRowStyles: {
+          fillColor: [251, 253, 255],
+        },
+        columnStyles: getColumnStyles(reportType),
+        didDrawCell: (data: any) => {
+          if (reportType === 'electors' && data.section === 'body' && data.column.index === 6) {
+            const trafficLight = data.cell.raw;
+            const colorMap: Record<string, [number, number, number]> = {
+              GREEN: [22, 163, 74],
+              YELLOW: [217, 119, 6],
+              RED: [220, 38, 38],
+              PURPLE: [124, 58, 237],
+            };
+            const rgb = colorMap[trafficLight] || [156, 163, 175];
+            
+            data.cell.text = '';
+            const x = data.cell.x + data.cell.width / 2;
+            const y = data.cell.y + data.cell.height / 2;
+            doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+            doc.circle(x, y, 1.8, 'F');
+          }
+        },
+        didDrawPage: (data: any) => {
+          // Footer
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(5.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial de uso interno`, 15, A4_H_MM - 6);
+          
+          const pageStr = `Página ${data.pageNumber} de ${totalPagesExp}`;
+          doc.setFontSize(6.2);
+          doc.text(pageStr, A4_W_MM - 15, A4_H_MM - 6, { align: 'right' });
+
+          // Header on subsequent pages
+          if (data.pageNumber > 1) {
+            doc.setFillColor(30, 58, 110);
+            doc.roundedRect(15, 8, 6, 6, 1.2, 1.2, 'F');
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(0.4);
+            doc.line(16.5, 11, 17.5, 12);
+            doc.line(17.5, 12, 19.5, 9.5);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(30, 58, 110);
+            doc.text('Inte', 23, 12.5);
+            doc.setTextColor(16, 185, 129);
+            doc.text('lecciones', 29.5, 12.5);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`REPORTE DE CAMPAÑA — ${title.toUpperCase()}`, 52, 12);
+
+            doc.setDrawColor(30, 58, 110);
+            doc.setLineWidth(0.3);
+            doc.line(15, 16, 195, 16);
+          }
+        }
+      });
+
+      // Replace total pages placeholder
+      if (typeof doc.putTotalPages === 'function') {
+        doc.putTotalPages(totalPagesExp);
       }
 
       const cleanDistrict = (selectedDistrictFilter === 'ALL'
@@ -1279,16 +1363,7 @@ const TeamPanel = () => {
             .replace(/[^a-z0-9]+/g, '-')
       );
       const filename = `reporte-${reportType.toLowerCase()}-${cleanDistrict}.pdf`;
-
-      const pdfBlob = doc.output('blob');
-      const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(blobUrl); }, 200);
+      doc.save(filename);
     } catch (err: any) {
       console.error('Error generating PDF:', err);
       alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
