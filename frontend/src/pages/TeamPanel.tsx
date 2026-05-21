@@ -1094,11 +1094,29 @@ const TeamPanel = () => {
       if (footerEl) footerEl.style.display = 'none';
 
       const avatars = el.querySelectorAll('.avatar-print') as NodeListOf<HTMLElement>;
-      const originalBgs: string[] = [];
-      avatars.forEach((av, i) => {
-        originalBgs[i] = av.style.background;
-        if (av.style.background.includes('url(')) av.style.background = '#e2e8f0';
+
+      // Pre-load all avatar images to avoid CORS issues with html2canvas
+      const imageLoadPromises: Promise<void>[] = [];
+      avatars.forEach((av) => {
+        const bg = av.style.background;
+        const urlMatch = bg.match(/url\(["']?([^"')]+)["']?\)/);
+        if (urlMatch && urlMatch[1]) {
+          const imgUrl = urlMatch[1];
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          imageLoadPromises.push(new Promise((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+            img.src = imgUrl;
+          }));
+        }
       });
+
+      // Wait for all images to load (max 3 seconds)
+      await Promise.race([
+        Promise.all(imageLoadPromises),
+        new Promise(resolve => setTimeout(resolve, 3000))
+      ]);
 
       const headerEl = el.querySelector('.print-header') as HTMLElement;
       const elRect = el.getBoundingClientRect();
@@ -1115,7 +1133,6 @@ const TeamPanel = () => {
           backgroundColor: '#ffffff', logging: false, imageTimeout: 5000, removeContainer: true,
         });
       } finally {
-        avatars.forEach((av, i) => { av.style.background = originalBgs[i]; });
         if (footerEl) footerEl.style.display = '';
       }
 
