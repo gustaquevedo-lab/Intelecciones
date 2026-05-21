@@ -32,7 +32,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 14; // Update this to trigger migrations
+const currentSchemaVersion = 15; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -50,6 +50,9 @@ const dbVersion = getDbVersion();
 if (dbVersion < currentSchemaVersion) {
     console.log(`MIGRATION: Database version [${dbVersion}] detected. Updating to [${currentSchemaVersion}]...`);
     
+    // Drop incorrect duplicate index to force recreation on correct column
+    db.exec("DROP INDEX IF EXISTS idx_electors_distrito;");
+
     db.exec(`
       CREATE TABLE IF NOT EXISTS campaigns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -303,7 +306,7 @@ if (dbVersion < currentSchemaVersion) {
 
       CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
       CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
-      CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(ciudad);
+      CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(distrito);
 
       CREATE INDEX IF NOT EXISTS idx_captures_ci ON elector_captures(elector_ci);
       CREATE INDEX IF NOT EXISTS idx_captures_coord ON elector_captures(coordinator_id);

@@ -1071,6 +1071,7 @@ const TeamPanel = () => {
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         body { font-family: system-ui, -apple-system, sans-serif; background: white; color: #1a1a1a; }
         @page { size: A4 portrait; margin: 10mm; }
+        tr { page-break-inside: avoid !important; break-inside: avoid !important; }
       </style></head><body>${el.outerHTML}</body></html>`);
     printWindow.document.close();
 
@@ -1142,22 +1143,96 @@ const TeamPanel = () => {
 
       const pxPerMm = fullCanvas.width / A4_W_MM;
       const usableHeightPx = (A4_H_MM - FOOTER_H_MM) * pxPerMm;
-      const contentPerSubPage = usableHeightPx - headerAreaPx;
-
-      let totalPages = 1;
-      let remaining = fullCanvas.height - usableHeightPx;
-      while (remaining > 0) {
-        totalPages++;
-        remaining -= contentPerSubPage;
+      
+      // Calculate repeat-header size and repeat-thead size
+      let contentPerSubPage = usableHeightPx - headerAreaPx;
+      let theadAreaPx = 0;
+      const theadEl = el.querySelector('thead') as HTMLElement;
+      if (theadEl) {
+        const theadRect = theadEl.getBoundingClientRect();
+        theadAreaPx = Math.ceil(theadRect.height * SCALE);
+        contentPerSubPage -= theadAreaPx;
       }
 
+      // Pre-capture the thead canvas to repeat it on subsequent pages
+      let theadCanvas: HTMLCanvasElement | null = null;
+      if (theadEl && theadAreaPx > 0) {
+        const theadRect = theadEl.getBoundingClientRect();
+        const theadRelTop = theadRect.top - elRect.top;
+        theadCanvas = document.createElement('canvas');
+        theadCanvas.width = fullCanvas.width;
+        theadCanvas.height = theadAreaPx;
+        const tCtx = theadCanvas.getContext('2d')!;
+        tCtx.fillStyle = '#ffffff';
+        tCtx.fillRect(0, 0, theadCanvas.width, theadCanvas.height);
+        tCtx.drawImage(
+          fullCanvas,
+          0, Math.floor(theadRelTop * SCALE),
+          fullCanvas.width, theadAreaPx,
+          0, 0,
+          fullCanvas.width, theadAreaPx
+        );
+      }
+
+      // Collect bounding positions of all table rows to prevent cutting them
+      const rowElements = el.querySelectorAll('tbody tr');
+      const rowPositions = Array.from(rowElements).map((row) => {
+        const rect = row.getBoundingClientRect();
+        const relTop = rect.top - elRect.top;
+        const relBottom = rect.bottom - elRect.top;
+        return {
+          top: relTop * SCALE,
+          bottom: relBottom * SCALE,
+          height: rect.height * SCALE
+        };
+      });
+
+      // Compute optimal page cuts
+      const pageCuts: number[] = [0];
+      let currentY = 0;
+      let isFirstPage = true;
+
+      while (currentY < fullCanvas.height) {
+        const limit = isFirstPage ? usableHeightPx : contentPerSubPage;
+        const targetY = currentY + limit;
+
+        if (targetY >= fullCanvas.height) {
+          pageCuts.push(fullCanvas.height);
+          break;
+        }
+
+        // Find the last row that fits completely within the page budget
+        const candidates = rowPositions.filter(
+          r => r.top >= currentY - 2 && r.bottom <= targetY + 2
+        );
+
+        let cutY = -1;
+        if (candidates.length > 0) {
+          cutY = candidates[candidates.length - 1].bottom;
+        }
+
+        // Fallback: if no candidates or no progress, use targetY
+        if (cutY <= currentY) {
+          cutY = targetY;
+        }
+
+        pageCuts.push(cutY);
+        currentY = cutY;
+        isFirstPage = false;
+      }
+
+      const totalPages = pageCuts.length - 1;
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) doc.addPage();
 
+        const startY = pageCuts[page];
+        const endY = pageCuts[page + 1];
+        const sliceH = endY - startY;
+
         if (page === 0) {
-          const sliceH = Math.min(usableHeightPx, fullCanvas.height);
+          // Page 1 contains everything from 0 to pageCuts[1]
           const sliceCanvas = document.createElement('canvas');
           sliceCanvas.width = fullCanvas.width;
           sliceCanvas.height = sliceH;
@@ -1167,9 +1242,8 @@ const TeamPanel = () => {
           ctx.drawImage(fullCanvas, 0, 0, fullCanvas.width, sliceH, 0, 0, fullCanvas.width, sliceH);
           doc.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, sliceH / pxPerMm);
         } else {
-          const contentStartPx = usableHeightPx + (page - 1) * contentPerSubPage;
+          // Page > 1: repeat header + repeat table headers + draw content slice
           const headerMM = headerAreaPx / pxPerMm;
-
           if (headerAreaPx > 0) {
             const hCanvas = document.createElement('canvas');
             hCanvas.width = fullCanvas.width;
@@ -1181,16 +1255,20 @@ const TeamPanel = () => {
             doc.addImage(hCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A4_W_MM, headerMM);
           }
 
-          const contentSliceH = Math.min(contentPerSubPage, fullCanvas.height - contentStartPx);
-          if (contentSliceH > 0) {
+          const theadMM = theadAreaPx / pxPerMm;
+          if (theadCanvas && theadAreaPx > 0) {
+            doc.addImage(theadCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, headerMM, A4_W_MM, theadMM);
+          }
+
+          if (sliceH > 0) {
             const cCanvas = document.createElement('canvas');
             cCanvas.width = fullCanvas.width;
-            cCanvas.height = contentSliceH;
+            cCanvas.height = sliceH;
             const cCtx = cCanvas.getContext('2d')!;
             cCtx.fillStyle = '#ffffff';
             cCtx.fillRect(0, 0, cCanvas.width, cCanvas.height);
-            cCtx.drawImage(fullCanvas, 0, contentStartPx, fullCanvas.width, contentSliceH, 0, 0, fullCanvas.width, contentSliceH);
-            doc.addImage(cCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, headerMM, A4_W_MM, contentSliceH / pxPerMm);
+            cCtx.drawImage(fullCanvas, 0, startY, fullCanvas.width, sliceH, 0, 0, fullCanvas.width, sliceH);
+            doc.addImage(cCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, headerMM + theadMM, A4_W_MM, sliceH / pxPerMm);
           }
         }
 
@@ -1301,6 +1379,11 @@ const TeamPanel = () => {
             background-color: #f8fafc !important;
             font-weight: 800 !important;
             color: #334155 !important;
+          }
+
+          #printable-report-area tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
           #printable-report-area .avatar-print {
