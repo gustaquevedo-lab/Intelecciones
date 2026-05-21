@@ -2149,6 +2149,27 @@ app.post('/api/users/change-p', (req, res) => {
   }
 });
 
+// Admin: reset needs_password_change flag for users
+app.post('/api/admin/reset-password-flags', (req, res) => {
+  const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+  if (requesterRole !== 'SUPERUSUARIO') {
+    return res.status(403).json({ error: 'Solo Super Administradores pueden ejecutar esta acción.' });
+  }
+  try {
+    const { role } = req.body; // optional filter by role
+    let sql = 'UPDATE users SET needs_password_change = 0 WHERE needs_password_change = 1';
+    let params: any[] = [];
+    if (role) {
+      sql += ' AND role = ?';
+      params.push(role.toUpperCase());
+    }
+    const result = db.prepare(sql).run(...params);
+    res.json({ success: true, updated: result.changes });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/users/:id', (req, res) => {
   const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
   const requesterId   = req.headers['x-user-id'] as string;

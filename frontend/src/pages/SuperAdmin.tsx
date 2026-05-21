@@ -2352,6 +2352,18 @@ Status: ${error.response?.status || 'N/A'}
           }}>
             <UserPlus size={18} /> Crear Usuario
           </button>
+          <button className="action-btn-primary" style={{ background: 'var(--green)' }} onClick={async () => {
+            if (!confirm('¿Resetear TODOS los flags de cambio de contraseña?')) return;
+            try {
+              const res = await api.post('/admin/reset-password-flags', {});
+              alert(`Flags reseteados: ${res.data.updated} usuarios`);
+              fetchData();
+            } catch {
+              alert('Error al resetear flags');
+            }
+          }}>
+            Resetear Flags
+          </button>
         </div>
 
         {/* FILTERS BAR */}
