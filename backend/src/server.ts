@@ -698,71 +698,20 @@ app.post('/api/login', (req, res) => {
   
   let user: any = null;
 
-  // MODO RESCATE Y USUARIOS GENÉRICOS EN PRODUCCIÓN
-  const genericUsers: Record<string, { role: string, nombre: string, parentUsername?: string }> = {
-    '3657834': { role: 'SUPERUSUARIO', nombre: 'Gustavo Quevedo' },
-    '3512586': { role: 'SUBJEFE', nombre: 'Subjefe Pedro' },
-    '1234567': { role: 'PADRINO', nombre: 'Padrino Juan', parentUsername: '3512586' },
-    '8765432': { role: 'COORDINADOR', nombre: 'Coordinador Zulma', parentUsername: '1234567' }
-  };
-
-  if (genericUsers[cleanUsername] && cleanPassword === '123') {
-    const config = genericUsers[cleanUsername];
-    let rescueUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(cleanUsername, cleanUsername) as any;
-    
-    if (!rescueUser) {
-      let parentId: number | null = null;
-      if (config.parentUsername) {
-        let parentUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(config.parentUsername, config.parentUsername) as any;
-        if (!parentUser) {
-          const parentConfig = genericUsers[config.parentUsername];
-          let grandparentId: number | null = null;
-          if (parentConfig.parentUsername) {
-            let gpUser = db.prepare('SELECT * FROM users WHERE ci = ? OR username = ?').get(parentConfig.parentUsername, parentConfig.parentUsername) as any;
-            if (!gpUser) {
-              const gpConfig = genericUsers[parentConfig.parentUsername];
-              db.prepare(`
-                INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change, status)
-                VALUES (?, ?, ?, ?, ?, ?, 1, 'ACTIVE')
-              `).run(Date.now() - 2000, parentConfig.parentUsername, '123', gpConfig.role, gpConfig.nombre, parentConfig.parentUsername);
-              gpUser = db.prepare('SELECT * FROM users WHERE ci = ?').get(parentConfig.parentUsername);
-            }
-            grandparentId = gpUser?.id || null;
-          }
-          db.prepare(`
-            INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change, parent_id, status)
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'ACTIVE')
-          `).run(Date.now() - 1000, config.parentUsername, '123', parentConfig.role, parentConfig.nombre, config.parentUsername, grandparentId);
-          parentUser = db.prepare('SELECT * FROM users WHERE ci = ?').get(config.parentUsername);
-        }
-        parentId = parentUser?.id || null;
-      }
-
-      db.prepare(`
-        INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, needs_password_change, parent_id, status)
-        VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'ACTIVE')
-      `).run(Date.now(), cleanUsername, '123', config.role, config.nombre, cleanUsername, parentId);
-      
-      rescueUser = db.prepare('SELECT * FROM users WHERE ci = ?').get(cleanUsername);
-    }
-    user = rescueUser;
-  }
-
-  if (!user) {
-    user = db.prepare(`
-      SELECT u.*, c.enabled_modules as campaign_modules, c.distrito, COALESCE(u.assigned_campaign_id, l.campaign_id) as final_campaign_id
-      FROM users u
-      LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN campaigns c ON (u.assigned_campaign_id = c.id OR l.campaign_id = c.id)
-      WHERE u.username = ? OR u.ci = ? OR u.username = ? OR u.ci = ?
-         OR REPLACE(u.username, '.', '') = ? OR REPLACE(u.ci, '.', '') = ?
-    `).get(username.trim(), username.trim(), cleanUsername, cleanUsername, cleanUsername, cleanUsername) as any;
-  }
+  // Buscar usuario en DB directamente
+  user = db.prepare(`
+    SELECT u.*, c.enabled_modules as campaign_modules, c.distrito, COALESCE(u.assigned_campaign_id, l.campaign_id) as final_campaign_id
+    FROM users u
+    LEFT JOIN lists l ON u.assigned_list_id = l.id
+    LEFT JOIN campaigns c ON (u.assigned_campaign_id = c.id OR l.campaign_id = c.id)
+    WHERE u.username = ? OR u.ci = ? OR u.username = ? OR u.ci = ?
+       OR REPLACE(u.username, '.', '') = ? OR REPLACE(u.ci, '.', '') = ?
+  `).get(username.trim(), username.trim(), cleanUsername, cleanUsername, cleanUsername, cleanUsername) as any;
 
   const normalizedSavedPassword = user?.password?.toString().replace(/\./g, '');
   const normalizedInputPassword = cleanPassword.replace(/\./g, '');
 
-  const isSuccess = user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword || (genericUsers[cleanUsername] && cleanPassword === '123'));
+  const isSuccess = user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword);
 
   // LOG LOGIN ATTEMPT
   try {
@@ -839,7 +788,8 @@ app.get('/api/electors/:ci', (req, res) => {
       WHERE u.id = ?
     `).get(user_id) as any;
     if (user?.distrito) {
-      distritoFilter = `AND (e.distrito = '${user.distrito}' OR e.ciudad = '${user.distrito}')`;
+      const safeDistrito = user.distrito.replace(/'/g, "''");
+      distritoFilter = `AND (e.distrito = '${safeDistrito}' OR e.ciudad = '${safeDistrito}')`;
     }
   }
   
@@ -1411,23 +1361,10 @@ app.put('/api/captures/:id', (req, res) => {
   }
 });
 
-try { db.prepare('ALTER TABLE voting_locations ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE voting_locations ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE electors ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE electors ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE electors ADD COLUMN photo_ci_frente TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE electors ADD COLUMN photo_ci_verso TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE elector_captures ADD COLUMN photo_ci_frente TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE elector_captures ADD COLUMN photo_ci_verso TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE campaigns ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE lists ADD COLUMN distrito TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE lists ADD COLUMN ciudad TEXT DEFAULT ""').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE users ADD COLUMN ci TEXT').run(); } catch(e) {}
-try { db.prepare('ALTER TABLE users ADD COLUMN needs_password_change INTEGER DEFAULT 1').run(); } catch(e) {}
+// Schema migrations now handled by db.ts
+// Legacy ALTER TABLE cleanup removed for performance
 
-console.log("DATABASE: Esquema verificado y columnas de distrito preparadas.");
-
-// 🔄 DATA UNIFICATION: Force everything to UPPERCASE to avoid duplicates like "Pedro Juan Caballero" vs "PEDRO JUAN CABALLERO"
+// Data Unification: Force everything to UPPERCASE to avoid duplicates
 const safeRun = (sql: string, ...params: any[]) => {
   try { db.prepare(sql).run(...params); } catch (e: any) { console.error(`[UNIFIER FAIL] ${sql}: ${e.message}`); }
 };
@@ -3063,20 +3000,21 @@ app.get('/api/admin/electors/search', (req, res) => {
   const role = getRole(req);
 
   try {
-    let cityFilter = '';
-    if (role !== 'SUPERUSUARIO' && user_id) {
-      const user = db.prepare(`
-        SELECT c.distrito 
-        FROM users u 
-        JOIN lists l ON u.assigned_list_id = l.id 
-        JOIN campaigns c ON l.campaign_id = c.id 
-        WHERE u.id = ?
-      `).get(user_id) as any;
-      
-      if (user?.distrito) {
-        cityFilter = `AND (e.distrito = '${user.distrito}' OR e.ciudad = '${user.distrito}')`;
-      }
+let cityFilter = '';
+  if (role !== 'SUPERUSUARIO' && user_id) {
+    const user = db.prepare(`
+      SELECT c.distrito 
+      FROM users u 
+      JOIN lists l ON u.assigned_list_id = l.id 
+      JOIN campaigns c ON l.campaign_id = c.id 
+      WHERE u.id = ?
+    `).get(user_id) as any;
+    
+    if (user?.distrito) {
+      const safeDistrito = user.distrito.replace(/'/g, "''");
+      cityFilter = `AND (e.distrito = '${safeDistrito}' OR e.ciudad = '${safeDistrito}')`;
     }
+  }
 
     const queryStr = q ? q.toString().trim() : '';
     const isNumber = /^\d+$/.test(queryStr);
@@ -5082,20 +5020,20 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
       } else {
         // DISTRICT SPECIFIC WIPE
         const electorsInDistrito = db.prepare('SELECT ci FROM electors WHERE ciudad = ? OR distrito = ?').all(distrito, distrito) as any[];
-        const ciList = electorsInDistrito.map(e => `'${e.ci}'`).join(',');
         
-        if (ciList) {
-          db.prepare(`DELETE FROM elector_captures WHERE elector_ci IN (${ciList})`).run();
-          db.prepare(`DELETE FROM capture_conflicts WHERE elector_ci IN (${ciList})`).run();
+        if (electorsInDistrito.length > 0) {
+          const ciList = electorsInDistrito.map(e => e.ci);
+          const placeholders = ciList.map(() => '?').join(',');
+          db.prepare(`DELETE FROM elector_captures WHERE elector_ci IN (${placeholders})`).run(...ciList);
+          db.prepare(`DELETE FROM capture_conflicts WHERE elector_ci IN (${placeholders})`).run(...ciList);
         }
 
         const locationsInDistrito = db.prepare('SELECT nombre FROM voting_locations WHERE distrito = ?').all(distrito) as any[];
-        const locList = locationsInDistrito.map(l => `'${l.nombre}'`).join(',');
-
-        if (locList) {
-          db.prepare(`DELETE FROM participation_logs WHERE local_votacion IN (${locList})`).run();
-          db.prepare(`DELETE FROM results WHERE local_votacion IN (${locList})`).run();
-          // acta_results are linked to results via acta_id, but better-sqlite3 doesn't have cascades by default if not enabled
+        if (locationsInDistrito.length > 0) {
+          const locList = locationsInDistrito.map(l => l.nombre);
+          const placeholdersLoc = locList.map(() => '?').join(',');
+          db.prepare(`DELETE FROM participation_logs WHERE local_votacion IN (${placeholdersLoc})`).run(...locList);
+          db.prepare(`DELETE FROM results WHERE local_votacion IN (${placeholdersLoc})`).run(...locList);
           db.prepare(`DELETE FROM acta_results WHERE acta_id NOT IN (SELECT id FROM results)`).run();
         }
 

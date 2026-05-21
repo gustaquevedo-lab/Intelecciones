@@ -9,8 +9,22 @@ if (!baseURL.endsWith('/api')) {
 
 const api = axios.create({
   baseURL,
-  timeout: 60000,
+  timeout: 30000,
 });
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('active_list_id');
+      localStorage.removeItem('active_district');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 api.interceptors.request.use((config) => {
   const userStr = localStorage.getItem('auth_user');
@@ -30,30 +44,22 @@ export const API_BASE = baseURL;
 
 export const getImageUrl = (url?: string) => {
   if (!url) return null;
-  
-  // If it's already a full data URL (base64), return as is
   if (url.startsWith('data:')) return url;
   
   let finalUrl = url;
   
-  // 1. If the URL is a full URL but contains /uploads/, extract the relative path
-  // This fixes cases where localhost or old dev IPs were saved in the DB
   if (url.includes('/uploads/')) {
     const parts = url.split('/uploads/');
     finalUrl = '/uploads/' + parts[parts.length - 1];
-  }
-  // 2. If it's just a filename (no slash and no http), assume it's in /uploads/
-  else if (!url.startsWith('http') && !url.includes('/')) {
+  } else if (!url.startsWith('http') && !url.includes('/')) {
     finalUrl = `/uploads/${url}`;
   }
 
-  // 3. If it's a relative path, prepend the current base API URL (without /api)
   if (!finalUrl.startsWith('http')) {
     const base = API_BASE.replace('/api', '');
     finalUrl = `${base}${finalUrl.startsWith('/') ? '' : '/'}${finalUrl}`;
   }
   
-  // 4. Upgrade HTTP to HTTPS if needed
   if (typeof window !== 'undefined' && window.location.protocol === 'https:' && finalUrl.startsWith('http://')) {
     finalUrl = finalUrl.replace('http://', 'https://');
   }
@@ -61,28 +67,76 @@ export const getImageUrl = (url?: string) => {
   return finalUrl;
 };
 
-/** Background Warmup: Keeps the backend alive on platforms like Railway/Vercel */
+// Non-blocking warmup - fire and forget, never blocks UI
+let warmupIntervalId: ReturnType<typeof setInterval> | null = null;
+let lastWarmupTime = 0;
+const MIN_WARMUP_INTERVAL = 60000; // Minimum 60s between warmups
+
 export const warmup = async () => {
-  try {
-    await api.get('/ping');
-    console.log('[API] Backend warmed up successfully');
-  } catch (e) {
-    console.warn('[API] Warmup failed, backend might be sleeping');
+  // Skip if recently warmed up
+  if (Date.now() - lastWarmupTime < MIN_WARMUP_INTERVAL) {
+    return;
   }
+  
+  lastWarmupTime = Date.now();
+  
+  // Use ping to check backend, but don't await - fire and forget
+  api.get('/ping', { timeout: 5000 })
+    .then(() => {
+      if (import.meta.env.DEV) console.log('[API] Backend warm');
+    })
+    .catch(() => {
+      // Silently fail - don't log in prod
+    });
 };
 
-// Auto-warmup every 45 seconds while the tab is active to prevent Cold Starts on Railway
+// Start warmup with proper visibility detection
 if (typeof window !== 'undefined') {
-  setInterval(() => {
-    if (document.visibilityState === 'visible') {
-      warmup();
-    }
-  }, 45000);
-
-  // Also warmup immediately when the tab becomes visible again
+  // Only warmup when tab is visible
+  const startWarmupCycle = () => {
+    if (warmupIntervalId) clearInterval(warmupIntervalId);
+    
+    warmupIntervalId = setInterval(() => {
+      if (document.visibilityState === 'visible' && !document.hidden) {
+        warmup();
+      }
+    }, 90000); // 90s interval - reduced for battery
+  };
+  
+  startWarmupCycle();
+  
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      warmup();
+      warmup(); // Immediate warmup when tab becomes visible
+    }
+  });
+}
+
+// API cache for reducing redundant requests
+const apiCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5000; // 5 second cache
+
+export const cachedApiGet = async <T>(url: string, forceRefresh = false): Promise<T> => {
+  const cached = apiCache.get(url);
+  
+  if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data as T;
+  }
+  
+  const response = await api.get<T>(url);
+  apiCache.set(url, { data: response.data, timestamp: Date.now() });
+  return response.data;
+};
+
+export const clearApiCache = () => {
+  apiCache.clear();
+};
+
+// Clear cache when user logs in/out
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'auth_user' && !e.newValue) {
+      clearApiCache();
     }
   });
 }

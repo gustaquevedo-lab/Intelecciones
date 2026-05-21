@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -10,12 +9,26 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https?:\/\/.*\/api\/ping$/,
+            handler: 'NetworkOnly'
+          },
+          {
+            urlPattern: /\/uploads\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'uploads-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 86400 }
+            }
+          }
+        ]
       },
       manifest: {
         name: 'Intelecciones - Comando Electoral',
         short_name: 'Intelecciones',
-        description: 'Sistema Táctico de Gestión Electoral y Veeduría',
+        description: 'Sistema Táctico de Gestión Electoral y Veeduria',
         theme_color: '#0056b3',
         background_color: '#0a0a0c',
         display: 'standalone',
@@ -42,5 +55,10 @@ export default defineConfig({
   ],
   build: {
     outDir: 'dist',
+    sourcemap: false,
+    minify: 'esbuild'
   },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', 'axios', 'leaflet', 'framer-motion']
+  }
 })

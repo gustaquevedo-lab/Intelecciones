@@ -22,12 +22,14 @@ const db = new Database(dbPath);
 // ── PERFORMANCE PRAGMAS ───────────────────────────────────────────────────
 db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
-db.pragma('cache_size = -131072');     // 128 MB cache
+db.pragma('cache_size = -65536');    // 64 MB cache (balanced for most environments)
 db.pragma('temp_store = MEMORY');
-db.pragma('mmap_size = 3000000000');   // 3GB memory-mapped I/O (Railway standard containers can handle this)
-db.pragma('busy_timeout = 30000');     // wait up to 30s (CRITICAL: prevents SQLite_BUSY on cold starts/heavy load)
+db.pragma('mmap_size = 268435456');  // 256MB memory-mapped I/O (safe for all environments)
+db.pragma('busy_timeout = 30000');   // wait up to 30s (CRITICAL: prevents SQLite_BUSY on cold starts/heavy load)
 db.pragma('auto_vacuum = INCREMENTAL');
 db.pragma('page_size = 4096');
+db.pragma('query_only = false');
+db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
 const currentSchemaVersion = 14; // Update this to trigger migrations
@@ -489,8 +491,9 @@ if (dbVersion < currentSchemaVersion) {
       `).all() as any[];
 
       if (invalidCaptureIds.length > 0) {
-        const idsString = invalidCaptureIds.map(c => c.id).join(',');
-        db.prepare(`UPDATE elector_captures SET is_disputed = 0 WHERE id IN (${idsString})`).run();
+        const ids = invalidCaptureIds.map(c => c.id);
+        const placeholders = ids.map(() => '?').join(',');
+        db.prepare(`UPDATE elector_captures SET is_disputed = 0 WHERE id IN (${placeholders})`).run(...ids);
       }
 
       // Delete the invalid conflict rows

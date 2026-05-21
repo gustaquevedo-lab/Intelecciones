@@ -4,7 +4,7 @@ import api from '../services/api';
 interface User {
     id: number;
     username: string;
-    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR' | 'CANDIDATO' | 'MIEMBRO_DE_MESA' | 'SUBJEFE';
+    role: 'SUPERUSUARIO' | 'JEFE_CAMPANA' | 'PADRINO' | 'COORDINADOR' | 'CANDIDATO' | 'MIEMBRO_DE_MESA' | 'SUBJEFE' | 'APODERADO' | 'VEEDOR';
     nombre: string;
     party?: string;
     assigned_list_id?: number;
@@ -19,7 +19,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    activeListId: number | null; // NULL means "GLOBAL VIEW" for SuperAdmin
+    activeListId: number | null;
     activeDistrict: string | null;
     setActiveListId: (id: number | null) => void;
     setActiveDistrict: (district: string | null) => void;
@@ -29,6 +29,25 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Normalize role names from various backend formats
+const normalizeRole = (role: string | undefined): User['role'] => {
+    if (!role) return 'COORDINADOR'; // Default role
+    
+    const upperRole = role.toUpperCase();
+    
+    // Handle various role aliases
+    if (upperRole === 'SUPER_ADMIN' || upperRole === 'SUPERUSUARIO') return 'SUPERUSUARIO';
+    if (upperRole === 'COORDINATOR' || upperRole === 'COORDINADOR') return 'COORDINADOR';
+    if (upperRole === 'CANDIDATE' || upperRole === 'CANDIDATO' || upperRole === 'JEFE_CAMPANA') return 'JEFE_CAMPANA';
+    if (upperRole === 'LIDER_LISTA' || upperRole === 'SUBJEFE') return 'SUBJEFE';
+    if (upperRole === 'PADRINO') return 'PADRINO';
+    if (upperRole === 'MIEMBRO_DE_MESA' || upperRole === 'MIEMBRO_MESA') return 'MIEMBRO_DE_MESA';
+    if (upperRole === 'APODERADO') return 'APODERADO';
+    if (upperRole === 'VEEDOR') return 'VEEDOR';
+    
+    return 'COORDINADOR' as User['role'];
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
@@ -52,10 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     return; 
                 }
 
-                if ((parsed as any).role === 'SUPER_ADMIN') parsed.role = 'SUPERUSUARIO';
-                if ((parsed as any).role === 'COORDINATOR') parsed.role = 'COORDINADOR';
-                if ((parsed as any).role === 'CANDIDATE') parsed.role = 'JEFE_CAMPANA';
-                if ((parsed as any).role === 'LIDER_LISTA' || (parsed as any).role === 'SUBJEFE') parsed.role = 'SUBJEFE';
+                // Normalize role on load
+                parsed.role = normalizeRole(parsed.role as unknown as string);
 
                 setUser(parsed);
                 if (parsed.role !== 'SUPERUSUARIO') {
@@ -68,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (err) {
             console.warn("Storage access denied in this environment.");
         } finally {
-            // Small delay to ensure React state batching completes before components start fetching
             setTimeout(() => setLoading(false), 100);
         }
     }, []);
@@ -97,10 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const login = async (credentials: any) => {
         const { data } = await api.post('/login', credentials);
-        setUser(data);
-        try { localStorage.setItem('auth_user', JSON.stringify(data)); } catch(e) {}
         
-        if (data.role === 'SUPERUSUARIO') {
+        // Normalize role from server response
+        const normalizedUser = {
+            ...data,
+            role: normalizeRole(data.role)
+        };
+        
+        setUser(normalizedUser);
+        try { localStorage.setItem('auth_user', JSON.stringify(normalizedUser)); } catch(e) {}
+        
+        if (normalizedUser.role === 'SUPERUSUARIO') {
             setActiveListId(null);
             setActiveDistrict(null);
             try {
@@ -109,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch(e) {}
         }
         
-        return data;
+        return normalizedUser;
     };
 
     const logout = () => {
@@ -121,6 +144,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(prev => {
             if (!prev) return null;
             const updated = { ...prev, ...newData };
+            // Normalize role if updated
+            if (newData.role) {
+                updated.role = normalizeRole(newData.role);
+            }
             localStorage.setItem('auth_user', JSON.stringify(updated));
             return updated;
         });
@@ -155,4 +182,30 @@ export const apiFetch = (url: string, options: any = {}) => {
     };
 
     return fetch(url, { ...options, headers });
+};
+
+// Permission helpers for consistent role checking
+export const canEdit = (role: User['role'] | undefined): boolean => {
+    if (!role) return false;
+    return ['COORDINADOR', 'MIEMBRO_DE_MESA', 'PADRINO', 'SUBJEFE'].includes(role);
+};
+
+export const canViewCommandCenter = (role: User['role'] | undefined): boolean => {
+    if (!role) return false;
+    return ['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO'].includes(role);
+};
+
+export const canManageUsers = (role: User['role'] | undefined): boolean => {
+    if (!role) return false;
+    return ['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO'].includes(role);
+};
+
+export const canAccessWhatsApp = (role: User['role'] | undefined): boolean => {
+    if (!role) return false;
+    return ['SUPERUSUARIO', 'JEFE_CAMPANA'].includes(role);
+};
+
+export const canViewReports = (role: User['role'] | undefined): boolean => {
+    if (!role) return false;
+    return ['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO'].includes(role);
 };
