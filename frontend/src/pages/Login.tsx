@@ -170,10 +170,15 @@ const Login = () => {
         user_id: onboardingUser.id,
         new_password: newPassword
       });
-      
-      // Re-login or just navigate
-      if (onboardingUser.role === 'JEFE_CAMPANA' || onboardingUser.role === 'CANDIDATO') navigate('/comando');
-      else navigate('/coordinador'); // Includes PADRINO
+
+      // Re-login with new credentials so AuthContext is properly updated
+      await login({ username: onboardingUser.username, password: newPassword });
+
+      // Navigate based on role after successful re-login
+      if (onboardingUser.role === 'SUPERUSUARIO') navigate('/admin');
+      else if (onboardingUser.role === 'JEFE_CAMPANA' || onboardingUser.role === 'CANDIDATO') navigate('/comando');
+      else if (onboardingUser.role === 'MIEMBRO_DE_MESA') navigate('/veedor');
+      else navigate('/coordinador');
     } catch (err: any) {
       console.error('Password Update Error:', err.response?.data || err.message);
       setError(`Error al actualizar contraseña: ${err.response?.data?.error || err.message}`);
