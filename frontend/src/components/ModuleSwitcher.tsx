@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { usePrefetchOnHover } from '../hooks/usePrefetch';
 
 const MODULES = [
   { id: 'coordinador',    label: 'Coordinador', short: 'Coord',  path: '/coordinador',   icon: Users,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'REGISTRY' },
@@ -19,6 +20,7 @@ export const ModuleSwitcher: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [tooltip, setTooltip] = React.useState<string | null>(null);
+  const { prefetchRoute, cancelPrefetch } = usePrefetchOnHover();
 
   if (!user) return null;
   const canSeeAny =
@@ -46,11 +48,19 @@ export const ModuleSwitcher: React.FC = () => {
           <div
             key={m.id}
             className="module-btn-wrap"
-            onMouseEnter={() => setTooltip(m.id)}
-            onMouseLeave={() => setTooltip(null)}
+            onMouseEnter={() => {
+              setTooltip(m.id);
+              prefetchRoute(m.path);
+            }}
+            onMouseLeave={() => {
+              setTooltip(null);
+              cancelPrefetch(m.path);
+            }}
           >
             <motion.button
               whileTap={{ scale: 0.92 }}
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               onClick={() => navigate(m.path)}
               className={`module-btn${isActive ? ' active' : ''}${accent ? ' accent' : ''}`}
               style={accent ? ({
@@ -60,11 +70,9 @@ export const ModuleSwitcher: React.FC = () => {
               aria-current={isActive ? 'page' : undefined}
             >
               <Icon size={17} strokeWidth={isActive ? 2.2 : 1.7} />
-              {/* Short label — visible only on mobile via CSS */}
               <span className="module-btn-label">{m.short}</span>
             </motion.button>
 
-            {/* Tooltip — desktop hover only, hidden on touch */}
             <AnimatePresence>
               {tooltip === m.id && (
                 <motion.div

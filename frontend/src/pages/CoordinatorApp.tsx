@@ -11,6 +11,7 @@ import {
 import MainLayout from '../components/MainLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageCropperModal } from '../components/ImageCropperModal';
+import { Skeleton } from '../components/Skeleton';
 
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -1469,79 +1470,93 @@ const CoordinatorApp = () => {
               gap: '0.75rem',
               marginBottom: '0.5rem'
             }}>
-              {[
-                { label: 'Casa', val: colorCounts?.green, color: 'var(--green)', bg: 'rgba(34,197,94,0.15)', icon: '🏠' },
-                { label: 'Familia', val: colorCounts?.yellow, color: 'var(--yellow)', bg: 'rgba(234,179,8,0.12)', icon: '👨‍👩‍👧' },
-                { label: 'Otros', val: colorCounts?.red, color: 'var(--red)', bg: 'rgba(239,68,68,0.12)', icon: '📍' },
-                { label: 'Voluntarios', val: colorCounts?.purple, color: '#A855F7', bg: 'rgba(168,85,247,0.15)', icon: '✨' },
-              ].map(stat => (
-                <div key={stat.label} style={{
-                  background: stat.bg,
-                  border: `1px solid ${stat.color}25`,
-                  borderRadius: '20px',
-                  padding: '1rem 0.75rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.4rem',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  boxShadow: `0 4px 15px -3px ${stat.color}15`,
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '40%', height: '40%', background: stat.color, filter: 'blur(20px)', opacity: 0.15 }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
-                      {stat.icon}
+              {isStatsLoading ? (
+                <>
+                  {[0, 1, 2, 3].map(i => (
+                    <Skeleton key={i} height={100} borderRadius="20px" />
+                  ))}
+                </>
+              ) : (
+                [
+                  { label: 'Casa', val: colorCounts?.green, color: 'var(--green)', bg: 'rgba(34,197,94,0.15)', icon: '🏠' },
+                  { label: 'Familia', val: colorCounts?.yellow, color: 'var(--yellow)', bg: 'rgba(234,179,8,0.12)', icon: '👨‍👩‍👧' },
+                  { label: 'Otros', val: colorCounts?.red, color: 'var(--red)', bg: 'rgba(239,68,68,0.12)', icon: '📍' },
+                  { label: 'Voluntarios', val: colorCounts?.purple, color: '#A855F7', bg: 'rgba(168,85,247,0.15)', icon: '✨' },
+                ].map(stat => (
+                  <div key={stat.label} style={{
+                    background: stat.bg,
+                    border: `1px solid ${stat.color}25`,
+                    borderRadius: '20px',
+                    padding: '1rem 0.75rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.4rem',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    boxShadow: `0 4px 15px -3px ${stat.color}15`,
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '40%', height: '40%', background: stat.color, filter: 'blur(20px)', opacity: 0.15 }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
+                        {stat.icon}
+                      </div>
+                      <span style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 900,
+                        color: 'white',
+                        fontFamily: 'var(--font-display)',
+                        letterSpacing: '-0.02em',
+                      }}>
+                        {stat.val ?? 0}
+                      </span>
                     </div>
-                    <span style={{ 
-                      fontSize: '1.25rem', 
-                      fontWeight: 900, 
-                      color: 'white', 
-                      fontFamily: 'var(--font-display)', 
-                      letterSpacing: '-0.02em',
-                      opacity: isStatsLoading ? 0.3 : 1
-                    }}>
-                      {isStatsLoading ? '...' : (stat.val ?? 0)}
-                    </span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 800, color: stat.color, textTransform: 'uppercase', letterSpacing: '0.12em', position: 'relative', zIndex: 1 }}>{stat.label}</span>
                   </div>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 800, color: stat.color, textTransform: 'uppercase', letterSpacing: '0.12em', position: 'relative', zIndex: 1 }}>{stat.label}</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             {/* LOCATION STATS MOVED HERE */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.5rem' }}>
               <SectionLabel icon={<MapPin size={13} />} text="Avance por Local" />
               <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', margin: '0 -0.25rem' }} className="no-scrollbar">
-                {locationStats.filter(loc => loc.total_captures > 0).map((loc: any) => (
-                  <div key={loc.cod_local} style={{
-                    minWidth: '180px',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '16px',
-                    padding: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.6rem'
-                  }}>
-                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.nombre}</h4>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <div>
-                        <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--plra-300)', margin: 0 }}>{loc.total_captures}</p>
-                        <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Captados</p>
+                {isStatsLoading ? (
+                  <>
+                    {[0, 1, 2].map(i => (
+                      <Skeleton key={i} width={180} height={120} borderRadius="16px" />
+                    ))}
+                  </>
+                ) : locationStats.filter(loc => loc.total_captures > 0).length > 0 ? (
+                  locationStats.filter(loc => loc.total_captures > 0).map((loc: any) => (
+                    <div key={loc.cod_local} style={{
+                      minWidth: '180px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '16px',
+                      padding: '1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.6rem'
+                    }}>
+                      <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.nombre}</h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <div>
+                          <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--plra-300)', margin: 0 }}>{loc.total_captures}</p>
+                          <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Captados</p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-2)', margin: 0 }}>{loc.percentage}%</p>
+                          <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Meta</p>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-2)', margin: 0 }}>{loc.percentage}%</p>
-                        <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Meta</p>
+                      <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${loc.percentage}%`, height: '100%', background: 'var(--plra-500)', boxShadow: '0 0 10px var(--plra-500)' }} />
                       </div>
                     </div>
-                    <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ width: `${loc.percentage}%`, height: '100%', background: 'var(--plra-500)', boxShadow: '0 0 10px var(--plra-500)' }} />
-                    </div>
-                  </div>
-                ))}
-                {locationStats.filter(loc => loc.total_captures > 0).length === 0 && (
+                  ))
+                ) : (
                   <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)', borderRadius: '12px', width: '100%', textAlign: 'center' }}>
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 600 }}>Sin capturas por local.</p>
                   </div>
@@ -1550,30 +1565,37 @@ const CoordinatorApp = () => {
             </div>
 
             <SectionLabel icon={<History size={13} />} text="Mis Capturas Recientes" />
-            {history.length === 0 && !isLoading && (
+            {isLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[0, 1, 2].map(i => (
+                  <Skeleton key={i} height={80} borderRadius="16px" />
+                ))}
+              </div>
+            ) : history.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '4rem 2rem', opacity: 0.5 }}>
                 <ClipboardCheck size={40} style={{ marginBottom: '1rem', color: 'var(--text-3)' }} />
                 <p style={{ fontSize: '0.8rem', fontWeight: 600 }}>Aún no has registrado ningún elector.</p>
               </div>
-            )}
-            {history.map((cap) => (
-              <motion.div key={cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', border: '1px solid currentColor' }}>
-                   <User size={20} />
-                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
-                    {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
+            ) : (
+              history.map((cap) => (
+                <motion.div key={cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', border: '1px solid currentColor' }}>
+                    <User size={20} />
                   </div>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion}</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>
-                  <button onClick={() => handleDeleteCapture(cap.id)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                </div>
-              </motion.div>
-            ))}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
+                      {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
+                    </div>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion}</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>
+                    <button onClick={() => handleDeleteCapture(cap.id)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
         ) : activeTab === 'support' ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
