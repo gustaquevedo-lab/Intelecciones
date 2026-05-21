@@ -1060,24 +1060,7 @@ const TeamPanel = () => {
   };
 
   const handlePrint = () => {
-    const el = document.getElementById('printable-report-area');
-    if (!el) { window.print(); return; }
-
-    const printWindow = window.open('', '_blank', 'width=800,height=1100');
-    if (!printWindow) { window.print(); return; }
-
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Reporte Intelecciones</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        body { font-family: system-ui, -apple-system, sans-serif; background: white; color: #1a1a1a; }
-        @page { size: A4 portrait; margin: 10mm; }
-        tr { page-break-inside: avoid !important; break-inside: avoid !important; }
-      </style></head><body>${el.outerHTML}</body></html>`);
-    printWindow.document.close();
-
-    printWindow.onload = () => {
-      setTimeout(() => { printWindow.print(); printWindow.close(); }, 300);
-    };
+    window.print();
   };
 
   const exportToPDF = async () => {
@@ -1120,18 +1103,27 @@ const TeamPanel = () => {
       ]);
 
       const headerEl = el.querySelector('.print-header') as HTMLElement;
-      const elRect = el.getBoundingClientRect();
+      const tableEl = el.querySelector('table') as HTMLElement;
+      const tableOffsetTop = tableEl ? tableEl.offsetTop : 0;
+
       let headerAreaPx = 0;
       if (headerEl) {
-        const headerRect = headerEl.getBoundingClientRect();
-        headerAreaPx = Math.ceil((headerRect.bottom - elRect.top + 20) * SCALE);
+        headerAreaPx = Math.ceil((headerEl.offsetTop + headerEl.offsetHeight + 15) * SCALE);
       }
 
       let fullCanvas: HTMLCanvasElement;
       try {
         fullCanvas = await html2canvas(el, {
-          scale: SCALE, useCORS: true, allowTaint: true,
-          backgroundColor: '#ffffff', logging: false, imageTimeout: 5000, removeContainer: true,
+          scale: SCALE, 
+          useCORS: true, 
+          allowTaint: true,
+          backgroundColor: '#ffffff', 
+          logging: false, 
+          imageTimeout: 5000, 
+          removeContainer: true,
+          width: el.scrollWidth,
+          height: el.scrollHeight,
+          windowWidth: el.scrollWidth > 1100 ? el.scrollWidth : 1200
         });
       } finally {
         if (footerEl) footerEl.style.display = '';
@@ -1149,16 +1141,14 @@ const TeamPanel = () => {
       let theadAreaPx = 0;
       const theadEl = el.querySelector('thead') as HTMLElement;
       if (theadEl) {
-        const theadRect = theadEl.getBoundingClientRect();
-        theadAreaPx = Math.ceil(theadRect.height * SCALE);
+        theadAreaPx = Math.ceil(theadEl.offsetHeight * SCALE);
         contentPerSubPage -= theadAreaPx;
       }
 
       // Pre-capture the thead canvas to repeat it on subsequent pages
       let theadCanvas: HTMLCanvasElement | null = null;
       if (theadEl && theadAreaPx > 0) {
-        const theadRect = theadEl.getBoundingClientRect();
-        const theadRelTop = theadRect.top - elRect.top;
+        const theadRelTop = theadEl.offsetTop + tableOffsetTop;
         theadCanvas = document.createElement('canvas');
         theadCanvas.width = fullCanvas.width;
         theadCanvas.height = theadAreaPx;
@@ -1177,13 +1167,13 @@ const TeamPanel = () => {
       // Collect bounding positions of all table rows to prevent cutting them
       const rowElements = el.querySelectorAll('tbody tr');
       const rowPositions = Array.from(rowElements).map((row) => {
-        const rect = row.getBoundingClientRect();
-        const relTop = rect.top - elRect.top;
-        const relBottom = rect.bottom - elRect.top;
+        const rEl = row as HTMLElement;
+        const relTop = rEl.offsetTop + tableOffsetTop;
+        const relBottom = relTop + rEl.offsetHeight;
         return {
           top: relTop * SCALE,
           bottom: relBottom * SCALE,
-          height: rect.height * SCALE
+          height: rEl.offsetHeight * SCALE
         };
       });
 
@@ -1326,29 +1316,60 @@ const TeamPanel = () => {
             print-color-adjust: exact !important;
           }
           
-          /* Hide the entire app UI */
-          body > * {
+          /* Hide all non-printable elements */
+          .no-print,
+          .no-print *,
+          #sidebar,
+          nav,
+          header,
+          aside,
+          footer,
+          button,
+          input,
+          select {
             display: none !important;
           }
 
-          /* Re-show only the report area by injecting it as a direct child of body via fixed positioning */
-          #printable-report-area {
+          /* Override all parent containers to allow normal page flow */
+          html, body {
+            background: white !important;
+            color: #1a1a1a !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          /* Reset all wrapper divs to block display without flex/grid limits */
+          #root,
+          .app-container,
+          main,
+          div {
             display: block !important;
-            visibility: visible !important;
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 210mm !important;
+            position: static !important;
+            width: auto !important;
             height: auto !important;
             margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: transparent !important;
+            transform: none !important;
+          }
+
+          /* Printable report area styling */
+          #printable-report-area {
+            display: block !important;
+            width: 210mm !important;
+            max-width: 100% !important;
+            margin: 0 auto !important;
             padding: 15mm 12mm !important;
             background: white !important;
             color: #1a1a1a !important;
-            overflow: visible !important;
-            z-index: 999999 !important;
             box-shadow: none !important;
             border: none !important;
-            font-family: system-ui, -apple-system, sans-serif !important;
+            position: relative !important;
+            overflow: visible !important;
           }
 
           #printable-report-area, #printable-report-area * {
@@ -1370,9 +1391,20 @@ const TeamPanel = () => {
             visibility: visible !important;
           }
 
+          /* Table pagination rules */
           #printable-report-area table {
             width: 100% !important;
             border-collapse: collapse !important;
+            page-break-inside: auto !important;
+          }
+
+          #printable-report-area thead {
+            display: table-header-group !important; /* Repeats table headers on every page */
+          }
+
+          #printable-report-area tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
           #printable-report-area th {
@@ -1381,18 +1413,13 @@ const TeamPanel = () => {
             color: #334155 !important;
           }
 
-          #printable-report-area tr {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-
           #printable-report-area .avatar-print {
             border: 1px solid #ccc !important;
           }
 
           @page {
             size: A4 portrait;
-            margin: 8mm;
+            margin: 10mm;
           }
         }
       `}</style>
