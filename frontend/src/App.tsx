@@ -24,10 +24,12 @@ import './services/syncService'; // Initialize sync listeners
 import { useAuth } from './context/AuthContext';
 import { warmup } from './services/api';
 
+const isDev = import.meta.env.DEV;
+
 const RootRedirect = () => {
   const { user, loading } = useAuth();
   
-  console.log('[Root] Checking redirection...', { user: !!user, loading });
+  if (isDev) console.log('[Root] Checking redirection...', { user: !!user, loading });
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--plra-900)' }}>
@@ -35,10 +37,9 @@ const RootRedirect = () => {
     </div>
   );
   
-  if (!user) return null; // Let the router handle the root route (LandingPage)
+  if (!user) return null;
   
   const role = user.role;
-  console.log('[Root] User authenticated, role:', role);
 
   if (role === 'SUPERUSUARIO') return <Navigate to="/admin" replace />;
   if (role === 'JEFE_CAMPANA' || role === 'CANDIDATO' || role === 'SUBJEFE') return <Navigate to="/comando" replace />;
@@ -70,7 +71,7 @@ function App() {
   React.useEffect(() => {
     warmup();
   }, []);
-  console.log('App Rendering Real V2');
+  
   return (
     <ErrorBoundary>
       <SettingsProvider>
