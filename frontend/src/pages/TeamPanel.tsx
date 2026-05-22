@@ -795,6 +795,8 @@ const TeamPanel = () => {
   const [reportType, setReportType] = useState<'padrinos' | 'coordinators' | 'electors' | 'locales'>('padrinos');
   const [reportData, setReportData] = useState<{
     district: string;
+    filterPadrinos: any[];
+    filterCoordinators: any[];
     padrinos: TeamUser[];
     coordinators: any[];
     electors: ElectorRow[];
@@ -815,8 +817,8 @@ const TeamPanel = () => {
 
   const availableDistricts = useMemo(() => {
     const set = new Set<string>();
-    const fp = reportData?.padrinos || padrinos;
-    const fc = reportData?.coordinators || myCoordinators;
+    const fp = reportData?.filterPadrinos || padrinos;
+    const fc = reportData?.filterCoordinators || myCoordinators;
     fp.forEach((p: any) => p.distrito && set.add(p.distrito));
     fc.forEach((c: any) => c.distrito && set.add(c.distrito));
     if (reportData?.electors) reportData.electors.forEach((e: any) => {
@@ -831,8 +833,8 @@ const TeamPanel = () => {
 
   const availableLists = useMemo(() => {
     const set = new Set<string>();
-    const fp = reportData?.padrinos || padrinos;
-    const fc = reportData?.coordinators || myCoordinators;
+    const fp = reportData?.filterPadrinos || padrinos;
+    const fc = reportData?.filterCoordinators || myCoordinators;
     fp.forEach((p: any) => p.list_number && set.add(String(p.list_number)));
     fc.forEach((c: any) => c.list_number && set.add(String(c.list_number)));
     if (!reportData) {
@@ -844,7 +846,7 @@ const TeamPanel = () => {
   }, [reportData, campaigns, padrinos, myCoordinators]);
 
   const availablePadrinos = useMemo(() => {
-    const list = reportData?.padrinos?.length ? reportData.padrinos : padrinos;
+    const list = reportData?.filterPadrinos || padrinos;
     return list.filter((p: any) => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
@@ -853,7 +855,7 @@ const TeamPanel = () => {
   }, [reportData, padrinos, selectedDistrictFilter, selectedListFilter]);
 
   const availableCoordinators = useMemo(() => {
-    const list = reportData?.coordinators?.length ? reportData.coordinators : myCoordinators;
+    const list = reportData?.filterCoordinators || myCoordinators;
     return list.filter((c: any) => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
