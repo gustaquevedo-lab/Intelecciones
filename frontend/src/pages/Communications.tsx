@@ -1603,9 +1603,15 @@ const LinesTab: React.FC = () => {
       const r = await api.get('/whatsapp/terminals');
       const list = r.data as any[];
       // Fetch status (with QR) for each terminal in parallel
-      const statuses = await Promise.all(
-        list.map(t => api.get(`/whatsapp/status?terminalId=${t.id}`).then(s => ({ id: t.id, ...s.data })).catch(() => ({ id: t.id, status: 'DISCONNECTED', qr: null, lastError: null })))
-      );
+      const statuses = [];
+      for (const t of list) {
+        try {
+          const s = await api.get(`/whatsapp/status?terminalId=${t.id}`);
+          statuses.push({ id: t.id, ...s.data });
+        } catch {
+          statuses.push({ id: t.id, status: 'DISCONNECTED', qr: null, lastError: null });
+        }
+      }
       setTerminals(list.map(t => {
         const s = statuses.find(x => x.id === t.id) || {};
         return { ...t, status: s.status || t.status, qr: s.qr || null, lastError: s.lastError || null };

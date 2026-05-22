@@ -40,14 +40,12 @@ const LogisticsApp: React.FC = () => {
       if (activeDistrict) params.append('district', activeDistrict);
       const queryStr = params.toString();
 
-      const [v, p, u, s, c, l] = await Promise.all([
-        api.get(`/vehicles?${queryStr}`),
-        api.get(`/logistics/pending?${queryStr}`),
-        api.get(`/users?${queryStr}`),
-        api.get(`/logistics/stats?${queryStr}`),
-        api.get(`/logistics/clusters?${queryStr}`),
-        api.get(`/voting-locations?${queryStr}`)
-      ]);
+      const v = await api.get(`/vehicles?${queryStr}`);
+      const p = await api.get(`/logistics/pending?${queryStr}`);
+      const u = await api.get(`/users?${queryStr}`);
+      const s = await api.get(`/logistics/stats?${queryStr}`);
+      const c = await api.get(`/logistics/clusters?${queryStr}`);
+      const l = await api.get(`/voting-locations?${queryStr}`);
       setVehicles(v.data);
       setPendingLogistics(p.data);
       setUsers(u.data);

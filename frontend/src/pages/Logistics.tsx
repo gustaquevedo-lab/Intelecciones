@@ -57,10 +57,8 @@ const Logistics: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [vehiclesRes, pendingRes] = await Promise.all([
-        api.get('/vehicles'),
-        api.get('/logistics/pending')
-      ]);
+      const vehiclesRes = await api.get('/vehicles');
+      const pendingRes = await api.get('/logistics/pending');
       setVehicles(vehiclesRes.data);
       setPendingElectors(pendingRes.data);
     } catch (err) {

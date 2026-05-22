@@ -922,10 +922,8 @@ const TeamPanel = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [teamRes, campaignsRes] = await Promise.all([
-        api.get('/my-team'),
-        api.get('/campaigns/mine')
-      ]);
+      const teamRes = await api.get('/my-team');
+      const campaignsRes = await api.get('/campaigns/mine');
       setPadrinos(teamRes.data.padrinos || []);
       setMyCoordinators(teamRes.data.coordinators || []);
       setCampaigns(campaignsRes.data || []);

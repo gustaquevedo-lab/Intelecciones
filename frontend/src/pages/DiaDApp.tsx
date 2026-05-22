@@ -329,14 +329,12 @@ const DiaDApp: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const [covRes, resRes, actasRes, locRes, fleetRes, memRes] = await Promise.all([
-        api.get('/diad/coverage').catch(() => ({ data: null })),
-        api.get('/diad/results').catch(() => ({ data: null })),
-        api.get('/diad/actas').catch(() => ({ data: null })),
-        api.get('/voting-locations').catch(() => ({ data: [] })),
-        api.get('/logistics/clusters').catch(() => ({ data: [] })),
-        api.get('/diad/members').catch(() => ({ data: [] }))
-      ]);
+      const covRes = await api.get('/diad/coverage').catch(() => ({ data: null }));
+      const resRes = await api.get('/diad/results').catch(() => ({ data: null }));
+      const actasRes = await api.get('/diad/actas').catch(() => ({ data: null }));
+      const locRes = await api.get('/voting-locations').catch(() => ({ data: [] }));
+      const fleetRes = await api.get('/logistics/clusters').catch(() => ({ data: [] }));
+      const memRes = await api.get('/diad/members').catch(() => ({ data: [] }));
       if (covRes.data) setCoverage(covRes.data);
       if (resRes.data) setResultados(resRes.data);
       if (actasRes.data) setActas(actasRes.data);

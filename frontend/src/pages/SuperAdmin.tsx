@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Trash2, 
-  Edit2, 
-  UserPlus, 
-  Flag, 
-  Users as UsersIcon, 
-  Database, 
+import {
+  Plus,
+  Search,
+  Trash2,
+  Edit2,
+  UserPlus,
+  Flag,
+  Users as UsersIcon,
+  Database,
   Activity,
   CheckCircle2,
   X,
@@ -191,8 +191,8 @@ const StatCard = ({ icon: Icon, label, value, color }: any) => (
     flexDirection: 'column',
     gap: '0.75rem'
   }}>
-    <div style={{ 
-      width: '32px', height: '32px', borderRadius: '8px', 
+    <div style={{
+      width: '32px', height: '32px', borderRadius: '8px',
       background: `${color}15`, border: `1px solid ${color}30`,
       display: 'flex', alignItems: 'center', justifyContent: 'center'
     }}>
@@ -206,13 +206,13 @@ const StatCard = ({ icon: Icon, label, value, color }: any) => (
 );
 
 const SuperAdmin = () => {
-  const { 
-    user: authUser, 
-    loading, 
-    activeListId, 
-    setActiveListId, 
-    activeDistrict, 
-    setActiveDistrict 
+  const {
+    user: authUser,
+    loading,
+    activeListId,
+    setActiveListId,
+    activeDistrict,
+    setActiveDistrict
   } = useAuth();
   const { refreshSettings } = useSettings();
   const navigate = useNavigate();
@@ -234,7 +234,7 @@ const SuperAdmin = () => {
   const [captures, setCaptures] = useState<any[]>([]);
   const [systemStats, setSystemStats] = useState<any>(null);
   const [selectedCityForLists, setSelectedCityForLists] = useState<string | null>(null);
-  
+
   // Audit Filters
   const [auditFilterAction, setAuditFilterAction] = useState('');
   const [auditFilterStart, setAuditFilterStart] = useState('');
@@ -247,7 +247,7 @@ const SuperAdmin = () => {
   const [appLogoUrl, setAppLogoUrl] = useState('');
   const [shareMessage, setShareMessage] = useState('🔹 *DATOS ELECTORALES* 🔹');
   const [shareMessageFooter, setShareMessageFooter] = useState('#Intelecciones #PLRA #DíaD');
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isUserVerified, setIsUserVerified] = useState(false);
   const [isCandidateVerified, setIsCandidateVerified] = useState(false);
@@ -310,12 +310,12 @@ Status: ${error.response?.status || 'N/A'}
 
     const key = prompt('NIVEL DE SEGURIDAD 2: Ingrese la LLAVE MAESTRA para autorizar la purga:');
     if (!key) return;
-    
+
     const distritos = Array.from(new Set((Array.isArray(campaigns) ? campaigns : []).map(c => c.distrito).filter(Boolean)));
-    const distMsg = distritos.length > 0 
-      ? `Distritos detectados: ${distritos.join(', ')}.\n\n` 
+    const distMsg = distritos.length > 0
+      ? `Distritos detectados: ${distritos.join(', ')}.\n\n`
       : '';
-    
+
     const distritoInput = prompt(
       `NIVEL DE SEGURIDAD 3: ¿Qué datos desea purgar?\n\n` +
       `${distMsg}` +
@@ -333,9 +333,9 @@ Status: ${error.response?.status || 'N/A'}
 
     try {
       setIsLoading(true);
-      const res = await api.post('/admin/system/wipe-captures', { 
-        key, 
-        distrito: targetDistrito.toUpperCase() === 'TODOS' ? 'ALL' : targetDistrito 
+      const res = await api.post('/admin/system/wipe-captures', {
+        key,
+        distrito: targetDistrito.toUpperCase() === 'TODOS' ? 'ALL' : targetDistrito
       });
       alert(`✅ PROCESO FINALIZADO: ${res.data.message || 'Purga completada.'}`);
       fetchData();
@@ -391,12 +391,12 @@ Status: ${error.response?.status || 'N/A'}
   const [candidatePreview, setCandidatePreview] = useState<any>(null);
   const [newListGoal, setNewListGoal] = useState(1000);
   const [listPhotoUrl, setListPhotoUrl] = useState('');
-  
+
   // List Filters
   const [listSearchTerm, setListSearchTerm] = useState('');
-  const [listCityFilter, setListCityFilter] = useState('');
+  const [listCityFilter] = useState('');
   const [listTypeFilter, setListTypeFilter] = useState('');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropperData, setCropperData] = useState<{ image: string, type: 'user' | 'list' | 'app' | 'campaign' } | null>(null);
 
@@ -424,7 +424,7 @@ Status: ${error.response?.status || 'N/A'}
       const res = await api.post('/upload-photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       const photoUrl = res.data.photo_url;
 
       if (type === 'user') {
@@ -441,13 +441,13 @@ Status: ${error.response?.status || 'N/A'}
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/campaigns', { 
+      await api.post('/campaigns', {
         name: newCampaignName,
         slogan: newCampaignSlogan,
         goal: newCampaignGoal,
         distrito: newCampaignDistrito,
         photo_url: newCampaignPhotoUrl,
-        enabled_modules: newCampaignModules 
+        enabled_modules: newCampaignModules
       });
       setShowModal(null);
       setNewCampaignName('');
@@ -470,7 +470,7 @@ Status: ${error.response?.status || 'N/A'}
     e.preventDefault();
     if (!editingCampaign) return;
     try {
-      await api.put(`/campaigns/${editingCampaign.id}`, { 
+      await api.put(`/campaigns/${editingCampaign.id}`, {
         name: newCampaignName,
         slogan: newCampaignSlogan,
         goal: newCampaignGoal,
@@ -539,7 +539,7 @@ Status: ${error.response?.status || 'N/A'}
         candidate_alias: newListAlias,
         candidate_nombre: candidatePreview?.nombre
       });
-      
+
       if (res.data.success) {
         setShowModal(null);
         setEditingList(null);
@@ -547,7 +547,7 @@ Status: ${error.response?.status || 'N/A'}
       } else {
         alert("Error al actualizar: " + (res.data.error || "Desconocido"));
       }
-    } catch (err: any) { 
+    } catch (err: any) {
       console.error("Update failed:", err);
       alert("Error de conexión al actualizar la lista.");
     }
@@ -563,7 +563,7 @@ Status: ${error.response?.status || 'N/A'}
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const finalNombre = newUserRealName.trim();
     const finalRole = newUserRole;
     const finalUsername = (newUserName || newUserCI).trim();
@@ -575,9 +575,9 @@ Status: ${error.response?.status || 'N/A'}
     }
 
     try {
-      await api.post('/users', { 
-        username: finalUsername, 
-        password: finalPassword, 
+      await api.post('/users', {
+        username: finalUsername,
+        password: finalPassword,
         role: finalRole,
         nombre: finalNombre,
         ci: newUserCI,
@@ -595,8 +595,8 @@ Status: ${error.response?.status || 'N/A'}
       setNewUserMesa(null);
       setNewUserTelefono('');
       fetchData(true);
-    } catch (err: any) { 
-      console.error(err); 
+    } catch (err: any) {
+      console.error(err);
       alert('Error: ' + (err.response?.data?.error || 'No se pudo crear el usuario.'));
     }
   };
@@ -624,8 +624,8 @@ Status: ${error.response?.status || 'N/A'}
       setNewUserMesa(null);
       setNewUserTelefono('');
       fetchData();
-    } catch (err) { 
-      console.error(err); 
+    } catch (err) {
+      console.error(err);
       alert('Error al actualizar usuario.');
     }
   };
@@ -640,8 +640,8 @@ Status: ${error.response?.status || 'N/A'}
     try {
       await api.delete(`/users/${id}`);
       fetchData(true);
-    } catch (err: any) { 
-      console.error(err); 
+    } catch (err: any) {
+      console.error(err);
       alert('No se pudo eliminar el usuario: ' + (err.response?.data?.error || 'Error interno del servidor'));
     }
   };
@@ -685,8 +685,8 @@ Status: ${error.response?.status || 'N/A'}
         setUserProfilePreview(res.data);
         setIsUserVerified(true);
       }
-    } catch (err) { 
-      alert('C.I. no encontrado'); 
+    } catch (err) {
+      alert('C.I. no encontrado');
       setIsUserVerified(false);
     }
   };
@@ -719,8 +719,8 @@ Status: ${error.response?.status || 'N/A'}
         setCandidatePreview(res.data);
         setIsCandidateVerified(true);
       }
-    } catch (err) { 
-      alert('C.I. no encontrado'); 
+    } catch (err) {
+      alert('C.I. no encontrado');
       setIsCandidateVerified(false);
     }
   };
@@ -733,8 +733,8 @@ Status: ${error.response?.status || 'N/A'}
         setNewVehicleDriver(`${res.data.nombre} ${res.data.apellido}`);
         setIsVehicleDriverVerified(true);
       }
-    } catch (err) { 
-      alert('C.I. no encontrado en el padrón'); 
+    } catch (err) {
+      alert('C.I. no encontrado en el padrón');
       setIsVehicleDriverVerified(false);
     }
   };
@@ -742,7 +742,7 @@ Status: ${error.response?.status || 'N/A'}
   useEffect(() => {
     if (newListCampaign) {
       const campaignLists = (Array.isArray(lists) ? lists : []).filter(l => l.campaign_id?.toString() === newListCampaign.toString());
-      
+
       // Filter taken options ONLY for the currently selected list number
       const options = campaignLists
         .filter(l => l.type === 'CONCEJAL' && l.list_number === newListNumber)
@@ -800,12 +800,12 @@ Status: ${error.response?.status || 'N/A'}
       const cleanLat = newLocaleLat?.toString().replace(',', '.') || '';
       const cleanLng = newLocaleLng?.toString().replace(',', '.') || '';
 
-      const payload = { 
-        cod_local: newLocaleCod, 
-        nombre: newLocaleNombre, 
-        direccion: newLocaleDireccion, 
-        lat: cleanLat ? parseFloat(cleanLat) : null, 
-        lng: cleanLng ? parseFloat(cleanLng) : null, 
+      const payload = {
+        cod_local: newLocaleCod,
+        nombre: newLocaleNombre,
+        direccion: newLocaleDireccion,
+        lat: cleanLat ? parseFloat(cleanLat) : null,
+        lng: cleanLng ? parseFloat(cleanLng) : null,
         icon: newLocaleIcon,
         ciudad: newLocaleCiudad,
         distrito: newLocaleCiudad
@@ -818,12 +818,12 @@ Status: ${error.response?.status || 'N/A'}
       }
       setShowModal(null);
       fetchData();
-    } catch (err: any) { 
-      console.error('[LOCALE SAVE ERROR]', err); 
+    } catch (err: any) {
+      console.error('[LOCALE SAVE ERROR]', err);
       const serverError = err.response?.data?.error || err.message;
-      setApiError({ 
-        message: 'Error al guardar el local', 
-        details: serverError 
+      setApiError({
+        message: 'Error al guardar el local',
+        details: serverError
       });
     }
   };
@@ -895,15 +895,15 @@ Status: ${error.response?.status || 'N/A'}
       };
 
       if (activeTab === 'overview') {
-        const [summary, predictionsRes, allCaptures, allLocales, allUsers, allLists, allCamps] = await Promise.all([
-          safeGet('/stats/summary'),
-          safeGet('/stats/predictions'),
-          safeGet('/captures', []),
-          safeGet('/voting-locations', []),
-          safeGet('/users', []),
-          safeGet('/lists', []),
-          safeGet('/campaigns', [])
-        ]);
+        let summaryUrl = '/stats/summary';
+        if (selectedCampaignId && selectedCampaignId !== 'all') {
+          summaryUrl += `?campaign_id=${selectedCampaignId}`;
+        }
+        const summary = await safeGet(summaryUrl);
+        const predictionsRes = await safeGet('/stats/predictions');
+        const allCaptures = await safeGet('/captures', []);
+        const allLocales = await safeGet('/voting-locations', []);
+        const allCamps = await safeGet('/campaigns', []);
 
         if (summary) {
           setStats(summary);
@@ -918,36 +918,30 @@ Status: ${error.response?.status || 'N/A'}
         if (predictionsRes) setPredictions(predictionsRes);
         setCaptures(Array.isArray(allCaptures) ? allCaptures : []);
         setLocales(Array.isArray(allLocales) ? allLocales : []);
-        setUsers(Array.isArray(allUsers) ? allUsers : []);
-        setLists(Array.isArray(allLists) ? allLists : []);
+        setUsers([]); // No longer needed for overview
+        setLists([]); // No longer needed for overview
         setCampaigns(Array.isArray(allCamps) ? allCamps : []);
       } else if (activeTab === 'campaigns') {
         const res = await safeGet('/campaigns', []);
         setCampaigns(Array.isArray(res) ? res : []);
       } else if (activeTab === 'lists') {
-        const [lts, camps] = await Promise.all([
-          safeGet('/lists', []),
-          safeGet('/campaigns', [])
-        ]);
+        const lts = await safeGet('/lists', []);
+        const camps = await safeGet('/campaigns', []);
         setLists(Array.isArray(lts) ? lts : []);
         setCampaigns(Array.isArray(camps) ? camps : []);
       } else if (activeTab === 'users') {
-        const [res, lts, camps] = await Promise.all([
-          safeGet('/users', []),
-          safeGet('/lists', []),
-          safeGet('/campaigns', [])
-        ]);
+        const res = await safeGet('/users', []);
+        const lts = await safeGet('/lists', []);
+        const camps = await safeGet('/campaigns', []);
         setUsers(Array.isArray(res) ? res : []);
         setLists(Array.isArray(lts) ? lts : []);
         setCampaigns(Array.isArray(camps) ? camps : []);
       } else if (activeTab === 'audit') {
         await fetchAuditData();
       } else if (activeTab === 'logistics') {
-        const [v, p, lts] = await Promise.all([
-          safeGet('/vehicles', []),
-          safeGet('/logistics/pending', []),
-          safeGet('/lists', [])
-        ]);
+        const v = await safeGet('/vehicles', []);
+        const p = await safeGet('/logistics/pending', []);
+        const lts = await safeGet('/lists', []);
         setVehicles(Array.isArray(v) ? v : []);
         setPendingLogistics(Array.isArray(p) ? p : []);
         setLists(Array.isArray(lts) ? lts : []);
@@ -1035,24 +1029,24 @@ Status: ${error.response?.status || 'N/A'}
 
   const renderOverview = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div style={{ 
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-        padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', 
-        border: '1px solid var(--border)', marginBottom: '2rem' 
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: '16px',
+        border: '1px solid var(--border)', marginBottom: '2rem'
       }}>
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>Panel Global SaaS</h2>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0 }}>Administración Central de Multi-Tenancy</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button 
+          <button
             onClick={() => {
               setActiveDistrict(null);
               setActiveListId(null);
               setSelectedCampaignId('all');
             }}
             className="mini-btn"
-            style={{ 
+            style={{
               background: (activeDistrict || activeListId) ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
               color: 'white',
               fontSize: '0.65rem',
@@ -1067,12 +1061,12 @@ Status: ${error.response?.status || 'N/A'}
             }}
           >
             <Shield size={12} />
-            { (activeDistrict || activeListId) ? 'LIMPIAR FILTROS GLOBALES' : 'VISTA GLOBAL ACTIVA' }
+            {(activeDistrict || activeListId) ? 'LIMPIAR FILTROS GLOBALES' : 'VISTA GLOBAL ACTIVA'}
           </button>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <select 
-              className="mini-input" 
+            <select
+              className="mini-input"
               style={{ width: '220px', background: 'rgba(255,255,255,0.05)' }}
               value={selectedCampaignId}
               onChange={(e) => {
@@ -1096,42 +1090,42 @@ Status: ${error.response?.status || 'N/A'}
               ))}
             </select>
           </div>
-          <button className="action-btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.75rem' }} onClick={fetchData}>
+          <button className="action-btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.75rem' }} onClick={() => fetchData()}>
             <Activity size={14} /> Sincronizar Datos
           </button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
-        <StatCard 
-          icon={Database} 
-          label="Padrón Total" 
-          value={selectedCampaignId === 'all' ? (stats?.electors || 0) : '—'} 
-          color="var(--text-3)" 
+        <StatCard
+          icon={Database}
+          label="Padrón Total"
+          value={stats?.electors || 0}
+          color="var(--text-3)"
         />
-        <StatCard 
-          icon={UsersIcon} 
-          label="Usuarios Activos" 
-          value={selectedCampaignId === 'all' ? (stats?.users || 0) : (Array.isArray(users) ? users.filter(u => u.assigned_campaign_id?.toString() === selectedCampaignId).length : 0)} 
-          color="var(--plra-300)" 
+        <StatCard
+          icon={UsersIcon}
+          label="Usuarios Activos"
+          value={stats?.users || 0}
+          color="var(--plra-300)"
         />
-        <StatCard 
-          icon={Activity} 
-          label="Capturas Totales" 
-          value={selectedCampaignId === 'all' ? (stats?.captures || 0) : (Array.isArray(captures) ? captures.filter(c => c.campaign_id?.toString() === selectedCampaignId).length : 0)} 
-          color="var(--plra-100)" 
+        <StatCard
+          icon={Activity}
+          label="Capturas Totales"
+          value={stats?.captures || 0}
+          color="var(--plra-100)"
         />
-        <StatCard 
-          icon={CheckCircle2} 
-          label="Electores CASA" 
-          value={selectedCampaignId === 'all' ? (stats?.green || 0) : (Array.isArray(captures) ? captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'GREEN').length : 0)} 
-          color="var(--green)" 
+        <StatCard
+          icon={CheckCircle2}
+          label="Electores CASA"
+          value={stats?.green || 0}
+          color="var(--green)"
         />
-        <StatCard 
-          icon={Flag} 
-          label="Familiares" 
-          value={selectedCampaignId === 'all' ? (stats?.yellow || 0) : (Array.isArray(captures) ? captures.filter(c => c.campaign_id?.toString() === selectedCampaignId && c.traffic_light === 'YELLOW').length : 0)} 
-          color="var(--yellow)" 
+        <StatCard
+          icon={Flag}
+          label="Familiares"
+          value={stats?.yellow || 0}
+          color="var(--yellow)"
         />
       </div>
 
@@ -1177,13 +1171,13 @@ Status: ${error.response?.status || 'N/A'}
               <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.2rem' }}>Control Maestro de Datos</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleWipeCaptures}
             className="action-btn-danger"
-            style={{ 
-              width: '100%', padding: '1rem', borderRadius: '10px', 
-              background: 'rgba(239,68,68,0.1)', color: 'var(--red)', 
-              border: '1px solid var(--red)', fontSize: '0.75rem', 
+            style={{
+              width: '100%', padding: '1rem', borderRadius: '10px',
+              background: 'rgba(239,68,68,0.1)', color: 'var(--red)',
+              border: '1px solid var(--red)', fontSize: '0.75rem',
               fontWeight: 800, cursor: 'pointer', marginTop: 'auto'
             }}
           >
@@ -1200,37 +1194,37 @@ Status: ${error.response?.status || 'N/A'}
             {(Array.isArray(captures) ? captures : [])
               .filter(c => c.lat && (selectedCampaignId === 'all' || c.campaign_id?.toString() === selectedCampaignId))
               .map(c => (
-              <Marker 
-                key={`cap-${c.id}`} 
-                position={[c.lat, c.lng]} 
-                icon={createCustomIcon(
-                  c.traffic_light === 'GREEN' ? 'var(--green)' : 
-                  c.traffic_light === 'YELLOW' ? 'var(--yellow)' : 
-                  c.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)',
-                  c.needs_transport === 1 ? 'Truck' : 'MapPin',
-                  20
-                )}
-              >
-                <Popup>
-                  <div style={{ color: 'black' }}>
-                    <strong>{c.nombre} {c.apellido}</strong><br/>
-                    Status: {c.traffic_light}<br/>
-                    {c.needs_transport === 1 ? '🚗 REQUIERE TRASLADO' : '🚶 Sin traslado'}<br/>
-                    <small>Por: {c.coordinator_name || 'Sistema'}</small>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+                <Marker
+                  key={`cap-${c.id}`}
+                  position={[c.lat, c.lng]}
+                  icon={createCustomIcon(
+                    c.traffic_light === 'GREEN' ? 'var(--green)' :
+                      c.traffic_light === 'YELLOW' ? 'var(--yellow)' :
+                        c.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)',
+                    c.needs_transport === 1 ? 'Truck' : 'MapPin',
+                    20
+                  )}
+                >
+                  <Popup>
+                    <div style={{ color: 'black' }}>
+                      <strong>{c.nombre} {c.apellido}</strong><br />
+                      Status: {c.traffic_light}<br />
+                      {c.needs_transport === 1 ? '🚗 REQUIERE TRASLADO' : '🚶 Sin traslado'}<br />
+                      <small>Por: {c.coordinator_name || 'Sistema'}</small>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
           </MarkerClusterGroup>
           {(Array.isArray(locales) ? locales : []).filter(l => l.lat).map(l => (
-            <Marker 
-              key={`loc-${l.cod_local}`} 
-              position={[l.lat, l.lng]} 
+            <Marker
+              key={`loc-${l.cod_local}`}
+              position={[l.lat, l.lng]}
               icon={createCustomIcon('var(--plra-500)', l.icon || 'Landmark', 28)}
             >
               <Popup>
                 <div style={{ color: 'black' }}>
-                  <strong>{l.nombre}</strong><br/>
+                  <strong>{l.nombre}</strong><br />
                   {l.direccion}
                 </div>
               </Popup>
@@ -1249,39 +1243,43 @@ Status: ${error.response?.status || 'N/A'}
             {Array.isArray(campaigns) ? campaigns.length : 0} CLIENTES ACTIVOS
           </div>
         </div>
-        <ManagementTable 
+        <ManagementTable
           isLoading={isLoading}
-          data={(Array.isArray(campaigns) ? campaigns : []).map(camp => {
-            const campCaptures = (Array.isArray(captures) ? captures : []).filter(c => c.campaign_id === camp.id).length;
-            const campUsers = (Array.isArray(users) ? users : []).filter(u => u.assigned_campaign_id === camp.id).length;
-            const progress = camp.goal ? Math.min(100, (campCaptures / camp.goal) * 100) : 0;
-            return { ...camp, campCaptures, campUsers, progress };
+          data={(Array.isArray(campaigns) ? campaigns : []).map((camp: any) => {
+            const progress = camp.goal ? Math.min(100, (camp.campCaptures / camp.goal) * 100) : 0;
+            return { ...camp, progress };
           })}
           columns={[
             { header: 'Campaña / Tenant', accessor: 'name' },
-            { header: 'Usuarios', accessor: (row: any) => (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={14} style={{ color: 'var(--text-3)' }} />
-                <span style={{ fontWeight: 700 }}>{row.campUsers}</span>
-              </div>
-            )},
-            { header: 'Capturas', accessor: (row: any) => (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Activity size={14} style={{ color: 'var(--plra-300)' }} />
-                <span style={{ fontWeight: 700 }}>{row.campCaptures}</span>
-              </div>
-            )},
-            { header: 'Progreso', accessor: (row: any) => (
-              <div style={{ width: '100%', minWidth: '120px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', marginBottom: '4px', fontWeight: 700 }}>
-                  <span style={{ color: 'var(--text-3)' }}>{row.campCaptures} / {row.goal || '∞'}</span>
-                  <span style={{ color: 'var(--plra-300)' }}>{row.progress.toFixed(1)}%</span>
+            {
+              header: 'Usuarios', accessor: (row: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Users size={14} style={{ color: 'var(--text-3)' }} />
+                  <span style={{ fontWeight: 700 }}>{row.campUsers}</span>
                 </div>
-                <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${row.progress}%`, background: 'var(--plra-400)', transition: 'width 0.3s ease' }} />
+              )
+            },
+            {
+              header: 'Capturas', accessor: (row: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Activity size={14} style={{ color: 'var(--plra-300)' }} />
+                  <span style={{ fontWeight: 700 }}>{row.campCaptures}</span>
                 </div>
-              </div>
-            )}
+              )
+            },
+            {
+              header: 'Progreso', accessor: (row: any) => (
+                <div style={{ width: '100%', minWidth: '120px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', marginBottom: '4px', fontWeight: 700 }}>
+                    <span style={{ color: 'var(--text-3)' }}>{row.campCaptures} / {row.goal || '∞'}</span>
+                    <span style={{ color: 'var(--plra-300)' }}>{row.progress.toFixed(1)}%</span>
+                  </div>
+                  <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${row.progress}%`, background: 'var(--plra-400)', transition: 'width 0.3s ease' }} />
+                  </div>
+                </div>
+              )
+            }
           ]}
         />
       </div>
@@ -1311,23 +1309,23 @@ Status: ${error.response?.status || 'N/A'}
           <Plus size={18} /> Nueva Campaña
         </button>
       </div>
-      <ManagementTable 
+      <ManagementTable
         isLoading={isLoading}
         columns={[
           { header: 'ID', accessor: 'id', width: '80px', sortKey: 'id' },
           { header: 'Nombre', accessor: 'name', sortKey: 'name' },
-          { 
-            header: 'Módulos', 
+          {
+            header: 'Módulos',
             accessor: (c: any) => (
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {(c.enabled_modules || 'COMMAND_CENTER,REGISTRY').split(',').map((m: string) => (
-                  <div 
-                    key={m} 
-                    style={{ 
-                      padding: '2px 6px', 
-                      borderRadius: '4px', 
-                      fontSize: '0.6rem', 
-                      background: 'rgba(59,130,246,0.1)', 
+                  <div
+                    key={m}
+                    style={{
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontSize: '0.6rem',
+                      background: 'rgba(59,130,246,0.1)',
                       color: 'var(--plra-300)',
                       border: '1px solid rgba(59,130,246,0.2)'
                     }}
@@ -1338,10 +1336,10 @@ Status: ${error.response?.status || 'N/A'}
               </div>
             )
           },
-          { 
-            header: 'Estado', 
+          {
+            header: 'Estado',
             accessor: (c: Campaign) => (
-              <span style={{ 
+              <span style={{
                 padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
                 background: c.status === 'ACTIVE' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                 color: c.status === 'ACTIVE' ? 'var(--green)' : 'var(--text-3)'
@@ -1354,14 +1352,14 @@ Status: ${error.response?.status || 'N/A'}
             header: 'Acciones',
             accessor: (c: Campaign) => (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="icon-btn" onClick={() => { 
-                  setEditingCampaign(c); 
+                <button className="icon-btn" onClick={() => {
+                  setEditingCampaign(c);
                   setNewCampaignName(c.name);
                   setNewCampaignSlogan((c as any).slogan || '');
                   setNewCampaignGoal((c as any).goal || 1000);
                   setNewCampaignDistrito((c as any).distrito || '');
                   setNewCampaignModules((c as any).enabled_modules ? (c as any).enabled_modules.split(',') : []);
-                  setShowModal('edit-campaign'); 
+                  setShowModal('edit-campaign');
                 }}><Edit2 size={14} /></button>
                 <button className="icon-btn delete" onClick={() => handleDeleteCampaign(c.id)}><Trash2 size={14} /></button>
               </div>
@@ -1390,7 +1388,7 @@ Status: ${error.response?.status || 'N/A'}
     })).sort((a, b) => a.name.localeCompare(b.name));
 
     const filteredLists = (Array.isArray(lists) ? lists : []).filter(l => {
-      const matchesSearch = !listSearchTerm || 
+      const matchesSearch = !listSearchTerm ||
         l.candidate_nombre?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
         (l as any).candidate_alias?.toLowerCase().includes(listSearchTerm.toLowerCase()) ||
         l.list_number?.toString().includes(listSearchTerm);
@@ -1428,12 +1426,12 @@ Status: ${error.response?.status || 'N/A'}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {(Array.isArray(cityStats) ? cityStats : []).map(city => (
-              <motion.div 
+              <motion.div
                 key={city.name}
                 whileHover={{ y: -5, scale: 1.02 }}
                 onClick={() => setSelectedCityForLists(city.name)}
                 className="card-premium-styled"
-                style={{ 
+                style={{
                   cursor: 'pointer',
                   padding: '2rem',
                   borderLeft: '4px solid var(--plra-400)',
@@ -1448,14 +1446,14 @@ Status: ${error.response?.status || 'N/A'}
                 <div style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.05 }}>
                   <MapPin size={120} />
                 </div>
-                
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', marginBottom: '0.25rem' }}>{city.name}</h3>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Distrito Electoral</p>
                   </div>
-                  <div style={{ 
-                    background: 'rgba(59, 130, 246, 0.1)', color: 'var(--plra-300)', 
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.1)', color: 'var(--plra-300)',
                     padding: '0.5rem 1rem', borderRadius: '12px', fontWeight: 900, fontSize: '1.2rem'
                   }}>
                     {city.count}
@@ -1473,9 +1471,9 @@ Status: ${error.response?.status || 'N/A'}
                   </div>
                 </div>
 
-                <div style={{ 
-                  marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                  color: 'var(--plra-400)', fontWeight: 800, fontSize: '0.8rem' 
+                <div style={{
+                  marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  color: 'var(--plra-400)', fontWeight: 800, fontSize: '0.8rem'
                 }}>
                   Gestionar Listas <ArrowRight size={14} />
                 </div>
@@ -1490,7 +1488,7 @@ Status: ${error.response?.status || 'N/A'}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <button 
+            <button
               onClick={() => setSelectedCityForLists(null)}
               className="icon-btn"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '0.75rem' }}
@@ -1523,30 +1521,30 @@ Status: ${error.response?.status || 'N/A'}
           </button>
         </div>
 
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: '1fr 200px auto', 
-          gap: '1rem', 
-          padding: '1rem', 
-          background: 'rgba(255,255,255,0.02)', 
-          borderRadius: '16px', 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 200px auto',
+          gap: '1rem',
+          padding: '1rem',
+          background: 'rgba(255,255,255,0.02)',
+          borderRadius: '16px',
           border: '1px solid var(--border)',
           alignItems: 'center'
         }}>
           <div style={{ position: 'relative' }}>
             <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', zIndex: 1 }} />
-            <input 
-              className="modern-input-premium-styled" 
+            <input
+              className="modern-input-premium-styled"
               style={{ paddingLeft: '2.75rem', marginBottom: 0 }}
-              placeholder="Buscar por candidato, alias o lista..." 
+              placeholder="Buscar por candidato, alias o lista..."
               value={listSearchTerm}
               onChange={e => setListSearchTerm(e.target.value)}
             />
           </div>
-          <select 
-            className="modern-input-premium-styled" 
+          <select
+            className="modern-input-premium-styled"
             style={{ marginBottom: 0 }}
-            value={listTypeFilter} 
+            value={listTypeFilter}
             onChange={e => setListTypeFilter(e.target.value)}
           >
             <option value="">Todos los Tipos</option>
@@ -1554,8 +1552,8 @@ Status: ${error.response?.status || 'N/A'}
             <option value="CONCEJAL">CONCEJAL</option>
           </select>
           {(listSearchTerm || listTypeFilter) && (
-            <button 
-              className="icon-btn" 
+            <button
+              className="icon-btn"
               onClick={() => { setListSearchTerm(''); setListTypeFilter(''); }}
               style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)' }}
             >
@@ -1564,11 +1562,11 @@ Status: ${error.response?.status || 'N/A'}
           )}
         </div>
 
-        <ManagementTable 
+        <ManagementTable
           isLoading={isLoading}
           columns={[
-            { 
-              header: 'Lista / Opción', 
+            {
+              header: 'Lista / Opción',
               accessor: (l: any) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ fontWeight: 800, color: 'var(--plra-300)', background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>L {l.list_number}</span>
@@ -1580,8 +1578,8 @@ Status: ${error.response?.status || 'N/A'}
               sortKey: 'list_number',
               width: '140px'
             },
-            { 
-              header: 'Candidato (Identidad)', 
+            {
+              header: 'Candidato (Identidad)',
               accessor: (l: any) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-light)', border: '1px solid var(--border)', flexShrink: 0 }}>
@@ -1596,10 +1594,10 @@ Status: ${error.response?.status || 'N/A'}
               sortKey: 'candidate_alias'
             },
             { header: 'Campaña', accessor: 'campaign_name', sortKey: 'campaign_name' },
-            { 
-              header: 'Tipo', 
+            {
+              header: 'Tipo',
               accessor: (l: any) => (
-                <span style={{ 
+                <span style={{
                   padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800,
                   background: l.type === 'INTENDENTE' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                   color: l.type === 'INTENDENTE' ? 'var(--plra-300)' : 'var(--text-3)'
@@ -1609,8 +1607,8 @@ Status: ${error.response?.status || 'N/A'}
               ),
               sortKey: 'type'
             },
-            { 
-              header: 'Meta', 
+            {
+              header: 'Meta',
               accessor: (l: any) => (
                 <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: '0.85rem' }}>{l.goal} <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>votos</span></div>
               ),
@@ -1620,14 +1618,14 @@ Status: ${error.response?.status || 'N/A'}
               header: 'Acciones',
               accessor: (l: any) => (
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="icon-btn" onClick={() => { 
-                    setEditingList(l); 
+                  <button className="icon-btn" onClick={() => {
+                    setEditingList(l);
                     setNewListCiudad(l.ciudad || '');
-                    setNewListGoal(l.goal || 1000); 
+                    setNewListGoal(l.goal || 1000);
                     setNewListCandidateCI(l.candidate_ci || '');
                     setNewListAlias(l.candidate_alias || '');
-                    setCandidatePreview({ 
-                      photo_url: l.photo_url, 
+                    setCandidatePreview({
+                      photo_url: l.photo_url,
                       nombre: l.candidate_nombre,
                       apellido: l.candidate_apellido
                     });
@@ -1636,7 +1634,7 @@ Status: ${error.response?.status || 'N/A'}
                     setNewListOption(l.option_number || '');
                     setNewListCampaign(l.campaign_id?.toString() || '');
                     setIsCandidateVerified(true);
-                    setShowModal('list'); 
+                    setShowModal('list');
                   }}><Edit2 size={14} /></button>
                   <button className="icon-btn delete" onClick={() => handleDeleteList(l.id)}><Trash2 size={14} /></button>
                 </div>
@@ -1655,15 +1653,15 @@ Status: ${error.response?.status || 'N/A'}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Auditoría de Sistema</h2>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button 
-            className={activeAuditTab === 'logs' ? 'tab-btn active' : 'tab-btn'} 
+          <button
+            className={activeAuditTab === 'logs' ? 'tab-btn active' : 'tab-btn'}
             onClick={() => setActiveAuditTab('logs')}
             style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
           >
             <Activity size={16} /> Logs de Actividad
           </button>
-          <button 
-            className={activeAuditTab === 'security' ? 'tab-btn active' : 'tab-btn'} 
+          <button
+            className={activeAuditTab === 'security' ? 'tab-btn active' : 'tab-btn'}
             onClick={() => setActiveAuditTab('security')}
             style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
           >
@@ -1671,13 +1669,13 @@ Status: ${error.response?.status || 'N/A'}
           </button>
         </div>
       </div>
-      
+
       {activeAuditTab === 'logs' ? (
         <>
-          <div style={{ 
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-            gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', 
-            borderRadius: '12px', border: '1px solid var(--border)' 
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)',
+            borderRadius: '12px', border: '1px solid var(--border)'
           }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Acción</label>
@@ -1703,7 +1701,7 @@ Status: ${error.response?.status || 'N/A'}
             </div>
           </div>
 
-          <ManagementTable 
+          <ManagementTable
             isLoading={isLoading}
             columns={[
               { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp' },
@@ -1716,16 +1714,16 @@ Status: ${error.response?.status || 'N/A'}
           />
         </>
       ) : (
-        <ManagementTable 
+        <ManagementTable
           isLoading={isLoading}
           columns={[
             { header: 'Fecha', accessor: (row: any) => new Date(row.timestamp).toLocaleString(), sortKey: 'timestamp', width: '180px' },
             { header: 'Usuario', accessor: 'username', sortKey: 'username' },
             { header: 'Distrito', accessor: (row: any) => row.user_district || 'N/A' },
-            { 
-              header: 'Estado', 
+            {
+              header: 'Estado',
               accessor: (row: any) => (
-                <span style={{ 
+                <span style={{
                   padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800,
                   background: row.status === 'SUCCESS' ? 'rgba(37,200,130,0.1)' : 'rgba(239,68,68,0.1)',
                   color: row.status === 'SUCCESS' ? 'var(--green)' : 'var(--red)'
@@ -1735,21 +1733,21 @@ Status: ${error.response?.status || 'N/A'}
               )
             },
             { header: 'IP', accessor: 'ip', width: '120px' },
-            { 
-              header: 'Dispositivo / Navegador', 
+            {
+              header: 'Dispositivo / Navegador',
               accessor: (row: any) => (
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.user_agent}>
                   {row.user_agent}
                 </div>
               )
             },
-            { 
-              header: 'GPS', 
+            {
+              header: 'GPS',
               accessor: (row: any) => (
                 row.lat ? (
-                  <a 
-                    href={`https://www.google.com/maps?q=${row.lat},${row.lng}`} 
-                    target="_blank" 
+                  <a
+                    href={`https://www.google.com/maps?q=${row.lat},${row.lng}`}
+                    target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: 'var(--plra-300)', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
@@ -1790,30 +1788,30 @@ Status: ${error.response?.status || 'N/A'}
           </button>
         </div>
       </div>
-      
+
       <div className="filter-bar-premium">
         <div className="search-input-wrapper-premium" style={{ maxWidth: '300px' }}>
           <Search size={18} />
-          <input 
-            className="modern-input-premium-styled" 
-            placeholder="Buscar local por nombre..." 
-            value={localeSearchTerm} 
-            onChange={e => setLocaleSearchTerm(e.target.value)} 
+          <input
+            className="modern-input-premium-styled"
+            placeholder="Buscar local por nombre..."
+            value={localeSearchTerm}
+            onChange={e => setLocaleSearchTerm(e.target.value)}
             style={{ marginBottom: 0 }}
           />
         </div>
-        <select 
-          className="modern-input-premium-styled" 
+        <select
+          className="modern-input-premium-styled"
           style={{ width: '200px', marginBottom: 0 }}
-          value={localeCityFilter} 
+          value={localeCityFilter}
           onChange={e => setLocaleCityFilter(e.target.value)}
         >
           <option value="">Todas las Ciudades</option>
           {cities.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         {(localeSearchTerm || localeCityFilter) && (
-          <button 
-            className="icon-btn" 
+          <button
+            className="icon-btn"
             onClick={() => { setLocaleSearchTerm(''); setLocaleCityFilter(''); }}
             style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)' }}
           >
@@ -1822,19 +1820,19 @@ Status: ${error.response?.status || 'N/A'}
         )}
       </div>
 
-      <ManagementTable 
+      <ManagementTable
         isLoading={isLoading}
         columns={[
           { header: 'Código', accessor: 'cod_local', width: '80px' },
           { header: 'Ciudad', accessor: 'ciudad', sortKey: 'ciudad' },
           { header: 'Nombre', accessor: 'nombre' },
           { header: 'Dirección', accessor: 'direccion' },
-          { 
-            header: 'Ubicación', 
+          {
+            header: 'Ubicación',
             accessor: (l: any) => (
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <span style={{ 
-                  width: '8px', height: '8px', borderRadius: '50%', 
+                <span style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
                   background: l.lat ? 'var(--green)' : 'var(--red)'
                 }} />
                 <span style={{ fontSize: '0.7rem', color: l.lat ? 'var(--text)' : 'var(--text-3)' }}>
@@ -1855,8 +1853,8 @@ Status: ${error.response?.status || 'N/A'}
             header: 'Acciones',
             accessor: (l: any) => (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="icon-btn" onClick={() => { 
-                  setEditingLocale(l); 
+                <button className="icon-btn" onClick={() => {
+                  setEditingLocale(l);
                   setNewLocaleCod(l.cod_local);
                   setNewLocaleNombre(l.nombre);
                   setNewLocaleDireccion(l.direccion || '');
@@ -1869,7 +1867,7 @@ Status: ${error.response?.status || 'N/A'}
                     setMapCenter([CIUDADES_PARAGUAY[currentCity].lat, CIUDADES_PARAGUAY[currentCity].lng]);
                     setMapZoom(CIUDADES_PARAGUAY[currentCity].zoom);
                   }
-                  setShowModal('locale'); 
+                  setShowModal('locale');
                 }}><Edit2 size={14} /></button>
                 <button className="icon-btn delete" onClick={() => handleDeleteLocale(l.cod_local)}><Trash2 size={14} /></button>
               </div>
@@ -1892,7 +1890,7 @@ Status: ${error.response?.status || 'N/A'}
             <Marker key={l.cod_local} position={[parseFloat(l.lat), parseFloat(l.lng)]} icon={createCustomIcon('var(--plra-500)', l.icon, 28)}>
               <Popup>
                 <div style={{ color: 'black' }}>
-                  <strong>{l.nombre}</strong><br/>
+                  <strong>{l.nombre}</strong><br />
                   {l.direccion}
                 </div>
               </Popup>
@@ -1905,7 +1903,7 @@ Status: ${error.response?.status || 'N/A'}
 
   const renderSettings = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1000px' }}>
-      
+
       <section>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Settings size={18} /> Identidad & Marca
@@ -1925,9 +1923,9 @@ Status: ${error.response?.status || 'N/A'}
             </div>
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label>Encabezado de Mensaje Compartir (WhatsApp/Share)</label>
-              <textarea 
-                className="modern-input-premium-styled" 
-                value={shareMessage} 
+              <textarea
+                className="modern-input-premium-styled"
+                value={shareMessage}
                 onChange={e => setShareMessage(e.target.value)}
                 style={{ height: '60px', paddingTop: '0.75rem' }}
                 placeholder="Ej: 🔹 *DATOS ELECTORALES* 🔹"
@@ -1935,9 +1933,9 @@ Status: ${error.response?.status || 'N/A'}
             </div>
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label>Pie de Mensaje Compartir (Hashtags)</label>
-              <textarea 
-                className="modern-input-premium-styled" 
-                value={shareMessageFooter} 
+              <textarea
+                className="modern-input-premium-styled"
+                value={shareMessageFooter}
                 onChange={e => setShareMessageFooter(e.target.value)}
                 style={{ height: '60px', paddingTop: '0.75rem' }}
                 placeholder="Ej: #Intelecciones #PLRA"
@@ -1978,12 +1976,12 @@ Status: ${error.response?.status || 'N/A'}
           <div className="card-premium-styled" style={{ padding: '2rem', borderColor: 'rgba(239,68,68,0.1)' }}>
             <div className="form-group">
               <label style={{ color: 'var(--red)' }}>Llave Maestra del Sistema</label>
-              <input 
-                type="password" 
-                className="modern-input-premium-styled" 
+              <input
+                type="password"
+                className="modern-input-premium-styled"
                 placeholder="Inviolable"
-                value={masterKey} 
-                onChange={e => setMasterKey(e.target.value)} 
+                value={masterKey}
+                onChange={e => setMasterKey(e.target.value)}
                 style={{ borderBottomColor: 'rgba(239,68,68,0.3)' }}
               />
               <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.75rem', lineHeight: '1.4' }}>
@@ -1996,7 +1994,7 @@ Status: ${error.response?.status || 'N/A'}
             <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '1.25rem' }}>
               Acción irreversible: Elimina todas las capturas de todos los coordinadores en todas las listas.
             </p>
-            <button onClick={handleWipeCaptures} className="btn-wipe" style={{ 
+            <button onClick={handleWipeCaptures} className="btn-wipe" style={{
               width: '100%', padding: '1rem', borderRadius: '10px', background: 'var(--red)', color: 'white', border: 'none', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
             }}>
               <Trash2 size={16} /> EJECUTAR WIPE DEL SISTEMA
@@ -2018,7 +2016,7 @@ Status: ${error.response?.status || 'N/A'}
       alert('Por favor, ingresa el nombre de la ciudad para este padrón.');
       return;
     }
-    
+
     setImportingPadron(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -2053,14 +2051,14 @@ Status: ${error.response?.status || 'N/A'}
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <FileText size={18} /> Importación de Padrones (Excel)
         </h3>
-        
+
         <div className="card-premium-styled" style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div className="form-group">
               <label>Nombre de la Ciudad</label>
-              <input 
-                className="modern-input-premium-styled" 
-                placeholder="Ej: Pedro Juan Caballero, Asunción..." 
+              <input
+                className="modern-input-premium-styled"
+                placeholder="Ej: Pedro Juan Caballero, Asunción..."
                 value={importCity}
                 onChange={e => setImportCity(e.target.value)}
               />
@@ -2069,7 +2067,7 @@ Status: ${error.response?.status || 'N/A'}
               </p>
             </div>
 
-            <div 
+            <div
               style={{
                 border: '2px dashed var(--border-mid)',
                 borderRadius: '16px',
@@ -2127,7 +2125,7 @@ Status: ${error.response?.status || 'N/A'}
         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <LayoutList size={18} /> Resumen de Registros por Ciudad
         </h3>
-        
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
           {(Array.isArray(padronStats) ? padronStats : []).map(stat => (
             <div key={stat.ciudad} className="card-premium-styled" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2156,8 +2154,8 @@ Status: ${error.response?.status || 'N/A'}
           <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Estado del Sistema</h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 500 }}>Métricas de rendimiento y salud de la plataforma en tiempo real.</p>
         </div>
-        <button 
-          className="btn-primary" 
+        <button
+          className="btn-primary"
           onClick={fetchSystemHealth}
           style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', fontSize: '0.8rem' }}
         >
@@ -2166,8 +2164,8 @@ Status: ${error.response?.status || 'N/A'}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.75rem' }}>
-        <div className="card-premium-styled" style={{ 
-          padding: '1.75rem', 
+        <div className="card-premium-styled" style={{
+          padding: '1.75rem',
           borderLeft: '5px solid var(--plra-400)',
           background: 'linear-gradient(145deg, var(--surface), rgba(59, 130, 246, 0.05))'
         }}>
@@ -2195,8 +2193,8 @@ Status: ${error.response?.status || 'N/A'}
           </div>
         </div>
 
-        <div className="card-premium-styled" style={{ 
-          padding: '1.75rem', 
+        <div className="card-premium-styled" style={{
+          padding: '1.75rem',
           borderLeft: '5px solid var(--green)',
           background: 'linear-gradient(145deg, var(--surface), rgba(34, 197, 94, 0.05))'
         }}>
@@ -2226,8 +2224,8 @@ Status: ${error.response?.status || 'N/A'}
           </div>
         </div>
 
-        <div className="card-premium-styled" style={{ 
-          padding: '1.75rem', 
+        <div className="card-premium-styled" style={{
+          padding: '1.75rem',
           borderLeft: '5px solid var(--yellow)',
           background: 'linear-gradient(145deg, var(--surface), rgba(245, 158, 11, 0.05))'
         }}>
@@ -2244,17 +2242,17 @@ Status: ${error.response?.status || 'N/A'}
             </div>
           </div>
           <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-            <button 
-              className="btn" 
-              style={{ 
-                width: '100%', 
-                gap: '0.5rem', 
-                background: 'rgba(245, 158, 11, 0.1)', 
+            <button
+              className="btn"
+              style={{
+                width: '100%',
+                gap: '0.5rem',
+                background: 'rgba(245, 158, 11, 0.1)',
                 color: 'var(--yellow)',
                 border: '1px solid rgba(245, 158, 11, 0.2)',
                 borderRadius: '10px',
                 padding: '0.7rem'
-              }} 
+              }}
               onClick={() => setActiveTab('audit')}
             >
               Consultar Logs Forenses <FileText size={14} />
@@ -2263,13 +2261,13 @@ Status: ${error.response?.status || 'N/A'}
         </div>
       </div>
 
-      <div className="card-premium-styled" style={{ 
-        padding: '3rem 2rem', 
-        textAlign: 'center', 
+      <div className="card-premium-styled" style={{
+        padding: '3rem 2rem',
+        textAlign: 'center',
         background: 'linear-gradient(180deg, rgba(59, 130, 246, 0.03) 0%, rgba(2, 12, 30, 0.5) 100%)',
         border: '1px solid rgba(59, 130, 246, 0.1)'
       }}>
-        <div style={{ 
+        <div style={{
           width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-400)',
           margin: '0 auto 1.5rem'
@@ -2281,10 +2279,10 @@ Status: ${error.response?.status || 'N/A'}
           Realiza limpiezas preventivas o reseteos controlados de la información de campo antes del inicio de una nueva jornada electoral para asegurar la integridad de los datos.
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-          <button 
-            className="btn" 
+          <button
+            className="btn"
             onClick={handleWipeCaptures}
-            style={{ 
+            style={{
               background: 'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)',
               color: 'white',
               padding: '0.9rem 2rem',
@@ -2297,10 +2295,10 @@ Status: ${error.response?.status || 'N/A'}
           >
             <Trash2 size={20} /> Purgar Datos (RESET)
           </button>
-          <button 
-            className="btn" 
+          <button
+            className="btn"
             onClick={() => setActiveTab('padrones')}
-            style={{ 
+            style={{
               background: 'linear-gradient(135deg, var(--plra-500) 0%, var(--plra-700) 100%)',
               color: 'white',
               padding: '0.9rem 2rem',
@@ -2320,11 +2318,11 @@ Status: ${error.response?.status || 'N/A'}
 
   const renderUsers = () => {
     const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
-      const matchesSearch = !userSearchTerm || 
+      const matchesSearch = !userSearchTerm ||
         u.username?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
         u.nombre?.toLowerCase().includes(userSearchTerm.toLowerCase());
       const matchesRole = !userRoleFilter || u.role === userRoleFilter;
-      const matchesCampaign = !userCampaignFilter || 
+      const matchesCampaign = !userCampaignFilter ||
         u.assigned_campaign_id?.toString() === userCampaignFilter ||
         u.effective_campaign_id?.toString() === userCampaignFilter;
       return matchesSearch && matchesRole && matchesCampaign;
@@ -2367,21 +2365,21 @@ Status: ${error.response?.status || 'N/A'}
         </div>
 
         {/* FILTERS BAR */}
-        <div style={{ 
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '1rem', padding: '1.25rem', background: 'rgba(255,255,255,0.02)', 
-          borderRadius: '12px', border: '1px solid var(--border)' 
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1rem', padding: '1.25rem', background: 'rgba(255,255,255,0.02)',
+          borderRadius: '12px', border: '1px solid var(--border)'
         }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: '0.4rem' }}>Buscador (Nombre / CI)</label>
             <div style={{ position: 'relative' }}>
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
-              <input 
-                className="mini-input" 
+              <input
+                className="mini-input"
                 style={{ paddingLeft: '30px', width: '100%' }}
-                placeholder="Buscar usuario..." 
-                value={userSearchTerm} 
-                onChange={e => setUserSearchTerm(e.target.value)} 
+                placeholder="Buscar usuario..."
+                value={userSearchTerm}
+                onChange={e => setUserSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -2405,28 +2403,30 @@ Status: ${error.response?.status || 'N/A'}
           </div>
         </div>
 
-        <ManagementTable 
+        <ManagementTable
           isLoading={isLoading}
           maxHeight="calc(100vh - 350px)"
           stickyHeader={true}
           columns={[
             { header: 'CI', accessor: 'username', width: '120px' },
             { header: 'Nombre', accessor: 'nombre' },
-            { header: 'Campaña / Cliente', accessor: (u: any) => {
-              const c = campaigns.find(camp => camp.id === u.assigned_campaign_id);
-              return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c ? 'var(--plra-300)' : 'var(--text-3)' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c ? 'white' : 'var(--text-3)' }}>
-                    {c ? c.name : 'SISTEMA GLOBAL'}
-                  </span>
-                </div>
-              );
-            }},
-            { 
-              header: 'Rol', 
+            {
+              header: 'Campaña / Cliente', accessor: (u: any) => {
+                const c = campaigns.find(camp => camp.id === u.assigned_campaign_id);
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c ? 'var(--plra-300)' : 'var(--text-3)' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c ? 'white' : 'var(--text-3)' }}>
+                      {c ? c.name : 'SISTEMA GLOBAL'}
+                    </span>
+                  </div>
+                );
+              }
+            },
+            {
+              header: 'Rol',
               accessor: (u: any) => (
-                <span style={{ 
+                <span style={{
                   padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800,
                   background: u.role === 'SUPERUSUARIO' ? 'var(--accent-subtle)' : 'var(--surface-light)',
                   color: u.role === 'SUPERUSUARIO' ? 'var(--plra-300)' : 'var(--text-2)'
@@ -2438,8 +2438,8 @@ Status: ${error.response?.status || 'N/A'}
               accessor: (u: any) => u.parent_name || <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>N/A</span>,
               sortKey: 'parent_name'
             },
-            { 
-              header: 'Lista Asignada', 
+            {
+              header: 'Lista Asignada',
               accessor: (u: any) => {
                 if (!u.assigned_list_id) return <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>Sin asignar</span>;
                 const list = lists?.find(l => l.id === u.assigned_list_id);
@@ -2458,11 +2458,11 @@ Status: ${error.response?.status || 'N/A'}
               header: 'Acciones',
               accessor: (u: any) => (
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="icon-btn" onClick={() => { 
-                    setEditingUser(u); 
-                    setNewUserCI(u.ci || ''); 
-                    setNewUserRealName(u.nombre || ''); 
-                    setNewUserName(u.username || ''); 
+                  <button className="icon-btn" onClick={() => {
+                    setEditingUser(u);
+                    setNewUserCI(u.ci || '');
+                    setNewUserRealName(u.nombre || '');
+                    setNewUserName(u.username || '');
                     setNewUserRole(u.role);
                     setNewUserList(u.assigned_list_id?.toString() || '');
                     setNewUserCampaign(u.assigned_campaign_id?.toString() || '');
@@ -2473,11 +2473,11 @@ Status: ${error.response?.status || 'N/A'}
                     setNewUserDistrito(u.distrito || '');
                     setUserProfilePreview({ photo_url: u.photo_url, nombre: u.nombre });
                     setIsUserVerified(!!u.ci);
-                    setShowModal('user'); 
+                    setShowModal('user');
                   }}><Edit2 size={14} /></button>
-                  <button 
-                    className="icon-btn" 
-                    style={{ color: 'var(--yellow)' }} 
+                  <button
+                    className="icon-btn"
+                    style={{ color: 'var(--yellow)' }}
                     onClick={() => handleResetPassword(u.id)}
                     title="Resetear Contraseña (Forzar Cambio)"
                   >
@@ -2521,12 +2521,12 @@ Status: ${error.response?.status || 'N/A'}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {(Array.isArray(pendingLogistics) ? pendingLogistics : []).filter(p => !p.assigned_vehicle_id).map(cap => (
-              <div key={cap.id} style={{ 
-                padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', 
+              <div key={cap.id} style={{
+                padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)',
                 borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem'
               }}>
-                <div style={{ 
-                  width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59,130,246,0.1)', 
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59,130,246,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-300)'
                 }}>
                   <User size={20} />
@@ -2552,16 +2552,17 @@ Status: ${error.response?.status || 'N/A'}
               const statusColor = v.status === 'AVAILABLE' ? 'var(--green)' : v.status === 'IN_TRANSIT' ? 'var(--yellow)' : 'var(--red)';
               const statusLabel = v.status === 'AVAILABLE' ? 'Disponible' : v.status === 'IN_TRANSIT' ? 'En Ruta' : 'Mantenimiento';
               return (
-              <div key={v.id} style={{ padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 800 }}>{v.description}</p>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Chofer: {v.driver_name}</p>
+                <div key={v.id} style={{ padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <p style={{ fontSize: '0.9rem', fontWeight: 800 }}>{v.description}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Chofer: {v.driver_name}</p>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: statusColor }}>{statusLabel}</span>
                   </div>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: statusColor }}>{statusLabel}</span>
                 </div>
-              </div>
-            )})} 
+              )
+            })}
           </div>
         </div>
       </div>
@@ -2575,17 +2576,17 @@ Status: ${error.response?.status || 'N/A'}
   if (loading) return null;
 
   return (
-    <MainLayout 
-      title="Panel de Administración" 
-      userName={authUser?.nombre || "Usuario"} 
+    <MainLayout
+      title="Panel de Administración"
+      userName={authUser?.nombre || "Usuario"}
       userPhoto={authUser?.photo_url}
     >
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'visible', position: 'relative' }}>
         <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        
-        <main style={{ 
-          flex: 1, 
-          padding: window.innerWidth < 768 ? '1rem' : '2rem', 
+
+        <main style={{
+          flex: 1,
+          padding: window.innerWidth < 768 ? '1rem' : '2rem',
           overflowY: 'auto',
           overflowX: 'hidden',
           background: 'linear-gradient(to bottom, transparent, rgba(0,71,171,0.03))'
@@ -2616,20 +2617,20 @@ Status: ${error.response?.status || 'N/A'}
 
       <AnimatePresence>
         {showModal && (
-          <div 
-            className="modal-overlay" 
+          <div
+            className="modal-overlay"
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(null); }}
           >
-            <motion.div 
+            <motion.div
               className="modal-content-premium"
               initial={{ scale: 0.9, opacity: 0, y: -20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: -20 }}
               onClick={e => e.stopPropagation()}
-              style={{ 
-                width: 'auto', 
-                maxWidth: '95vw', 
-                padding: 0, 
+              style={{
+                width: 'auto',
+                maxWidth: '95vw',
+                padding: 0,
                 overflowY: 'auto',   // Permitir scroll interno
                 maxHeight: '90vh',   // Aumentar un poco el espacio útil
                 display: 'flex',
@@ -2664,11 +2665,11 @@ Status: ${error.response?.status || 'N/A'}
                         </div>
                         <div className="form-group">
                           <label>Distrito</label>
-                          <input 
-                            className="modern-input-premium-styled" 
-                            value={newCampaignDistrito} 
-                            onChange={e => setNewCampaignDistrito(e.target.value.toUpperCase())} 
-                            placeholder="Ej: ASUNCION" 
+                          <input
+                            className="modern-input-premium-styled"
+                            value={newCampaignDistrito}
+                            onChange={e => setNewCampaignDistrito(e.target.value.toUpperCase())}
+                            placeholder="Ej: ASUNCION"
                             list="districts-list"
                           />
                         </div>
@@ -2684,34 +2685,44 @@ Status: ${error.response?.status || 'N/A'}
                         </label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           {[
-                            { key: 'COMMAND_CENTER', label: 'Centro de Mando', icon: '🎯', desc: 'Panel de comando operativo y KPIs en tiempo real', subs: [
-                              { key: 'CC_FIELD_REQUESTS', label: 'Solicitudes de Campo' },
-                              { key: 'CC_ELECTOR_REGISTRY', label: 'Registro de Electores' },
-                              { key: 'CC_RANKINGS', label: 'Rankings de Coordinadores' },
-                              { key: 'CC_HEATMAP', label: 'Mapa de Calor' }
-                            ]},
-                            { key: 'REGISTRY', label: 'Registro Electoral', icon: '📋', desc: 'Captura y verificación de adherentes en campo', subs: [
-                              { key: 'REG_CAPTURE', label: 'Captura de Adherentes' },
-                              { key: 'REG_LOOKUP', label: 'Consulta por Cédula' },
-                              { key: 'REG_SHARE', label: 'Compartir Constancias' }
-                            ]},
-                            { key: 'LOGISTICS', label: 'Logística', icon: '🚛', desc: 'Gestión de vehículos, rutas y traslados del Día D', subs: [
-                              { key: 'LOG_VEHICLES', label: 'Gestión de Vehículos' },
-                              { key: 'LOG_ROUTES', label: 'Planificación de Rutas' },
-                              { key: 'LOG_ZONES', label: 'Cobertura de Zonas' },
-                              { key: 'LOG_TRANSPORT', label: 'Traslado de Electores' }
-                            ]},
-                            { key: 'WHATSAPP', label: 'Comunicaciones', icon: '💬', desc: 'Mensajería masiva y gestión de contactos', subs: [
-                              { key: 'WA_BROADCAST', label: 'Mensajes Masivos' },
-                              { key: 'WA_CONTACTS', label: 'Gestión de Contactos' },
-                              { key: 'WA_TEMPLATES', label: 'Plantillas de Mensaje' }
-                            ]},
-                            { key: 'DIAD', label: 'Día D', icon: '🗳️', desc: 'Operación electoral del día de la votación', subs: [
-                              { key: 'DD_COUNTDOWN', label: 'Cuenta Regresiva' },
-                              { key: 'DD_VEEDORES', label: 'Gestión de Veedores' },
-                              { key: 'DD_ACTAS', label: 'Carga de Actas' },
-                              { key: 'DD_RESULTS', label: 'Resultados en Vivo' }
-                            ]}
+                            {
+                              key: 'COMMAND_CENTER', label: 'Centro de Mando', icon: '🎯', desc: 'Panel de comando operativo y KPIs en tiempo real', subs: [
+                                { key: 'CC_FIELD_REQUESTS', label: 'Solicitudes de Campo' },
+                                { key: 'CC_ELECTOR_REGISTRY', label: 'Registro de Electores' },
+                                { key: 'CC_RANKINGS', label: 'Rankings de Coordinadores' },
+                                { key: 'CC_HEATMAP', label: 'Mapa de Calor' }
+                              ]
+                            },
+                            {
+                              key: 'REGISTRY', label: 'Registro Electoral', icon: '📋', desc: 'Captura y verificación de adherentes en campo', subs: [
+                                { key: 'REG_CAPTURE', label: 'Captura de Adherentes' },
+                                { key: 'REG_LOOKUP', label: 'Consulta por Cédula' },
+                                { key: 'REG_SHARE', label: 'Compartir Constancias' }
+                              ]
+                            },
+                            {
+                              key: 'LOGISTICS', label: 'Logística', icon: '🚛', desc: 'Gestión de vehículos, rutas y traslados del Día D', subs: [
+                                { key: 'LOG_VEHICLES', label: 'Gestión de Vehículos' },
+                                { key: 'LOG_ROUTES', label: 'Planificación de Rutas' },
+                                { key: 'LOG_ZONES', label: 'Cobertura de Zonas' },
+                                { key: 'LOG_TRANSPORT', label: 'Traslado de Electores' }
+                              ]
+                            },
+                            {
+                              key: 'WHATSAPP', label: 'Comunicaciones', icon: '💬', desc: 'Mensajería masiva y gestión de contactos', subs: [
+                                { key: 'WA_BROADCAST', label: 'Mensajes Masivos' },
+                                { key: 'WA_CONTACTS', label: 'Gestión de Contactos' },
+                                { key: 'WA_TEMPLATES', label: 'Plantillas de Mensaje' }
+                              ]
+                            },
+                            {
+                              key: 'DIAD', label: 'Día D', icon: '🗳️', desc: 'Operación electoral del día de la votación', subs: [
+                                { key: 'DD_COUNTDOWN', label: 'Cuenta Regresiva' },
+                                { key: 'DD_VEEDORES', label: 'Gestión de Veedores' },
+                                { key: 'DD_ACTAS', label: 'Carga de Actas' },
+                                { key: 'DD_RESULTS', label: 'Resultados en Vivo' }
+                              ]
+                            }
                           ].map(mod => {
                             const isModActive = newCampaignModules.includes(mod.key);
                             return (
@@ -2828,34 +2839,44 @@ Status: ${error.response?.status || 'N/A'}
                         </label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           {[
-                            { key: 'COMMAND_CENTER', label: 'Centro de Mando', icon: '🎯', desc: 'Panel de comando operativo y KPIs en tiempo real', subs: [
-                              { key: 'CC_FIELD_REQUESTS', label: 'Solicitudes de Campo' },
-                              { key: 'CC_ELECTOR_REGISTRY', label: 'Registro de Electores' },
-                              { key: 'CC_RANKINGS', label: 'Rankings de Coordinadores' },
-                              { key: 'CC_HEATMAP', label: 'Mapa de Calor' }
-                            ]},
-                            { key: 'REGISTRY', label: 'Registro Electoral', icon: '📋', desc: 'Captura y verificación de adherentes en campo', subs: [
-                              { key: 'REG_CAPTURE', label: 'Captura de Adherentes' },
-                              { key: 'REG_LOOKUP', label: 'Consulta por Cédula' },
-                              { key: 'REG_SHARE', label: 'Compartir Constancias' }
-                            ]},
-                            { key: 'LOGISTICS', label: 'Logística', icon: '🚛', desc: 'Gestión de vehículos, rutas y traslados del Día D', subs: [
-                              { key: 'LOG_VEHICLES', label: 'Gestión de Vehículos' },
-                              { key: 'LOG_ROUTES', label: 'Planificación de Rutas' },
-                              { key: 'LOG_ZONES', label: 'Cobertura de Zonas' },
-                              { key: 'LOG_TRANSPORT', label: 'Traslado de Electores' }
-                            ]},
-                            { key: 'WHATSAPP', label: 'Comunicaciones', icon: '💬', desc: 'Mensajería masiva y gestión de contactos', subs: [
-                              { key: 'WA_BROADCAST', label: 'Mensajes Masivos' },
-                              { key: 'WA_CONTACTS', label: 'Gestión de Contactos' },
-                              { key: 'WA_TEMPLATES', label: 'Plantillas de Mensaje' }
-                            ]},
-                            { key: 'DIAD', label: 'Día D', icon: '🗳️', desc: 'Operación electoral del día de la votación', subs: [
-                              { key: 'DD_COUNTDOWN', label: 'Cuenta Regresiva' },
-                              { key: 'DD_VEEDORES', label: 'Gestión de Veedores' },
-                              { key: 'DD_ACTAS', label: 'Carga de Actas' },
-                              { key: 'DD_RESULTS', label: 'Resultados en Vivo' }
-                            ]}
+                            {
+                              key: 'COMMAND_CENTER', label: 'Centro de Mando', icon: '🎯', desc: 'Panel de comando operativo y KPIs en tiempo real', subs: [
+                                { key: 'CC_FIELD_REQUESTS', label: 'Solicitudes de Campo' },
+                                { key: 'CC_ELECTOR_REGISTRY', label: 'Registro de Electores' },
+                                { key: 'CC_RANKINGS', label: 'Rankings de Coordinadores' },
+                                { key: 'CC_HEATMAP', label: 'Mapa de Calor' }
+                              ]
+                            },
+                            {
+                              key: 'REGISTRY', label: 'Registro Electoral', icon: '📋', desc: 'Captura y verificación de adherentes en campo', subs: [
+                                { key: 'REG_CAPTURE', label: 'Captura de Adherentes' },
+                                { key: 'REG_LOOKUP', label: 'Consulta por Cédula' },
+                                { key: 'REG_SHARE', label: 'Compartir Constancias' }
+                              ]
+                            },
+                            {
+                              key: 'LOGISTICS', label: 'Logística', icon: '🚛', desc: 'Gestión de vehículos, rutas y traslados del Día D', subs: [
+                                { key: 'LOG_VEHICLES', label: 'Gestión de Vehículos' },
+                                { key: 'LOG_ROUTES', label: 'Planificación de Rutas' },
+                                { key: 'LOG_ZONES', label: 'Cobertura de Zonas' },
+                                { key: 'LOG_TRANSPORT', label: 'Traslado de Electores' }
+                              ]
+                            },
+                            {
+                              key: 'WHATSAPP', label: 'Comunicaciones', icon: '💬', desc: 'Mensajería masiva y gestión de contactos', subs: [
+                                { key: 'WA_BROADCAST', label: 'Mensajes Masivos' },
+                                { key: 'WA_CONTACTS', label: 'Gestión de Contactos' },
+                                { key: 'WA_TEMPLATES', label: 'Plantillas de Mensaje' }
+                              ]
+                            },
+                            {
+                              key: 'DIAD', label: 'Día D', icon: '🗳️', desc: 'Operación electoral del día de la votación', subs: [
+                                { key: 'DD_COUNTDOWN', label: 'Cuenta Regresiva' },
+                                { key: 'DD_VEEDORES', label: 'Gestión de Veedores' },
+                                { key: 'DD_ACTAS', label: 'Carga de Actas' },
+                                { key: 'DD_RESULTS', label: 'Resultados en Vivo' }
+                              ]
+                            }
                           ].map(mod => {
                             const isModActive = newCampaignModules.includes(mod.key);
                             return (
@@ -2942,7 +2963,7 @@ Status: ${error.response?.status || 'N/A'}
                     <h2>{editingUser ? 'Editar Operador' : 'Nuevo Operador'}</h2>
                     <button className="icon-btn" onClick={() => { setShowModal(null); setEditingUser(null); }}><X size={20} /></button>
                   </div>
-                  
+
                   <div className="modal-body-premium">
                     <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser}>
                       {/* Cabecera de Perfil Compacta */}
@@ -3006,10 +3027,10 @@ Status: ${error.response?.status || 'N/A'}
                             </div>
                             <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
                               <label>Distrito bajo su mando (Opcional)</label>
-                              <input 
-                                className="modern-input-premium-styled" 
-                                placeholder="Ej: PEDRO JUAN CABALLERO" 
-                                value={newUserDistrito} 
+                              <input
+                                className="modern-input-premium-styled"
+                                placeholder="Ej: PEDRO JUAN CABALLERO"
+                                value={newUserDistrito}
                                 onChange={e => setNewUserDistrito(e.target.value.toUpperCase())}
                                 list="districts-list"
                               />
@@ -3023,9 +3044,9 @@ Status: ${error.response?.status || 'N/A'}
                         {(newUserRole === 'PADRINO' || newUserRole === 'COORDINADOR' || newUserRole === 'SUBJEFE') && (
                           <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
                             <label>
-                              {newUserRole === 'SUBJEFE' ? 'Superior (Jefe de Campaña)' : 
-                               newUserRole === 'PADRINO' ? 'Superior (Jefe de Campaña)' : 
-                               'Superior (Padrino o Sub-Jefe)'}
+                              {newUserRole === 'SUBJEFE' ? 'Superior (Jefe de Campaña)' :
+                                newUserRole === 'PADRINO' ? 'Superior (Jefe de Campaña)' :
+                                  'Superior (Padrino o Sub-Jefe)'}
                             </label>
                             <select className="modern-input-premium-styled" value={newUserParent} onChange={e => setNewUserParent(e.target.value)} required>
                               <option value="">Seleccione Superior...</option>
@@ -3075,11 +3096,11 @@ Status: ${error.response?.status || 'N/A'}
                     <h2>{editingList ? 'Actualizar Lista' : 'Registro de Lista Electoral'}</h2>
                     <button className="icon-btn" onClick={() => { setShowModal(null); setEditingList(null); }}><X size={20} /></button>
                   </div>
-                  
+
                   <div className="modal-body-premium">
                     <form onSubmit={editingList ? handleUpdateList : handleCreateList}>
-                      <div style={{ 
-                        padding: '1.25rem', 
+                      <div style={{
+                        padding: '1.25rem',
                         background: 'rgba(37,99,235,0.04)',
                         borderRadius: '16px',
                         border: '1px solid var(--border)',
@@ -3087,11 +3108,11 @@ Status: ${error.response?.status || 'N/A'}
                         marginBottom: '1.5rem'
                       }}>
                         <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileUpload(e, 'list')} />
-                        <div style={{ 
-                          width: '90px', height: '90px', borderRadius: '24px', 
-                          background: 'white', border: '2px solid var(--plra-300)', 
-                          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                          position: 'relative', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' 
+                        <div style={{
+                          width: '90px', height: '90px', borderRadius: '24px',
+                          background: 'white', border: '2px solid var(--plra-300)',
+                          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          position: 'relative', cursor: 'pointer', boxShadow: 'var(--shadow-sm)'
                         }} onClick={() => fileInputRef.current?.click()}>
                           {candidatePreview?.photo_url ? (
                             <img src={getImageUrl(candidatePreview.photo_url) || ''} alt="Candidato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -3120,13 +3141,13 @@ Status: ${error.response?.status || 'N/A'}
                       <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Ciudad / Distrito</label>
-                          <input 
-                            className="modern-input-premium-styled" 
-                            placeholder="Ej: PEDRO JUAN CABALLERO" 
-                            value={newListCiudad} 
-                            onChange={e => setNewListCiudad(e.target.value.toUpperCase())} 
+                          <input
+                            className="modern-input-premium-styled"
+                            placeholder="Ej: PEDRO JUAN CABALLERO"
+                            value={newListCiudad}
+                            onChange={e => setNewListCiudad(e.target.value.toUpperCase())}
                             list="districts-list"
-                            required 
+                            required
                           />
                         </div>
 
@@ -3176,16 +3197,16 @@ Status: ${error.response?.status || 'N/A'}
                         <div className="form-group">
                           <label>Número de Lista</label>
                           <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                            <input 
-                              className="modern-input-premium-styled" 
-                              placeholder="Ej: 2" 
-                              value={newListNumber} 
-                              onChange={e => setNewListNumber(e.target.value)} 
-                              required 
+                            <input
+                              className="modern-input-premium-styled"
+                              placeholder="Ej: 2"
+                              value={newListNumber}
+                              onChange={e => setNewListNumber(e.target.value)}
+                              required
                             />
                             {newListType === 'CONCEJAL' && (
-                              <select 
-                                className="modern-input-premium-styled" 
+                              <select
+                                className="modern-input-premium-styled"
                                 style={{ fontSize: '0.65rem', padding: '0.4rem', height: 'auto', background: 'rgba(255,255,255,0.02)' }}
                                 onChange={e => {
                                   const val = e.target.value;
@@ -3199,8 +3220,8 @@ Status: ${error.response?.status || 'N/A'}
                                 }}
                               >
                                 <option value="">Auto-vínculo con Intendente...</option>
-                                {lists.filter(l => 
-                                  l.type === 'INTENDENTE' && 
+                                {lists.filter(l =>
+                                  l.type === 'INTENDENTE' &&
                                   (newListCiudad ? l.ciudad?.toUpperCase() === newListCiudad.toUpperCase() : true)
                                 ).map(l => (
                                   <option key={l.id} value={l.list_number}>Usar # de Lista {l.list_number} ({l.candidate_alias || l.candidate_nombre})</option>
@@ -3219,7 +3240,7 @@ Status: ${error.response?.status || 'N/A'}
                           <div className="form-group" style={{ gridColumn: 'span 2' }}>
                             <label>Opción (Posición)</label>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '0.25rem' }}>
-                              {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => {
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => {
                                 const isTaken = takenOptions.includes(n);
                                 const isSelected = newListOption === n.toString();
                                 return (
@@ -3313,19 +3334,19 @@ Status: ${error.response?.status || 'N/A'}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label>Código de Local</label>
-                          <input 
-                            className="modern-input-premium-styled" 
-                            value={newLocaleCod} 
-                            onChange={e => setNewLocaleCod(e.target.value.toUpperCase())} 
-                            placeholder="Ej: 101" 
-                            required 
+                          <input
+                            className="modern-input-premium-styled"
+                            value={newLocaleCod}
+                            onChange={e => setNewLocaleCod(e.target.value.toUpperCase())}
+                            placeholder="Ej: 101"
+                            required
                           />
                         </div>
                         <div className="form-group">
                           <label>Ciudad / Distrito</label>
-                          <input 
-                            className="modern-input-premium-styled" 
-                            value={newLocaleCiudad} 
+                          <input
+                            className="modern-input-premium-styled"
+                            value={newLocaleCiudad}
                             placeholder="Ej: ASUNCION"
                             list="districts-list"
                             onChange={e => {
@@ -3339,7 +3360,7 @@ Status: ${error.response?.status || 'N/A'}
                             required
                           />
                         </div>
-                        
+
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Nombre de la Institución</label>
                           <input className="modern-input-premium-styled" value={newLocaleNombre} onChange={e => setNewLocaleNombre(e.target.value.toUpperCase())} placeholder="Ej: ESCUELA GRADUADA NRO 1" required />
@@ -3386,10 +3407,10 @@ Status: ${error.response?.status || 'N/A'}
       </AnimatePresence>
       <AnimatePresence>
         {cropperData && (
-          <ImageCropperModal 
-            image={cropperData.image} 
-            onCropComplete={onCropComplete} 
-            onCancel={() => setCropperData(null)} 
+          <ImageCropperModal
+            image={cropperData.image}
+            onCropComplete={onCropComplete}
+            onCancel={() => setCropperData(null)}
           />
         )}
       </AnimatePresence>
@@ -3397,7 +3418,7 @@ Status: ${error.response?.status || 'N/A'}
       <AnimatePresence>
         {apiError && (
           <div className="modal-overlay" style={{ zIndex: 1000000 }}>
-            <motion.div 
+            <motion.div
               className="modal-content-premium"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -3409,22 +3430,22 @@ Status: ${error.response?.status || 'N/A'}
               </div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>Incidencia Detectada</h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', marginBottom: '1.5rem' }}>{apiError.message}</p>
-              
+
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', textAlign: 'left', marginBottom: '1.5rem', border: '1px solid var(--border)' }}>
                 <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--red)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Detalle Técnico:</p>
                 <code style={{ fontSize: '0.75rem', color: 'var(--text)', wordBreak: 'break-all' }}>{apiError.details}</code>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <button 
-                  className="btn-confirm-styled" 
+                <button
+                  className="btn-confirm-styled"
                   onClick={() => handleCopyDiagnostic({ message: apiError.message, response: { data: apiError.details } })}
                   style={{ width: '100%', justifyContent: 'center' }}
                 >
                   <Copy size={18} /> Copiar Diagnóstico
                 </button>
-                <button 
-                  className="btn-cancel-styled" 
+                <button
+                  className="btn-cancel-styled"
                   onClick={() => setApiError(null)}
                   style={{ width: '100%' }}
                 >

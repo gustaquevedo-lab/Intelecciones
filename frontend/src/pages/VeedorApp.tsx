@@ -396,10 +396,8 @@ const ActaFinalTab = () => {
   const loadActaData = async () => {
     try {
       setLoading(true);
-      const [tableRes, listasRes] = await Promise.all([
-        api.get('/veedor/table-status'),
-        api.get('/diad/listas'),
-      ]);
+      const tableRes = await api.get('/veedor/table-status');
+      const listasRes = await api.get('/diad/listas');
       setTableInfo({
         local: tableRes.data.info.local,
         mesa: tableRes.data.info.mesa,
@@ -690,10 +688,8 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [covRes, memRes] = await Promise.all([
-        api.get('/api/diad/coverage'),
-        api.get('/api/diad/members')
-      ]);
+      const covRes = await api.get('/api/diad/coverage');
+      const memRes = await api.get('/api/diad/members');
       
       // Filter mesas belonging to the apoderado's school
       const schoolName = user?.assigned_local || '';

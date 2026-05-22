@@ -1163,7 +1163,13 @@ app.get('/api/campaigns', (req, res) => {
   const params = sec.params || [];
   
   try {
-    const campaigns = db.prepare(`SELECT * FROM campaigns c WHERE 1=1 ${sec.sql}`).all(...params);
+    const campaigns = db.prepare(`
+      SELECT c.*,
+        (SELECT COUNT(*) FROM users u WHERE u.assigned_campaign_id = c.id) as campUsers,
+        (SELECT COUNT(*) FROM elector_captures ec WHERE ec.campaign_id = c.id) as campCaptures
+      FROM campaigns c 
+      WHERE 1=1 ${sec.sql}
+    `).all(...params);
     res.json(campaigns);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2056,10 +2062,24 @@ app.get('/api/users', (req, res) => {
     `;
     
     let users;
-    if (req.query.parent_id) {
-      users = db.prepare(query + ' AND u.parent_id = ?').all(...params, req.query.parent_id);
+    let limitStr = '';
+    let offsetStr = '';
+    const limit = parseInt(req.query.limit as string);
+    const offset = parseInt(req.query.offset as string);
+    if (!isNaN(limit)) {
+      limitStr = ` LIMIT ${limit}`;
+      if (!isNaN(offset)) {
+         offsetStr = ` OFFSET ${offset}`;
+      }
     } else {
-      users = db.prepare(query).all(...params);
+      // Default safety limit for massive tables
+      limitStr = ` LIMIT 1500`;
+    }
+
+    if (req.query.parent_id) {
+      users = db.prepare(query + ' AND u.parent_id = ?' + limitStr + offsetStr).all(...params, req.query.parent_id);
+    } else {
+      users = db.prepare(query + limitStr + offsetStr).all(...params);
     }
     
     console.log(`[ADMIN] Sirviendo ${users.length} usuarios.`);
@@ -2407,19 +2427,25 @@ app.get('/api/stats/summary', (req, res) => {
   const params = sec.params || [];
   
   try {
-    const usersCount = db.prepare(`SELECT COUNT(*) as count FROM users u WHERE 1=1 ${getSecurityFilter(req, 'u').sql}`).get(...getSecurityFilter(req, 'u').params) as any;
-    const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${getSecurityFilter(req, 'c').sql}`).get(...getSecurityFilter(req, 'c').params) as any;
-    const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${getSecurityFilter(req, 'l').sql}`).get(...getSecurityFilter(req, 'l').params) as any;
+    const campId = req.query.campaign_id;
+    let campFilterU = campId ? ` AND u.assigned_campaign_id = ${db.prepare('SELECT ?').get(campId)}` : '';
+    let campFilterC = campId ? ` AND c.id = ${db.prepare('SELECT ?').get(campId)}` : '';
+    let campFilterL = campId ? ` AND l.campaign_id = ${db.prepare('SELECT ?').get(campId)}` : '';
+    let campFilterE = campId ? ` AND e.campaign_id = ${db.prepare('SELECT ?').get(campId)}` : '';
+
+    const usersCount = db.prepare(`SELECT COUNT(*) as count FROM users u WHERE 1=1 ${getSecurityFilter(req, 'u').sql}${campFilterU}`).get(...getSecurityFilter(req, 'u').params) as any;
+    const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${getSecurityFilter(req, 'c').sql}${campFilterC}`).get(...getSecurityFilter(req, 'c').params) as any;
+    const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${getSecurityFilter(req, 'l').sql}${campFilterL}`).get(...getSecurityFilter(req, 'l').params) as any;
     
     const secE = getSecurityFilter(req, 'e');
-    const cacheKey = JSON.stringify({ sql: secE.sql, params: secE.params });
+    const cacheKey = JSON.stringify({ sql: secE.sql + campFilterE, params: secE.params });
     const cachedE = electorsCountCache.get(cacheKey);
     let electorsCountVal = 0;
     const now = Date.now();
     if (cachedE && (now - cachedE.ts < ELECTORS_COUNT_TTL)) {
       electorsCountVal = cachedE.count;
     } else {
-      const res = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${secE.sql}`).get(...secE.params) as any;
+      const res = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${secE.sql}${campFilterE}`).get(...secE.params) as any;
       electorsCountVal = res?.count || 0;
       electorsCountCache.set(cacheKey, { count: electorsCountVal, ts: now });
     }
@@ -2441,6 +2467,10 @@ app.get('/api/stats/summary', (req, res) => {
       query += ` LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`;
     } else {
       query += ` WHERE 1=1 ${sec.sql.replace(/\be\./g, 'ec.')}`;
+    }
+    
+    if (campId) {
+       query += ` AND ec.campaign_id = ${db.prepare('SELECT ?').get(campId)}`;
     }
 
     const capturesStats = db.prepare(query).get(...params) as any;

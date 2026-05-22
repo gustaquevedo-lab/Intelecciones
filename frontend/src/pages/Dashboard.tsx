@@ -19,20 +19,20 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    const fetchData = () => {
-      Promise.all([
-        apiFetch('http://localhost:5000/api/electors/search').then(res => res.json()),
-        apiFetch('http://localhost:5000/api/stats/neighborhoods').then(res => res.json()),
-        apiFetch('http://localhost:5000/api/stats/results').then(res => res.json())
-      ]).then(([electorsData, statsData, resultsData]) => {
+    const fetchData = async () => {
+      try {
+        const electorsData = await apiFetch('http://localhost:5000/api/electors/search').then(res => res.json());
+        const statsData = await apiFetch('http://localhost:5000/api/stats/neighborhoods').then(res => res.json());
+        const resultsData = await apiFetch('http://localhost:5000/api/stats/results').then(res => res.json());
+        
         setElectors(electorsData);
         setStats(statsData);
         setResults(resultsData);
         setLoading(false);
-      }).catch(err => {
+      } catch (err) {
         console.error(err);
         setLoading(false);
-      });
+      }
     };
 
     fetchData();
