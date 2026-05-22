@@ -4143,25 +4143,21 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
                  l.list_number, c.name as campaign_name
         `;
 
-        let q1 = `
-          ${baseSelect}
+        let q1_ids = `
+          SELECT ec.id, ec.timestamp
           FROM electors e INDEXED BY idx_electors_distrito
           INNER JOIN elector_captures ec ON ec.elector_ci = e.ci
           LEFT JOIN users u ON ec.coordinator_id = u.id
-          LEFT JOIN users p ON u.parent_id = p.id
           LEFT JOIN lists l ON ec.list_id = l.id
-          LEFT JOIN campaigns c ON l.campaign_id = c.id
           WHERE e.distrito = ?
         `;
 
-        let q2 = `
-          ${baseSelect}
+        let q2_ids = `
+          SELECT ec.id, ec.timestamp
           FROM users u INDEXED BY idx_users_distrito
           INNER JOIN elector_captures ec ON ec.coordinator_id = u.id
           LEFT JOIN electors e ON ec.elector_ci = e.ci
-          LEFT JOIN users p ON u.parent_id = p.id
           LEFT JOIN lists l ON ec.list_id = l.id
-          LEFT JOIN campaigns c ON l.campaign_id = c.id
           WHERE u.distrito = ?
         `;
 
@@ -4190,15 +4186,25 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
           extraParams.push(parseInt(selectedCoordinator));
         }
 
-        q1 += extraFilters;
-        q2 += extraFilters;
+        q1_ids += extraFilters;
+        q2_ids += extraFilters;
 
         electorSql = `
-          SELECT * FROM (
-            ${q1}
-            UNION
-            ${q2}
-          ) ORDER BY timestamp DESC LIMIT 3000
+          ${baseSelect}
+          FROM (
+            SELECT id FROM (
+              ${q1_ids}
+              UNION
+              ${q2_ids}
+            ) ORDER BY timestamp DESC LIMIT 3000
+          ) as subset
+          INNER JOIN elector_captures ec ON subset.id = ec.id
+          LEFT JOIN electors e ON ec.elector_ci = e.ci
+          LEFT JOIN users u ON ec.coordinator_id = u.id
+          LEFT JOIN users p ON u.parent_id = p.id
+          LEFT JOIN lists l ON ec.list_id = l.id
+          LEFT JOIN campaigns c ON l.campaign_id = c.id
+          ORDER BY ec.timestamp DESC
         `;
         electorParams = [selectedDistrict, ...extraParams, selectedDistrict, ...extraParams];
       } else {
