@@ -942,16 +942,35 @@ const TeamPanel = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Use a ref for filters to avoid auto-triggering reloads on every dropdown change
+  const filtersRef = useRef({
+    district: selectedDistrictFilter,
+    list: selectedListFilter,
+    padrino: selectedPadrinoFilter,
+    coord: selectedCoordinatorFilter
+  });
+
+  useEffect(() => {
+    filtersRef.current = {
+      district: selectedDistrictFilter,
+      list: selectedListFilter,
+      padrino: selectedPadrinoFilter,
+      coord: selectedCoordinatorFilter
+    };
+  }, [selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter]);
+
   // Load reports data
   const loadReportsData = useCallback(async () => {
     setLoadingReports(true);
     try {
       const queryParams = new URLSearchParams();
       queryParams.append('report_type', reportType);
-      if (selectedDistrictFilter !== 'ALL') queryParams.append('district', selectedDistrictFilter);
-      if (selectedListFilter !== 'ALL') queryParams.append('list_number', selectedListFilter);
-      if (selectedPadrinoFilter !== 'ALL') queryParams.append('padrino_id', selectedPadrinoFilter);
-      if (selectedCoordinatorFilter !== 'ALL') queryParams.append('coordinator_id', selectedCoordinatorFilter);
+      
+      const { district, list, padrino, coord } = filtersRef.current;
+      if (district !== 'ALL') queryParams.append('district', district);
+      if (list !== 'ALL') queryParams.append('list_number', list);
+      if (padrino !== 'ALL') queryParams.append('padrino_id', padrino);
+      if (coord !== 'ALL') queryParams.append('coordinator_id', coord);
 
       const res = await api.get(`/my-team/reports?${queryParams.toString()}`);
       setReportData(res.data);
@@ -965,7 +984,7 @@ const TeamPanel = () => {
     } finally {
       setLoadingReports(false);
     }
-  }, [reportType, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter]);
+  }, [reportType]);
 
   useEffect(() => {
     if (activeTab === 'reports') {
