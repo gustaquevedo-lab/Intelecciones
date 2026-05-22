@@ -604,7 +604,14 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       const isDetailQuery = ['ec', 'u'].includes(tableAlias);
       const isPublicStats = req.path.includes('/stats/command'); 
       
-      // Jefes de Campaña now have full visibility of their district without restrictions.
+      if (role === 'JEFE_CAMPANA' && isDetailQuery && !isPublicStats) {
+          const listCol = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
+          sql += ` AND (
+            ${tableAlias}.${listCol} IS NULL OR 
+            ${tableAlias}.role IN ('SUBJEFE') OR
+            NOT EXISTS (SELECT 1 FROM users ul WHERE ul.assigned_list_id = ${tableAlias}.${listCol} AND ul.role = 'SUBJEFE')
+          )`;
+      }
 
       return { sql, params };
     }
@@ -2871,9 +2878,25 @@ app.post('/api/admin/conflicts/decide', (req, res) => {
       const conflict = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
       if (!conflict) throw new Error('Conflicto no encontrado');
 
-      // The Jefe's decision is final. Auto-consent for both lists.
-      db.prepare('UPDATE capture_conflicts SET jefe_decision_id = ?, consent_a = 1, consent_b = 1 WHERE id = ?')
+      // Update the Jefe's decision
+      db.prepare('UPDATE capture_conflicts SET jefe_decision_id = ?, status = "WAITING_CONSENT" WHERE id = ?')
         .run(winner_capture_id, conflict_id);
+
+      // AUTO-CONSENT Logic:
+      // 1. If it's an internal conflict (same list), the decision is final (no consent needed).
+      // 2. If it's inter-list, we auto-consent ONLY for lists that have NO SUBJEFE.
+      if (conflict.list_id_a === conflict.list_id_b) {
+          db.prepare('UPDATE capture_conflicts SET consent_a = 1, consent_b = 1 WHERE id = ?').run(conflict_id);
+      } else {
+          const lists = [conflict.list_id_a, conflict.list_id_b];
+          lists.forEach((lid, idx) => {
+              const hasSubjefe = db.prepare('SELECT 1 FROM users WHERE assigned_list_id = ? AND role = "SUBJEFE" LIMIT 1').get(lid);
+              if (!hasSubjefe) {
+                  const col = (idx === 0) ? 'consent_a' : 'consent_b';
+                  db.prepare(`UPDATE capture_conflicts SET ${col} = 1 WHERE id = ?`).run(conflict_id);
+              }
+          });
+      }
 
       checkAndFinalizeConflict(conflict_id, user_id);
       logAction(user_id, 'DECIDE_CONFLICT', 'CONFLICT', conflict_id, `Jefe decided conflict ${conflict_id} in favor of ${winner_capture_id}`);

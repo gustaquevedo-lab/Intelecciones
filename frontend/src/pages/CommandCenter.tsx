@@ -1963,14 +1963,29 @@ const CommandCenter = () => {
                             </a>
                         </div>
 
-                        <button 
-                            onClick={() => handleDecide(showResolveModal.capture_a_id)}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--surface-3)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-4)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-3)'}
-                        >
-                            ADJUDICAR
-                        </button>
+                        {showResolveModal.conflict_status === 'WAITING_CONSENT' ? (
+                            (user?.role === 'SUBJEFE' && user?.assigned_list_id === showResolveModal.list_id_a && showResolveModal.consent_a === 0) ? (
+                                <button 
+                                    onClick={() => handleConsent(showResolveModal.conflict_id)}
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--blue)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
+                                >
+                                    CONSENTIR DECISIÓN
+                                </button>
+                            ) : (
+                                <div style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: showResolveModal.jefe_decision_id === showResolveModal.capture_a_id ? 'var(--green)' : 'var(--surface-3)', color: showResolveModal.jefe_decision_id === showResolveModal.capture_a_id ? 'white' : 'var(--text-3)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', textAlign: 'center' }}>
+                                    {showResolveModal.jefe_decision_id === showResolveModal.capture_a_id ? 'ADJUDICADO (Esperando Subjefe)' : 'DESCARTADO'}
+                                </div>
+                            )
+                        ) : (
+                            <button 
+                                onClick={() => handleDecide(showResolveModal.capture_a_id)}
+                                style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--surface-3)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-4)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-3)'}
+                            >
+                                ADJUDICAR
+                            </button>
+                        )}
                     </div>
                   </div>
 
@@ -2010,14 +2025,29 @@ const CommandCenter = () => {
                             </a>
                         </div>
 
-                        <button 
-                            onClick={() => handleDecide(showResolveModal.capture_b_id)}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--surface-3)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-4)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-3)'}
-                        >
-                            ADJUDICAR
-                        </button>
+                        {showResolveModal.conflict_status === 'WAITING_CONSENT' ? (
+                            (user?.role === 'SUBJEFE' && user?.assigned_list_id === showResolveModal.list_id_b && showResolveModal.consent_b === 0) ? (
+                                <button 
+                                    onClick={() => handleConsent(showResolveModal.conflict_id)}
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--blue)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
+                                >
+                                    CONSENTIR DECISIÓN
+                                </button>
+                            ) : (
+                                <div style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: showResolveModal.jefe_decision_id === showResolveModal.capture_b_id ? 'var(--green)' : 'var(--surface-3)', color: showResolveModal.jefe_decision_id === showResolveModal.capture_b_id ? 'white' : 'var(--text-3)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', textAlign: 'center' }}>
+                                    {showResolveModal.jefe_decision_id === showResolveModal.capture_b_id ? 'ADJUDICADO (Esperando Subjefe)' : 'DESCARTADO'}
+                                </div>
+                            )
+                        ) : (
+                            <button 
+                                onClick={() => handleDecide(showResolveModal.capture_b_id)}
+                                style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--surface-3)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-4)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-3)'}
+                            >
+                                ADJUDICAR
+                            </button>
+                        )}
                     </div>
                   </div>
                 </div>
