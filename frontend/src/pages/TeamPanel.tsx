@@ -4,7 +4,7 @@ import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface TeamUser {
   id: number;
@@ -1287,7 +1287,7 @@ const TeamPanel = () => {
       }
 
       // Draw the table
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 47,
         head: [headers],
         body: rows,

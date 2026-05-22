@@ -2076,13 +2076,14 @@ const CommandCenter = () => {
               }
               
               /* Show only the report */
-              .print-only-report, .print-only-report * { 
+              .print-only-report, .print-only-report *,
+              #printable-report-area, #printable-report-area * { 
                 visibility: visible !important; 
                 height: auto !important;
                 overflow: visible !important;
               }
               
-              .print-only-report { 
+              .print-only-report, #printable-report-area { 
                 position: absolute; 
                 left: 0; 
                 top: 0; 
