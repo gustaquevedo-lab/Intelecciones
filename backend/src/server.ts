@@ -2879,7 +2879,7 @@ app.post('/api/admin/conflicts/decide', (req, res) => {
       if (!conflict) throw new Error('Conflicto no encontrado');
 
       // Update the Jefe's decision
-      db.prepare('UPDATE capture_conflicts SET jefe_decision_id = ?, status = "WAITING_CONSENT" WHERE id = ?')
+      db.prepare("UPDATE capture_conflicts SET jefe_decision_id = ?, status = 'WAITING_CONSENT' WHERE id = ?")
         .run(winner_capture_id, conflict_id);
 
       // AUTO-CONSENT Logic:
@@ -2945,7 +2945,7 @@ const checkAndFinalizeConflict = (conflict_id: number, resolver_id: number) => {
 
         db.prepare('UPDATE elector_captures SET is_disputed = 0 WHERE id = ?').run(winnerId);
         db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE id = ?').run(loserId);
-        db.prepare('UPDATE capture_conflicts SET status = "RESOLVED", resolved_by_jefe_id = ?, winner_capture_id = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?')
+        db.prepare("UPDATE capture_conflicts SET status = 'RESOLVED', resolved_by_jefe_id = ?, winner_capture_id = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?")
             .run(resolver_id, winnerId, conflict_id);
         
         console.log(`[CONFLICT] Resolved and finalized conflict ${conflict_id}`);
