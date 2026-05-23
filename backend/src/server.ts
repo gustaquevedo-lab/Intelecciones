@@ -2888,10 +2888,11 @@ app.post('/api/admin/conflicts/decide', (req, res) => {
       if (conflict.list_id_a === conflict.list_id_b) {
           db.prepare('UPDATE capture_conflicts SET consent_a = 1, consent_b = 1 WHERE id = ?').run(conflict_id);
       } else {
+          const user = getCachedUserInfo(user_id.toString());
           const lists = [conflict.list_id_a, conflict.list_id_b];
           lists.forEach((lid, idx) => {
-              const hasSubjefe = db.prepare('SELECT 1 FROM users WHERE assigned_list_id = ? AND role = "SUBJEFE" LIMIT 1').get(lid);
-              if (!hasSubjefe) {
+              const hasSubjefe = lid ? db.prepare('SELECT 1 FROM users WHERE assigned_list_id = ? AND role = "SUBJEFE" LIMIT 1').get(lid) : null;
+              if (!hasSubjefe || (user && user.assigned_list_id === lid)) {
                   const col = (idx === 0) ? 'consent_a' : 'consent_b';
                   db.prepare(`UPDATE capture_conflicts SET ${col} = 1 WHERE id = ?`).run(conflict_id);
               }
