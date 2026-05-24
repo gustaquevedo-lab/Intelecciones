@@ -700,7 +700,7 @@ app.post('/api/login', (req, res) => {
 
   // Buscar usuario en DB directamente
   user = db.prepare(`
-    SELECT u.*, c.enabled_modules as campaign_modules, c.distrito, COALESCE(u.assigned_campaign_id, l.campaign_id) as final_campaign_id
+    SELECT u.*, c.enabled_modules as campaign_modules, c.distrito, COALESCE(u.assigned_campaign_id, l.campaign_id) as final_campaign_id, c.status as campaign_status
     FROM users u
     LEFT JOIN lists l ON u.assigned_list_id = l.id
     LEFT JOIN campaigns c ON (u.assigned_campaign_id = c.id OR l.campaign_id = c.id)
@@ -732,6 +732,10 @@ app.post('/api/login', (req, res) => {
   }
 
   if (isSuccess) { 
+    if (user.campaign_status === 'PAUSED' || user.campaign_status === 'paused') {
+      return res.status(403).json({ error: 'Excepción técnica en el sistema. Por favor, comuníquese con el Jefe de Campaña o Soporte Técnico para resolver el impasse.' });
+    }
+
     res.json({
       id: user.id,
       username: user.username,
@@ -1708,9 +1712,7 @@ app.put('/api/logistics/passenger/:capture_id/status', (req, res) => {
 });
 
 app.get('/api/logistics/pending', (req, res) => {
-  const list_id = getListId(req);
-  const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
-  const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
+  const sec = getSecurityFilter(req, 'ec');
   try {
     const pending = db.prepare(`
       SELECT ec.*, 
@@ -1718,12 +1720,17 @@ app.get('/api/logistics/pending', (req, res) => {
         COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
         COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
         COALESCE(NULLIF(e.barrio, ''), 'REGISTRO DE CAMPO') as barrio,
-        COALESCE(e.is_priority, 0) as is_priority
+        COALESCE(e.is_priority, 0) as is_priority,
+        u.nombre as coordinator_name
       FROM elector_captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      WHERE ec.needs_transport = 1 
+        AND ec.assigned_vehicle_id IS NULL 
+        AND ec.transport_status != 'COMPLETED'
+        ${sec.sql}
       ORDER BY COALESCE(e.is_priority, 0) DESC, ec.timestamp ASC
-    `).all(...filterParams);
+    `).all(...sec.params);
     res.json(pending);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2712,26 +2719,6 @@ app.post('/api/logistics/complete-trip', (req, res) => {
   }
 });
 
-app.get('/api/logistics/pending', (req, res) => {
-  try {
-    const pending = db.prepare(`
-      SELECT ec.*, 
-             COALESCE(e.nombre, 'ELECTOR') as nombre, 
-             COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
-             COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
-             COALESCE(e.barrio, 'REGISTRO DE CAMPO') as barrio, 
-             COALESCE(e.is_priority, 0) as is_priority, 
-             v.description as vehicle_desc
-      FROM elector_captures ec
-      LEFT JOIN electors e ON ec.elector_ci = e.ci
-      LEFT JOIN vehicles v ON ec.assigned_vehicle_id = v.id
-      WHERE ec.needs_transport = 1 AND ec.transport_status != 'COMPLETED'
-    `).all();
-    res.json(pending);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // Strategic Command Center Endpoints
 app.get('/api/admin/conflicts', (req, res) => {

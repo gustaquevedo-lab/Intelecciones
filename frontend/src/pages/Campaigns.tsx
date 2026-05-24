@@ -28,10 +28,25 @@ const Campaigns: React.FC = () => {
 
     const fetchTenants = async () => {
         try {
-            const res = await apiFetch('http://localhost:5000/api/admin/tenants_list'); 
+            const res = await apiFetch('http://localhost:5000/api/campaigns'); 
             if (res.ok) {
                 const data = await res.json();
                 setTenants(data);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleTogglePause = async (id: number, currentStatus: string) => {
+        const newStatus = currentStatus === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
+        try {
+            const res = await apiFetch(`http://localhost:5000/api/campaigns/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                fetchTenants();
             }
         } catch (err) {
             console.error(err);
@@ -89,13 +104,17 @@ const Campaigns: React.FC = () => {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await apiFetch('http://localhost:5000/api/admin/tenants', {
+            const res = await apiFetch('http://localhost:5000/api/campaigns', {
                 method: 'POST',
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    name: `Campaña ${formData.name}`,
+                    distrito: formData.city,
+                    status: 'ACTIVE'
+                })
             });
             if (res.ok) {
                 const result = await res.json();
-                setSuccessData({ ...formData, tenant_id: result.tenant_id });
+                setSuccessData({ ...formData, tenant_id: result.id });
                 setStep(4); // Pantalla de éxito
                 fetchTenants(); // Recargar lista
             }
@@ -291,22 +310,30 @@ const Campaigns: React.FC = () => {
                             </div>
 
                             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '4px' }}>{t.name}</h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{t.position} • {t.election_type}</p>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{t.status === 'PAUSED' ? '🔴 Pausado' : '🟢 Activo'}</p>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <div className="flex items-center gap-2" style={{ fontSize: '0.85rem' }}>
                                     <MapPin size={16} color="var(--primary)" />
-                                    <span>{t.city}, {t.department}</span>
+                                    <span>{t.distrito || t.city || 'Nacional'}</span>
                                 </div>
                                 <div className="flex items-center gap-2" style={{ fontSize: '0.85rem' }}>
                                     <Layers size={16} color="var(--text-muted)" />
-                                    <span>Sistema Electoral {t.election_type}</span>
+                                    <span>Sistema Electoral {t.election_type || 'General'}</span>
                                 </div>
                             </div>
 
-                            <button style={{ width: '100%', marginTop: '2rem', padding: '0.75rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-                                Administrar Campaña
-                            </button>
+                            <div className="flex gap-2" style={{ marginTop: '2rem' }}>
+                                <button style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: 'white', fontWeight: 600, fontSize: '0.85rem' }}>
+                                    Administrar
+                                </button>
+                                <button 
+                                    onClick={() => handleTogglePause(t.id, t.status)}
+                                    style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', background: t.status === 'PAUSED' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(220, 38, 38, 0.2)', color: t.status === 'PAUSED' ? '#4ade80' : '#f87171', border: t.status === 'PAUSED' ? '1px solid #4ade80' : '1px solid #f87171', fontWeight: 600, fontSize: '0.85rem' }}
+                                >
+                                    {t.status === 'PAUSED' ? 'Reactivar' : 'Pausar'}
+                                </button>
+                            </div>
                         </motion.div>
                     ))}
                 </AnimatePresence>
