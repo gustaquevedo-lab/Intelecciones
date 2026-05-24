@@ -1267,7 +1267,7 @@ const CommandCenter = () => {
                               </div>
                             </div>
                           </Popup>
-                        </CircleMarker>
+                        </Marker>
                       );
                     })
                 )}
