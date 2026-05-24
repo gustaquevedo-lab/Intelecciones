@@ -16,7 +16,7 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
       localStorage.removeItem('auth_user');
       localStorage.removeItem('active_list_id');
       localStorage.removeItem('active_district');
