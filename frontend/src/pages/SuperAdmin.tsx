@@ -996,6 +996,17 @@ Status: ${error.response?.status || 'N/A'}
     }
   };
 
+  const handleTogglePause = async (id: number, currentStatus: string) => {
+    const newStatus = currentStatus === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
+    try {
+      await api.put(`/campaigns/${id}`, { status: newStatus });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Error al cambiar el estado de la campaña.');
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'audit') {
       if (activeAuditTab === 'logs') fetchAuditData();
@@ -1352,6 +1363,14 @@ Status: ${error.response?.status || 'N/A'}
             header: 'Acciones',
             accessor: (c: Campaign) => (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  className="icon-btn" 
+                  onClick={() => handleTogglePause(c.id, c.status)}
+                  style={{ background: c.status === 'PAUSED' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)', color: c.status === 'PAUSED' ? 'var(--green)' : 'var(--red)', border: c.status === 'PAUSED' ? '1px solid var(--green)' : '1px solid var(--red)' }}
+                  title={c.status === 'PAUSED' ? 'Reactivar' : 'Pausar'}
+                >
+                  {c.status === 'PAUSED' ? <CheckCircle2 size={14} /> : <X size={14} />}
+                </button>
                 <button className="icon-btn" onClick={() => {
                   setEditingCampaign(c);
                   setNewCampaignName(c.name);
