@@ -102,6 +102,34 @@ const createCustomIcon = (color: string, iconName: string = 'Landmark', needsTra
   });
 };
 
+const FAST_ICONS: Record<string, L.Icon> = {};
+
+const getFastPinIcon = (colorHex: string, needsTransport: boolean) => {
+  const key = `${colorHex}-${needsTransport}`;
+  if (FAST_ICONS[key]) return FAST_ICONS[key];
+  
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="34" viewBox="0 0 24 34">
+      <path d="M12 2C6.48 2 2 6.48 2 12c0 7.5 10 20 10 20s10-12.5 10-20c0-5.52-4.48-10-10-10z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.5"/>
+      <circle cx="12" cy="12" r="4.5" fill="#ffffff" opacity="0.8"/>
+      ${needsTransport ? '<circle cx="19" cy="5" r="4.5" fill="#3B82F6" stroke="#ffffff" stroke-width="1.5"/>' : ''}
+    </svg>
+  `;
+  
+  const encodedSvg = encodeURIComponent(svg.trim());
+  const dataUri = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+  
+  const icon = L.icon({
+    iconUrl: dataUri,
+    iconSize: [22, 31],
+    iconAnchor: [11, 31],
+    popupAnchor: [0, -29],
+  });
+  
+  FAST_ICONS[key] = icon;
+  return icon;
+};
+
 const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
   'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
   'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
@@ -1104,16 +1132,10 @@ const CommandCenter = () => {
                                          cap.traffic_light === 'YELLOW' ? '#EAB308' : 
                                          cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444';
                         return (
-                          <CircleMarker
+                          <Marker
                             key={`cap-${cap.id}`}
-                            center={[lat, lng]}
-                            radius={5}
-                            pathOptions={{ 
-                              color: 'rgba(255,255,255,0.8)', 
-                              weight: 1.5, 
-                              fillColor: colorHex, 
-                              fillOpacity: 1 
-                            }}
+                            position={[lat, lng]}
+                            icon={getFastPinIcon(colorHex, cap.needs_transport === 1)}
                           >
                             <Popup className="premium-popup">
                               <div style={{ minWidth: '230px', maxWidth: '265px' }}>
@@ -1164,7 +1186,7 @@ const CommandCenter = () => {
                                 </div>
                               </div>
                             </Popup>
-                          </CircleMarker>
+                          </Marker>
                         );
                       })}
                   </MarkerClusterGroup>
@@ -1191,16 +1213,10 @@ const CommandCenter = () => {
                                        cap.traffic_light === 'YELLOW' ? '#EAB308' : 
                                        cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444';
                       return (
-                        <CircleMarker
+                        <Marker
                           key={`cap-raw-${cap.id}`}
-                          center={[lat, lng]}
-                          radius={5}
-                          pathOptions={{ 
-                            color: 'rgba(255,255,255,0.8)', 
-                            weight: 1.5, 
-                            fillColor: colorHex, 
-                            fillOpacity: 1 
-                          }}
+                          position={[lat, lng]}
+                          icon={getFastPinIcon(colorHex, cap.needs_transport === 1)}
                         >
                           <Popup className="premium-popup">
                             <div style={{ minWidth: '230px', maxWidth: '265px' }}>
