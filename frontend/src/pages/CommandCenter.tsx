@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap, CircleMarker } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -1032,7 +1032,7 @@ const CommandCenter = () => {
                 )}
               </div>
 
-              <MapContainer center={[-22.5422, -55.7336]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+              <MapContainer center={[-22.5422, -55.7336]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false} preferCanvas={true}>
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1100,17 +1100,20 @@ const CommandCenter = () => {
                         const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
                         const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
 
+                        const colorHex = cap.traffic_light === 'GREEN' ? '#22C55E' : 
+                                         cap.traffic_light === 'YELLOW' ? '#EAB308' : 
+                                         cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444';
                         return (
-                          <Marker
+                          <CircleMarker
                             key={`cap-${cap.id}`}
-                            position={[lat, lng]}
-                            icon={createCustomIcon(
-                              cap.traffic_light === 'GREEN' ? 'var(--green)' :
-                                cap.traffic_light === 'YELLOW' ? 'var(--yellow)' :
-                                  cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)',
-                              'MapPin',
-                              cap.needs_transport === 1
-                            )}
+                            center={[lat, lng]}
+                            radius={5}
+                            pathOptions={{ 
+                              color: 'rgba(255,255,255,0.8)', 
+                              weight: 1.5, 
+                              fillColor: colorHex, 
+                              fillOpacity: 1 
+                            }}
                           >
                             <Popup className="premium-popup">
                               <div style={{ minWidth: '230px', maxWidth: '265px' }}>
@@ -1161,7 +1164,7 @@ const CommandCenter = () => {
                                 </div>
                               </div>
                             </Popup>
-                          </Marker>
+                          </CircleMarker>
                         );
                       })}
                   </MarkerClusterGroup>
@@ -1184,17 +1187,20 @@ const CommandCenter = () => {
                       const lat = cap.lat + (Math.cos(angle * (Math.PI / 180)) * jitter);
                       const lng = cap.lng + (Math.sin(angle * (Math.PI / 180)) * jitter);
 
+                      const colorHex = cap.traffic_light === 'GREEN' ? '#22C55E' : 
+                                       cap.traffic_light === 'YELLOW' ? '#EAB308' : 
+                                       cap.traffic_light === 'PURPLE' ? '#A855F7' : '#EF4444';
                       return (
-                        <Marker
+                        <CircleMarker
                           key={`cap-raw-${cap.id}`}
-                          position={[lat, lng]}
-                          icon={createCustomIcon(
-                            cap.traffic_light === 'GREEN' ? 'var(--green)' :
-                              cap.traffic_light === 'YELLOW' ? 'var(--yellow)' :
-                                cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)',
-                            'MapPin',
-                            cap.needs_transport === 1
-                          )}
+                          center={[lat, lng]}
+                          radius={5}
+                          pathOptions={{ 
+                            color: 'rgba(255,255,255,0.8)', 
+                            weight: 1.5, 
+                            fillColor: colorHex, 
+                            fillOpacity: 1 
+                          }}
                         >
                           <Popup className="premium-popup">
                             <div style={{ minWidth: '230px', maxWidth: '265px' }}>
@@ -1245,7 +1251,7 @@ const CommandCenter = () => {
                               </div>
                             </div>
                           </Popup>
-                        </Marker>
+                        </CircleMarker>
                       );
                     })
                 )}
