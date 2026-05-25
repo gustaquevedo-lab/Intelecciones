@@ -683,6 +683,18 @@ const CommandCenter = () => {
     if (!disputesReportData) return null;
     const { filter, conflicts, conflictsHistory } = disputesReportData;
 
+    const safeFormatDate = (dateStr: any) => {
+      if (!dateStr) return 'N/A';
+      try {
+        const normalized = String(dateStr).replace(' ', 'T');
+        const d = new Date(normalized);
+        if (isNaN(d.getTime())) return String(dateStr);
+        return d.toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return String(dateStr);
+      }
+    };
+
     let groups: Record<string, any[]> = {};
     let historyGroups: Record<string, any[]> = {};
 
@@ -799,7 +811,7 @@ const CommandCenter = () => {
                       <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.elector_ci}</td>
                       <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.local_votacion} (M. {h.mesa})</td>
                       <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 800 }}>{h.winner_name}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{new Date(h.resolved_at).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{safeFormatDate(h.resolved_at)}</td>
                     </tr>
                   ))}
                 </tbody>
