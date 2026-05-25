@@ -663,71 +663,73 @@ const CommandCenter = () => {
 
   const DisputesReport = () => {
     if (!disputesReportData) return null;
-    const { filter, conflicts, conflictsHistory } = disputesReportData;
 
-    const safeFormatDate = (dateStr: any) => {
-      if (!dateStr) return 'N/A';
-      try {
-        const normalized = String(dateStr).replace(' ', 'T');
-        const d = new Date(normalized);
-        if (isNaN(d.getTime())) return String(dateStr);
-        return d.toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-      } catch {
-        return String(dateStr);
+    try {
+      const { filter, conflicts, conflictsHistory } = disputesReportData;
+
+      const safeFormatDate = (dateStr: any) => {
+        if (!dateStr) return 'N/A';
+        try {
+          const normalized = String(dateStr).replace(' ', 'T');
+          const d = new Date(normalized);
+          if (isNaN(d.getTime())) return String(dateStr);
+          return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch {
+          return String(dateStr);
+        }
+      };
+
+      let groups: Record<string, any[]> = {};
+      let historyGroups: Record<string, any[]> = {};
+
+      if (filter === 'LISTA') {
+        conflicts.forEach((c: any) => {
+          const key = `Lista ${c.list_a || c.list_id_a || 'A'} vs Lista ${c.list_b || c.list_id_b || 'B'}`;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(c);
+        });
+        conflictsHistory.forEach((h: any) => {
+          const key = `Lista ${h.list_a || h.list_id_a || 'A'} vs Lista ${h.list_b || h.list_id_b || 'B'}`;
+          if (!historyGroups[key]) historyGroups[key] = [];
+          historyGroups[key].push(h);
+        });
+      } else if (filter === 'DISTRITO') {
+        conflicts.forEach((c: any) => {
+          const key = effectiveDistrict || 'Distrito General';
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(c);
+        });
+        conflictsHistory.forEach((h: any) => {
+          const key = effectiveDistrict || 'Distrito General';
+          if (!historyGroups[key]) historyGroups[key] = [];
+          historyGroups[key].push(h);
+        });
+      } else {
+        groups['General'] = conflicts;
+        historyGroups['General'] = conflictsHistory;
       }
-    };
 
-    let groups: Record<string, any[]> = {};
-    let historyGroups: Record<string, any[]> = {};
+      return (
+        <div className="print-only-report">
+          <div style={{ padding: '40px', color: '#000', background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <header style={{ borderBottom: '3px solid #EF4444', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <h1 style={{ margin: 0, fontSize: '24px', color: '#EF4444', fontWeight: 900, textTransform: 'uppercase' }}>REPORTE TÁCTICO DE DISPUTAS</h1>
+                <p style={{ margin: '5px 0 0', fontSize: '14px', fontWeight: 700, color: '#333' }}>
+                  DISTRITO: {effectiveDistrict || 'TODOS'} | FILTRO: {filter} | FECHA: {new Date().toLocaleDateString()}
+                </p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ margin: 0, fontSize: '12px', fontWeight: 600 }}>INTELEX v2.4</p>
+                <p style={{ margin: 0, fontSize: '10px' }}>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            </header>
 
-    if (filter === 'LISTA') {
-      conflicts.forEach((c: any) => {
-        const key = `Lista ${c.list_a || c.list_id_a || 'A'} vs Lista ${c.list_b || c.list_id_b || 'B'}`;
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(c);
-      });
-      conflictsHistory.forEach((h: any) => {
-        const key = `Lista ${h.list_a || h.list_id_a || 'A'} vs Lista ${h.list_b || h.list_id_b || 'B'}`;
-        if (!historyGroups[key]) historyGroups[key] = [];
-        historyGroups[key].push(h);
-      });
-    } else if (filter === 'DISTRITO') {
-      conflicts.forEach((c: any) => {
-        const key = effectiveDistrict || 'Distrito General';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(c);
-      });
-      conflictsHistory.forEach((h: any) => {
-        const key = effectiveDistrict || 'Distrito General';
-        if (!historyGroups[key]) historyGroups[key] = [];
-        historyGroups[key].push(h);
-      });
-    } else {
-      groups['General'] = conflicts;
-      historyGroups['General'] = conflictsHistory;
-    }
-
-    return (
-      <div className="print-only-report">
-        <div style={{ padding: '40px', color: '#000', background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-          <header style={{ borderBottom: '3px solid #EF4444', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '24px', color: '#EF4444', fontWeight: 900, textTransform: 'uppercase' }}>REPORTE TÁCTICO DE DISPUTAS</h1>
-              <p style={{ margin: '5px 0 0', fontSize: '14px', fontWeight: 700, color: '#333' }}>
-                DISTRITO: {effectiveDistrict || 'TODOS'} | FILTRO: {filter} | FECHA: {new Date().toLocaleDateString('es-PY')}
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ margin: 0, fontSize: '12px', fontWeight: 600 }}>INTELEX v2.4</p>
-              <p style={{ margin: 0, fontSize: '10px' }}>{new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</p>
-            </div>
-          </header>
-
-          <section style={{ marginBottom: '40px' }}>
-            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-              <h2 style={{ margin: '0 0 10px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>RESUMEN GENERAL</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div>
+            <section style={{ marginBottom: '40px' }}>
+              <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                <h2 style={{ margin: '0 0 10px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>RESUMEN GENERAL</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div>
                   <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: 700 }}>DISPUTAS ACTIVAS</p>
                   <p style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#EF4444' }}>{conflicts.length}</p>
                 </div>
@@ -806,7 +808,17 @@ const CommandCenter = () => {
           </footer>
         </div>
       </div>
-    );
+      );
+    } catch (err: any) {
+      return (
+        <div className="print-only-report">
+          <div style={{ padding: '40px', background: '#fff', minHeight: '100vh' }}>
+            <h1 style={{ color: 'red' }}>ERROR AL RENDERIZAR REPORTE</h1>
+            <p>{err.message || 'Error desconocido.'}</p>
+          </div>
+        </div>
+      );
+    }
   };
 
   useEffect(() => {
@@ -2270,11 +2282,13 @@ const CommandCenter = () => {
                 </div>
                 <button 
                   onClick={() => {
+                    setIsGeneratingReport(true);
                     setDisputesReportData({ filter: disputesReportFilter, conflicts, conflictsHistory });
                     setShowDisputesReportModal(false);
                     setTimeout(() => {
+                      setIsGeneratingReport(false);
                       window.print();
-                    }, 1000);
+                    }, 1500);
                   }}
                   style={{ width: '100%', padding: '1rem', borderRadius: '14px', background: 'var(--red)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
