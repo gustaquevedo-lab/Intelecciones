@@ -103,24 +103,11 @@ const StatDot = ({ count, color }: { count: number; color: string }) => (
 export const canEditUser = (currentUser: any, target: any, targetParent?: any) => {
   if (!currentUser) return false;
   if (currentUser.role === 'SUPERUSUARIO') return true;
+  if (currentUser.role === 'JEFE_CAMPANA' || currentUser.role === 'CANDIDATO' || currentUser.role === 'SUBJEFE') return true;
   if (currentUser.id === target.id) return true;
 
   // Direct creator can edit
   if (target.parent_id === currentUser.id) return true;
-
-  // Subjefe hierarchy: can edit if target's parent is a Padrino and that Padrino's parent is current user.
-  if (currentUser.role === 'SUBJEFE') {
-    if (targetParent && targetParent.role === 'PADRINO' && targetParent.parent_id === currentUser.id) {
-      return true;
-    }
-  }
-
-  // Jefe de Campaña hierarchy: can edit if target's parent is a Padrino and that Padrino's parent is current user.
-  if (currentUser.role === 'JEFE_CAMPANA' || currentUser.role === 'CANDIDATO') {
-    if (targetParent && targetParent.role === 'PADRINO' && targetParent.parent_id === currentUser.id) {
-      return true;
-    }
-  }
 
   return false;
 };

@@ -1812,23 +1812,11 @@ const canModifyUser = (requesterId: string | number | undefined, requesterRole: 
     // 1. Direct parent sovereignty: if the requester is the direct parent of target, they can edit.
     if (target.parent_id === reqId) return true;
 
-    // 2. Subjefe hierarchy: can edit if target's parent is a PADRINO and that PADRINO's parent is the requester.
-    if (reqRole === 'SUBJEFE') {
-      if (target.parent_id) {
-        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(target.parent_id) as any;
-        if (parent && parent.role === 'PADRINO' && parent.parent_id === reqId) {
-          return true;
-        }
-      }
-    }
-
-    // 3. Jefe de Campaña hierarchy: can edit if target's parent is a PADRINO and that PADRINO's parent is the requester.
-    if (reqRole === 'JEFE_CAMPANA' || reqRole === 'CANDIDATO') {
-      if (target.parent_id) {
-        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(target.parent_id) as any;
-        if (parent && parent.role === 'PADRINO' && parent.parent_id === reqId) {
-          return true;
-        }
+    // 2. Sovereignty for upper management over any users within their isolated campaign/list scope.
+    // The previous block ensures they only see/modify users within their campaign_id constraint.
+    if (reqRole === 'SUBJEFE' || reqRole === 'JEFE_CAMPANA' || reqRole === 'CANDIDATO') {
+      if (target.role !== 'SUPERUSUARIO' && target.role !== 'JEFE_CAMPANA' && target.role !== 'CANDIDATO') {
+        return true;
       }
     }
 
