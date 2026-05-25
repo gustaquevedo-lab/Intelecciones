@@ -536,6 +536,9 @@ const CommandCenter = () => {
   const [needsTransportFilter, setNeedsTransportFilter] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [showDisputesReportModal, setShowDisputesReportModal] = useState(false);
+  const [disputesReportFilter, setDisputesReportFilter] = useState('GENERAL');
+  const [disputesReportData, setDisputesReportData] = useState<any>(null);
 
   const handleExportReport = async (padrinoId: number) => {
     setIsGeneratingReport(true);
@@ -650,6 +653,142 @@ const CommandCenter = () => {
               </div>
             ))}
           </section>
+          <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #ccc', textAlign: 'center', fontSize: '10px', color: '#666' }}>
+            Este documento es de carácter confidencial y estratégico para el operativo electoral.
+          </footer>
+        </div>
+      </div>
+    );
+  };
+
+  const DisputesReport = () => {
+    if (!disputesReportData) return null;
+    const { filter, conflicts, conflictsHistory } = disputesReportData;
+
+    let groups: Record<string, any[]> = {};
+    let historyGroups: Record<string, any[]> = {};
+
+    if (filter === 'LISTA') {
+      conflicts.forEach((c: any) => {
+        const key = `Lista ${c.list_a || c.list_id_a || 'A'} vs Lista ${c.list_b || c.list_id_b || 'B'}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(c);
+      });
+      conflictsHistory.forEach((h: any) => {
+        const key = `Lista ${h.list_a || h.list_id_a || 'A'} vs Lista ${h.list_b || h.list_id_b || 'B'}`;
+        if (!historyGroups[key]) historyGroups[key] = [];
+        historyGroups[key].push(h);
+      });
+    } else if (filter === 'DISTRITO') {
+      conflicts.forEach((c: any) => {
+        const key = effectiveDistrict || 'Distrito General';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(c);
+      });
+      conflictsHistory.forEach((h: any) => {
+        const key = effectiveDistrict || 'Distrito General';
+        if (!historyGroups[key]) historyGroups[key] = [];
+        historyGroups[key].push(h);
+      });
+    } else {
+      groups['General'] = conflicts;
+      historyGroups['General'] = conflictsHistory;
+    }
+
+    return (
+      <div className="print-only-report">
+        <div style={{ padding: '40px', color: '#000', background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+          <header style={{ borderBottom: '3px solid #EF4444', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '24px', color: '#EF4444', fontWeight: 900, textTransform: 'uppercase' }}>REPORTE TÁCTICO DE DISPUTAS</h1>
+              <p style={{ margin: '5px 0 0', fontSize: '14px', fontWeight: 700, color: '#333' }}>
+                DISTRITO: {effectiveDistrict || 'TODOS'} | FILTRO: {filter} | FECHA: {new Date().toLocaleDateString('es-PY')}
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, fontSize: '12px', fontWeight: 600 }}>INTELEX v2.4</p>
+              <p style={{ margin: 0, fontSize: '10px' }}>{new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          </header>
+
+          <section style={{ marginBottom: '40px' }}>
+            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+              <h2 style={{ margin: '0 0 10px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>RESUMEN GENERAL</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: 700 }}>DISPUTAS ACTIVAS</p>
+                  <p style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#EF4444' }}>{conflicts.length}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: 700 }}>DISPUTAS RESUELTAS</p>
+                  <p style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#10b981' }}>{conflictsHistory.length}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {Object.entries(groups).map(([groupName, items]) => items.length > 0 && (
+            <section key={groupName} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
+                {groupName} - ACTIVAS ({items.length})
+              </h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ background: '#EF4444', color: 'white' }}>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ELECTOR</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CÉDULA</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CAPTURA INICIAL (L A)</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ÚLTIMA CAPTURA (L B)</th>
+                    <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>ESTADO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((c: any) => (
+                    <tr key={c.conflict_id}>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 700 }}>{c.elector_nombre} {c.elector_apellido}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.elector_ci}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.coord_a}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.coord_b || 'N/A'}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 700, color: '#EF4444' }}>
+                        {c.conflict_status === 'WAITING_CONSENT' ? 'ESP. CONSENTIMIENTO' : 'ACTIVA'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ))}
+
+          {Object.entries(historyGroups).map(([groupName, items]) => items.length > 0 && (
+            <section key={`hist-${groupName}`} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#10b981', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
+                {groupName} - RESUELTAS ({items.length})
+              </h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ background: '#10b981', color: 'white' }}>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ELECTOR</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CÉDULA</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>LOCAL DE VOTACIÓN</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ADJUDICADO A</th>
+                    <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>FECHA RESOLUCIÓN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((h: any) => (
+                    <tr key={h.conflict_id}>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 700 }}>{h.elector_nombre} {h.elector_apellido}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.elector_ci}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.local_votacion} (M. {h.mesa})</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 800 }}>{h.winner_name}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{new Date(h.resolved_at).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ))}
+
           <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #ccc', textAlign: 'center', fontSize: '10px', color: '#666' }}>
             Este documento es de carácter confidencial y estratégico para el operativo electoral.
           </footer>
@@ -1683,8 +1822,21 @@ const CommandCenter = () => {
                     </h2>
                     <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', fontWeight: 700 }}>RESOLUCIÓN TÁCTICA DE CONFLICTOS DE CAPTACIÓN</p>
                   </div>
-                  <div style={{ background: 'rgba(239,68,68,0.1)', padding: '0.6rem 1.25rem', borderRadius: '14px', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--red)', fontWeight: 900, fontSize: '0.8rem' }}>
-                    {conflicts.length} ACTIVAS
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setShowDisputesReportModal(true)}
+                      style={{
+                        background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                        color: 'var(--red)', padding: '0.6rem 1rem', borderRadius: '14px',
+                        cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem',
+                        display: 'flex', alignItems: 'center', gap: '0.5rem'
+                      }}
+                    >
+                      <Download size={14} /> REPORTE PDF
+                    </button>
+                    <div style={{ background: 'rgba(239,68,68,0.1)', padding: '0.6rem 1.25rem', borderRadius: '14px', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--red)', fontWeight: 900, fontSize: '0.8rem' }}>
+                      {conflicts.length} ACTIVAS
+                    </div>
                   </div>
                 </header>
 
@@ -2086,7 +2238,44 @@ const CommandCenter = () => {
             </div>
           )}
         </AnimatePresence>
+
+        <AnimatePresence>
+          {showDisputesReportModal && (
+            <div className="modal-overlay" onClick={() => setShowDisputesReportModal(false)} style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)' }}>
+              <motion.div
+                className="modal-content"
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                onClick={e => e.stopPropagation()}
+                style={{ maxWidth: '400px', width: '95%', padding: '2rem', borderRadius: '24px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+              >
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', marginBottom: '1.5rem', textAlign: 'center' }}>Configurar Reporte</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+                  <button onClick={() => setDisputesReportFilter('GENERAL')} style={{ padding: '1rem', borderRadius: '14px', background: disputesReportFilter === 'GENERAL' ? 'rgba(239,68,68,0.15)' : 'var(--bg)', border: disputesReportFilter === 'GENERAL' ? '1px solid var(--red)' : '1px solid var(--border)', color: disputesReportFilter === 'GENERAL' ? 'var(--red)' : 'var(--text-3)', fontWeight: 800, cursor: 'pointer', transition: '0.2s' }}>General (Todo)</button>
+                  <button onClick={() => setDisputesReportFilter('DISTRITO')} style={{ padding: '1rem', borderRadius: '14px', background: disputesReportFilter === 'DISTRITO' ? 'rgba(239,68,68,0.15)' : 'var(--bg)', border: disputesReportFilter === 'DISTRITO' ? '1px solid var(--red)' : '1px solid var(--border)', color: disputesReportFilter === 'DISTRITO' ? 'var(--red)' : 'var(--text-3)', fontWeight: 800, cursor: 'pointer', transition: '0.2s' }}>Agrupado por Distrito</button>
+                  <button onClick={() => setDisputesReportFilter('LISTA')} style={{ padding: '1rem', borderRadius: '14px', background: disputesReportFilter === 'LISTA' ? 'rgba(239,68,68,0.15)' : 'var(--bg)', border: disputesReportFilter === 'LISTA' ? '1px solid var(--red)' : '1px solid var(--border)', color: disputesReportFilter === 'LISTA' ? 'var(--red)' : 'var(--text-3)', fontWeight: 800, cursor: 'pointer', transition: '0.2s' }}>Agrupado por Lista</button>
+                </div>
+                <button 
+                  onClick={() => {
+                    setDisputesReportData({ filter: disputesReportFilter, conflicts, conflictsHistory });
+                    setShowDisputesReportModal(false);
+                    setTimeout(() => {
+                      window.print();
+                      setDisputesReportData(null);
+                    }, 800);
+                  }}
+                  style={{ width: '100%', padding: '1rem', borderRadius: '14px', background: 'var(--red)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                >
+                  <Download size={16} /> GENERAR PDF
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         <TacticalReport />
+        <DisputesReport />
         <style>
           {`
             @media print {
