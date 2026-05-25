@@ -4155,9 +4155,11 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
                  l.list_number, c.name as campaign_name
         `;
 
+        const filterE = (role === 'PADRINO') ? null : getSecurityFilter(req, 'u');
+
         const needsUsersJoin = role === 'PADRINO' || 
                                (selectedPadrino && selectedPadrino !== 'ALL') || 
-                               (role !== 'SUPERUSUARIO' && getDistrict(req));
+                               (filterE && filterE.sql && filterE.sql.trim() !== "");
 
         const needsListsJoin = selectedList && selectedList !== 'ALL';
 
@@ -4184,8 +4186,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
         if (role === 'PADRINO') {
           extraFilters += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
           extraParams.push(requesterId, requesterId);
-        } else {
-          const filterE = getSecurityFilter(req, 'u');
+        } else if (filterE) {
           extraFilters += ` ${filterE.sql}`;
           extraParams.push(...filterE.params);
         }
