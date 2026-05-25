@@ -577,4 +577,43 @@ try {
     console.error("MIGRATION ERROR (Normalization):", e.message);
 }
 
+// 🔄 AUTO-RESTORE CAPTURE CONFLICTS (Self-healing checks on boot)
+try {
+  db.transaction(() => {
+    db.prepare(`
+      INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
+      SELECT 
+        MIN(id) as capture_id, 
+        MAX(id) as capture_id_b, 
+        elector_ci, 
+        (SELECT list_id FROM elector_captures WHERE id = MIN(ec.id)) as list_id_a, 
+        (SELECT list_id FROM elector_captures WHERE id = MAX(ec.id)) as list_id_b,
+        CASE 
+          WHEN (SELECT list_id FROM elector_captures WHERE id = MIN(ec.id)) = (SELECT list_id FROM elector_captures WHERE id = MAX(ec.id)) 
+          THEN 'INTERNAL' 
+          ELSE 'INTER_LIST' 
+        END as conflict_type,
+        'PENDING'
+      FROM elector_captures ec
+      WHERE elector_ci IS NOT NULL AND elector_ci != ''
+        AND elector_ci IN (SELECT elector_ci FROM elector_captures GROUP BY elector_ci HAVING COUNT(*) > 1)
+        AND elector_ci NOT IN (SELECT elector_ci FROM capture_conflicts WHERE status = 'PENDING' OR status = 'WAITING_CONSENT')
+      GROUP BY elector_ci
+    `).run();
+
+    db.prepare(`
+      UPDATE elector_captures
+      SET is_disputed = 1
+      WHERE id IN (
+        SELECT capture_id FROM capture_conflicts WHERE status = 'PENDING' OR status = 'WAITING_CONSENT'
+        UNION
+        SELECT capture_id_b FROM capture_conflicts WHERE status = 'PENDING' OR status = 'WAITING_CONSENT'
+      )
+    `).run();
+  })();
+  console.log("DATABASE: Verified and restored missing capture conflicts from duplicates.");
+} catch (e: any) {
+  console.error("DATABASE ERROR (Conflict auto-restore):", e.message);
+}
+
 export default db;
