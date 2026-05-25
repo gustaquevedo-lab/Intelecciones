@@ -2108,7 +2108,7 @@ app.delete('/api/users/:id', (req, res) => {
       return res.status(403).json({ error: 'No se puede eliminar al administrador maestro (admin).' });
     }
 
-    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    const user = db.prepare('SELECT id, role, parent_id FROM users WHERE id = ?').get(userId) as any;
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
@@ -2117,12 +2117,29 @@ app.delete('/api/users/:id', (req, res) => {
       if (!canModifyUser(requesterId, requesterRole, userId)) {
         return res.status(403).json({ error: 'No tienes permisos para eliminar este usuario.' });
       }
+      
+      if (user.role === 'PADRINO') {
+        if (!['JEFE_CAMPANA', 'SUBJEFE', 'CANDIDATO'].includes(requesterRole)) {
+          return res.status(403).json({ error: 'Solo Jefes y Subjefes de campaña pueden eliminar Padrinos.' });
+        }
+      }
     }
+
+    const capturesAction = req.query.action as string;
 
     const transaction = db.transaction(() => {
       db.prepare('PRAGMA foreign_keys = OFF').run();
-      // 1. Nullify references in elector_captures to avoid breaking historical data
-      db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+      
+      // 1. Handle elector_captures based on action
+      if (capturesAction === 'delete') {
+        db.prepare('DELETE FROM capture_conflicts WHERE capture_id IN (SELECT id FROM elector_captures WHERE coordinator_id = ?) OR capture_id_b IN (SELECT id FROM elector_captures WHERE coordinator_id = ?)').run(userId, userId);
+        db.prepare('DELETE FROM elector_captures WHERE coordinator_id = ?').run(userId);
+      } else if (capturesAction === 'inherit' && user.parent_id) {
+        db.prepare('UPDATE elector_captures SET coordinator_id = ? WHERE coordinator_id = ?').run(user.parent_id, userId);
+      } else {
+        // Default behavior (nullify)
+        db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+      }
       
       // 2. Nullify references in vehicles (formerly logistics)
       db.prepare('UPDATE vehicles SET assigned_user_id = NULL WHERE assigned_user_id = ?').run(userId);

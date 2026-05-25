@@ -636,9 +636,18 @@ Status: ${error.response?.status || 'N/A'}
       alert('No se puede eliminar al administrador maestro del sistema.');
       return;
     }
-    if (!window.confirm('¿Está seguro de eliminar este operador?')) return;
+    if (!window.confirm('¿Está seguro de eliminar este operador? Esta acción no se puede deshacer.')) return;
+    
+    const deleteCaptures = window.confirm(
+      `¿Desea ELIMINAR también todas las capturas (electores) de este usuario?\n\n` +
+      `[ Aceptar ] -> Eliminar capturas.\n` +
+      `[ Cancelar ] -> NO eliminar (serán heredadas por su superior).`
+    );
+    
+    const action = deleteCaptures ? 'delete' : 'inherit';
+
     try {
-      await api.delete(`/users/${id}`);
+      await api.delete(`/users/${id}?action=${action}`);
       fetchData(true);
     } catch (err: any) {
       console.error(err);

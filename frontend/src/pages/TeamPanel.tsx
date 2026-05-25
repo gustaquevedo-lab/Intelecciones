@@ -610,15 +610,17 @@ const PadrinoRow = ({
               >
                 <Key size={14} />
               </button>
-              <button 
-                title="Eliminar Usuario"
-                onClick={() => onDeleteUser(padrino, onRefresh)}
-                style={actionButtonStyle}
-                onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
-              >
-                <Trash2 size={14} />
-              </button>
+              {['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'CANDIDATO'].includes(currentUser?.role || '') && (
+                <button 
+                  title="Eliminar Usuario"
+                  onClick={() => onDeleteUser(padrino, onRefresh)}
+                  style={actionButtonStyle}
+                  onMouseEnter={e => e.currentTarget.style.color = '#EF4444'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-3)'}
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
           )}
           {expanded ? <ChevronDown size={16} style={{ color: 'var(--text-3)' }} /> : <ChevronRight size={16} style={{ color: 'var(--text-3)' }} />}
@@ -773,9 +775,25 @@ const TeamPanel = () => {
   const [showEditModal, setShowEditModal] = useState(false);
 
   const handleDeleteUser = async (targetUser: any, onDeleted: () => void) => {
+    if (targetUser.role === 'PADRINO' || targetUser.role === 'SUBJEFE') {
+      if (!['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'CANDIDATO'].includes(user?.role || '')) {
+        alert('Solo los Jefes o Subjefes de campaña pueden eliminar Padrinos.');
+        return;
+      }
+    }
+    
     if (!window.confirm(`¿Está seguro de que desea eliminar a ${targetUser.nombre} de su equipo? Esta acción no se puede deshacer.`)) return;
+
+    const deleteCaptures = window.confirm(
+      `¿Desea ELIMINAR también todas las capturas (electores) de ${targetUser.nombre}?\n\n` +
+      `[ Aceptar ] -> Eliminar capturas.\n` +
+      `[ Cancelar ] -> NO eliminar (serán heredadas por su superior).`
+    );
+    
+    const action = deleteCaptures ? 'delete' : 'inherit';
+
     try {
-      await api.delete(`/users/${targetUser.id}`);
+      await api.delete(`/users/${targetUser.id}?action=${action}`);
       onDeleted();
       alert('Usuario eliminado correctamente.');
     } catch (err: any) {
