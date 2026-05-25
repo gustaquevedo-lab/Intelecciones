@@ -540,6 +540,24 @@ const CommandCenter = () => {
   const [disputesReportFilter, setDisputesReportFilter] = useState('GENERAL');
   const [disputesReportData, setDisputesReportData] = useState<any>(null);
 
+  useEffect(() => {
+    if (disputesReportData) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      
+      const handleAfterPrint = () => {
+        setDisputesReportData(null);
+      };
+      
+      window.addEventListener('afterprint', handleAfterPrint);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+    }
+  }, [disputesReportData]);
+
   const handleExportReport = async (padrinoId: number) => {
     setIsGeneratingReport(true);
     try {
@@ -2260,10 +2278,6 @@ const CommandCenter = () => {
                   onClick={() => {
                     setDisputesReportData({ filter: disputesReportFilter, conflicts, conflictsHistory });
                     setShowDisputesReportModal(false);
-                    setTimeout(() => {
-                      window.print();
-                      setDisputesReportData(null);
-                    }, 800);
                   }}
                   style={{ width: '100%', padding: '1rem', borderRadius: '14px', background: 'var(--red)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
