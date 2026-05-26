@@ -18,6 +18,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api, { getImageUrl } from '../services/api';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
@@ -538,7 +540,10 @@ const CommandCenter = () => {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [showDisputesReportModal, setShowDisputesReportModal] = useState(false);
   const [disputesReportFilter, setDisputesReportFilter] = useState('GENERAL');
-  const [disputesReportData, setDisputesReportData] = useState<any>(null);
+  const [disputesReportStatusFilter, setDisputesReportStatusFilter] = useState('TODAS');
+  const [disputesReportSearch, setDisputesReportSearch] = useState('');
+  const [disputesReportLocalFilter, setDisputesReportLocalFilter] = useState('');
+  const [isGeneratingDisputesPDF, setIsGeneratingDisputesPDF] = useState(false);
 
   const handleExportReport = async (padrinoId: number) => {
     setIsGeneratingReport(true);
@@ -661,163 +666,253 @@ const CommandCenter = () => {
     );
   };
 
-  const DisputesReport = () => {
-    if (!disputesReportData) return null;
-
+  const exportDisputesPDF = () => {
+    setIsGeneratingDisputesPDF(true);
     try {
-      const { filter, conflicts, conflictsHistory } = disputesReportData;
+      const A4_W = 210;
+      const A4_H = 297;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const totalPagesExp = '{total_pages_count_string}';
 
-      const safeFormatDate = (dateStr: any) => {
-        if (!dateStr) return 'N/A';
+      const safeDate = (d: any) => {
+        if (!d) return 'N/A';
         try {
-          const normalized = String(dateStr).replace(' ', 'T');
-          const d = new Date(normalized);
-          if (isNaN(d.getTime())) return String(dateStr);
-          return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch {
-          return String(dateStr);
-        }
+          const dt = new Date(String(d).replace(' ', 'T'));
+          if (isNaN(dt.getTime())) return String(d);
+          return dt.toLocaleDateString('es-PY') + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch { return String(d); }
       };
 
-      let groups: Record<string, any[]> = {};
-      let historyGroups: Record<string, any[]> = {};
+      // Apply filters
+      const searchUpper = disputesReportSearch.toUpperCase();
+      const filterItem = (item: any) => {
+        if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
+        if (disputesReportLocalFilter && item.local_votacion && item.local_votacion !== disputesReportLocalFilter) return false;
+        return true;
+      };
 
-      if (filter === 'LISTA') {
-        conflicts.forEach((c: any) => {
-          const key = `Lista ${c.list_a || c.list_id_a || 'A'} vs Lista ${c.list_b || c.list_id_b || 'B'}`;
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
+      const showActive = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'ACTIVAS';
+      const showResolved = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'RESUELTAS';
+      const filteredActive = showActive ? conflicts.filter(filterItem) : [];
+      const filteredResolved = showResolved ? conflictsHistory.filter(filterItem) : [];
+
+      // Group data
+      const groupItems = (items: any[], isHistory: boolean) => {
+        const groups: Record<string, any[]> = {};
+        if (disputesReportFilter === 'LISTA') {
+          items.forEach((c: any) => {
+            const la = c.list_a || c.list_id_a || '?';
+            const lb = c.list_b || c.list_id_b || la;
+            const key = isHistory ? `Lista ${la}` : `Lista ${la} vs Lista ${lb}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+          });
+        } else if (disputesReportFilter === 'DISTRITO') {
+          items.forEach((c: any) => {
+            const key = effectiveDistrict || 'Distrito General';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+          });
+        } else {
+          if (items.length > 0) groups['General'] = items;
+        }
+        return groups;
+      };
+
+      const activeGroups = groupItems(filteredActive, false);
+      const resolvedGroups = groupItems(filteredResolved, true);
+
+      // --- Draw header ---
+      const drawHeader = (isFirst: boolean) => {
+        doc.setFillColor(30, 58, 110);
+        doc.roundedRect(15, isFirst ? 12 : 8, isFirst ? 10 : 6, isFirst ? 10 : 6, 2, 2, 'F');
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.6);
+        if (isFirst) {
+          doc.line(17, 17, 19, 19);
+          doc.line(19, 19, 23, 14);
+        } else {
+          doc.line(16.5, 11, 17.5, 12);
+          doc.line(17.5, 12, 19.5, 9.5);
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(isFirst ? 14 : 10);
+        doc.setTextColor(30, 58, 110);
+        doc.text('Inte', isFirst ? 27 : 23, isFirst ? 17.5 : 12.5);
+        doc.setTextColor(16, 185, 129);
+        doc.text('lecciones', isFirst ? 36.2 : 29.5, isFirst ? 17.5 : 12.5);
+
+        if (isFirst) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6.8);
+          doc.setTextColor(100, 116, 139);
+          doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 27, 21.2);
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(isFirst ? 9 : 7);
+        doc.setTextColor(220, 38, 38);
+        doc.text('REPORTE DE DISPUTAS', 195, isFirst ? 15 : 11, { align: 'right' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(71, 85, 105);
+        if (isFirst) {
+          doc.text(`Distrito: ${effectiveDistrict || 'Todos'}`, 195, 19, { align: 'right' });
+          doc.text(`Agrupación: ${disputesReportFilter}`, 195, 22.5, { align: 'right' });
+          doc.text(`Fecha Imp.: ${new Date().toLocaleString('es-PY')}`, 195, 26, { align: 'right' });
+        }
+
+        doc.setDrawColor(220, 38, 38);
+        doc.setLineWidth(0.6);
+        doc.line(15, isFirst ? 29 : 16, 195, isFirst ? 29 : 16);
+      };
+
+      drawHeader(true);
+
+      // Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text('REPORTE TÁCTICO DE DISPUTAS', 15, 36);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      const filterDesc = `Estado: ${disputesReportStatusFilter} | Agrupación: ${disputesReportFilter}${disputesReportSearch ? ` | Búsqueda: "${disputesReportSearch}"` : ''}${disputesReportLocalFilter ? ` | Local: ${disputesReportLocalFilter}` : ''}`;
+      doc.text(doc.splitTextToSize(filterDesc, 180), 15, 40);
+
+      // Summary boxes
+      const summaryY = 46;
+      doc.setFillColor(254, 242, 242);
+      doc.roundedRect(15, summaryY, 85, 14, 2, 2, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('DISPUTAS ACTIVAS', 20, summaryY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(220, 38, 38);
+      doc.text(String(filteredActive.length), 20, summaryY + 11.5);
+
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(110, summaryY, 85, 14, 2, 2, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('DISPUTAS RESUELTAS', 115, summaryY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(16, 185, 129);
+      doc.text(String(filteredResolved.length), 115, summaryY + 11.5);
+
+      let currentY = summaryY + 20;
+
+      // Active disputes tables
+      Object.entries(activeGroups).forEach(([groupName, items]) => {
+        if (items.length === 0) return;
+        if (currentY > A4_H - 40) { doc.addPage(); currentY = 22; }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(220, 38, 38);
+        doc.text(`${groupName} — ACTIVAS (${items.length})`, 15, currentY);
+        currentY += 2;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['ELECTOR', 'CÉDULA', 'CAPTURA INICIAL', 'ÚLTIMA CAPTURA', 'TIPO', 'ESTADO']],
+          body: items.map((c: any) => [
+            `${c.elector_nombre} ${c.elector_apellido}`,
+            c.elector_ci,
+            `${c.coord_a || 'N/A'}${c.list_a ? ` (L${c.list_a})` : ''}`,
+            `${c.coord_b || 'N/A'}${c.list_b ? ` (L${c.list_b})` : ''}`,
+            c.conflict_type === 'INTERNAL' ? 'INTERNA' : 'INTER-LISTA',
+            c.conflict_status === 'WAITING_CONSENT' ? 'ESP. CONSENT.' : 'PENDIENTE',
+          ]),
+          margin: { left: 15, right: 15 },
+          styles: { fontSize: 7, cellPadding: 2.2, font: 'helvetica', textColor: [51, 65, 85], lineColor: [226, 232, 240], lineWidth: 0.1 },
+          headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.2 },
+          alternateRowStyles: { fillColor: [255, 251, 251] },
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
+            4: { halign: 'center', fontSize: 6.5 },
+            5: { halign: 'center', fontStyle: 'bold', textColor: [220, 38, 38] },
+          },
+          didDrawPage: (data: any) => {
+            if (data.pageNumber > 1) drawHeader(false);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(5.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial`, 15, A4_H - 6);
+            doc.setFontSize(6.2);
+            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 6, { align: 'right' });
+          },
         });
-        conflictsHistory.forEach((h: any) => {
-          const key = `Lista ${h.list_a || h.list_id_a || 'A'} vs Lista ${h.list_b || h.list_id_b || 'B'}`;
-          if (!historyGroups[key]) historyGroups[key] = [];
-          historyGroups[key].push(h);
+        currentY = (doc as any).lastAutoTable.finalY + 8;
+      });
+
+      // Resolved disputes tables
+      Object.entries(resolvedGroups).forEach(([groupName, items]) => {
+        if (items.length === 0) return;
+        if (currentY > A4_H - 40) { doc.addPage(); currentY = 22; }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(16, 185, 129);
+        doc.text(`${groupName} — RESUELTAS (${items.length})`, 15, currentY);
+        currentY += 2;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['ELECTOR', 'CÉDULA', 'LOCAL / MESA', 'ADJUDICADO A', 'FECHA RESOLUCIÓN']],
+          body: items.map((h: any) => [
+            `${h.elector_nombre} ${h.elector_apellido}`,
+            h.elector_ci,
+            `${h.local_votacion || 'N/A'} (M. ${h.mesa || '?'})`,
+            h.winner_name || 'N/A',
+            safeDate(h.resolved_at),
+          ]),
+          margin: { left: 15, right: 15 },
+          styles: { fontSize: 7, cellPadding: 2.2, font: 'helvetica', textColor: [51, 65, 85], lineColor: [226, 232, 240], lineWidth: 0.1 },
+          headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.2 },
+          alternateRowStyles: { fillColor: [245, 253, 250] },
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
+            3: { fontStyle: 'bold', textColor: [30, 58, 110] },
+            4: { halign: 'center' },
+          },
+          didDrawPage: (data: any) => {
+            if (data.pageNumber > 1) drawHeader(false);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(5.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial`, 15, A4_H - 6);
+            doc.setFontSize(6.2);
+            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 6, { align: 'right' });
+          },
         });
-      } else if (filter === 'DISTRITO') {
-        conflicts.forEach((c: any) => {
-          const key = effectiveDistrict || 'Distrito General';
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
-        });
-        conflictsHistory.forEach((h: any) => {
-          const key = effectiveDistrict || 'Distrito General';
-          if (!historyGroups[key]) historyGroups[key] = [];
-          historyGroups[key].push(h);
-        });
-      } else {
-        groups['General'] = conflicts;
-        historyGroups['General'] = conflictsHistory;
+        currentY = (doc as any).lastAutoTable.finalY + 8;
+      });
+
+      // Empty state
+      if (filteredActive.length === 0 && filteredResolved.length === 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text('No se encontraron disputas con los filtros seleccionados.', A4_W / 2, currentY + 10, { align: 'center' });
       }
 
-      return (
-        <div className="print-only-report">
-          <div style={{ padding: '40px', color: '#000', background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            <header style={{ borderBottom: '3px solid #EF4444', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-              <div>
-                <h1 style={{ margin: 0, fontSize: '24px', color: '#EF4444', fontWeight: 900, textTransform: 'uppercase' }}>REPORTE TÁCTICO DE DISPUTAS</h1>
-                <p style={{ margin: '5px 0 0', fontSize: '14px', fontWeight: 700, color: '#333' }}>
-                  DISTRITO: {effectiveDistrict || 'TODOS'} | FILTRO: {filter} | FECHA: {new Date().toLocaleDateString()}
-                </p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '12px', fontWeight: 600 }}>INTELEX v2.4</p>
-                <p style={{ margin: 0, fontSize: '10px' }}>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-              </div>
-            </header>
+      if (typeof doc.putTotalPages === 'function') doc.putTotalPages(totalPagesExp);
 
-            <section style={{ marginBottom: '40px' }}>
-              <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-                <h2 style={{ margin: '0 0 10px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>RESUMEN GENERAL</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: 700 }}>DISPUTAS ACTIVAS</p>
-                  <p style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#EF4444' }}>{conflicts.length}</p>
-                </div>
-                <div>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: 700 }}>DISPUTAS RESUELTAS</p>
-                  <p style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#10b981' }}>{conflictsHistory.length}</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {Object.entries(groups).map(([groupName, items]) => items.length > 0 && (
-            <section key={groupName} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#0f172a', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
-                {groupName} - ACTIVAS ({items.length})
-              </h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                <thead>
-                  <tr style={{ background: '#EF4444', color: 'white' }}>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ELECTOR</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CÉDULA</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CAPTURA INICIAL (L A)</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ÚLTIMA CAPTURA (L B)</th>
-                    <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>ESTADO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((c: any) => (
-                    <tr key={c.conflict_id}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 700 }}>{c.elector_nombre} {c.elector_apellido}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.elector_ci}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.coord_a}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.coord_b || 'N/A'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 700, color: '#EF4444' }}>
-                        {c.conflict_status === 'WAITING_CONSENT' ? 'ESP. CONSENTIMIENTO' : 'ACTIVA'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
-
-          {Object.entries(historyGroups).map(([groupName, items]) => items.length > 0 && (
-            <section key={`hist-${groupName}`} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#10b981', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
-                {groupName} - RESUELTAS ({items.length})
-              </h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                <thead>
-                  <tr style={{ background: '#10b981', color: 'white' }}>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ELECTOR</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CÉDULA</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>LOCAL DE VOTACIÓN</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ADJUDICADO A</th>
-                    <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>FECHA RESOLUCIÓN</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((h: any) => (
-                    <tr key={h.conflict_id}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 700 }}>{h.elector_nombre} {h.elector_apellido}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.elector_ci}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.local_votacion} (M. {h.mesa})</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 800 }}>{h.winner_name}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{safeFormatDate(h.resolved_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
-
-          <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #ccc', textAlign: 'center', fontSize: '10px', color: '#666' }}>
-            Este documento es de carácter confidencial y estratégico para el operativo electoral.
-          </footer>
-        </div>
-      </div>
-      );
+      const cleanDistrict = (effectiveDistrict || 'global').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      doc.save(`reporte-disputas-${cleanDistrict}-${disputesReportFilter.toLowerCase()}.pdf`);
     } catch (err: any) {
-      return (
-        <div className="print-only-report">
-          <div style={{ padding: '40px', background: '#fff', minHeight: '100vh' }}>
-            <h1 style={{ color: 'red' }}>ERROR AL RENDERIZAR REPORTE</h1>
-            <p>{err.message || 'Error desconocido.'}</p>
-          </div>
-        </div>
-      );
+      console.error('Error generating disputes PDF:', err);
+      alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setIsGeneratingDisputesPDF(false);
     }
   };
 
@@ -2272,27 +2367,98 @@ const CommandCenter = () => {
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0, y: 20 }}
                 onClick={e => e.stopPropagation()}
-                style={{ maxWidth: '400px', width: '95%', padding: '2rem', borderRadius: '24px', border: '1px solid var(--border)', background: 'var(--surface)' }}
+                style={{ maxWidth: '480px', width: '95%', padding: '2rem', borderRadius: '24px', border: '1px solid var(--border)', background: 'var(--surface)' }}
               >
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', marginBottom: '1.5rem', textAlign: 'center' }}>Configurar Reporte</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-                  <button onClick={() => setDisputesReportFilter('GENERAL')} style={{ padding: '1rem', borderRadius: '14px', background: disputesReportFilter === 'GENERAL' ? 'rgba(239,68,68,0.15)' : 'var(--bg)', border: disputesReportFilter === 'GENERAL' ? '1px solid var(--red)' : '1px solid var(--border)', color: disputesReportFilter === 'GENERAL' ? 'var(--red)' : 'var(--text-3)', fontWeight: 800, cursor: 'pointer', transition: '0.2s' }}>General (Todo)</button>
-                  <button onClick={() => setDisputesReportFilter('DISTRITO')} style={{ padding: '1rem', borderRadius: '14px', background: disputesReportFilter === 'DISTRITO' ? 'rgba(239,68,68,0.15)' : 'var(--bg)', border: disputesReportFilter === 'DISTRITO' ? '1px solid var(--red)' : '1px solid var(--border)', color: disputesReportFilter === 'DISTRITO' ? 'var(--red)' : 'var(--text-3)', fontWeight: 800, cursor: 'pointer', transition: '0.2s' }}>Agrupado por Distrito</button>
-                  <button onClick={() => setDisputesReportFilter('LISTA')} style={{ padding: '1rem', borderRadius: '14px', background: disputesReportFilter === 'LISTA' ? 'rgba(239,68,68,0.15)' : 'var(--bg)', border: disputesReportFilter === 'LISTA' ? '1px solid var(--red)' : '1px solid var(--border)', color: disputesReportFilter === 'LISTA' ? 'var(--red)' : 'var(--text-3)', fontWeight: 800, cursor: 'pointer', transition: '0.2s' }}>Agrupado por Lista</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>Generar Reporte de Disputas</h3>
+                  <button onClick={() => setShowDisputesReportModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: '4px' }}>
+                    <X size={18} />
+                  </button>
                 </div>
-                <button 
+
+                {/* Preview counts */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <div style={{ background: 'rgba(239,68,68,0.08)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(239,68,68,0.15)' }}>
+                    <p style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)', margin: '0 0 2px', textTransform: 'uppercase' }}>Activas</p>
+                    <p style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--red)', margin: 0 }}>{conflicts.length}</p>
+                  </div>
+                  <div style={{ background: 'rgba(16,185,129,0.08)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.15)' }}>
+                    <p style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)', margin: '0 0 2px', textTransform: 'uppercase' }}>Resueltas</p>
+                    <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#10b981', margin: 0 }}>{conflictsHistory.length}</p>
+                  </div>
+                </div>
+
+                {/* Agrupación */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Agrupación</p>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {(['GENERAL', 'DISTRITO', 'LISTA'] as const).map(opt => (
+                      <button key={opt} onClick={() => setDisputesReportFilter(opt)} style={{
+                        flex: 1, padding: '0.6rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', transition: '0.2s',
+                        background: disputesReportFilter === opt ? 'rgba(239,68,68,0.15)' : 'var(--bg)',
+                        border: disputesReportFilter === opt ? '1px solid var(--red)' : '1px solid var(--border)',
+                        color: disputesReportFilter === opt ? 'var(--red)' : 'var(--text-3)',
+                      }}>{opt === 'GENERAL' ? 'General' : opt === 'DISTRITO' ? 'Distrito' : 'Lista'}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status filter */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Incluir</p>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {(['TODAS', 'ACTIVAS', 'RESUELTAS'] as const).map(opt => (
+                      <button key={opt} onClick={() => setDisputesReportStatusFilter(opt)} style={{
+                        flex: 1, padding: '0.6rem', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', transition: '0.2s',
+                        background: disputesReportStatusFilter === opt ? 'rgba(59,130,246,0.15)' : 'var(--bg)',
+                        border: disputesReportStatusFilter === opt ? '1px solid var(--plra-300)' : '1px solid var(--border)',
+                        color: disputesReportStatusFilter === opt ? 'var(--plra-300)' : 'var(--text-3)',
+                      }}>{opt === 'TODAS' ? 'Todas' : opt === 'ACTIVAS' ? 'Solo Activas' : 'Solo Resueltas'}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Search + Local filter */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Buscar elector</p>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={13} style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+                      <input
+                        type="text"
+                        placeholder="Nombre o CI..."
+                        value={disputesReportSearch}
+                        onChange={e => setDisputesReportSearch(e.target.value)}
+                        style={{ width: '100%', padding: '0.55rem 0.75rem 0.55rem 2rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-3)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Local votación</p>
+                    <select
+                      value={disputesReportLocalFilter}
+                      onChange={e => setDisputesReportLocalFilter(e.target.value)}
+                      style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.75rem', boxSizing: 'border-box' }}
+                    >
+                      <option value="">Todos</option>
+                      {locales.map(l => <option key={l.cod_local} value={l.nombre}>{l.nombre}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  disabled={isGeneratingDisputesPDF}
                   onClick={() => {
-                    setIsGeneratingReport(true);
-                    setDisputesReportData({ filter: disputesReportFilter, conflicts, conflictsHistory });
+                    exportDisputesPDF();
                     setShowDisputesReportModal(false);
-                    setTimeout(() => {
-                      setIsGeneratingReport(false);
-                      window.print();
-                    }, 1500);
                   }}
-                  style={{ width: '100%', padding: '1rem', borderRadius: '14px', background: 'var(--red)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                  style={{
+                    width: '100%', padding: '1rem', borderRadius: '14px', background: isGeneratingDisputesPDF ? 'var(--text-3)' : 'var(--red)',
+                    color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: isGeneratingDisputesPDF ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+                  }}
                 >
-                  <Download size={16} /> GENERAR PDF
+                  <Download size={16} /> {isGeneratingDisputesPDF ? 'GENERANDO...' : 'DESCARGAR PDF'}
                 </button>
               </motion.div>
             </div>
@@ -2300,7 +2466,6 @@ const CommandCenter = () => {
         </AnimatePresence>
 
         <TacticalReport />
-        <DisputesReport />
         <style>
           {`
             @media print {
