@@ -2449,29 +2449,57 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/stats/summary', (req, res) => {
-  const sec = getSecurityFilter(req, 'ec');
-  const params = sec.params || [];
-  
   try {
-    const campId = req.query.campaign_id;
-    let campFilterU = campId ? ` AND u.assigned_campaign_id = ${db.prepare('SELECT ?').get(campId)}` : '';
-    let campFilterC = campId ? ` AND c.id = ${db.prepare('SELECT ?').get(campId)}` : '';
-    let campFilterL = campId ? ` AND l.campaign_id = ${db.prepare('SELECT ?').get(campId)}` : '';
-    let campFilterE = campId ? ` AND e.campaign_id = ${db.prepare('SELECT ?').get(campId)}` : '';
-
-    const usersCount = db.prepare(`SELECT COUNT(*) as count FROM users u WHERE 1=1 ${getSecurityFilter(req, 'u').sql}${campFilterU}`).get(...getSecurityFilter(req, 'u').params) as any;
-    const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${getSecurityFilter(req, 'c').sql}${campFilterC}`).get(...getSecurityFilter(req, 'c').params) as any;
-    const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${getSecurityFilter(req, 'l').sql}${campFilterL}`).get(...getSecurityFilter(req, 'l').params) as any;
-    
+    const secU = getSecurityFilter(req, 'u');
+    const secC = getSecurityFilter(req, 'c');
+    const secL = getSecurityFilter(req, 'l');
     const secE = getSecurityFilter(req, 'e');
-    const cacheKey = JSON.stringify({ sql: secE.sql + campFilterE, params: secE.params });
+    const secEC = getSecurityFilter(req, 'ec');
+
+    const campId = req.query.campaign_id;
+    const cid = campId && !isNaN(parseInt(campId as string)) ? parseInt(campId as string) : null;
+
+    let campFilterU = '';
+    let campFilterC = '';
+    let campFilterL = '';
+    let campFilterE = '';
+    let campFilterEC = '';
+
+    const paramsU = [...(secU.params || [])];
+    const paramsC = [...(secC.params || [])];
+    const paramsL = [...(secL.params || [])];
+    const paramsE = [...(secE.params || [])];
+    const paramsEC = [...(secEC.params || [])];
+
+    if (cid !== null) {
+      campFilterU = ' AND u.assigned_campaign_id = ?';
+      paramsU.push(cid);
+
+      campFilterC = ' AND c.id = ?';
+      paramsC.push(cid);
+
+      campFilterL = ' AND l.campaign_id = ?';
+      paramsL.push(cid);
+
+      campFilterE = ' AND e.campaign_id = ?';
+      paramsE.push(cid);
+
+      campFilterEC = ' AND ec.campaign_id = ?';
+      paramsEC.push(cid);
+    }
+
+    const usersCount = db.prepare(`SELECT COUNT(*) as count FROM users u WHERE 1=1 ${secU.sql}${campFilterU}`).get(...paramsU) as any;
+    const campaignsCount = db.prepare(`SELECT COUNT(*) as count FROM campaigns c WHERE 1=1 ${secC.sql}${campFilterC}`).get(...paramsC) as any;
+    const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${secL.sql}${campFilterL}`).get(...paramsL) as any;
+    
+    const cacheKey = JSON.stringify({ sql: secE.sql + campFilterE, params: paramsE });
     const cachedE = electorsCountCache.get(cacheKey);
     let electorsCountVal = 0;
     const now = Date.now();
     if (cachedE && (now - cachedE.ts < ELECTORS_COUNT_TTL)) {
       electorsCountVal = cachedE.count;
     } else {
-      const res = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${secE.sql}${campFilterE}`).get(...secE.params) as any;
+      const res = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${secE.sql}${campFilterE}`).get(...paramsE) as any;
       electorsCountVal = res?.count || 0;
       electorsCountCache.set(cacheKey, { count: electorsCountVal, ts: now });
     }
@@ -2489,17 +2517,15 @@ app.get('/api/stats/summary', (req, res) => {
       FROM elector_captures ec
     `;
 
-    if (sec.sql.includes('e.ciudad') || sec.sql.includes('e.distrito') || sec.sql.includes('e.ci')) {
-      query += ` LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${sec.sql}`;
+    if (secEC.sql.includes('e.ciudad') || secEC.sql.includes('e.distrito') || secEC.sql.includes('e.ci')) {
+      query += ` LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${secEC.sql}`;
     } else {
-      query += ` WHERE 1=1 ${sec.sql.replace(/\be\./g, 'ec.')}`;
+      query += ` WHERE 1=1 ${secEC.sql.replace(/\be\./g, 'ec.')}`;
     }
     
-    if (campId) {
-       query += ` AND ec.campaign_id = ${db.prepare('SELECT ?').get(campId)}`;
-    }
+    query += campFilterEC;
 
-    const capturesStats = db.prepare(query).get(...params) as any;
+    const capturesStats = db.prepare(query).get(...paramsEC) as any;
 
     res.json({
       users: usersCount.count,
@@ -3998,19 +4024,30 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
     // JEFE_CAMPANA / SUBJEFE / SUPERUSUARIO: list view with index-friendly subqueries
     const filter = getSecurityFilter(req, 'u');
     const padrinos = db.prepare(`
+      WITH team_map AS (
+        SELECT id as member_id,
+               CASE WHEN role IN ('PADRINO','SUBJEFE') THEN id ELSE parent_id END as padrino_id
+        FROM users
+        WHERE role IN ('PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA')
+      ),
+      padrino_stats AS (
+        SELECT tm.padrino_id,
+               COUNT(ec.id) as total_captures,
+               SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport
+        FROM team_map tm
+        INNER JOIN elector_captures ec ON ec.coordinator_id = tm.member_id
+        GROUP BY tm.padrino_id
+      )
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
              u.assigned_list_id, l.list_number, l.candidate_alias,
              (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
-             
-             ((SELECT COUNT(*) FROM elector_captures WHERE coordinator_id = u.id) + 
-              (SELECT COUNT(*) FROM elector_captures WHERE coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')))) AS total_captures,
-              
-             ((SELECT COUNT(*) FROM elector_captures WHERE coordinator_id = u.id AND needs_transport = 1) + 
-              (SELECT COUNT(*) FROM elector_captures WHERE coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AND needs_transport = 1)) AS needs_transport
-      FROM users u
-      LEFT JOIN lists l ON u.assigned_list_id = l.id
-      WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
-      ORDER BY u.nombre
+             COALESCE(ps.total_captures, 0) AS total_captures,
+             COALESCE(ps.needs_transport, 0) AS needs_transport
+       FROM users u
+       LEFT JOIN lists l ON u.assigned_list_id = l.id
+       LEFT JOIN padrino_stats ps ON ps.padrino_id = u.id
+       WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
+       ORDER BY u.nombre
     `).all(...filter.params);
 
     res.json({ role, padrinos, coordinators });
