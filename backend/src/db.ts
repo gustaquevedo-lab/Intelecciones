@@ -378,6 +378,11 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("whatsapp_messages", "type", "TEXT DEFAULT 'chat'");
     addColumnIfNotExists("whatsapp_messages", "media_url", "TEXT");
     addColumnIfNotExists("whatsapp_broadcast_logs", "terminal_id", "TEXT DEFAULT 'default'");
+    addColumnIfNotExists("whatsapp_broadcast_logs", "custom_message", "TEXT");
+    addColumnIfNotExists("whatsapp_broadcast_logs", "media_url", "TEXT");
+    addColumnIfNotExists("whatsapp_broadcast_logs", "media_type", "TEXT");
+    addColumnIfNotExists("whatsapp_broadcast_logs", "min_delay", "INTEGER DEFAULT 2");
+    addColumnIfNotExists("whatsapp_broadcast_logs", "max_delay", "INTEGER DEFAULT 5");
     addColumnIfNotExists("electors", "campaign_id", "INTEGER");
     addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
     addColumnIfNotExists("whatsapp_messages", "campaign_id", "INTEGER");

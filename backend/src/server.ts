@@ -4500,6 +4500,25 @@ app.get('/api/campaigns/mine', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEF
 // ─────────────────────────────────────────────────────────────────────────────
 
 // WhatsApp Endpoints
+const whatsappUpload = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+});
+
+app.post('/api/whatsapp/upload', whatsappUpload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se subió ningún archivo' });
+  }
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  res.json({
+    success: true,
+    url: `${baseUrl}/uploads/${req.file.filename}`,
+    path: `/uploads/${req.file.filename}`,
+    filename: req.file.filename,
+    mimetype: req.file.mimetype
+  });
+});
+
 app.get('/api/whatsapp/terminals', async (req, res) => {
   res.json(await whatsappService.getTerminals());
 });
@@ -4576,114 +4595,205 @@ app.get('/api/whatsapp/broadcast/logs', (req, res) => {
 });
 
 app.post('/api/whatsapp/broadcast', async (req, res) => {
-  const { template_id, target_list_id, target_role, traffic_light, terminalId: reqTerminalId } = req.body;
+  const { 
+    template_id, 
+    targets, // array of { telefono, nombre, elector_ci, local_votacion, mesa, orden }
+    message, // custom message content
+    media_url, 
+    media_type, 
+    minDelay = 2, 
+    maxDelay = 5, 
+    useSpintax = true,
+    terminalId: reqTerminalId 
+  } = req.body;
+  
   const terminalId = reqTerminalId || 'default';
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
 
   try {
-    const template = db.prepare('SELECT * FROM whatsapp_templates WHERE id = ?').get(template_id) as any;
-    if (!template) return res.status(404).json({ error: 'Plantilla no encontrada' });
-
-    // Identify targets
-    let targets: any[] = [];
-    if (target_role) {
-      // Targets are users
-      let query = 'SELECT telefono, nombre FROM users WHERE telefono IS NOT NULL AND telefono != ""';
-      const params: any[] = [];
-      if (target_role !== 'ALL') {
-        query += ' AND role = ?';
-        params.push(target_role);
-      }
-      if (target_list_id) {
-        query += ' AND assigned_list_id = ?';
-        params.push(target_list_id);
-      }
-      targets = db.prepare(query).all(...params);
-    } else if (traffic_light) {
-      // Targets are electors from captures - JOIN with electors to get names and voting data
-      let query = `
-        SELECT ec.telefono, COALESCE(e.nombre, 'ELECTOR') as nombre, ec.elector_ci, COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden
-        FROM elector_captures ec
-        LEFT JOIN electors e ON ec.elector_ci = e.ci
-        WHERE ec.telefono IS NOT NULL AND ec.telefono != ""
-      `;
-      const params: any[] = [];
-      if (traffic_light !== 'ALL') {
-        query += ' AND ec.traffic_light = ?';
-        params.push(traffic_light);
-      }
-      if (target_list_id) {
-        query += ' AND ec.list_id = ?';
-        params.push(target_list_id);
-      }
-      targets = db.prepare(query).all(...params);
+    if (!targets || !Array.isArray(targets) || targets.length === 0) {
+      return res.status(400).json({ error: 'No se encontraron destinatarios con teléfono' });
     }
 
-    if (targets.length === 0) return res.status(400).json({ error: 'No se encontraron destinatarios con teléfono' });
-
-    // Create log entry
+    // 1. Log entry in DB
     const logResult = db.prepare(`
-      INSERT INTO whatsapp_broadcast_logs (template_id, target_count, status)
-      VALUES (?, ?, 'RUNNING')
-    `).run(template_id, targets.length);
+      INSERT INTO whatsapp_broadcast_logs (template_id, custom_message, media_url, media_type, terminal_id, target_count, status, min_delay, max_delay)
+      VALUES (?, ?, ?, ?, ?, ?, 'RUNNING', ?, ?)
+    `).run(
+      template_id || null,
+      message || null,
+      media_url || null,
+      media_type || null,
+      terminalId,
+      targets.length,
+      minDelay,
+      maxDelay
+    );
     const logId = logResult.lastInsertRowid;
 
-    // Start background process
+    // 2. Start background process
     const runBroadcast = async () => {
       let successCount = 0;
       let failCount = 0;
+      let sentInSession = 0;
 
-      for (const target of targets) {
+      for (let i = 0; i < targets.length; i++) {
+        // Check current status in DB
+        const log = db.prepare('SELECT status FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
+        if (!log) {
+          console.log(`[WHATSAPP] Broadcast ${logId} log not found. Terminating.`);
+          break;
+        }
+        
+        if (log.status === 'CANCELLED') {
+          console.log(`[WHATSAPP] Broadcast ${logId} was CANCELLED.`);
+          break;
+        }
+
+        if (log.status === 'PAUSED') {
+          await new Promise(r => setTimeout(r, 1000));
+          i--; // Retry same index
+          continue;
+        }
+
+        const target = targets[i];
+        if (!target.telefono) {
+          failCount++;
+          continue;
+        }
+
         try {
-          // Anti-ban delay: 2-5 seconds
-          await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
-          
-          // Advanced Personalized content
-          let personalizedContent = template.content || '';
-          if (personalizedContent) {
-            personalizedContent = personalizedContent
-              .replace(/{{nombre}}/g, target.nombre || 'Amigo/a')
-              .replace(/{{ci}}/g, target.elector_ci || '')
-              .replace(/{{local}}/g, target.local_votacion || 'No especificado')
-              .replace(/{{mesa}}/g, target.mesa?.toString() || '-')
-              .replace(/{{orden}}/g, target.orden?.toString() || '-');
+          // Personalize message content
+          let personalizedContent = message || '';
+          if (template_id) {
+            const template = db.prepare('SELECT content FROM whatsapp_templates WHERE id = ?').get(template_id) as any;
+            if (template && template.content) {
+              personalizedContent = template.content;
+            }
           }
 
-          if (template.media_type === 'VOICE') {
-            await whatsappService.sendVoice(terminalId, target.telefono, template.media_url);
-          } else if (template.media_type === 'LOCATION') {
-            await whatsappService.sendLocation(terminalId, target.telefono, template.lat, template.lng, personalizedContent);
-          } else if (template.media_type === 'CONTACT') {
-            await whatsappService.sendContact(terminalId, target.telefono, template.contact_name, template.contact_phone);
-          } else if (template.media_url) {
-            await whatsappService.sendMedia(terminalId, target.telefono, template.media_url, personalizedContent);
+          personalizedContent = personalizedContent
+            .replace(/{{nombre}}/g, target.nombre || 'Amigo/a')
+            .replace(/{{ci}}/g, target.elector_ci || target.ci || '')
+            .replace(/{{local}}/g, target.local_votacion || 'No especificado')
+            .replace(/{{mesa}}/g, target.mesa?.toString() || '-')
+            .replace(/{{orden}}/g, target.orden?.toString() || '-');
+
+          if (useSpintax && personalizedContent) {
+            personalizedContent = addSubtleVariation(personalizedContent);
+          }
+
+          // Send message
+          if (media_type === 'VOICE' && media_url) {
+            await whatsappService.sendVoice(terminalId, target.telefono, media_url);
+          } else if (media_url) {
+            await whatsappService.sendMedia(terminalId, target.telefono, media_url, personalizedContent);
           } else {
             await whatsappService.sendMessage(terminalId, target.telefono, personalizedContent);
           }
           successCount++;
+          sentInSession++;
         } catch (err) {
-          console.error(`Broadcast failed for ${target.telefono}:`, err);
+          console.error(`Broadcast ${logId} failed for ${target.telefono}:`, err);
           failCount++;
         }
-        
-        // Update progress every 5 messages
-        if ((successCount + failCount) % 5 === 0) {
-          db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
-            .run(successCount, failCount, logId);
+
+        // Update progress in DB on each iteration
+        db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
+          .run(successCount, failCount, logId);
+
+        // If it's the last message, skip delay
+        if (i === targets.length - 1) {
+          break;
+        }
+
+        // Dynamic delay
+        const currentDelaySec = minDelay + Math.random() * (maxDelay - minDelay);
+        await new Promise(r => setTimeout(r, currentDelaySec * 1000));
+
+        // Human break every 15 messages (20-40 seconds pause)
+        if (sentInSession > 0 && sentInSession % 15 === 0) {
+          const breakSec = 20 + Math.random() * 20;
+          console.log(`[WHATSAPP] Broadcast ${logId}: Human break for ${breakSec.toFixed(1)}s.`);
+          await new Promise(r => setTimeout(r, breakSec * 1000));
         }
       }
 
-      db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ?, status = "COMPLETED" WHERE id = ?')
-        .run(successCount, failCount, logId);
+      // Finish broadcast status
+      const finalLog = db.prepare('SELECT status FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
+      const finalStatus = (finalLog && (finalLog.status === 'CANCELLED' || finalLog.status === 'PAUSED')) ? finalLog.status : 'COMPLETED';
+      
+      db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ?, status = ? WHERE id = ?')
+        .run(successCount, failCount, finalStatus, logId);
     };
 
-    runBroadcast(); // Non-blocking
+    runBroadcast();
 
     res.json({ success: true, log_id: logId, target_count: targets.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.get('/api/whatsapp/broadcast/active', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  try {
+    const active = db.prepare(`
+      SELECT id, target_count, success_count, fail_count, status
+      FROM whatsapp_broadcast_logs
+      WHERE status IN ('RUNNING', 'PAUSED')
+      ORDER BY id DESC LIMIT 1
+    `).get();
+    res.json(active || null);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/broadcast/logs/:id', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const logId = parseInt(req.params.id);
+  try {
+    const log = db.prepare(`
+      SELECT l.*, t.name as template_name
+      FROM whatsapp_broadcast_logs l
+      LEFT JOIN whatsapp_templates t ON l.template_id = t.id
+      WHERE l.id = ?
+    `).get(logId);
+    if (!log) return res.status(404).json({ error: 'Log no encontrado' });
+    res.json(log);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/whatsapp/broadcast/:id/pause', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const logId = parseInt(req.params.id);
+  try {
+    db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'PAUSED' WHERE id = ?").run(logId);
+    res.json({ success: true, status: 'PAUSED' });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/whatsapp/broadcast/:id/resume', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const logId = parseInt(req.params.id);
+  try {
+    db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'RUNNING' WHERE id = ?").run(logId);
+    res.json({ success: true, status: 'RUNNING' });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/whatsapp/broadcast/:id/cancel', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const logId = parseInt(req.params.id);
+  try {
+    db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'CANCELLED' WHERE id = ?").run(logId);
+    res.json({ success: true, status: 'CANCELLED' });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // Parse spintax formats like {Hola|Buenos días|Buenas}
@@ -4767,7 +4877,7 @@ app.get('/api/whatsapp/recipients/coordinators', (req, res) => {
   try {
     const coordinators = db.prepare(`
       SELECT
-        u.id, u.nombre, u.telefono, u.ci, u.distrito,
+        u.id, u.nombre, u.telefono, u.ci, u.distrito, u.parent_id,
         u.assigned_list_id, l.list_number, l.candidate_alias, l.candidate_nombre, l.ciudad,
         COUNT(ec.id) as capture_count
       FROM users u
@@ -4779,6 +4889,45 @@ app.get('/api/whatsapp/recipients/coordinators', (req, res) => {
     `).all();
     res.json(coordinators);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/whatsapp/recipients/electors', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  
+  const padrinoId = req.query.padrino_id ? parseInt(req.query.padrino_id as string) : null;
+  const coordinatorId = req.query.coordinator_id ? parseInt(req.query.coordinator_id as string) : null;
+  
+  try {
+    let query = `
+      SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
+        COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden,
+        u.nombre as coordinator_nombre,
+        p.nombre as padrino_nombre
+      FROM elector_captures ec
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
+      JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      WHERE ec.telefono IS NOT NULL AND ec.telefono != ''
+    `;
+    const params: any[] = [];
+    
+    if (coordinatorId) {
+      query += ' AND ec.coordinator_id = ?';
+      params.push(coordinatorId);
+    } else if (padrinoId) {
+      query += ' AND u.parent_id = ?';
+      params.push(padrinoId);
+    }
+    
+    query += ' ORDER BY COALESCE(e.nombre, \'ELECTOR\')';
+    
+    const electors = db.prepare(query).all(...params);
+    res.json((electors as any[]).map(sanitizeElectorData));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/whatsapp/recipients/padrinos', (req, res) => {

@@ -22,6 +22,32 @@ import db from './db';
 import fs from 'fs';
 import path from 'path';
 
+async function getMediaFromUrlOrPath(mediaUrl: string) {
+  loadWhatsappWeb();
+  
+  let filename = '';
+  if (mediaUrl.includes('/uploads/')) {
+    filename = mediaUrl.split('/uploads/')[1];
+  } else if (!mediaUrl.startsWith('http://') && !mediaUrl.startsWith('https://') && mediaUrl.match(/^[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/)) {
+    filename = mediaUrl;
+  }
+  
+  if (filename) {
+    const uploadDir = process.env.NODE_ENV === 'production'
+      ? '/app/data/uploads'
+      : path.join(__dirname, '../uploads');
+    const localPath = path.join(uploadDir, filename);
+    
+    if (fs.existsSync(localPath)) {
+      console.log(`[WHATSAPP] Loading local media from file path: ${localPath}`);
+      return MessageMedia.fromFilePath(localPath);
+    }
+  }
+  
+  console.log(`[WHATSAPP] Fetching media from URL: ${mediaUrl}`);
+  return MessageMedia.fromUrl(mediaUrl);
+}
+
 interface TerminalInfo {
   id: string;
   name: string;
@@ -278,7 +304,7 @@ class WhatsAppManager {
     const cleanNumber = number.replace(/\D/g, '');
     const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
     
-    const media = await MessageMedia.fromUrl(mediaUrl);
+    const media = await getMediaFromUrlOrPath(mediaUrl);
     const res = await client.sendMessage(chatId, media, { sendAudioAsVoice: true });
     
     db.prepare(`
@@ -332,7 +358,7 @@ class WhatsAppManager {
     const cleanNumber = number.replace(/\D/g, '');
     const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
     
-    const media = await MessageMedia.fromUrl(mediaUrl);
+    const media = await getMediaFromUrlOrPath(mediaUrl);
     const res = await client.sendMessage(chatId, media, { caption: message });
     
     db.prepare(`

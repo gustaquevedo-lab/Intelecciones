@@ -9,7 +9,7 @@ import {
   Search, Plus, Trash2, Image as ImageIcon, Video,
   Mic, MapPin, X, Loader2, ChevronRight, ChevronDown,
   Paperclip, Info, Tag, Hash, Star, Radio, Eye, 
-  UserCheck, Edit3, CornerDownLeft
+  UserCheck, Edit3, CornerDownLeft, User
 } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
 
@@ -559,10 +559,11 @@ interface RecipientSelectorProps {
   onToggle: (phone: string, meta?: any) => void;
   onSelectAll: (phones: string[], meta?: any[]) => void;
   onClearAll: () => void;
+  onDeselectAll?: (phones: string[]) => void;
 }
 
-const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggle, onSelectAll, onClearAll }) => {
-  const [mode, setMode] = useState<'role' | 'padrino' | 'coordinator' | 'search'>('role');
+const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggle, onSelectAll, onClearAll, onDeselectAll }) => {
+  const [mode, setMode] = useState<'role' | 'padrino' | 'coordinator' | 'electores' | 'search'>('role');
   const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
   const [padrinos, setPadrinos] = useState<Padrino[]>([]);
   const [expandedPadrino, setExpandedPadrino] = useState<number | null>(null);
@@ -573,10 +574,44 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggl
   const [searchResults, setSearchResults] = useState<{ users: any[]; electors: any[] } | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  // Electores filtering state
+  const [filterPadrinoId, setFilterPadrinoId] = useState<string>('all');
+  const [filterCoordId, setFilterCoordId] = useState<string>('all');
+  const [filteredElectors, setFilteredElectors] = useState<any[]>([]);
+  const [electorsLoading, setElectorsLoading] = useState(false);
+
   useEffect(() => {
     api.get('/whatsapp/recipients/coordinators').then(r => setCoordinators(r.data)).catch(() => {});
     api.get('/whatsapp/recipients/padrinos').then(r => setPadrinos(r.data)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (mode !== 'electores') return;
+    
+    const fetchElectors = async () => {
+      setElectorsLoading(true);
+      try {
+        let url = '/whatsapp/recipients/electors';
+        const params = [];
+        if (filterCoordId !== 'all') {
+          params.push(`coordinator_id=${filterCoordId}`);
+        } else if (filterPadrinoId !== 'all') {
+          params.push(`padrino_id=${filterPadrinoId}`);
+        }
+        if (params.length > 0) {
+          url += '?' + params.join('&');
+        }
+        const r = await api.get(url);
+        setFilteredElectors(r.data);
+      } catch (err) {
+        console.error('Error fetching electors:', err);
+      } finally {
+        setElectorsLoading(false);
+      }
+    };
+    
+    fetchElectors();
+  }, [filterPadrinoId, filterCoordId, mode]);
 
   const loadPadrinoTeam = async (id: number) => {
     if (expandedPadrino === id) { setExpandedPadrino(null); setPadrinoTeam(null); return; }
@@ -613,6 +648,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggl
     { id: 'role', label: 'Por Rol', icon: Users },
     { id: 'padrino', label: 'Padrinos', icon: Star },
     { id: 'coordinator', label: 'Coordinadores', icon: UserCheck },
+    { id: 'electores', label: 'Electores', icon: User },
     { id: 'search', label: 'Buscar', icon: Search },
   ] as const;
 
@@ -830,6 +866,107 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggl
         </div>
       )}
 
+      {/* Electores mode */}
+      {mode === 'electores' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>Filtrar por Padrino</label>
+              <select 
+                value={filterPadrinoId} 
+                onChange={e => { setFilterPadrinoId(e.target.value); setFilterCoordId('all'); }}
+                style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.4rem 0.5rem', color: 'var(--text)', fontSize: '0.72rem', outline: 'none' }}
+              >
+                <option value="all">Todos los Padrinos</option>
+                {padrinos.map(p => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>Filtrar por Coordinador</label>
+              <select 
+                value={filterCoordId} 
+                onChange={e => setFilterCoordId(e.target.value)}
+                style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.4rem 0.5rem', color: 'var(--text)', fontSize: '0.72rem', outline: 'none' }}
+              >
+                <option value="all">Todos los Coordinadores</option>
+                {(filterPadrinoId === 'all' 
+                  ? coordinators 
+                  : coordinators.filter(c => c.parent_id === parseInt(filterPadrinoId))
+                ).map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-2)' }}>
+              Electores encontrados: {filteredElectors.length}
+            </span>
+            {filteredElectors.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => onSelectAll(filteredElectors.map(e => e.telefono), filteredElectors)}
+                  style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', border: 'none', background: 'var(--plra-500)', color: 'white', fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Marcar Todos
+                </button>
+                <button
+                  onClick={() => onDeselectAll && onDeselectAll(filteredElectors.map(e => e.telefono))}
+                  style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Desmarcar Todos
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '280px', overflowY: 'auto' }}>
+            {electorsLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-3)' }} />
+              </div>
+            ) : filteredElectors.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-3)', fontSize: '0.72rem' }}>
+                No se encontraron electores con teléfono en este filtro
+              </div>
+            ) : (
+              filteredElectors.map(e => (
+                <div 
+                  key={e.capture_id} 
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', 
+                    padding: '0.45rem 0.6rem', borderRadius: '6px', 
+                    background: 'var(--surface-light)', border: '1px solid var(--border)' 
+                  }}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={selected.has(e.telefono)} 
+                    onChange={() => onToggle(e.telefono, e)}
+                    style={{ cursor: 'pointer', accentColor: 'var(--plra-500)' }} 
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text)' }}>
+                      {e.nombre} {e.apellido || ''}
+                    </div>
+                    <div style={{ fontSize: '0.58rem', color: 'var(--text-3)', display: 'flex', flexWrap: 'wrap', gap: '0.3rem 0.6rem' }}>
+                      <span>📱 {e.telefono}</span>
+                      <span>👤 Coord: {e.coordinator_nombre || 'No asignado'}</span>
+                      {e.padrino_nombre && <span>⭐ Padrino: {e.padrino_nombre}</span>}
+                    </div>
+                  </div>
+                  <TrafficBadge light={e.traffic_light} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Search mode */}
       {mode === 'search' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -943,37 +1080,132 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
       .replace(/{{orden}}/g, meta?.orden?.toString() || '-');
   };
 
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<{ filename: string; path: string; url: string } | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await api.post('/whatsapp/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setUploadedFile({
+        filename: file.name,
+        path: res.data.path,
+        url: res.data.url
+      });
+      setMediaUrl(res.data.url);
+    } catch (err) {
+      alert('Error al subir el archivo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const sendBroadcast = async () => {
     if (selectedPhones.size === 0 || !composedMessage.trim()) return;
     setStep('sending');
 
-    // Use direct-message loop for individual sending
-    const phones = Array.from(selectedPhones);
-    const total = phones.length;
-    let sent = 0; let failed = 0;
-    setBroadcastLog({ logId: 0, total, sent: 0, failed: 0, status: 'RUNNING' });
+    const targets = Array.from(selectedPhones).map(phone => {
+      const meta = recipientMeta[phone];
+      return {
+        telefono: phone,
+        nombre: meta?.nombre || '',
+        elector_ci: meta?.elector_ci || meta?.ci || '',
+        local_votacion: meta?.local_votacion || '',
+        mesa: meta?.mesa || 0,
+        orden: meta?.orden || 0
+      };
+    });
 
-    for (const phone of phones) {
-      try {
-        const msg = previewMessage(phone);
-        await api.post('/whatsapp/direct-message', {
-          number: phone, message: msg,
-          media_url: mediaUrl || undefined,
-          media_type: mediaType !== 'TEXT' ? mediaType : undefined,
-          terminalId,
-          use_spintax: useSpintax
+    try {
+      const res = await api.post('/whatsapp/broadcast', {
+        template_id: selectedTemplateId || undefined,
+        targets,
+        message: selectedTemplateId ? undefined : customMessage,
+        media_url: mediaUrl || undefined,
+        media_type: mediaType !== 'TEXT' ? mediaType : undefined,
+        minDelay,
+        maxDelay,
+        useSpintax,
+        terminalId
+      });
+
+      setBroadcastLog({
+        logId: res.data.log_id,
+        total: targets.length,
+        sent: 0,
+        failed: 0,
+        status: 'RUNNING'
+      });
+    } catch (err) {
+      alert('Error al iniciar la difusión masiva');
+      setStep('recipients');
+    }
+  };
+
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Check for active broadcast
+    api.get('/whatsapp/broadcast/active').then(r => {
+      if (r.data) {
+        setBroadcastLog({
+          logId: r.data.id,
+          total: r.data.target_count,
+          sent: r.data.success_count,
+          failed: r.data.fail_count,
+          status: r.data.status
         });
-        sent++;
-      } catch { failed++; }
-      setBroadcastLog({ logId: 0, total, sent, failed, status: 'RUNNING' });
-      // Customized randomized dynamic delay based on min/max delay preferences
-      const currentDelaySec = minDelay + Math.random() * (maxDelay - minDelay);
-      await new Promise(r => setTimeout(r, currentDelaySec * 1000));
+        setStep('sending');
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (broadcastLog && broadcastLog.logId > 0 && (broadcastLog.status === 'RUNNING' || broadcastLog.status === 'PAUSED')) {
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          const r = await api.get(`/whatsapp/broadcast/logs/${broadcastLog.logId}`);
+          setBroadcastLog({
+            logId: r.data.id,
+            total: r.data.target_count,
+            sent: r.data.success_count,
+            failed: r.data.fail_count,
+            status: r.data.status
+          });
+          
+          if (r.data.status !== 'RUNNING' && r.data.status !== 'PAUSED') {
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+            api.get('/whatsapp/broadcast/logs').then(res => setLogs(res.data)).catch(() => {});
+          }
+        } catch (err) {
+          console.error('Error polling broadcast status:', err);
+        }
+      }, 2000);
+    } else {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     }
 
-    setBroadcastLog(prev => prev ? { ...prev, status: 'COMPLETED' } : null);
-    api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {});
-  };
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [broadcastLog]);
 
   const STEPS = [
     { id: 'recipients', label: 'Destinatarios', icon: Users },
@@ -982,6 +1214,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   ];
 
   if (step === 'sending') {
+    const isSending = broadcastLog?.status === 'RUNNING' || broadcastLog?.status === 'PAUSED';
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <motion.div
@@ -993,12 +1226,14 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
             border: '1px solid var(--border)', textAlign: 'center'
           }}
         >
-          {broadcastLog?.status === 'RUNNING' ? (
+          {isSending ? (
             <>
               <div style={{ marginBottom: '1.5rem' }}>
-                <Radio size={40} style={{ color: 'var(--plra-300)', margin: '0 auto' }} className="animate-pulse" />
+                <Radio size={40} style={{ color: broadcastLog?.status === 'PAUSED' ? 'var(--text-3)' : 'var(--plra-300)', margin: '0 auto' }} className={broadcastLog?.status === 'PAUSED' ? '' : 'animate-pulse'} />
               </div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>Enviando difusión...</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>
+                {broadcastLog?.status === 'PAUSED' ? 'Difusión Pausada' : 'Enviando difusión...'}
+              </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1.5rem' }}>
                 {broadcastLog.sent + broadcastLog.failed} de {broadcastLog.total} enviados
               </p>
@@ -1012,11 +1247,49 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                 <span style={{ fontSize: '0.7rem', color: '#22c55e' }}>✓ {broadcastLog.sent} enviados</span>
                 <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>✗ {broadcastLog.failed} fallidos</span>
               </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+                {broadcastLog.status === 'RUNNING' && (
+                  <button
+                    onClick={async () => {
+                      await api.post(`/whatsapp/broadcast/${broadcastLog.logId}/pause`);
+                      setBroadcastLog(prev => prev ? { ...prev, status: 'PAUSED' } : null);
+                    }}
+                    style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-light)', color: 'var(--text)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Pausar
+                  </button>
+                )}
+                {broadcastLog.status === 'PAUSED' && (
+                  <button
+                    onClick={async () => {
+                      await api.post(`/whatsapp/broadcast/${broadcastLog.logId}/resume`);
+                      setBroadcastLog(prev => prev ? { ...prev, status: 'RUNNING' } : null);
+                    }}
+                    style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: 'var(--plra-500)', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Reanudar
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    if (confirm('¿Seguro que deseas cancelar esta difusión masiva?')) {
+                      await api.post(`/whatsapp/broadcast/${broadcastLog.logId}/cancel`);
+                      setBroadcastLog(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
+                    }
+                  }}
+                  style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: '#ef4444', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+              </div>
             </>
           ) : (
             <>
-              <CheckCircle2 size={48} style={{ color: '#22c55e', margin: '0 auto 1rem' }} />
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>¡Difusión completada!</h3>
+              <CheckCircle2 size={48} style={{ color: broadcastLog?.status === 'CANCELLED' ? '#ef4444' : '#22c55e', margin: '0 auto 1rem' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>
+                {broadcastLog?.status === 'CANCELLED' ? 'Difusión Cancelada' : '¡Difusión completada!'}
+              </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1.5rem' }}>
                 {broadcastLog?.sent} enviados · {broadcastLog?.failed} fallidos de {broadcastLog?.total} total
               </p>
@@ -1103,6 +1376,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
               onToggle={toggleRecipient}
               onSelectAll={selectAll}
               onClearAll={clearAll}
+              onDeselectAll={deselectAll}
             />
           </div>
         )}
@@ -1242,16 +1516,47 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                 ))}
               </div>
               {mediaType !== 'TEXT' && (
-                <input
-                  value={mediaUrl}
-                  onChange={e => setMediaUrl(e.target.value)}
-                  placeholder="URL del archivo multimedia..."
-                  style={{
-                    marginTop: '0.5rem', width: '100%', background: 'var(--input-bg)',
-                    border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem 0.75rem',
-                    color: 'var(--text)', fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box'
-                  }}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.6rem', border: '1px dashed var(--border)',
+                    borderRadius: '8px', background: 'var(--surface-light)'
+                  }}>
+                    <input
+                      type="file"
+                      accept={mediaType === 'IMAGE' ? 'image/*' : mediaType === 'VIDEO' ? 'video/*' : 'audio/*'}
+                      onChange={handleFileUpload}
+                      style={{ display: 'none' }}
+                      id="whatsapp-media-upload"
+                    />
+                    <label
+                      htmlFor="whatsapp-media-upload"
+                      style={{
+                        padding: '0.35rem 0.75rem', borderRadius: '6px',
+                        background: 'var(--plra-500)', color: 'white',
+                        fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.25rem'
+                      }}
+                    >
+                      {uploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
+                      Subir de la Computadora
+                    </label>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                      {mediaUrl ? mediaUrl.split('/').pop() : 'Ningún archivo subido'}
+                    </span>
+                  </div>
+                  
+                  <input
+                    value={mediaUrl}
+                    onChange={e => setMediaUrl(e.target.value)}
+                    placeholder="O ingresa una URL de archivo multimedia..."
+                    style={{
+                      width: '100%', background: 'var(--input-bg)',
+                      border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem 0.75rem',
+                      color: 'var(--text)', fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
               )}
             </div>
 
@@ -1416,8 +1721,28 @@ const TemplatesTab: React.FC = () => {
     lat: -25.2637, lng: -57.5759, contact_name: '', contact_phone: ''
   });
   const [saving, setSaving] = useState(false);
+  const [templateUploading, setTemplateUploading] = useState(false);
 
   const load = () => api.get('/whatsapp/templates').then(r => setTemplates(r.data)).catch(() => {});
+
+  const handleTemplateFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTemplateUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await api.post('/whatsapp/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setForm(p => ({ ...p, media_url: res.data.url }));
+    } catch (err) {
+      alert('Error al subir el archivo');
+    } finally {
+      setTemplateUploading(false);
+    }
+  };
+
   useEffect(() => { load(); }, []);
 
   const save = async () => {
@@ -1501,10 +1826,40 @@ const TemplatesTab: React.FC = () => {
                   style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem 0.6rem', color: 'var(--text)', fontSize: '0.75rem', outline: 'none', resize: 'vertical', fontFamily: 'var(--font-body)', boxSizing: 'border-box' }} />
               </div>
               {form.media_type !== 'TEXT' && form.media_type !== 'LOCATION' && form.media_type !== 'CONTACT' && (
-                <div>
-                  <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', display: 'block', marginBottom: '0.3rem' }}>URL del Archivo</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-2)', textTransform: 'uppercase', display: 'block', marginBottom: '0.1rem' }}>Archivo Multimedia</label>
+                  
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.6rem', border: '1px dashed var(--border)',
+                    borderRadius: '8px', background: 'var(--surface-light)'
+                  }}>
+                    <input
+                      type="file"
+                      accept={form.media_type === 'IMAGE' ? 'image/*' : form.media_type === 'VIDEO' ? 'video/*' : 'audio/*'}
+                      onChange={handleTemplateFileUpload}
+                      style={{ display: 'none' }}
+                      id="whatsapp-template-upload"
+                    />
+                    <label
+                      htmlFor="whatsapp-template-upload"
+                      style={{
+                        padding: '0.35rem 0.75rem', borderRadius: '6px',
+                        background: 'var(--plra-500)', color: 'white',
+                        fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.25rem'
+                      }}
+                    >
+                      {templateUploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
+                      Subir de la Computadora
+                    </label>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-3)' }}>
+                      {form.media_url ? form.media_url.split('/').pop() : 'Ningún archivo subido'}
+                    </span>
+                  </div>
+
                   <input value={form.media_url} onChange={e => setForm(p => ({ ...p, media_url: e.target.value }))}
-                    placeholder="https://..."
+                    placeholder="O ingresa la URL de la imagen/video/audio..."
                     style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.45rem 0.6rem', color: 'var(--text)', fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               )}
