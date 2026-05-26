@@ -548,6 +548,12 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
         } else if (tableAlias === 'ec') {
           sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
           params.push(d, d);
+        } else if (tableAlias === 'cc') {
+          sql += ` AND (e.ciudad = ? OR e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
+          params.push(d, d, d, d);
+        } else if (tableAlias === 'cc_history') {
+          sql += ` AND (e.ciudad = ? OR e.distrito = ? OR u_win.distrito = ?)`;
+          params.push(d, d, d);
         } else {
           // Determine which column to use based on table schema
           let col = 'distrito';
@@ -624,16 +630,24 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       return { sql: ' AND 1=0', params: [] };
     }
 
-    // Adjust for ec (elector_captures) which needs to filter via joined electors table 'e'
+    // Adjust for ec, cc, and cc_history which need customized joins or columns
+    let sql = '';
+    let params: any[] = [];
     let targetAlias = tableAlias;
-    let targetCol = distColumn;
     if (tableAlias === 'ec') {
-      targetAlias = 'e';
-      targetCol = 'ciudad';
+      sql = ` AND (e.ciudad = ? OR e.distrito = ?)`;
+      params = [user.distrito, user.distrito];
+    } else if (tableAlias === 'cc') {
+      sql = ` AND (e.ciudad = ? OR e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
+      params = [user.distrito, user.distrito, user.distrito, user.distrito];
+    } else if (tableAlias === 'cc_history') {
+      sql = ` AND (e.ciudad = ? OR e.distrito = ? OR u_win.distrito = ?)`;
+      params = [user.distrito, user.distrito, user.distrito];
+    } else {
+      let targetCol = distColumn;
+      sql = ` AND ${targetAlias}.${targetCol} = ?`;
+      params = [user.distrito];
     }
-
-    let sql = ` AND ${targetAlias}.${targetCol} = ?`;
-    let params: any[] = [user.distrito];
 
     if ((tableAlias === 'e') && user.campaign_id) {
       sql += ` AND (${targetAlias}.campaign_id = ? OR ${targetAlias}.campaign_id IS NULL)`;
@@ -2741,7 +2755,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         cc.consent_b,
         cc.list_id_a,
         cc.list_id_b,
-        e.ci as elector_ci,
+        cc.elector_ci as elector_ci,
         e.nombre as elector_nombre,
         e.apellido as elector_apellido,
         
@@ -2785,7 +2799,7 @@ app.get('/api/admin/conflicts', (req, res) => {
     `;
     const params: any[] = [];
 
-    const sec = getSecurityFilter(req, 'e');
+    const sec = getSecurityFilter(req, 'cc');
     sql += ` ${sec.sql}`;
     params.push(...sec.params);
 
@@ -2837,8 +2851,12 @@ app.get('/api/admin/conflicts/history', (req, res) => {
     `;
     const params: any[] = [];
 
+    const sec = getSecurityFilter(req, 'cc_history');
+    sql += ` ${sec.sql}`;
+    params.push(...sec.params);
+
     if (district && district !== 'null' && district !== 'undefined') {
-      sql += " AND (UPPER(TRIM(e.distrito)) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(e.ciudad)) LIKE UPPER(TRIM(?)))";
+      sql += " AND (UPPER(TRIM(COALESCE(e.distrito, u_win.distrito))) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(COALESCE(e.ciudad, u_win.distrito))) LIKE UPPER(TRIM(?)))";
       params.push(`%${district}%`, `%${district}%`);
     }
 
@@ -3652,22 +3670,38 @@ app.get('/api/structure/padrinos', (req, res) => {
 
   try {
     const padrinos = db.prepare(`
+      WITH team_map AS (
+        SELECT id as member_id,
+               CASE WHEN role IN ('PADRINO','SUBJEFE') THEN id ELSE parent_id END as padrino_id
+        FROM users
+        WHERE role IN ('PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA')
+      ),
+      padrino_stats AS (
+        SELECT tm.padrino_id,
+               COUNT(ec.id) as total_captures,
+               SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport,
+               SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
+               SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
+               SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+               SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple
+        FROM team_map tm
+        INNER JOIN elector_captures ec ON ec.coordinator_id = tm.member_id
+        GROUP BY tm.padrino_id
+      )
       SELECT u.id, u.nombre, u.photo_url, u.telefono, u.assigned_list_id,
              l.list_number, l.option_number,
-             COUNT(DISTINCT u2.id) AS coordinator_count,
-             COUNT(DISTINCT ec.id) AS total_electors,
-             COUNT(DISTINCT CASE WHEN ec.traffic_light='GREEN'  THEN ec.id END) AS green_total,
-             COUNT(DISTINCT CASE WHEN ec.traffic_light='YELLOW' THEN ec.id END) AS yellow_total,
-             COUNT(DISTINCT CASE WHEN ec.traffic_light='RED'    THEN ec.id END) AS red_total,
-             COUNT(DISTINCT CASE WHEN ec.traffic_light='PURPLE' THEN ec.id END) AS purple_total,
-             COUNT(DISTINCT CASE WHEN ec.needs_transport=1      THEN ec.id END) AS transport_total
-      FROM users u
-      LEFT JOIN lists l           ON u.assigned_list_id = l.id
-      LEFT JOIN users u2          ON u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
-      LEFT JOIN elector_captures ec ON (ec.coordinator_id = u2.id OR ec.coordinator_id = u.id)
-      WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
-      GROUP BY u.id 
-      ORDER BY u.nombre
+             (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
+             COALESCE(ps.total_captures, 0) AS total_electors,
+             COALESCE(ps.needs_transport, 0) AS transport_total,
+             COALESCE(ps.green, 0) AS green_total,
+             COALESCE(ps.yellow, 0) AS yellow_total,
+             COALESCE(ps.red, 0) AS red_total,
+             COALESCE(ps.purple, 0) AS purple_total
+       FROM users u
+       LEFT JOIN lists l ON u.assigned_list_id = l.id
+       LEFT JOIN padrino_stats ps ON ps.padrino_id = u.id
+       WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
+       ORDER BY u.nombre
     `).all(...sec.params);
     res.json(padrinos);
   } catch (err: any) {
@@ -3748,14 +3782,26 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
     if (!padrino) return res.status(404).json({ error: 'Padrino no encontrado' });
 
     const coordinators = db.prepare(`
+      WITH coord_stats AS (
+        SELECT coordinator_id,
+               COUNT(id) as total_electors,
+               SUM(CASE WHEN traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
+               SUM(CASE WHEN traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
+               SUM(CASE WHEN traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
+               SUM(CASE WHEN traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
+               SUM(CASE WHEN needs_transport = 1 THEN 1 ELSE 0 END) as transport_needed
+        FROM elector_captures
+        GROUP BY coordinator_id
+      )
       SELECT u.id, u.nombre, u.telefono,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) as total_electors,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') as green,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') as yellow,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'RED') as red,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') as purple,
-      (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) as transport_needed
+             COALESCE(cs.total_electors, 0) as total_electors,
+             COALESCE(cs.green, 0) as green,
+             COALESCE(cs.yellow, 0) as yellow,
+             COALESCE(cs.red, 0) as red,
+             COALESCE(cs.purple, 0) as purple,
+             COALESCE(cs.transport_needed, 0) as transport_needed
       FROM users u
+      LEFT JOIN coord_stats cs ON cs.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
     `).all(id) as any[];
 
