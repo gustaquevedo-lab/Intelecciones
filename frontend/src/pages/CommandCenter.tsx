@@ -676,7 +676,14 @@ const CommandCenter = () => {
       const element = document.getElementById('disputes-premium-print-container');
       if (!element) throw new Error("No se pudo encontrar el contenedor del reporte");
 
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: true, windowHeight: element.scrollHeight + 1000 });
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        width: 800,
+        windowWidth: 800,
+        windowHeight: element.scrollHeight + 1000
+      });
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       
       if (imgData === 'data:,' || canvas.width === 0 || canvas.height === 0) {
@@ -777,7 +784,7 @@ const CommandCenter = () => {
     const resolvedGroups = groupItems(filteredResolved, true);
 
     return (
-      <div style={{ position: 'absolute', top: 0, left: 0, opacity: 0.01, zIndex: -9999, width: '800px', pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '800px', zIndex: -9999 }}>
         <div id="disputes-premium-print-container" style={{ width: '800px', background: '#fff', color: '#000', padding: '40px', fontFamily: 'Inter, system-ui, sans-serif' }}>
           
           <header style={{ borderBottom: '4px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
