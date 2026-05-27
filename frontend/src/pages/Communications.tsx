@@ -1116,11 +1116,14 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
     }
   };
 
+  // Maximum recipients per single API call — keeps payload well under 10MB
+  const BATCH_SIZE = 200;
+
   const sendBroadcast = async () => {
     if (selectedPhones.size === 0 || !composedMessage.trim()) return;
     setStep('sending');
 
-    const targets = Array.from(selectedPhones).map(phone => {
+    const allTargets = Array.from(selectedPhones).map(phone => {
       const meta = recipientMeta[phone];
       return {
         telefono: phone,
@@ -1132,29 +1135,84 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
       };
     });
 
-    try {
-      const res = await api.post('/whatsapp/broadcast', {
-        template_id: selectedTemplateId || undefined,
-        targets,
-        message: selectedTemplateId ? undefined : customMessage,
-        media_url: mediaUrl || undefined,
-        media_type: mediaType !== 'TEXT' ? mediaType : undefined,
-        minDelay,
-        maxDelay,
-        useSpintax,
-        terminalId
-      });
+    // Split into batches of BATCH_SIZE to avoid HTTP payload limits
+    const batches: typeof allTargets[] = [];
+    for (let i = 0; i < allTargets.length; i += BATCH_SIZE) {
+      batches.push(allTargets.slice(i, i + BATCH_SIZE));
+    }
 
+    let lastLogId: number | null = null;
+    let totalSuccess = 0;
+    let totalFail = 0;
+    let batchErrors = 0;
+
+    // Initialize UI immediately so user knows it started
+    setBroadcastLog({
+      logId: 0,
+      total: allTargets.length,
+      sent: 0,
+      failed: 0,
+      status: 'RUNNING'
+    });
+
+    for (let bIdx = 0; bIdx < batches.length; bIdx++) {
+      const batch = batches[bIdx];
+      const batchLabel = batches.length > 1 ? ` (lote ${bIdx + 1}/${batches.length})` : '';
+      console.log(`[BROADCAST] Enviando lote ${bIdx + 1}/${batches.length} — ${batch.length} destinatarios`);
+
+      try {
+        const res = await api.post('/whatsapp/broadcast', {
+          template_id: selectedTemplateId || undefined,
+          targets: batch,
+          message: selectedTemplateId ? undefined : customMessage,
+          media_url: mediaUrl || undefined,
+          media_type: mediaType !== 'TEXT' ? mediaType : undefined,
+          minDelay,
+          maxDelay,
+          useSpintax,
+          terminalId
+        });
+
+        lastLogId = res.data.log_id;
+
+        // Show the last batch's log for progress tracking
+        setBroadcastLog({
+          logId: res.data.log_id,
+          total: allTargets.length,
+          sent: totalSuccess,
+          failed: totalFail,
+          status: 'RUNNING'
+        });
+      } catch (err: any) {
+        batchErrors++;
+        const errMsg = err?.response?.data?.error || err?.message || 'Error desconocido';
+        console.error(`[BROADCAST] Error en lote ${bIdx + 1}:`, errMsg);
+        // Don't abort — log the failure and continue with next batch
+        totalFail += batch.length;
+        setBroadcastLog(prev => prev ? {
+          ...prev,
+          failed: totalFail,
+          total: allTargets.length
+        } : null);
+      }
+    }
+
+    // If every single batch failed, surface an error
+    if (batchErrors === batches.length) {
+      alert(`Error al iniciar la difusión masiva. Verifica que la terminal WhatsApp está conectada.`);
+      setStep('recipients');
+      return;
+    }
+
+    // If we got at least one successful batch, the log is running — keep polling it
+    if (lastLogId) {
       setBroadcastLog({
-        logId: res.data.log_id,
-        total: targets.length,
+        logId: lastLogId,
+        total: allTargets.length,
         sent: 0,
-        failed: 0,
+        failed: totalFail,
         status: 'RUNNING'
       });
-    } catch (err) {
-      alert('Error al iniciar la difusión masiva');
-      setStep('recipients');
     }
   };
 
@@ -1223,13 +1281,15 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
 
   if (step === 'sending') {
     const isSending = broadcastLog?.status === 'RUNNING' || broadcastLog?.status === 'PAUSED';
+    const isQueuing = broadcastLog?.logId === 0; // Still registering batches
+    const totalBatches = Math.ceil((broadcastLog?.total ?? 0) / BATCH_SIZE);
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           style={{
-            maxWidth: '480px', width: '100%', padding: '2rem',
+            maxWidth: '520px', width: '100%', padding: '2rem',
             background: 'var(--surface)', borderRadius: '16px',
             border: '1px solid var(--border)', textAlign: 'center'
           }}
@@ -1239,28 +1299,43 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
               <div style={{ marginBottom: '1.5rem' }}>
                 <Radio size={40} style={{ color: broadcastLog?.status === 'PAUSED' ? 'var(--text-3)' : 'var(--plra-300)', margin: '0 auto' }} className={broadcastLog?.status === 'PAUSED' ? '' : 'animate-pulse'} />
               </div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem' }}>
-                {broadcastLog?.status === 'PAUSED' ? 'Difusión Pausada' : 'Enviando difusión...'}
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.35rem' }}>
+                {isQueuing ? 'Registrando lotes...' : broadcastLog?.status === 'PAUSED' ? 'Difusión Pausada' : 'Enviando difusión...'}
               </h3>
+              {totalBatches > 1 && (
+                <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+                  📦 {broadcastLog!.total} destinatarios segmentados en {totalBatches} lotes de máx. {BATCH_SIZE}
+                </p>
+              )}
               <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1.5rem' }}>
-                {broadcastLog.sent + broadcastLog.failed} de {broadcastLog.total} enviados
+                {broadcastLog!.sent + broadcastLog!.failed} de {broadcastLog!.total} enviados
               </p>
               <div style={{ background: 'var(--surface-light)', borderRadius: '999px', height: '8px', overflow: 'hidden' }}>
                 <motion.div
-                  animate={{ width: `${((broadcastLog.sent + broadcastLog.failed) / broadcastLog.total) * 100}%` }}
+                  animate={{ width: broadcastLog!.total > 0 ? `${((broadcastLog!.sent + broadcastLog!.failed) / broadcastLog!.total) * 100}%` : '0%' }}
                   style={{ height: '100%', background: 'linear-gradient(90deg, var(--plra-500), var(--plra-300))', borderRadius: '999px' }}
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
-                <span style={{ fontSize: '0.7rem', color: '#22c55e' }}>✓ {broadcastLog.sent} enviados</span>
-                <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>✗ {broadcastLog.failed} fallidos</span>
+                <span style={{ fontSize: '0.7rem', color: '#22c55e' }}>✓ {broadcastLog!.sent} enviados</span>
+                <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>✗ {broadcastLog!.failed} fallidos</span>
               </div>
               
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
-                {broadcastLog.status === 'RUNNING' && (
+              {/* "Ver Bandeja de Salida" link while running */}
+              <div style={{ marginTop: '1rem' }}>
+                <button
+                  onClick={() => { setStep('recipients'); setMode('outbox'); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--plra-300)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Ver Bandeja de Salida →
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                {!isQueuing && broadcastLog!.status === 'RUNNING' && broadcastLog!.logId > 0 && (
                   <button
                     onClick={async () => {
-                      await api.post(`/whatsapp/broadcast/${broadcastLog.logId}/pause`);
+                      await api.post(`/whatsapp/broadcast/${broadcastLog!.logId}/pause`);
                       setBroadcastLog(prev => prev ? { ...prev, status: 'PAUSED' } : null);
                     }}
                     style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-light)', color: 'var(--text)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
@@ -1268,10 +1343,10 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                     Pausar
                   </button>
                 )}
-                {broadcastLog.status === 'PAUSED' && (
+                {!isQueuing && broadcastLog!.status === 'PAUSED' && broadcastLog!.logId > 0 && (
                   <button
                     onClick={async () => {
-                      await api.post(`/whatsapp/broadcast/${broadcastLog.logId}/resume`);
+                      await api.post(`/whatsapp/broadcast/${broadcastLog!.logId}/resume`);
                       setBroadcastLog(prev => prev ? { ...prev, status: 'RUNNING' } : null);
                     }}
                     style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: 'var(--plra-500)', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
@@ -1279,17 +1354,19 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                     Reanudar
                   </button>
                 )}
-                <button
-                  onClick={async () => {
-                    if (confirm('¿Seguro que deseas cancelar esta difusión masiva?')) {
-                      await api.post(`/whatsapp/broadcast/${broadcastLog.logId}/cancel`);
-                      setBroadcastLog(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
-                    }
-                  }}
-                  style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: '#ef4444', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Cancelar
-                </button>
+                {!isQueuing && broadcastLog!.logId > 0 && (
+                  <button
+                    onClick={async () => {
+                      if (confirm('¿Seguro que deseas cancelar esta difusión masiva?')) {
+                        await api.post(`/whatsapp/broadcast/${broadcastLog!.logId}/cancel`);
+                        setBroadcastLog(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
+                      }
+                    }}
+                    style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: '#ef4444', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Cancelar
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -1301,12 +1378,20 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
               <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: '1.5rem' }}>
                 {broadcastLog?.sent} enviados · {broadcastLog?.failed} fallidos de {broadcastLog?.total} total
               </p>
-              <button
-                onClick={() => { setStep('recipients'); clearAll(); setBroadcastLog(null); setSelectedTemplateId(null); setCustomMessage(''); }}
-                style={{ padding: '0.6rem 1.5rem', borderRadius: '10px', border: 'none', background: 'var(--plra-500)', color: 'white', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
-              >
-                Nueva difusión
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => { setStep('recipients'); clearAll(); setBroadcastLog(null); setSelectedTemplateId(null); setCustomMessage(''); }}
+                  style={{ padding: '0.6rem 1.5rem', borderRadius: '10px', border: 'none', background: 'var(--plra-500)', color: 'white', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  Nueva difusión
+                </button>
+                <button
+                  onClick={() => { setStep('recipients'); setMode('outbox'); }}
+                  style={{ padding: '0.6rem 1.5rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--surface-light)', color: 'var(--text)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  Ver Bandeja de Salida
+                </button>
+              </div>
             </>
           )}
         </motion.div>

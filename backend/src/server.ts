@@ -65,7 +65,7 @@ const uploadDir = process.env.NODE_ENV === 'production'
   
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(uploadDir));
 
 const storage = multer.diskStorage({
