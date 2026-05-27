@@ -4652,6 +4652,9 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
         const target = targets[i];
         if (!target.telefono) {
           failCount++;
+          // Log skipped (no phone)
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Sin número de teléfono')`)
+            .run(logId, target.telefono || '', target.nombre || '');
           continue;
         }
 
@@ -4686,9 +4689,15 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           }
           successCount++;
           sentInSession++;
-        } catch (err) {
+          // ✅ Log per-recipient success
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status) VALUES (?, ?, ?, 'SENT')`)
+            .run(logId, target.telefono, target.nombre || '');
+        } catch (err: any) {
           console.error(`Broadcast ${logId} failed for ${target.telefono}:`, err);
           failCount++;
+          // ❌ Log per-recipient failure
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', ?)`)
+            .run(logId, target.telefono, target.nombre || '', err?.message || 'Error desconocido');
         }
 
         // Update progress in DB on each iteration
@@ -4816,6 +4825,52 @@ app.post('/api/whatsapp/broadcast/:id/cancel', (req, res) => {
     }
     db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'CANCELLED' WHERE id = ?").run(logId);
     res.json({ success: true, status: 'CANCELLED' });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/whatsapp/broadcast/:id/recipients — per-recipient results for community outbox
+app.get('/api/whatsapp/broadcast/:id/recipients', (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA' && role !== 'SUBJEFE') return res.status(403).json({ error: 'Prohibido' });
+  const logId = parseInt(req.params.id);
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const page = parseInt((req.query.page as string) || '1');
+  const limit = Math.min(parseInt((req.query.limit as string) || '200'), 500);
+  const offset = (page - 1) * limit;
+  const filterStatus = req.query.status as string | undefined; // 'SENT' | 'FAILED' | undefined
+
+  try {
+    // Verify access to this log
+    const log = db.prepare('SELECT campaign_id FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
+    if (!log) return res.status(404).json({ error: 'Log no encontrado' });
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id && log.campaign_id && log.campaign_id !== user.campaign_id) {
+      return res.status(403).json({ error: 'Prohibido' });
+    }
+
+    let where = 'WHERE log_id = ?';
+    const params: any[] = [logId];
+    if (filterStatus) {
+      where += ' AND status = ?';
+      params.push(filterStatus);
+    }
+
+    const total = (db.prepare(`SELECT COUNT(*) as cnt FROM whatsapp_broadcast_recipients ${where}`).get(...params) as any).cnt;
+    const recipients = db.prepare(
+      `SELECT id, telefono, nombre, status, error_msg, sent_at
+       FROM whatsapp_broadcast_recipients
+       ${where}
+       ORDER BY id ASC
+       LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
+
+    res.json({
+      recipients,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      limit
+    });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

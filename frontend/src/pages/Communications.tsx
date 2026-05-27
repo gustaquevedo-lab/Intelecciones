@@ -9,9 +9,10 @@ import {
   Search, Plus, Trash2, Image as ImageIcon, Video,
   Mic, MapPin, X, Loader2, ChevronRight, ChevronDown,
   Paperclip, Info, Tag, Hash, Star, Radio, Eye, 
-  UserCheck, Edit3, CornerDownLeft, User
+  UserCheck, Edit3, CornerDownLeft, User, Filter, Download
 } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
+import { useBroadcast } from '../context/BroadcastContext';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1021,6 +1022,222 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggl
   );
 };
 
+// ─── OutboxPanel (Bandeja de Salida comunitaria) ──────────────────────────────
+
+interface OutboxPanelProps {
+  logs: any[];
+  activeBroadcast: { logId: number; total: number; sent: number; failed: number; status: string } | null;
+  onRefresh: () => void;
+}
+
+const OutboxPanel: React.FC<OutboxPanelProps> = ({ logs, activeBroadcast, onRefresh }) => {
+  const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
+  const [recipients, setRecipients] = useState<any[]>([]);
+  const [recipTotal, setRecipTotal] = useState(0);
+  const [recipPage, setRecipPage] = useState(1);
+  const [recipFilter, setRecipFilter] = useState<'ALL' | 'SENT' | 'FAILED'>('ALL');
+  const [recipLoading, setRecipLoading] = useState(false);
+
+  const loadRecipients = async (logId: number, page = 1, filter: 'ALL' | 'SENT' | 'FAILED' = 'ALL') => {
+    setRecipLoading(true);
+    try {
+      const params: any = { page, limit: 200 };
+      if (filter !== 'ALL') params.status = filter;
+      const r = await api.get(`/whatsapp/broadcast/${logId}/recipients`, { params });
+      setRecipients(r.data.recipients);
+      setRecipTotal(r.data.total);
+      setRecipPage(page);
+    } catch { /* no permission or not found */ }
+    finally { setRecipLoading(false); }
+  };
+
+  const toggleExpand = (logId: number) => {
+    if (expandedLogId === logId) {
+      setExpandedLogId(null);
+      setRecipients([]);
+    } else {
+      setExpandedLogId(logId);
+      setRecipFilter('ALL');
+      setRecipPage(1);
+      loadRecipients(logId, 1, 'ALL');
+    }
+  };
+
+  // Merge active broadcast into logs list for live update
+  const allLogs = activeBroadcast && activeBroadcast.logId > 0
+    ? logs.map(l => l.id === activeBroadcast.logId
+        ? { ...l, success_count: activeBroadcast.sent, fail_count: activeBroadcast.failed, status: activeBroadcast.status }
+        : l)
+    : logs;
+
+  const statusColor = (s: string) =>
+    s === 'COMPLETED' ? '#22c55e' : s === 'RUNNING' ? '#f59e0b' : s === 'PAUSED' ? '#a78bfa' : s === 'CANCELLED' ? '#ef4444' : '#6b7280';
+  const statusLabel = (s: string) =>
+    s === 'COMPLETED' ? 'Completado' : s === 'RUNNING' ? 'En curso' : s === 'PAUSED' ? 'Pausado' : s === 'CANCELLED' ? 'Cancelado' : s;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)' }}>
+          Bandeja de Salida
+          <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 400 }}>
+            — visible para Jefe, Subjefe y Admin
+          </span>
+        </div>
+        <button
+          onClick={onRefresh}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', fontSize: '0.7rem', cursor: 'pointer' }}
+        >
+          <RefreshCw size={12} /> Actualizar
+        </button>
+      </div>
+
+      {allLogs.length === 0 && (
+        <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '3rem 0', fontSize: '0.85rem' }}>
+          Sin envíos registrados aún.
+        </div>
+      )}
+
+      {allLogs.map((log: any) => {
+        const pct = log.target_count > 0 ? Math.round(((log.success_count + log.fail_count) / log.target_count) * 100) : 0;
+        const isExpanded = expandedLogId === log.id;
+
+        return (
+          <div key={log.id} style={{ borderRadius: '12px', background: 'var(--surface)', border: `1px solid ${isExpanded ? 'rgba(139,92,246,0.35)' : 'var(--border)'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+            {/* Log header row */}
+            <div
+              onClick={() => toggleExpand(log.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', cursor: 'pointer' }}
+            >
+              {/* Status dot */}
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0, background: statusColor(log.status), boxShadow: log.status === 'RUNNING' ? `0 0 8px ${statusColor(log.status)}` : 'none' }} />
+
+              {/* Main info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {log.template_name || 'Mensaje personalizado'}
+                  <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: '4px', background: `${statusColor(log.status)}18`, color: statusColor(log.status), fontWeight: 700 }}>
+                    {statusLabel(log.status)}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '2px' }}>
+                  <span style={{ color: '#22c55e', fontWeight: 700 }}>✓ {log.success_count}</span>
+                  {' · '}
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>✗ {log.fail_count}</span>
+                  {' de '}
+                  <strong>{log.target_count}</strong>
+                  {' · '}
+                  {new Date(log.timestamp).toLocaleString('es', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+
+              {/* Progress bar (compact) */}
+              <div style={{ width: '80px', flexShrink: 0 }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', textAlign: 'right', marginBottom: '2px' }}>{pct}%</div>
+                <div style={{ height: '4px', background: 'var(--surface-light)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <motion.div animate={{ width: `${pct}%` }} style={{ height: '100%', background: statusColor(log.status), borderRadius: '2px' }} />
+                </div>
+              </div>
+
+              {/* Expand chevron */}
+              <ChevronDown size={14} style={{ color: 'var(--text-3)', flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+            </div>
+
+            {/* Expanded: recipient list */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ overflow: 'hidden', borderTop: '1px solid var(--border)' }}
+                >
+                  <div style={{ padding: '0.75rem 1rem' }}>
+                    {/* Filter tabs */}
+                    <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                      {(['ALL', 'SENT', 'FAILED'] as const).map(f => (
+                        <button key={f} onClick={() => { setRecipFilter(f); loadRecipients(log.id, 1, f); }}
+                          style={{ padding: '0.25rem 0.65rem', borderRadius: '6px', border: 'none', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer',
+                            background: recipFilter === f ? 'var(--plra-500)' : 'var(--surface-light)',
+                            color: recipFilter === f ? 'white' : 'var(--text-3)'
+                          }}>
+                          {f === 'ALL' ? 'Todos' : f === 'SENT' ? '✓ Enviados' : '✗ Fallidos'}
+                        </button>
+                      ))}
+                      <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-3)', alignSelf: 'center' }}>
+                        {recipTotal} destinatario{recipTotal !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {recipLoading && (
+                      <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-3)', fontSize: '0.75rem' }}>
+                        <Loader2 size={16} className="animate-spin" style={{ margin: '0 auto' }} />
+                      </div>
+                    )}
+
+                    {!recipLoading && recipients.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-3)', fontSize: '0.75rem' }}>
+                        {log.status === 'RUNNING' ? 'Aún no se procesaron destinatarios...' : 'Sin destinatarios registrados.'}
+                      </div>
+                    )}
+
+                    {!recipLoading && recipients.length > 0 && (
+                      <>
+                        {/* Table header */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 80px', gap: '0.5rem', padding: '0.3rem 0.5rem', borderBottom: '1px solid var(--border)', marginBottom: '0.25rem' }}>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nombre</span>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Teléfono</span>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Estado</span>
+                        </div>
+                        {/* Rows */}
+                        <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          {recipients.map((r: any) => (
+                            <div key={r.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 80px', gap: '0.5rem', padding: '0.35rem 0.5rem', borderRadius: '6px', background: r.status === 'FAILED' ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.nombre || '—'}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-2)', fontFamily: 'monospace' }}>
+                                {r.telefono}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', fontWeight: 800, textAlign: 'center',
+                                color: r.status === 'SENT' ? '#22c55e' : r.status === 'FAILED' ? '#ef4444' : 'var(--text-3)'
+                              }}>
+                                {r.status === 'SENT' ? '✓ Enviado' : r.status === 'FAILED' ? '✗ Fallido' : '⏳'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Pagination */}
+                        {recipTotal > 200 && (
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem' }}>
+                            <button disabled={recipPage <= 1} onClick={() => loadRecipients(log.id, recipPage - 1, recipFilter)}
+                              style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: '0.68rem', cursor: recipPage <= 1 ? 'default' : 'pointer', opacity: recipPage <= 1 ? 0.4 : 1 }}>
+                              ← Anterior
+                            </button>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', alignSelf: 'center' }}>
+                              {recipPage} / {Math.ceil(recipTotal / 200)}
+                            </span>
+                            <button disabled={recipPage * 200 >= recipTotal} onClick={() => loadRecipients(log.id, recipPage + 1, recipFilter)}
+                              style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: '0.68rem', cursor: recipPage * 200 >= recipTotal ? 'default' : 'pointer', opacity: recipPage * 200 >= recipTotal ? 0.4 : 1 }}>
+                              Siguiente →
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // ─── Broadcast Tab ────────────────────────────────────────────────────────────
 
 const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
@@ -1033,8 +1250,34 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   const [customMessage, setCustomMessage] = useState('');
   const [mediaType, setMediaType] = useState<'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE'>('TEXT');
   const [mediaUrl, setMediaUrl] = useState('');
-  const [broadcastLog, setBroadcastLog] = useState<{ logId: number; total: number; sent: number; failed: number; status: string } | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
+  // ── Global broadcast context (survives navigation) ──────────────────────────
+  const { broadcast: broadcastLog, setBroadcast: setBroadcastCtx, pause: ctxPause, resume: ctxResume, cancel: ctxCancel } = useBroadcast();
+  useEffect(() => {
+    api.get('/whatsapp/templates').then(r => setTemplates(r.data)).catch(() => {});
+    api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {});
+  }, []);
+
+  // Refresh logs list when broadcast completes
+  useEffect(() => {
+    if (broadcastLog && (broadcastLog.status === 'COMPLETED' || broadcastLog.status === 'CANCELLED')) {
+      api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {});
+    }
+  }, [broadcastLog?.status]);
+
+  // Restore step to 'sending' if broadcast is active when entering the page
+  useEffect(() => {
+    if (broadcastLog && (broadcastLog.status === 'RUNNING' || broadcastLog.status === 'PAUSED') && step !== 'sending') {
+      setStep('sending');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const STEPS = [
+    { id: 'recipients', label: 'Destinatarios', icon: Users },
+    { id: 'compose', label: 'Mensaje', icon: Edit3 },
+    { id: 'preview', label: 'Previsualizar', icon: Eye },
+  ];
+
   const [minDelay, setMinDelay] = useState<number>(1);
   const [maxDelay, setMaxDelay] = useState<number>(60);
   const [useSpintax, setUseSpintax] = useState<boolean>(true);
@@ -1147,7 +1390,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
     let batchErrors = 0;
 
     // Initialize UI immediately so user knows it started
-    setBroadcastLog({
+    setBroadcastCtx({
       logId: 0,
       total: allTargets.length,
       sent: 0,
@@ -1176,7 +1419,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
         lastLogId = res.data.log_id;
 
         // Show the last batch's log for progress tracking
-        setBroadcastLog({
+        setBroadcastCtx({
           logId: res.data.log_id,
           total: allTargets.length,
           sent: totalSuccess,
@@ -1189,8 +1432,8 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
         console.error(`[BROADCAST] Error en lote ${bIdx + 1}:`, errMsg);
         // Don't abort — log the failure and continue with next batch
         totalFail += batch.length;
-        setBroadcastLog(prev => prev ? {
-          ...prev,
+        setBroadcastCtx(broadcastLog ? {
+          ...broadcastLog,
           failed: totalFail,
           total: allTargets.length
         } : null);
@@ -1206,7 +1449,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
 
     // If we got at least one successful batch, the log is running — keep polling it
     if (lastLogId) {
-      setBroadcastLog({
+      setBroadcastCtx({
         logId: lastLogId,
         total: allTargets.length,
         sent: 0,
@@ -1215,69 +1458,6 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
       });
     }
   };
-
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    // Check for active broadcast
-    api.get('/whatsapp/broadcast/active').then(r => {
-      if (r.data) {
-        setBroadcastLog({
-          logId: r.data.id,
-          total: r.data.target_count,
-          sent: r.data.success_count,
-          failed: r.data.fail_count,
-          status: r.data.status
-        });
-        setStep('sending');
-      }
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (broadcastLog && broadcastLog.logId > 0 && (broadcastLog.status === 'RUNNING' || broadcastLog.status === 'PAUSED')) {
-      pollIntervalRef.current = setInterval(async () => {
-        try {
-          const r = await api.get(`/whatsapp/broadcast/logs/${broadcastLog.logId}`);
-          setBroadcastLog({
-            logId: r.data.id,
-            total: r.data.target_count,
-            sent: r.data.success_count,
-            failed: r.data.fail_count,
-            status: r.data.status
-          });
-          
-          if (r.data.status !== 'RUNNING' && r.data.status !== 'PAUSED') {
-            if (pollIntervalRef.current) {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
-            }
-            api.get('/whatsapp/broadcast/logs').then(res => setLogs(res.data)).catch(() => {});
-          }
-        } catch (err) {
-          console.error('Error polling broadcast status:', err);
-        }
-      }, 2000);
-    } else {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [broadcastLog]);
-
-  const STEPS = [
-    { id: 'recipients', label: 'Destinatarios', icon: Users },
-    { id: 'compose', label: 'Mensaje', icon: Edit3 },
-    { id: 'preview', label: 'Previsualizar', icon: Eye },
-  ];
 
   if (step === 'sending') {
     const isSending = broadcastLog?.status === 'RUNNING' || broadcastLog?.status === 'PAUSED';
@@ -1334,10 +1514,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
               <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
                 {!isQueuing && broadcastLog!.status === 'RUNNING' && broadcastLog!.logId > 0 && (
                   <button
-                    onClick={async () => {
-                      await api.post(`/whatsapp/broadcast/${broadcastLog!.logId}/pause`);
-                      setBroadcastLog(prev => prev ? { ...prev, status: 'PAUSED' } : null);
-                    }}
+                    onClick={() => ctxPause()}
                     style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-light)', color: 'var(--text)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Pausar
@@ -1345,10 +1522,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                 )}
                 {!isQueuing && broadcastLog!.status === 'PAUSED' && broadcastLog!.logId > 0 && (
                   <button
-                    onClick={async () => {
-                      await api.post(`/whatsapp/broadcast/${broadcastLog!.logId}/resume`);
-                      setBroadcastLog(prev => prev ? { ...prev, status: 'RUNNING' } : null);
-                    }}
+                    onClick={() => ctxResume()}
                     style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: 'var(--plra-500)', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Reanudar
@@ -1356,12 +1530,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                 )}
                 {!isQueuing && broadcastLog!.logId > 0 && (
                   <button
-                    onClick={async () => {
-                      if (confirm('¿Seguro que deseas cancelar esta difusión masiva?')) {
-                        await api.post(`/whatsapp/broadcast/${broadcastLog!.logId}/cancel`);
-                        setBroadcastLog(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
-                      }
-                    }}
+                    onClick={() => { if (confirm('¿Seguro que deseas cancelar esta difusión masiva?')) ctxCancel(); }}
                     style={{ padding: '0.45rem 1rem', borderRadius: '8px', border: 'none', background: '#ef4444', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Cancelar
@@ -1380,7 +1549,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
               </p>
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button
-                  onClick={() => { setStep('recipients'); clearAll(); setBroadcastLog(null); setSelectedTemplateId(null); setCustomMessage(''); }}
+                  onClick={() => { setStep('recipients'); clearAll(); setBroadcastCtx(null); setSelectedTemplateId(null); setCustomMessage(''); }}
                   style={{ padding: '0.6rem 1.5rem', borderRadius: '10px', border: 'none', background: 'var(--plra-500)', color: 'white', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
                 >
                   Nueva difusión
@@ -1825,56 +1994,9 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
         )}
         </>)}
 
-        {/* Broadcast history (Outbox Mode) */}
-        {mode === 'outbox' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)' }}>
-              Bandeja de Salida
-            </div>
-            
-            {logs.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '2rem 0' }}>
-                No hay envíos recientes.
-              </div>
-            )}
-            
-            {logs.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {logs.map((log: any) => (
-                  <div key={log.id} style={{
-                    display: 'flex', alignItems: 'center', gap: '1rem',
-                    padding: '1rem', borderRadius: '12px',
-                    background: 'var(--surface)', border: '1px solid var(--border)'
-                  }}>
-                    <div style={{
-                      width: '12px', height: '12px', borderRadius: '50%',
-                      background: log.status === 'COMPLETED' ? '#22c55e' : log.status === 'RUNNING' ? '#f59e0b' : log.status === 'CANCELLED' ? '#ef4444' : '#6b7280',
-                      boxShadow: log.status === 'RUNNING' ? '0 0 8px #f59e0b' : 'none'
-                    }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>
-                        {log.template_name || 'Mensaje Personalizado'}
-                        {log.status === 'RUNNING' && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', borderRadius: '4px' }}>EN CURSO</span>}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.2rem' }}>
-                        {log.success_count} enviados, {log.fail_count} fallidos de {log.target_count} total · {new Date(log.timestamp).toLocaleString('es')}
-                      </div>
-                    </div>
-                    {log.status === 'RUNNING' && (
-                       <div style={{ width: '100px', height: '6px', background: 'var(--surface-light)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${((log.success_count + log.fail_count) / log.target_count) * 100}%` }}
-                            style={{ height: '100%', background: '#f59e0b' }}
-                          />
-                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Broadcast history (Outbox Mode) — community view scoped to campaign */}
+        {mode === 'outbox' && <OutboxPanel logs={logs} activeBroadcast={broadcastLog} onRefresh={() => api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {})} />}
+
       </div>
     </div>
   );

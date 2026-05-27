@@ -18,6 +18,7 @@ import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { BroadcastProvider } from './context/BroadcastContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UpdatePrompt from './components/UpdatePrompt';
 import './services/syncService'; // Initialize sync listeners
@@ -77,6 +78,7 @@ function App() {
       <SettingsProvider>
       <ThemeProvider>
         <AuthProvider>
+          <BroadcastProvider>
           <Router>
             <UpdatePrompt />
             <React.Suspense fallback={
@@ -93,6 +95,7 @@ function App() {
               <AppRoutes />
             </React.Suspense>
           </Router>
+          </BroadcastProvider>
         </AuthProvider>
       </ThemeProvider>
       </SettingsProvider>

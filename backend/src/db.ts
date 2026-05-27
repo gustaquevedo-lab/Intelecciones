@@ -32,7 +32,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 18; // Update this to trigger migrations
+const currentSchemaVersion = 19; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -253,6 +253,17 @@ if (dbVersion < currentSchemaVersion) {
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS whatsapp_broadcast_recipients (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        log_id      INTEGER NOT NULL,
+        telefono    TEXT NOT NULL,
+        nombre      TEXT,
+        status      TEXT DEFAULT 'PENDING',
+        error_msg   TEXT,
+        sent_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(log_id) REFERENCES whatsapp_broadcast_logs(id) ON DELETE CASCADE
+      );
+
       CREATE TABLE IF NOT EXISTS whatsapp_messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         terminal_id TEXT DEFAULT 'default',
@@ -322,6 +333,8 @@ if (dbVersion < currentSchemaVersion) {
       
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id);
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number);
+      CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_log ON whatsapp_broadcast_recipients(log_id);
+      CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_status ON whatsapp_broadcast_recipients(log_id, status);
     `);
 
     const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
