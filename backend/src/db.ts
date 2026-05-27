@@ -32,7 +32,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 16; // Update this to trigger migrations
+const currentSchemaVersion = 18; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -386,6 +386,9 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("electors", "campaign_id", "INTEGER");
     addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
     addColumnIfNotExists("whatsapp_messages", "campaign_id", "INTEGER");
+    addColumnIfNotExists("whatsapp_messages", "phone_number", "TEXT");
+    addColumnIfNotExists("whatsapp_templates", "campaign_id", "INTEGER");
+    addColumnIfNotExists("whatsapp_broadcast_logs", "campaign_id", "INTEGER");
     addColumnIfNotExists("voting_locations", "campaign_id", "INTEGER");
     addColumnIfNotExists("vehicles", "lat", "REAL");
     addColumnIfNotExists("vehicles", "lng", "REAL");

@@ -54,6 +54,7 @@ interface TerminalInfo {
   status: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED';
   qr: string | null;
   lastError: string | null;
+  campaign_id?: number | null;
 }
 
 class WhatsAppManager {
@@ -73,25 +74,30 @@ class WhatsAppManager {
           name: row.name,
           status: 'DISCONNECTED',
           qr: null,
-          lastError: null
+          lastError: null,
+          campaign_id: row.campaign_id
         });
       });
       // Always ensure a default terminal exists
       if (!this.terminals.has('default')) {
-        this.addTerminal('default', 'Terminal Principal');
+        this.addTerminal('default', 'Terminal Principal', null);
       }
     } catch (err) {
       console.error('Error loading terminals:', err);
     }
   }
 
-  async addTerminal(id: string, name: string) {
-    db.prepare('INSERT OR IGNORE INTO whatsapp_terminals (id, name) VALUES (?, ?)').run(id, name);
-    this.terminals.set(id, { id, name, status: 'DISCONNECTED', qr: null, lastError: null });
+  async addTerminal(id: string, name: string, campaignId?: number | null) {
+    db.prepare('INSERT OR IGNORE INTO whatsapp_terminals (id, name, campaign_id) VALUES (?, ?, ?)').run(id, name, campaignId || null);
+    this.terminals.set(id, { id, name, status: 'DISCONNECTED', qr: null, lastError: null, campaign_id: campaignId || null });
   }
 
-  async getTerminals() {
-    return Array.from(this.terminals.values());
+  async getTerminals(campaignId?: number | null) {
+    const list = Array.from(this.terminals.values());
+    if (campaignId === undefined || campaignId === null) {
+      return list;
+    }
+    return list.filter(t => t.campaign_id === campaignId || t.id === 'default');
   }
 
   /** Remove Chromium singleton lock files left from a crashed/killed process */
@@ -234,10 +240,13 @@ class WhatsAppManager {
           }
         }
 
+        const terminal = this.terminals.get(terminalId);
+        const campaignId = terminal?.campaign_id || null;
+        const phoneNumber = contact.number || msg.from.split('@')[0];
         db.prepare(`
-          INSERT INTO whatsapp_messages (terminal_id, contact_number, contact_name, body, type, media_url, is_incoming)
-          VALUES (?, ?, ?, ?, ?, ?, 1)
-        `).run(terminalId, msg.from, contact.pushname || contact.name || msg.from, msg.body || '', msg.type, mediaUrl);
+          INSERT INTO whatsapp_messages (terminal_id, contact_number, contact_name, body, type, media_url, is_incoming, campaign_id, phone_number)
+          VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+        `).run(terminalId, msg.from, contact.pushname || contact.name || msg.from, msg.body || '', msg.type, mediaUrl, campaignId, phoneNumber);
       } catch (err) { console.error('Error saving message:', err); }
     });
 
@@ -285,8 +294,12 @@ class WhatsAppManager {
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
-    const cleanNumber = number.replace(/\D/g, '');
-    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    let chatId = number;
+    if (!chatId.includes('@')) {
+      const cleanNumber = number.replace(/\D/g, '');
+      chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    }
+    const cleanPhone = chatId.split('@')[0];
     
     try {
       const chat = await client.getChatById(chatId);
@@ -297,10 +310,12 @@ class WhatsAppManager {
     }
     
     const res = await client.sendMessage(chatId, message);
+    const terminal = this.terminals.get(terminalId);
+    const campaignId = terminal?.campaign_id || null;
     db.prepare(`
-      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
-      VALUES (?, ?, ?, 'chat', 0)
-    `).run(terminalId, chatId, message);
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming, campaign_id, phone_number)
+      VALUES (?, ?, ?, 'chat', 0, ?, ?)
+    `).run(terminalId, chatId, message, campaignId, cleanPhone);
     return res;
   }
 
@@ -309,8 +324,12 @@ class WhatsAppManager {
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
-    const cleanNumber = number.replace(/\D/g, '');
-    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    let chatId = number;
+    if (!chatId.includes('@')) {
+      const cleanNumber = number.replace(/\D/g, '');
+      chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    }
+    const cleanPhone = chatId.split('@')[0];
     
     try {
       const chat = await client.getChatById(chatId);
@@ -321,10 +340,12 @@ class WhatsAppManager {
     const media = await getMediaFromUrlOrPath(mediaUrl);
     const res = await client.sendMessage(chatId, media, { sendAudioAsVoice: true });
     
+    const terminal = this.terminals.get(terminalId);
+    const campaignId = terminal?.campaign_id || null;
     db.prepare(`
-      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, media_url, is_incoming)
-      VALUES (?, ?, 'Nota de voz', 'ptt', ?, 0)
-    `).run(terminalId, chatId, mediaUrl);
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, media_url, is_incoming, campaign_id, phone_number)
+      VALUES (?, ?, 'Nota de voz', 'ptt', ?, 0, ?, ?)
+    `).run(terminalId, chatId, mediaUrl, campaignId, cleanPhone);
     return res;
   }
 
@@ -333,16 +354,22 @@ class WhatsAppManager {
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
-    const cleanNumber = number.replace(/\D/g, '');
-    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    let chatId = number;
+    if (!chatId.includes('@')) {
+      const cleanNumber = number.replace(/\D/g, '');
+      chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    }
+    const cleanPhone = chatId.split('@')[0];
     
     const location = new Location(lat, lng, { name: message || 'Ubicación' } as any);
     const res = await client.sendMessage(chatId, location);
     
+    const terminal = this.terminals.get(terminalId);
+    const campaignId = terminal?.campaign_id || null;
     db.prepare(`
-      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
-      VALUES (?, ?, ?, 'location', 0)
-    `).run(terminalId, chatId, message || 'Ubicación');
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming, campaign_id, phone_number)
+      VALUES (?, ?, ?, 'location', 0, ?, ?)
+    `).run(terminalId, chatId, message || 'Ubicación', campaignId, cleanPhone);
     return res;
   }
 
@@ -350,17 +377,23 @@ class WhatsAppManager {
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
-    const cleanNumber = number.replace(/\D/g, '');
-    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    let chatId = number;
+    if (!chatId.includes('@')) {
+      const cleanNumber = number.replace(/\D/g, '');
+      chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    }
+    const cleanPhone = chatId.split('@')[0];
     
     // This is a bit complex in whatsapp-web.js, usually involves vcard
     const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${contactName}\nTEL;type=CELL;type=VOICE;waid=${contactPhone.replace(/\D/g,'')}:+${contactPhone.replace(/\D/g,'')}\nEND:VCARD`;
     const res = await client.sendMessage(chatId, vcard);
     
+    const terminal = this.terminals.get(terminalId);
+    const campaignId = terminal?.campaign_id || null;
     db.prepare(`
-      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
-      VALUES (?, ?, ?, 'contact', 0)
-    `).run(terminalId, chatId, `Contacto: ${contactName}`);
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming, campaign_id, phone_number)
+      VALUES (?, ?, ?, 'contact', 0, ?, ?)
+    `).run(terminalId, chatId, `Contacto: ${contactName}`, campaignId, cleanPhone);
     return res;
   }
 
@@ -369,8 +402,12 @@ class WhatsAppManager {
     const client = this.clients.get(terminalId);
     if (!client || this.terminals.get(terminalId)?.status !== 'CONNECTED') throw new Error('Terminal no conectada');
     
-    const cleanNumber = number.replace(/\D/g, '');
-    const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    let chatId = number;
+    if (!chatId.includes('@')) {
+      const cleanNumber = number.replace(/\D/g, '');
+      chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
+    }
+    const cleanPhone = chatId.split('@')[0];
     
     try {
       const chat = await client.getChatById(chatId);
@@ -381,10 +418,12 @@ class WhatsAppManager {
     const media = await getMediaFromUrlOrPath(mediaUrl);
     const res = await client.sendMessage(chatId, media, { caption: message });
     
+    const terminal = this.terminals.get(terminalId);
+    const campaignId = terminal?.campaign_id || null;
     db.prepare(`
-      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, media_url, is_incoming)
-      VALUES (?, ?, ?, 'media', ?, 0)
-    `).run(terminalId, chatId, message || 'Archivo', mediaUrl);
+      INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, media_url, is_incoming, campaign_id, phone_number)
+      VALUES (?, ?, ?, 'media', ?, 0, ?, ?)
+    `).run(terminalId, chatId, message || 'Archivo', mediaUrl, campaignId, cleanPhone);
     return res;
   }
 

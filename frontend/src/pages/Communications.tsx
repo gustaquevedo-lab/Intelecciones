@@ -543,7 +543,7 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
           {/* Contact Intel Sidebar */}
           <AnimatePresence>
             {showIntel && (
-              <ContactIntelPanel phone={selectedChat} onClose={() => setShowIntel(false)} />
+              <ContactIntelPanel phone={selectedChatData?.phone_number || selectedChat} onClose={() => setShowIntel(false)} />
             )}
           </AnimatePresence>
         </>

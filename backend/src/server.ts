@@ -3168,7 +3168,9 @@ let cityFilter = '';
 
 app.get('/api/admin/verify-phone/:phone', (req, res) => {
   try {
-    const phone = req.params.phone.replace(/\D/g, '');
+    const rawPhone = req.params.phone;
+    const cleanPhone = rawPhone.includes('@') ? rawPhone.split('@')[0] : rawPhone;
+    const phone = cleanPhone.replace(/\D/g, '');
     const phoneWithCountry = phone.startsWith('595') ? phone : `595${phone.replace(/^0/, '')}`;
     const phoneShort = phone.replace(/^595/, '0');
 
@@ -4478,12 +4480,18 @@ app.post('/api/whatsapp/upload', whatsappUpload.single('file'), (req, res) => {
 });
 
 app.get('/api/whatsapp/terminals', async (req, res) => {
-  res.json(await whatsappService.getTerminals());
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const campaignId = (user?.role === 'SUPERUSUARIO') ? null : user?.campaign_id;
+  res.json(await whatsappService.getTerminals(campaignId));
 });
 
 app.post('/api/whatsapp/terminals', async (req, res) => {
   const { id, name } = req.body;
-  await whatsappService.addTerminal(id, name);
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const campaignId = user?.campaign_id || null;
+  await whatsappService.addTerminal(id, name, campaignId);
   res.json({ success: true });
 });
 
@@ -4516,19 +4524,32 @@ app.post('/api/whatsapp/disconnect', (req, res) => {
 });
 
 app.get('/api/whatsapp/templates', (req, res) => {
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const role = getRole(req);
   try {
-    const templates = db.prepare('SELECT * FROM whatsapp_templates ORDER BY created_at DESC').all();
+    let sql = 'SELECT * FROM whatsapp_templates WHERE 1=1';
+    const params: any[] = [];
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      sql += ' AND (campaign_id = ? OR campaign_id IS NULL)';
+      params.push(user.campaign_id);
+    }
+    sql += ' ORDER BY created_at DESC';
+    const templates = db.prepare(sql).all(...params);
     res.json(templates);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/whatsapp/templates', (req, res) => {
   const { name, content, media_url, media_type, lat, lng, contact_name, contact_phone } = req.body;
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const campaignId = user?.campaign_id || null;
   try {
     const result = db.prepare(`
-      INSERT INTO whatsapp_templates (name, content, media_url, media_type, lat, lng, contact_name, contact_phone)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(name, content, media_url, media_type, lat, lng, contact_name, contact_phone);
+      INSERT INTO whatsapp_templates (name, content, media_url, media_type, lat, lng, contact_name, contact_phone, campaign_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(name, content, media_url, media_type, lat, lng, contact_name, contact_phone, campaignId);
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -4541,13 +4562,23 @@ app.delete('/api/whatsapp/templates/:id', (req, res) => {
 });
 
 app.get('/api/whatsapp/broadcast/logs', (req, res) => {
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const role = getRole(req);
   try {
-    const logs = db.prepare(`
+    let sql = `
       SELECT l.*, t.name as template_name 
       FROM whatsapp_broadcast_logs l
-      JOIN whatsapp_templates t ON l.template_id = t.id
-      ORDER BY l.timestamp DESC LIMIT 50
-    `).all();
+      LEFT JOIN whatsapp_templates t ON l.template_id = t.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      sql += ' AND l.campaign_id = ?';
+      params.push(user.campaign_id);
+    }
+    sql += ' ORDER BY l.timestamp DESC LIMIT 50';
+    const logs = db.prepare(sql).all(...params);
     res.json(logs);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -4565,6 +4596,8 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
     terminalId: reqTerminalId 
   } = req.body;
   
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
   const terminalId = reqTerminalId || 'default';
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
@@ -4576,8 +4609,8 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
 
     // 1. Log entry in DB
     const logResult = db.prepare(`
-      INSERT INTO whatsapp_broadcast_logs (template_id, custom_message, media_url, media_type, terminal_id, target_count, status, min_delay, max_delay)
-      VALUES (?, ?, ?, ?, ?, ?, 'RUNNING', ?, ?)
+      INSERT INTO whatsapp_broadcast_logs (template_id, custom_message, media_url, media_type, terminal_id, target_count, status, min_delay, max_delay, campaign_id)
+      VALUES (?, ?, ?, ?, ?, ?, 'RUNNING', ?, ?, ?)
     `).run(
       template_id || null,
       message || null,
@@ -4586,7 +4619,8 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
       terminalId,
       targets.length,
       minDelay,
-      maxDelay
+      maxDelay,
+      user?.campaign_id || null
     );
     const logId = logResult.lastInsertRowid;
 
@@ -4695,15 +4729,23 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
 });
 
 app.get('/api/whatsapp/broadcast/active', (req, res) => {
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   try {
-    const active = db.prepare(`
+    let sql = `
       SELECT id, target_count, success_count, fail_count, status
       FROM whatsapp_broadcast_logs
       WHERE status IN ('RUNNING', 'PAUSED')
-      ORDER BY id DESC LIMIT 1
-    `).get();
+    `;
+    const params: any[] = [];
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      sql += ' AND campaign_id = ?';
+      params.push(user.campaign_id);
+    }
+    sql += ' ORDER BY id DESC LIMIT 1';
+    const active = db.prepare(sql).get(...params);
     res.json(active || null);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -4712,14 +4754,19 @@ app.get('/api/whatsapp/broadcast/logs/:id', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   const logId = parseInt(req.params.id);
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
   try {
     const log = db.prepare(`
       SELECT l.*, t.name as template_name
       FROM whatsapp_broadcast_logs l
       LEFT JOIN whatsapp_templates t ON l.template_id = t.id
       WHERE l.id = ?
-    `).get(logId);
+    `).get(logId) as any;
     if (!log) return res.status(404).json({ error: 'Log no encontrado' });
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id && log.campaign_id !== user.campaign_id) {
+      return res.status(403).json({ error: 'Prohibido' });
+    }
     res.json(log);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -4728,7 +4775,13 @@ app.post('/api/whatsapp/broadcast/:id/pause', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   const logId = parseInt(req.params.id);
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
   try {
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      const log = db.prepare('SELECT campaign_id FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
+      if (log && log.campaign_id !== user.campaign_id) return res.status(403).json({ error: 'Prohibido' });
+    }
     db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'PAUSED' WHERE id = ?").run(logId);
     res.json({ success: true, status: 'PAUSED' });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -4738,7 +4791,13 @@ app.post('/api/whatsapp/broadcast/:id/resume', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   const logId = parseInt(req.params.id);
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
   try {
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      const log = db.prepare('SELECT campaign_id FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
+      if (log && log.campaign_id !== user.campaign_id) return res.status(403).json({ error: 'Prohibido' });
+    }
     db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'RUNNING' WHERE id = ?").run(logId);
     res.json({ success: true, status: 'RUNNING' });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -4748,7 +4807,13 @@ app.post('/api/whatsapp/broadcast/:id/cancel', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   const logId = parseInt(req.params.id);
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
   try {
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      const log = db.prepare('SELECT campaign_id FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
+      if (log && log.campaign_id !== user.campaign_id) return res.status(403).json({ error: 'Prohibido' });
+    }
     db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'CANCELLED' WHERE id = ?").run(logId);
     res.json({ success: true, status: 'CANCELLED' });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -4804,27 +4869,87 @@ app.post('/api/whatsapp/direct-message', async (req, res) => {
 });
 
 app.get('/api/whatsapp/messages', (req, res) => {
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const role = getRole(req);
   try {
-    const messages = db.prepare('SELECT * FROM whatsapp_messages ORDER BY timestamp ASC').all();
+    let sql = 'SELECT * FROM whatsapp_messages WHERE 1=1';
+    const params: any[] = [];
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      sql += ' AND campaign_id = ?';
+      params.push(user.campaign_id);
+    }
+    sql += ' ORDER BY timestamp ASC';
+    const messages = db.prepare(sql).all(...params);
     res.json(messages);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/whatsapp/chats', (req, res) => {
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+  const role = getRole(req);
   try {
-    const chats = db.prepare(`
+    let sql = `
       SELECT
         m1.contact_number,
-        COALESCE((SELECT m2.contact_name FROM whatsapp_messages m2 WHERE m2.contact_number = m1.contact_number AND m2.contact_name IS NOT NULL LIMIT 1), m1.contact_number) as contact_name,
+        COALESCE((SELECT m2.contact_name FROM whatsapp_messages m2 WHERE m2.contact_number = m1.contact_number AND m2.campaign_id = m1.campaign_id AND m2.contact_name IS NOT NULL LIMIT 1), m1.contact_number) as contact_name,
         m1.body as last_message,
         m1.timestamp,
         m1.is_incoming,
-        (SELECT COUNT(*) FROM whatsapp_messages WHERE contact_number = m1.contact_number AND is_incoming = 1) as unread_count
+        (SELECT COUNT(*) FROM whatsapp_messages WHERE contact_number = m1.contact_number AND campaign_id = m1.campaign_id AND is_incoming = 1) as unread_count,
+        m1.phone_number
       FROM whatsapp_messages m1
-      WHERE m1.id IN (SELECT MAX(id) FROM whatsapp_messages GROUP BY contact_number)
+      WHERE m1.id IN (SELECT MAX(id) FROM whatsapp_messages WHERE 1=1 ${role !== 'SUPERUSUARIO' && user?.campaign_id ? 'AND campaign_id = ?' : ''} GROUP BY contact_number)
       ORDER BY m1.timestamp DESC
-    `).all();
-    res.json(chats);
+    `;
+    const params: any[] = [];
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id) {
+      params.push(user.campaign_id);
+    }
+    const chats = db.prepare(sql).all(...params) as any[];
+
+    const resolveRegisteredName = (phone: string | null) => {
+      if (!phone) return null;
+      const clean = phone.replace(/\D/g, '');
+      if (!clean) return null;
+      const phoneWithCountry = clean.startsWith('595') ? clean : `595${clean.replace(/^0/, '')}`;
+      const phoneShort = clean.replace(/^595/, '0');
+      
+      try {
+        const elector = db.prepare(`
+          SELECT e.nombre, e.apellido
+          FROM electors e
+          JOIN elector_captures ec ON e.ci = ec.elector_ci
+          WHERE ec.telefono LIKE ? OR ec.telefono LIKE ?
+          LIMIT 1
+        `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+        if (elector) return `${elector.nombre} ${elector.apellido || ''}`.trim();
+      } catch (e) {}
+
+      try {
+        const u = db.prepare(`
+          SELECT nombre FROM users
+          WHERE telefono LIKE ? OR telefono LIKE ?
+          LIMIT 1
+        `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+        if (u) return u.nombre;
+      } catch (e) {}
+
+      return null;
+    };
+
+    const resolvedChats = chats.map(chat => {
+      const targetPhone = chat.phone_number || chat.contact_number.split('@')[0];
+      const registeredName = resolveRegisteredName(targetPhone);
+      return {
+        ...chat,
+        contact_name: registeredName || chat.contact_name,
+        phone_number: targetPhone
+      };
+    });
+
+    res.json(resolvedChats);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -4833,6 +4958,7 @@ app.get('/api/whatsapp/recipients/coordinators', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   try {
+    const sec = getSecurityFilter(req, 'u');
     const coordinators = db.prepare(`
       SELECT
         u.id, u.nombre, u.telefono, u.ci, u.distrito, u.parent_id,
@@ -4841,10 +4967,10 @@ app.get('/api/whatsapp/recipients/coordinators', (req, res) => {
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
-      WHERE u.role = 'COORDINADOR' AND u.status = 'ACTIVE'
+      WHERE u.role = 'COORDINADOR' AND u.status = 'ACTIVE' ${sec.sql}
       GROUP BY u.id
       ORDER BY u.nombre
-    `).all();
+    `).all(...sec.params);
     res.json(coordinators);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -4857,6 +4983,7 @@ app.get('/api/whatsapp/recipients/electors', (req, res) => {
   const coordinatorId = req.query.coordinator_id ? parseInt(req.query.coordinator_id as string) : null;
   
   try {
+    const sec = getSecurityFilter(req, 'u');
     let query = `
       SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
         COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
@@ -4867,9 +4994,9 @@ app.get('/api/whatsapp/recipients/electors', (req, res) => {
       LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
       LEFT JOIN users p ON u.parent_id = p.id
-      WHERE ec.telefono IS NOT NULL AND ec.telefono != ''
+      WHERE ec.telefono IS NOT NULL AND ec.telefono != '' ${sec.sql}
     `;
-    const params: any[] = [];
+    const params: any[] = [...sec.params];
     
     if (coordinatorId) {
       query += ' AND ec.coordinator_id = ?';
@@ -4892,6 +5019,7 @@ app.get('/api/whatsapp/recipients/padrinos', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   try {
+    const sec = getSecurityFilter(req, 'u');
     const padrinos = db.prepare(`
       SELECT
         u.id, u.nombre, u.telefono, u.ci, u.distrito,
@@ -4902,10 +5030,10 @@ app.get('/api/whatsapp/recipients/padrinos', (req, res) => {
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN users ch ON ch.parent_id = u.id AND ch.role = 'COORDINADOR'
       LEFT JOIN elector_captures ec ON ec.coordinator_id = ch.id
-      WHERE u.role = 'PADRINO' AND u.status = 'ACTIVE'
+      WHERE u.role = 'PADRINO' AND u.status = 'ACTIVE' ${sec.sql}
       GROUP BY u.id
       ORDER BY u.nombre
-    `).all();
+    `).all(...sec.params);
     res.json(padrinos);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -4915,15 +5043,16 @@ app.get('/api/whatsapp/recipients/padrinos/:id/team', (req, res) => {
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   const padrinoId = parseInt(req.params.id);
   try {
+    const sec = getSecurityFilter(req, 'u');
     const coordinators = db.prepare(`
       SELECT u.id, u.nombre, u.telefono, u.ci, u.distrito,
         COUNT(ec.id) as capture_count
       FROM users u
       LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
-      WHERE u.parent_id = ? AND u.role = 'COORDINADOR'
+      WHERE u.parent_id = ? AND u.role = 'COORDINADOR' ${sec.sql}
       GROUP BY u.id
       ORDER BY u.nombre
-    `).all(padrinoId);
+    `).all(padrinoId, ...sec.params);
 
     const electorsRaw = db.prepare(`
       SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
@@ -4933,9 +5062,9 @@ app.get('/api/whatsapp/recipients/padrinos/:id/team', (req, res) => {
       FROM elector_captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
       JOIN users u ON ec.coordinator_id = u.id
-      WHERE u.parent_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != ''
+      WHERE u.parent_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != '' ${sec.sql}
       ORDER BY u.nombre, COALESCE(e.nombre, 'ELECTOR')
-    `).all(padrinoId);
+    `).all(padrinoId, ...sec.params);
 
     res.json({ coordinators, electors: electorsRaw });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -4946,15 +5075,17 @@ app.get('/api/whatsapp/recipients/coordinator/:id/electors', (req, res) => {
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   const coordId = parseInt(req.params.id);
   try {
+    const sec = getSecurityFilter(req, 'u');
     const electors = db.prepare(`
       SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light,
         COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
         COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden
       FROM elector_captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.coordinator_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != ''
+      JOIN users u ON ec.coordinator_id = u.id
+      WHERE ec.coordinator_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != '' ${sec.sql}
       ORDER BY COALESCE(e.nombre, 'ELECTOR')
-    `).all(coordId);
+    `).all(coordId, ...sec.params);
     res.json((electors as any[]).map(sanitizeElectorData));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -4964,12 +5095,13 @@ app.get('/api/whatsapp/recipients/search', (req, res) => {
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
   const q = `%${req.query.q || ''}%`;
   try {
+    const sec = getSecurityFilter(req, 'u');
     const users = db.prepare(`
-      SELECT id, nombre, telefono, ci, role, distrito FROM users
-      WHERE telefono IS NOT NULL AND telefono != '' AND status = 'ACTIVE'
-        AND (nombre LIKE ? OR telefono LIKE ? OR ci LIKE ?)
+      SELECT u.id, u.nombre, u.telefono, u.ci, u.role, u.distrito FROM users u
+      WHERE u.telefono IS NOT NULL AND u.telefono != '' AND u.status = 'ACTIVE'
+        AND (u.nombre LIKE ? OR u.telefono LIKE ? OR u.ci LIKE ?) ${sec.sql}
       LIMIT 10
-    `).all(q, q, q);
+    `).all(q, q, q, ...sec.params);
 
     const electors = db.prepare(`
       SELECT ec.elector_ci, ec.telefono, ec.traffic_light,
