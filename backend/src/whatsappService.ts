@@ -288,6 +288,14 @@ class WhatsAppManager {
     const cleanNumber = number.replace(/\D/g, '');
     const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
     
+    try {
+      const chat = await client.getChatById(chatId);
+      await chat.sendStateTyping();
+      await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
+    } catch (e) {
+      console.log(`[WHATSAPP] Failed to simulate typing for ${chatId}`, e);
+    }
+    
     const res = await client.sendMessage(chatId, message);
     db.prepare(`
       INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming)
@@ -304,6 +312,12 @@ class WhatsAppManager {
     const cleanNumber = number.replace(/\D/g, '');
     const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
     
+    try {
+      const chat = await client.getChatById(chatId);
+      await chat.sendStateRecording();
+      await new Promise(r => setTimeout(r, 3000 + Math.random() * 4000));
+    } catch (e) {}
+
     const media = await getMediaFromUrlOrPath(mediaUrl);
     const res = await client.sendMessage(chatId, media, { sendAudioAsVoice: true });
     
@@ -358,6 +372,12 @@ class WhatsAppManager {
     const cleanNumber = number.replace(/\D/g, '');
     const chatId = `${cleanNumber.startsWith('595') ? cleanNumber : '595'+cleanNumber.replace(/^0/,'')}@c.us`;
     
+    try {
+      const chat = await client.getChatById(chatId);
+      await chat.sendStateTyping();
+      await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
+    } catch (e) {}
+
     const media = await getMediaFromUrlOrPath(mediaUrl);
     const res = await client.sendMessage(chatId, media, { caption: message });
     

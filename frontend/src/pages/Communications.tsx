@@ -1024,6 +1024,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggl
 // ─── Broadcast Tab ────────────────────────────────────────────────────────────
 
 const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
+  const [mode, setMode] = useState<'compose' | 'outbox'>('compose');
   const [step, setStep] = useState<'recipients' | 'compose' | 'preview' | 'sending'>('recipients');
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [recipientMeta, setRecipientMeta] = useState<Record<string, any>>({});
@@ -1317,7 +1318,38 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-        {/* Step indicator */}
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--surface-light)', padding: '0.4rem', borderRadius: '10px', alignSelf: 'flex-start' }}>
+          <button
+            onClick={() => setMode('compose')}
+            style={{
+              padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer',
+              background: mode === 'compose' ? 'var(--surface)' : 'transparent',
+              color: mode === 'compose' ? 'var(--text)' : 'var(--text-3)',
+              fontSize: '0.8rem', fontWeight: 800,
+              boxShadow: mode === 'compose' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none'
+            }}
+          >
+            Preparar Envío
+          </button>
+          <button
+            onClick={() => setMode('outbox')}
+            style={{
+              padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer',
+              background: mode === 'outbox' ? 'var(--surface)' : 'transparent',
+              color: mode === 'outbox' ? 'var(--text)' : 'var(--text-3)',
+              fontSize: '0.8rem', fontWeight: 800,
+              boxShadow: mode === 'outbox' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none',
+              display: 'flex', alignItems: 'center', gap: '0.4rem'
+            }}
+          >
+            Bandeja de Salida {broadcastLog?.status === 'RUNNING' && <Radio size={14} className="animate-pulse" color="#22c55e" />}
+          </button>
+        </div>
+
+        {mode === 'compose' && (
+          <>
+            {/* Step indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
           {STEPS.map((s, i) => {
             const stepIndex = STEPS.findIndex(x => x.id === step);
@@ -1363,8 +1395,30 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
         {/* Recipients step */}
         {step === 'recipients' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>Seleccionar Destinatarios</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>Seleccionar Destinatarios</h3>
+                {selectedPhones.size > 0 && (
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    style={{
+                      background: 'var(--plra-500)',
+                      color: 'white',
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '999px',
+                      fontSize: '0.85rem',
+                      fontWeight: 900,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    }}
+                  >
+                    🔥 {selectedPhones.size} destinatario{selectedPhones.size !== 1 ? 's' : ''} marcado{selectedPhones.size !== 1 ? 's' : ''}
+                  </motion.div>
+                )}
+              </div>
               {selectedPhones.size > 0 && (
                 <button
                   onClick={() => setStep('compose')}
@@ -1684,33 +1738,56 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
             </div>
           </div>
         )}
+        </>)}
 
-        {/* Broadcast history */}
-        {logs.length > 0 && step === 'recipients' && (
-          <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-2)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Historial Reciente
+        {/* Broadcast history (Outbox Mode) */}
+        {mode === 'outbox' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)' }}>
+              Bandeja de Salida
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              {logs.slice(0, 5).map((log: any) => (
-                <div key={log.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.6rem 0.75rem', borderRadius: '8px',
-                  background: 'var(--surface-light)', border: '1px solid var(--border)'
-                }}>
-                  <div style={{
-                    width: '8px', height: '8px', borderRadius: '50%',
-                    background: log.status === 'COMPLETED' ? '#22c55e' : log.status === 'RUNNING' ? '#f59e0b' : '#6b7280'
-                  }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text)' }}>{log.template_name}</div>
-                    <div style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>
-                      {log.success_count}/{log.target_count} enviados · {new Date(log.timestamp).toLocaleDateString('es')}
+            
+            {logs.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '2rem 0' }}>
+                No hay envíos recientes.
+              </div>
+            )}
+            
+            {logs.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {logs.map((log: any) => (
+                  <div key={log.id} style={{
+                    display: 'flex', alignItems: 'center', gap: '1rem',
+                    padding: '1rem', borderRadius: '12px',
+                    background: 'var(--surface)', border: '1px solid var(--border)'
+                  }}>
+                    <div style={{
+                      width: '12px', height: '12px', borderRadius: '50%',
+                      background: log.status === 'COMPLETED' ? '#22c55e' : log.status === 'RUNNING' ? '#f59e0b' : log.status === 'CANCELLED' ? '#ef4444' : '#6b7280',
+                      boxShadow: log.status === 'RUNNING' ? '0 0 8px #f59e0b' : 'none'
+                    }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>
+                        {log.template_name || 'Mensaje Personalizado'}
+                        {log.status === 'RUNNING' && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', borderRadius: '4px' }}>EN CURSO</span>}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.2rem' }}>
+                        {log.success_count} enviados, {log.fail_count} fallidos de {log.target_count} total · {new Date(log.timestamp).toLocaleString('es')}
+                      </div>
                     </div>
+                    {log.status === 'RUNNING' && (
+                       <div style={{ width: '100px', height: '6px', background: 'var(--surface-light)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${((log.success_count + log.fail_count) / log.target_count) * 100}%` }}
+                            style={{ height: '100%', background: '#f59e0b' }}
+                          />
+                       </div>
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

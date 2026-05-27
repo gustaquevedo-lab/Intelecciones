@@ -4917,8 +4917,8 @@ app.get('/api/whatsapp/recipients/electors', (req, res) => {
       query += ' AND ec.coordinator_id = ?';
       params.push(coordinatorId);
     } else if (padrinoId) {
-      query += ' AND u.parent_id = ?';
-      params.push(padrinoId);
+      query += ' AND (u.parent_id = ? OR ec.coordinator_id = ?)';
+      params.push(padrinoId, padrinoId);
     }
     
     query += ' ORDER BY COALESCE(e.nombre, \'ELECTOR\')';
