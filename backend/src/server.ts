@@ -2868,11 +2868,13 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         COALESCE(e.mesa, 0) as mesa,
         
         u_win.nombre as winner_name,
-        u_win.role as winner_role
+        u_win.role as winner_role,
+        p_win.nombre as padrino_name
       FROM capture_conflicts cc
       LEFT JOIN electors e ON cc.elector_ci = e.ci
       LEFT JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
       LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+      LEFT JOIN users p_win ON u_win.parent_id = p_win.id
       WHERE cc.status = 'RESOLVED'
     `;
     const params: any[] = [];
