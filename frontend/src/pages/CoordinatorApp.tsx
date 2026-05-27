@@ -36,22 +36,27 @@ const formatWhatsApp = (phone: string) => {
 };
 
 const handlePhoneChange = (value: string, setter: (v: string) => void) => {
-  // Remove everything except digits
-  let clean = value.replace(/\D/g, '');
+  // Remove everything except digits and optional leading +
+  let clean = value.replace(/[^\d+]/g, '');
   
-  // If starts with 595, keep only what follows to normalize
-  if (clean.startsWith('595')) {
-    clean = clean.substring(3);
+  let prefix = '+595';
+  if (clean.startsWith('+55') || clean.startsWith('55')) {
+    prefix = '+55';
+    clean = clean.startsWith('+55') ? clean.substring(3) : clean.substring(2);
+  } else if (clean.startsWith('+595') || clean.startsWith('595')) {
+    prefix = '+595';
+    clean = clean.startsWith('+595') ? clean.substring(4) : clean.substring(3);
   }
   
-  // If starts with 0, remove it (Paraguayan mobile standard)
+  // Clean remaining non-digits
+  clean = clean.replace(/\D/g, '');
+  
   if (clean.startsWith('0')) {
     clean = clean.substring(1);
   }
   
-  // Re-apply prefix if there's any number
   if (clean.length > 0) {
-    setter(`+595 ${clean}`);
+    setter(`${prefix} ${clean}`);
   } else {
     setter('');
   }
@@ -2029,7 +2034,36 @@ const CoordinatorApp = () => {
                   <label style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                     Celular (WhatsApp) <span style={{ color: 'var(--red)' }}>*</span>
                   </label>
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentDigits = telefono.replace(/\D/g, '');
+                        let base = currentDigits;
+                        if (currentDigits.startsWith('595')) base = currentDigits.substring(3);
+                        else if (currentDigits.startsWith('55')) base = currentDigits.substring(2);
+                        if (base.startsWith('0')) base = base.substring(1);
+                        
+                        const newPrefix = telefono.startsWith('+55') ? '+595' : '+55';
+                        setTelefono(base ? `${newPrefix} ${base}` : `${newPrefix} `);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        left: '0.5rem',
+                        background: 'var(--accent-subtle)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '6px',
+                        color: 'var(--plra-300)',
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        padding: '0.2rem 0.4rem',
+                        cursor: 'pointer',
+                        zIndex: 10
+                      }}
+                      title="Haz clic para cambiar entre +595 (PY) y +55 (BR)"
+                    >
+                      {telefono.startsWith('+55') ? '+55 🇧🇷' : '+595 🇵🇾'}
+                    </button>
                     <input 
                       type="text"
                       inputMode="tel"
@@ -2037,9 +2071,8 @@ const CoordinatorApp = () => {
                       value={telefono}
                       onChange={(e) => handlePhoneChange(e.target.value, setTelefono)}
                       className="modern-input-premium-styled"
-                      style={{ paddingLeft: '2.8rem', fontSize: '1rem', fontWeight: 700 }}
+                      style={{ paddingLeft: '4.8rem', fontSize: '1rem', fontWeight: 700 }}
                     />
-                    <MessageSquare size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--plra-300)' }} />
                   </div>
                   <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontStyle: 'italic' }}>Formato automático para envío de mensajes.</p>
                 </div>
@@ -2332,22 +2365,53 @@ const CoordinatorApp = () => {
                     {/* Telefono Input */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                       <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Número de Teléfono</label>
-                      <input
-                        type="tel"
-                        placeholder="+595 981 123456"
-                        value={customElectorTelefono}
-                        onChange={(e) => handlePhoneChange(e.target.value, setCustomElectorTelefono)}
-                        style={{
-                          width: '100%',
-                          padding: '0.85rem 1rem',
-                          borderRadius: '12px',
-                          border: '1px solid var(--border-mid)',
-                          background: 'rgba(255,255,255,0.03)',
-                          color: '#FFFFFF',
-                          fontSize: '0.9rem',
-                          fontWeight: 700,
-                        }}
-                      />
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentDigits = customElectorTelefono.replace(/\D/g, '');
+                            let base = currentDigits;
+                            if (currentDigits.startsWith('595')) base = currentDigits.substring(3);
+                            else if (currentDigits.startsWith('55')) base = currentDigits.substring(2);
+                            if (base.startsWith('0')) base = base.substring(1);
+                            
+                            const newPrefix = customElectorTelefono.startsWith('+55') ? '+595' : '+55';
+                            setCustomElectorTelefono(base ? `${newPrefix} ${base}` : `${newPrefix} `);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            left: '0.5rem',
+                            background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid var(--border-mid)',
+                            borderRadius: '6px',
+                            color: 'rgba(255,255,255,0.7)',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '0.2rem 0.4rem',
+                            cursor: 'pointer',
+                            zIndex: 10
+                          }}
+                          title="Haz clic para cambiar entre +595 (PY) y +55 (BR)"
+                        >
+                          {customElectorTelefono.startsWith('+55') ? '+55 🇧🇷' : '+595 🇵🇾'}
+                        </button>
+                        <input
+                          type="tel"
+                          placeholder="+595 981 123456"
+                          value={customElectorTelefono}
+                          onChange={(e) => handlePhoneChange(e.target.value, setCustomElectorTelefono)}
+                          style={{
+                            width: '100%',
+                            padding: '0.85rem 1rem 0.85rem 4.5rem',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border-mid)',
+                            background: 'rgba(255,255,255,0.03)',
+                            color: '#FFFFFF',
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                          }}
+                        />
+                      </div>
                     </div>
 
                     {/* CI Photo capture front and back */}
@@ -2669,13 +2733,44 @@ const CoordinatorApp = () => {
 
                     <div className="form-group">
                       <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>WhatsApp Directo</label>
-                      <input 
-                        className="modern-input-premium-styled" 
-                        style={{ height: '44px', fontSize: '0.9rem' }} 
-                        placeholder="+595 9xx xxx xxx"
-                        value={newCoordTelefono}
-                        onChange={e => handlePhoneChange(e.target.value, setNewCoordTelefono)}
-                      />
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentDigits = newCoordTelefono.replace(/\D/g, '');
+                            let base = currentDigits;
+                            if (currentDigits.startsWith('595')) base = currentDigits.substring(3);
+                            else if (currentDigits.startsWith('55')) base = currentDigits.substring(2);
+                            if (base.startsWith('0')) base = base.substring(1);
+                            
+                            const newPrefix = newCoordTelefono.startsWith('+55') ? '+595' : '+55';
+                            setNewCoordTelefono(base ? `${newPrefix} ${base}` : `${newPrefix} `);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            left: '0.5rem',
+                            background: 'var(--accent-subtle)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '6px',
+                            color: 'var(--plra-300)',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '0.2rem 0.4rem',
+                            cursor: 'pointer',
+                            zIndex: 10
+                          }}
+                          title="Haz clic para cambiar entre +595 (PY) y +55 (BR)"
+                        >
+                          {newCoordTelefono.startsWith('+55') ? '+55 🇧🇷' : '+595 🇵🇾'}
+                        </button>
+                        <input 
+                          className="modern-input-premium-styled" 
+                          style={{ height: '44px', fontSize: '0.9rem', paddingLeft: '4.8rem' }} 
+                          placeholder="+595 9xx xxx xxx"
+                          value={newCoordTelefono}
+                          onChange={e => handlePhoneChange(e.target.value, setNewCoordTelefono)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2856,13 +2951,45 @@ const CoordinatorApp = () => {
 
                   <div className="form-group" style={{ marginTop: '1rem' }}>
                     <label style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Teléfono de WhatsApp (Obligatorio)</label>
-                    <input 
-                      className="modern-input-premium-styled" 
-                      placeholder="+595 9xx xxx xxx"
-                      value={newPadrinoTelefono} 
-                      onChange={e => handlePhoneChange(e.target.value, setNewPadrinoTelefono)} 
-                      required
-                    />
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentDigits = newPadrinoTelefono.replace(/\D/g, '');
+                          let base = currentDigits;
+                          if (currentDigits.startsWith('595')) base = currentDigits.substring(3);
+                          else if (currentDigits.startsWith('55')) base = currentDigits.substring(2);
+                          if (base.startsWith('0')) base = base.substring(1);
+                          
+                          const newPrefix = newPadrinoTelefono.startsWith('+55') ? '+595' : '+55';
+                          setNewPadrinoTelefono(base ? `${newPrefix} ${base}` : `${newPrefix} `);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: '0.5rem',
+                          background: 'var(--accent-subtle)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          color: 'var(--plra-300)',
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '0.2rem 0.4rem',
+                          cursor: 'pointer',
+                          zIndex: 10
+                        }}
+                        title="Haz clic para cambiar entre +595 (PY) y +55 (BR)"
+                      >
+                        {newPadrinoTelefono.startsWith('+55') ? '+55 🇧🇷' : '+595 🇵🇾'}
+                      </button>
+                      <input 
+                        className="modern-input-premium-styled" 
+                        placeholder="+595 9xx xxx xxx"
+                        value={newPadrinoTelefono} 
+                        onChange={e => handlePhoneChange(e.target.value, setNewPadrinoTelefono)} 
+                        style={{ paddingLeft: '4.8rem' }}
+                        required
+                      />
+                    </div>
                   </div>
 
                   {/* Invisible Inputs for Padrino */}

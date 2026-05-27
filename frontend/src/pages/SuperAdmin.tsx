@@ -3022,16 +3022,60 @@ Status: ${error.response?.status || 'N/A'}
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                           <label>WhatsApp</label>
-                          <input className="modern-input-premium-styled" value={newUserTelefono} placeholder="+595" onChange={e => {
-                            let v = e.target.value;
-                            if (v.length >= 2 && !v.startsWith('+')) {
-                              let d = v.replace(/\D/g, '');
-                              if (d.startsWith('09')) v = '+595' + d.substring(1);
-                              else if (d.startsWith('9')) v = '+595' + d;
-                              else if (d.length > 5) v = '+' + d;
-                            }
-                            setNewUserTelefono(v);
-                          }} />
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentDigits = newUserTelefono.replace(/\D/g, '');
+                                let base = currentDigits;
+                                if (currentDigits.startsWith('595')) base = currentDigits.substring(3);
+                                else if (currentDigits.startsWith('55')) base = currentDigits.substring(2);
+                                if (base.startsWith('0')) base = base.substring(1);
+                                
+                                const newPrefix = newUserTelefono.startsWith('+55') ? '+595' : '+55';
+                                setNewUserTelefono(base ? `${newPrefix} ${base}` : `${newPrefix} `);
+                              }}
+                              style={{
+                                position: 'absolute',
+                                left: '0.5rem',
+                                background: 'var(--accent-subtle)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '6px',
+                                color: 'var(--plra-300)',
+                                fontSize: '0.7rem',
+                                fontWeight: 800,
+                                padding: '0.2rem 0.4rem',
+                                cursor: 'pointer',
+                                zIndex: 10
+                              }}
+                              title="Haz clic para cambiar entre +595 (PY) y +55 (BR)"
+                            >
+                              {newUserTelefono.startsWith('+55') ? '+55 🇧🇷' : '+595 🇵🇾'}
+                            </button>
+                            <input 
+                              className="modern-input-premium-styled" 
+                              value={newUserTelefono} 
+                              placeholder="+595" 
+                              onChange={e => {
+                                let v = e.target.value;
+                                let clean = v.replace(/[^\d+]/g, '');
+                                let prefix = '+595';
+                                if (clean.startsWith('+55') || clean.startsWith('55')) {
+                                  prefix = '+55';
+                                  clean = clean.startsWith('+55') ? clean.substring(3) : clean.substring(2);
+                                } else if (clean.startsWith('+595') || clean.startsWith('595')) {
+                                  prefix = '+595';
+                                  clean = clean.startsWith('+595') ? clean.substring(4) : clean.substring(3);
+                                }
+                                clean = clean.replace(/\D/g, '');
+                                if (clean.startsWith('0')) {
+                                  clean = clean.substring(1);
+                                }
+                                setNewUserTelefono(clean ? `${prefix} ${clean}` : '');
+                              }} 
+                              style={{ paddingLeft: '4.8rem' }}
+                            />
+                          </div>
                         </div>
                         <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                           <label>Rol del Operador</label>
