@@ -1066,6 +1066,13 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   };
 
   const clearAll = () => setSelectedPhones(new Set());
+  const deselectAll = (phones: string[]) => {
+    setSelectedPhones(prev => {
+      const next = new Set(prev);
+      phones.forEach(p => next.delete(p));
+      return next;
+    });
+  };
 
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
   const composedMessage = selectedTemplate ? selectedTemplate.content : customMessage;
