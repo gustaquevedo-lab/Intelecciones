@@ -668,173 +668,258 @@ const CommandCenter = () => {
 
   const exportDisputesPDF = () => {
     setIsGeneratingDisputesPDF(true);
-    setTimeout(() => {
-      window.print();
-      setIsGeneratingDisputesPDF(false);
-    }, 1000);
-  };
+    try {
+      const A4_W = 210;
+      const A4_H = 297;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const totalPagesExp = '{total_pages_count_string}';
 
-  const DisputesTacticalReport = () => {
-    if (!isGeneratingDisputesPDF) return null;
+      const safeDate = (d: any) => {
+        if (!d) return 'N/A';
+        try {
+          const dt = new Date(String(d).replace(' ', 'T'));
+          if (isNaN(dt.getTime())) return String(d);
+          return dt.toLocaleDateString('es-PY') + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch { return String(d); }
+      };
 
-    const safeDate = (d: any) => {
-      if (!d) return 'N/A';
-      try {
-        const dt = new Date(String(d).replace(' ', 'T'));
-        if (isNaN(dt.getTime())) return String(d);
-        return dt.toLocaleDateString('es-PY') + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } catch { return String(d); }
-    };
+      // Apply filters
+      const searchUpper = disputesReportSearch.toUpperCase();
+      const filterItem = (item: any) => {
+        if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
+        if (disputesReportLocalFilter && item.local_votacion && item.local_votacion !== disputesReportLocalFilter) return false;
+        return true;
+      };
 
-    const searchUpper = disputesReportSearch.toUpperCase();
-    const filterItem = (item: any) => {
-      if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
-      if (disputesReportLocalFilter && item.local_votacion && item.local_votacion !== disputesReportLocalFilter) return false;
-      return true;
-    };
+      const showActive = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'ACTIVAS';
+      const showResolved = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'RESUELTAS';
+      const filteredActive = showActive ? conflicts.filter(filterItem) : [];
+      const filteredResolved = showResolved ? conflictsHistory.filter(filterItem) : [];
 
-    const showActive = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'ACTIVAS';
-    const showResolved = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'RESUELTAS';
-    const filteredActive = showActive ? conflicts.filter(filterItem) : [];
-    const filteredResolved = showResolved ? conflictsHistory.filter(filterItem) : [];
+      // Group data
+      const groupItems = (items: any[], isHistory: boolean) => {
+        const groups: Record<string, any[]> = {};
+        if (disputesReportFilter === 'LISTA') {
+          items.forEach((c: any) => {
+            const la = c.list_a || c.list_id_a || '?';
+            const lb = c.list_b || c.list_id_b || la;
+            const key = isHistory ? `Lista ${la}` : `Lista ${la} vs Lista ${lb}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+          });
+        } else if (disputesReportFilter === 'DISTRITO') {
+          items.forEach((c: any) => {
+            const key = effectiveDistrict || 'Distrito General';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+          });
+        } else if (disputesReportFilter === 'PADRINO') {
+          items.forEach((c: any) => {
+            const pa = c.padrino_a || c.padrino_name || 'Desconocido';
+            const pb = c.padrino_b || pa;
+            const key = isHistory ? `Padrino ${pa}` : `Padrino ${pa} vs Padrino ${pb}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+          });
+        } else {
+          if (items.length > 0) groups['General'] = items;
+        }
+        return groups;
+      };
 
-    const groupItems = (items: any[], isHistory: boolean) => {
-      const groups: Record<string, any[]> = {};
-      if (disputesReportFilter === 'LISTA') {
-        items.forEach((c: any) => {
-          const la = c.list_a || c.list_id_a || '?';
-          const lb = c.list_b || c.list_id_b || la;
-          const key = isHistory ? `Lista ${la}` : `Lista ${la} vs Lista ${lb}`;
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
+      const activeGroups = groupItems(filteredActive, false);
+      const resolvedGroups = groupItems(filteredResolved, true);
+
+      // --- Draw header ---
+      const drawHeader = (isFirst: boolean) => {
+        doc.setFillColor(0, 71, 171); // Premium Blue
+        doc.roundedRect(15, isFirst ? 12 : 8, isFirst ? 10 : 6, isFirst ? 10 : 6, 2, 2, 'F');
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.6);
+        if (isFirst) {
+          doc.line(17, 17, 19, 19);
+          doc.line(19, 19, 23, 14);
+        } else {
+          doc.line(16.5, 11, 17.5, 12);
+          doc.line(17.5, 12, 19.5, 9.5);
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(isFirst ? 14 : 10);
+        doc.setTextColor(0, 71, 171); // Premium Blue
+        doc.text('Inte', isFirst ? 27 : 23, isFirst ? 17.5 : 12.5);
+        doc.setTextColor(16, 185, 129);
+        doc.text('lecciones', isFirst ? 36.2 : 29.5, isFirst ? 17.5 : 12.5);
+
+        if (isFirst) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6.8);
+          doc.setTextColor(100, 116, 139);
+          doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 27, 21.2);
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(isFirst ? 9 : 7);
+        doc.setTextColor(0, 71, 171);
+        doc.text('REPORTE TÁCTICO DE DISPUTAS', 195, isFirst ? 15 : 11, { align: 'right' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(71, 85, 105);
+        if (isFirst) {
+          doc.text(`Distrito: ${effectiveDistrict || 'Todos'}`, 195, 19, { align: 'right' });
+          doc.text(`Agrupación: ${disputesReportFilter}`, 195, 22.5, { align: 'right' });
+          doc.text(`Fecha Imp.: ${new Date().toLocaleString('es-PY')}`, 195, 26, { align: 'right' });
+        }
+
+        doc.setDrawColor(0, 71, 171); // Premium Blue
+        doc.setLineWidth(0.6);
+        doc.line(15, isFirst ? 29 : 16, 195, isFirst ? 29 : 16);
+      };
+
+      drawHeader(true);
+
+      // Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(0, 71, 171); // Premium Blue
+      doc.text('REPORTE TÁCTICO DE DISPUTAS', 15, 38);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(71, 85, 105);
+      const filterDesc = `Estado: ${disputesReportStatusFilter} | Agrupación: ${disputesReportFilter}${disputesReportSearch ? ` | Búsqueda: "${disputesReportSearch}"` : ''}${disputesReportLocalFilter ? ` | Local: ${disputesReportLocalFilter}` : ''}`;
+      doc.text(doc.splitTextToSize(filterDesc, 180), 15, 43);
+
+      // Summary boxes
+      const summaryY = 50;
+      doc.setFillColor(254, 242, 242);
+      doc.roundedRect(15, summaryY, 85, 14, 2, 2, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('DISPUTAS ACTIVAS', 20, summaryY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(220, 38, 38);
+      doc.text(String(filteredActive.length), 20, summaryY + 11.5);
+
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(110, summaryY, 85, 14, 2, 2, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text('DISPUTAS RESUELTAS', 115, summaryY + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(16, 185, 129);
+      doc.text(String(filteredResolved.length), 115, summaryY + 11.5);
+
+      let currentY = summaryY + 22;
+
+      // Active disputes tables
+      Object.entries(activeGroups).forEach(([groupName, items]) => {
+        if (items.length === 0) return;
+        if (currentY > A4_H - 40) { doc.addPage(); currentY = 22; }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(220, 38, 38);
+        doc.text(`${groupName} — ACTIVAS (${items.length})`, 15, currentY);
+        currentY += 3;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['ELECTOR', 'CÉDULA', 'CAPTURA INICIAL', 'ÚLTIMA CAPTURA', 'TIPO', 'ESTADO']],
+          body: items.map((c: any) => [
+            `${c.elector_nombre} ${c.elector_apellido}`,
+            c.elector_ci,
+            `${c.coord_a || 'N/A'}${c.list_a ? ` (L${c.list_a})` : ''}`,
+            `${c.coord_b || 'N/A'}${c.list_b ? ` (L${c.list_b})` : ''}`,
+            c.conflict_type === 'INTERNAL' ? 'INTERNA' : 'INTER-LISTA',
+            c.conflict_status === 'WAITING_CONSENT' ? 'ESP. CONSENT.' : 'PENDIENTE',
+          ]),
+          margin: { left: 15, right: 15 },
+          styles: { fontSize: 7.5, cellPadding: 2.5, font: 'helvetica', textColor: [51, 65, 85], lineColor: [226, 232, 240], lineWidth: 0.1 },
+          headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.2 },
+          alternateRowStyles: { fillColor: [254, 242, 242] }, // Light red for active
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
+            4: { halign: 'center', fontSize: 6.5 },
+            5: { halign: 'center', fontStyle: 'bold', textColor: [220, 38, 38] },
+          },
+          didDrawPage: (data: any) => {
+            if (data.pageNumber > 1) drawHeader(false);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial y estratégico`, 15, A4_H - 8);
+            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 8, { align: 'right' });
+          },
         });
-      } else if (disputesReportFilter === 'DISTRITO') {
-        items.forEach((c: any) => {
-          const key = effectiveDistrict || 'Distrito General';
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+      });
+
+      // Resolved disputes tables
+      Object.entries(resolvedGroups).forEach(([groupName, items]) => {
+        if (items.length === 0) return;
+        if (currentY > A4_H - 40) { doc.addPage(); currentY = 22; }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(5, 150, 105);
+        doc.text(`${groupName} — RESUELTAS (${items.length})`, 15, currentY);
+        currentY += 3;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['ELECTOR', 'CÉDULA', 'LOCAL / MESA', 'ADJUDICADO A', 'FECHA RESOLUCIÓN']],
+          body: items.map((h: any) => [
+            `${h.elector_nombre} ${h.elector_apellido}`,
+            h.elector_ci,
+            `${h.local_votacion || 'N/A'} (M. ${h.mesa || '?'})`,
+            h.winner_name || 'N/A',
+            safeDate(h.resolved_at),
+          ]),
+          margin: { left: 15, right: 15 },
+          styles: { fontSize: 7.5, cellPadding: 2.5, font: 'helvetica', textColor: [51, 65, 85], lineColor: [226, 232, 240], lineWidth: 0.1 },
+          headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.2 },
+          alternateRowStyles: { fillColor: [240, 253, 244] }, // Light green for resolved
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
+            3: { fontStyle: 'bold', textColor: [0, 71, 171] }, // Winner in Premium Blue
+            4: { halign: 'center' },
+          },
+          didDrawPage: (data: any) => {
+            if (data.pageNumber > 1) drawHeader(false);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial y estratégico`, 15, A4_H - 8);
+            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 8, { align: 'right' });
+          },
         });
-      } else if (disputesReportFilter === 'PADRINO') {
-        items.forEach((c: any) => {
-          const pa = c.padrino_a || c.padrino_name || 'Desconocido';
-          const pb = c.padrino_b || pa;
-          const key = isHistory ? `Padrino ${pa}` : `Padrino ${pa} vs Padrino ${pb}`;
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
-        });
-      } else {
-        if (items.length > 0) groups['General'] = items;
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+      });
+
+      // Empty state
+      if (filteredActive.length === 0 && filteredResolved.length === 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text('No se encontraron disputas con los filtros seleccionados.', A4_W / 2, currentY + 10, { align: 'center' });
       }
-      return groups;
-    };
 
-    const activeGroups = groupItems(filteredActive, false);
-    const resolvedGroups = groupItems(filteredResolved, true);
+      if (typeof doc.putTotalPages === 'function') doc.putTotalPages(totalPagesExp);
 
-    return (
-      <div className="print-only-report">
-        <div style={{ padding: '40px', color: '#000', background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-          <header style={{ borderBottom: '3px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '24px', color: '#0047AB', fontWeight: 900 }}>REPORTE TÁCTICO DE DISPUTAS</h1>
-              <p style={{ margin: '5px 0 0', fontSize: '14px', fontWeight: 700, color: '#333' }}>
-                DISTRITO: {effectiveDistrict || 'Todos'} | AGRUPACIÓN: {disputesReportFilter}
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ margin: 0, fontSize: '12px', fontWeight: 600 }}>INTELEX v2.4</p>
-              <p style={{ margin: 0, fontSize: '10px' }}>{new Date().toLocaleString('es-PY')}</p>
-            </div>
-          </header>
-
-          <section style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-              <div style={{ background: '#fef2f2', padding: '15px', borderRadius: '8px', border: '1px solid #fecaca' }}>
-                <p style={{ margin: 0, fontSize: '12px', color: '#ef4444', fontWeight: 800 }}>DISPUTAS ACTIVAS</p>
-                <p style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#dc2626' }}>{filteredActive.length}</p>
-              </div>
-              <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                <p style={{ margin: 0, fontSize: '12px', color: '#10b981', fontWeight: 800 }}>DISPUTAS RESUELTAS</p>
-                <p style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#059669' }}>{filteredResolved.length}</p>
-              </div>
-            </div>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '20px' }}>
-              Filtro Estado: {disputesReportStatusFilter} {disputesReportSearch ? `| Búsqueda: "${disputesReportSearch}"` : ''} {disputesReportLocalFilter ? `| Local: ${disputesReportLocalFilter}` : ''}
-            </p>
-
-            {Object.entries(activeGroups).map(([groupName, items]) => (
-              <div key={groupName} style={{ marginBottom: '30px', breakInside: 'avoid' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '10px', color: '#dc2626' }}>
-                  {groupName} — ACTIVAS ({items.length})
-                </h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
-                  <thead>
-                    <tr style={{ background: '#dc2626', color: 'white' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ELECTOR</th>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CÉDULA</th>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CAPTURA INICIAL</th>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ÚLTIMA CAPTURA</th>
-                      <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>TIPO</th>
-                      <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>ESTADO</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((c: any) => (
-                      <tr key={c.conflict_id || c.elector_ci} style={{ background: '#fef2f2' }}>
-                        <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 700 }}>{c.elector_nombre} {c.elector_apellido}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.elector_ci}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.coord_a || 'N/A'}{c.list_a ? ` (L${c.list_a})` : ''}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{c.coord_b || 'N/A'}{c.list_b ? ` (L${c.list_b})` : ''}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{c.conflict_type === 'INTERNAL' ? 'INTERNA' : 'INTER-LISTA'}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', fontWeight: 800, color: '#dc2626' }}>{c.conflict_status === 'WAITING_CONSENT' ? 'ESP. CONSENT.' : 'PENDIENTE'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-
-            {Object.entries(resolvedGroups).map(([groupName, items]) => (
-              <div key={groupName} style={{ marginBottom: '30px', breakInside: 'avoid' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '10px', color: '#059669' }}>
-                  {groupName} — RESUELTAS ({items.length})
-                </h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
-                  <thead>
-                    <tr style={{ background: '#059669', color: 'white' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ELECTOR</th>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>CÉDULA</th>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>LOCAL / MESA</th>
-                      <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #ddd' }}>ADJUDICADO A</th>
-                      <th style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>FECHA RESOLUCIÓN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((h: any) => (
-                      <tr key={h.conflict_id || h.elector_ci} style={{ background: '#f0fdf4' }}>
-                        <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 700 }}>{h.elector_nombre} {h.elector_apellido}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.elector_ci}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{h.local_votacion || 'N/A'} (M. {h.mesa || '?'})</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 800, color: '#0047AB' }}>{h.winner_name || 'N/A'}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{safeDate(h.resolved_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-            
-            {filteredActive.length === 0 && filteredResolved.length === 0 && (
-              <p style={{ textAlign: 'center', color: '#64748b', marginTop: '40px', fontWeight: 800 }}>No se encontraron disputas con los filtros seleccionados.</p>
-            )}
-          </section>
-          
-          <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #ccc', textAlign: 'center', fontSize: '10px', color: '#666' }}>
-            Este documento es de carácter confidencial y estratégico para el operativo electoral.
-          </footer>
-        </div>
-      </div>
-    );
+      const cleanDistrict = (effectiveDistrict || 'global').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      doc.save(`reporte-disputas-${cleanDistrict}-${disputesReportFilter.toLowerCase()}.pdf`);
+    } catch (err: any) {
+      console.error('Error generating disputes PDF:', err);
+      alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setIsGeneratingDisputesPDF(false);
+    }
   };
 
   useEffect(() => {
@@ -2387,7 +2472,6 @@ const CommandCenter = () => {
         </AnimatePresence>
 
         <TacticalReport />
-        <DisputesTacticalReport />
         <style>
           {`
             @media print {
