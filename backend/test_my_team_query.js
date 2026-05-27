@@ -11,28 +11,15 @@ try {
   const filterParams = [district, district, district];
 
   const query = `
-    WITH team_map AS (
-      SELECT id as member_id,
-             CASE WHEN role IN ('PADRINO','SUBJEFE') THEN id ELSE parent_id END as padrino_id
-      FROM users
-      WHERE role IN ('PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA')
-    ),
-    padrino_stats AS (
-      SELECT tm.padrino_id,
-             COUNT(ec.id) as total_captures,
-             SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport
-      FROM team_map tm
-      INNER JOIN elector_captures ec ON ec.coordinator_id = tm.member_id
-      GROUP BY tm.padrino_id
-    )
     SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
            u.assigned_list_id, l.list_number, l.candidate_alias,
            (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
-           COALESCE(ps.total_captures, 0) AS total_captures,
-           COALESCE(ps.needs_transport, 0) AS needs_transport
+           ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) + 
+            (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id))) AS total_captures,
+           ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) + 
+            (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.needs_transport = 1)) AS needs_transport
      FROM users u
      LEFT JOIN lists l ON u.assigned_list_id = l.id
-     LEFT JOIN padrino_stats ps ON ps.padrino_id = u.id
      WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filterSql}
      ORDER BY u.nombre
   `;
