@@ -676,8 +676,13 @@ const CommandCenter = () => {
       const element = document.getElementById('disputes-premium-print-container');
       if (!element) throw new Error("No se pudo encontrar el contenedor del reporte");
 
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: true, windowHeight: element.scrollHeight + 1000 });
       const imgData = canvas.toDataURL('image/png');
+      
+      if (imgData === 'data:,' || canvas.width === 0 || canvas.height === 0) {
+        throw new Error("El navegador bloqueó el renderizado o el contenedor no es visible (Canvas 0x0).");
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -765,7 +770,7 @@ const CommandCenter = () => {
     const resolvedGroups = groupItems(filteredResolved, true);
 
     return (
-      <div style={{ position: 'absolute', top: '-15000px', left: '-15000px' }}>
+      <div style={{ position: 'fixed', top: '200vh', left: 0, zIndex: -9999 }}>
         <div id="disputes-premium-print-container" style={{ width: '800px', background: '#fff', color: '#000', padding: '40px', fontFamily: 'Inter, system-ui, sans-serif' }}>
           
           <header style={{ borderBottom: '4px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
