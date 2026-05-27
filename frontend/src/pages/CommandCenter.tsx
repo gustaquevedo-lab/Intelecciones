@@ -707,6 +707,205 @@ const CommandCenter = () => {
     }
   };
 
+  const DisputesPremiumReportRenderer = () => {
+    if (!isGeneratingDisputesPDF) return null;
+
+    const safeDate = (d: any) => {
+      if (!d) return 'N/A';
+      try {
+        const dt = new Date(String(d).replace(' ', 'T'));
+        if (isNaN(dt.getTime())) return String(d);
+        return dt.toLocaleDateString('es-PY') + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch { return String(d); }
+    };
+
+    const searchUpper = disputesReportSearch.toUpperCase();
+    const filterItem = (item: any) => {
+      if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
+      if (disputesReportLocalFilter && item.local_votacion && item.local_votacion !== disputesReportLocalFilter) return false;
+      return true;
+    };
+
+    const showActive = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'ACTIVAS';
+    const showResolved = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'RESUELTAS';
+    const filteredActive = showActive ? conflicts.filter(filterItem) : [];
+    const filteredResolved = showResolved ? conflictsHistory.filter(filterItem) : [];
+
+    const groupItems = (items: any[], isHistory: boolean) => {
+      const groups: Record<string, any[]> = {};
+      if (disputesReportFilter === 'LISTA') {
+        items.forEach((c: any) => {
+          const la = c.list_a || c.list_id_a || '?';
+          const lb = c.list_b || c.list_id_b || la;
+          const key = isHistory ? `Lista ${la}` : `Lista ${la} vs Lista ${lb}`;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(c);
+        });
+      } else if (disputesReportFilter === 'DISTRITO') {
+        items.forEach((c: any) => {
+          const key = effectiveDistrict || 'Distrito General';
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(c);
+        });
+      } else if (disputesReportFilter === 'PADRINO') {
+        items.forEach((c: any) => {
+          const pa = c.padrino_a || c.padrino_name || 'Desconocido';
+          const pb = c.padrino_b || pa;
+          const key = isHistory ? `Padrino ${pa}` : `Padrino ${pa} vs Padrino ${pb}`;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(c);
+        });
+      } else {
+        if (items.length > 0) groups['General'] = items;
+      }
+      return groups;
+    };
+
+    const activeGroups = groupItems(filteredActive, false);
+    const resolvedGroups = groupItems(filteredResolved, true);
+
+    return (
+      <div style={{ position: 'absolute', top: '-15000px', left: '-15000px' }}>
+        <div id="disputes-premium-print-container" style={{ width: '800px', background: '#fff', color: '#000', padding: '40px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+          
+          <header style={{ borderBottom: '4px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '28px', color: '#0047AB', fontWeight: 900, letterSpacing: '-0.03em' }}>REPORTE TÁCTICO DE DISPUTAS</h1>
+              <p style={{ margin: '8px 0 0', fontSize: '14px', fontWeight: 700, color: '#334155', textTransform: 'uppercase' }}>
+                DISTRITO: {effectiveDistrict || 'Todos'} <span style={{ color: '#cbd5e1', margin: '0 8px' }}>|</span> AGRUPACIÓN: {disputesReportFilter}
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0047AB' }}>INTELEX v2.4</p>
+              <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b', fontWeight: 600 }}>{new Date().toLocaleString('es-PY')}</p>
+            </div>
+          </header>
+
+          <section style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+              <div style={{ background: '#fef2f2', padding: '18px', borderRadius: '12px', border: '1px solid #fecaca', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#ef4444', fontWeight: 800, letterSpacing: '0.05em' }}>DISPUTAS ACTIVAS</p>
+                <p style={{ margin: '4px 0 0', fontSize: '32px', fontWeight: 900, color: '#dc2626' }}>{filteredActive.length}</p>
+              </div>
+              <div style={{ background: '#f0fdf4', padding: '18px', borderRadius: '12px', border: '1px solid #bbf7d0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#10b981', fontWeight: 800, letterSpacing: '0.05em' }}>DISPUTAS RESUELTAS</p>
+                <p style={{ margin: '4px 0 0', fontSize: '32px', fontWeight: 900, color: '#059669' }}>{filteredResolved.length}</p>
+              </div>
+            </div>
+            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '30px', fontWeight: 600 }}>
+              Filtro Estado: {disputesReportStatusFilter} {disputesReportSearch ? `| Búsqueda: "${disputesReportSearch}"` : ''} {disputesReportLocalFilter ? `| Local: ${disputesReportLocalFilter}` : ''}
+            </p>
+
+            {Object.entries(activeGroups).map(([groupName, items]) => (
+              <div key={groupName} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#dc2626', borderBottom: '2px solid #fecaca', paddingBottom: '8px' }}>
+                  {groupName} — ACTIVAS ({items.length})
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  {items.map((c: any) => (
+                    <div key={c.conflict_id || c.elector_ci} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc', padding: '16px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)' }}>
+                      
+                      <div style={{ marginBottom: '12px', borderBottom: '1px dashed #cbd5e1', paddingBottom: '12px' }}>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{c.elector_nombre} {c.elector_apellido}</h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: 600 }}>C.I: {c.elector_ci}</p>
+                          <p style={{ margin: 0, fontSize: '11px', color: '#0047AB', fontWeight: 700, background: '#e0e7ff', padding: '2px 8px', borderRadius: '4px' }}>
+                            {c.local_votacion || 'N/A'} (Mesa {c.mesa || '0'})
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '15px', alignItems: 'center' }}>
+                        {/* Lado A */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                           <img src={c.photo_a ? getImageUrl(c.photo_a) : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.coord_a || 'A')}&background=random`} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+                           <div>
+                             <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_a || 'Desconocido'}</p>
+                             <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
+                               <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: TRAFFIC_COLORS[c.tl_a as keyof typeof TRAFFIC_COLORS] || '#94a3b8' }}></span>
+                               <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{c.tl_a || 'S/D'}</span>
+                               {c.transport_a ? <span style={{ background: '#dbeafe', color: '#2563eb', fontSize: '9px', fontWeight: 800, padding: '1px 4px', borderRadius: '4px' }}>TRANSP.</span> : null}
+                             </div>
+                             <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{safeDate(c.time_a)}</p>
+                           </div>
+                        </div>
+                        
+                        {/* VS */}
+                        <div style={{ fontSize: '12px', fontWeight: 900, color: '#dc2626', background: '#fee2e2', padding: '6px 10px', borderRadius: '8px', border: '1px solid #fca5a5' }}>VS</div>
+                        
+                        {/* Lado B */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: 'row-reverse', textAlign: 'right' }}>
+                           <img src={c.photo_b ? getImageUrl(c.photo_b) : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.coord_b || 'B')}&background=random`} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+                           <div>
+                             <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_b || 'Desconocido'}</p>
+                             <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                               {c.transport_b ? <span style={{ background: '#dbeafe', color: '#2563eb', fontSize: '9px', fontWeight: 800, padding: '1px 4px', borderRadius: '4px' }}>TRANSP.</span> : null}
+                               <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{c.tl_b || 'S/D'}</span>
+                               <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: TRAFFIC_COLORS[c.tl_b as keyof typeof TRAFFIC_COLORS] || '#94a3b8' }}></span>
+                             </div>
+                             <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{safeDate(c.time_b)}</p>
+                           </div>
+                        </div>
+                      </div>
+                      
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {Object.entries(resolvedGroups).map(([groupName, items]) => (
+              <div key={groupName} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#059669', borderBottom: '2px solid #a7f3d0', paddingBottom: '8px' }}>
+                  {groupName} — RESUELTAS ({items.length})
+                </h3>
+                
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  <thead>
+                    <tr style={{ background: '#059669', color: 'white' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 800 }}>ELECTOR Y CÉDULA</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 800 }}>LOCAL DE VOTACIÓN</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 800 }}>ADJUDICADO A</th>
+                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 800 }}>FECHA RESOLUCIÓN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((h: any, i: number) => (
+                      <tr key={h.conflict_id || h.elector_ci} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                          <p style={{ margin: 0, fontWeight: 800, color: '#0f172a', fontSize: '12px' }}>{h.elector_nombre} {h.elector_apellido}</p>
+                          <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#64748b' }}>C.I: {h.elector_ci}</p>
+                        </td>
+                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', color: '#334155', fontWeight: 600 }}>{h.local_votacion || 'N/A'} <br/><span style={{ color: '#94a3b8' }}>(M. {h.mesa || '?'})</span></td>
+                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'inline-block', background: '#e0e7ff', color: '#0047AB', padding: '4px 10px', borderRadius: '20px', fontWeight: 800 }}>
+                            {h.winner_name || 'N/A'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{safeDate(h.resolved_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+            
+            {filteredActive.length === 0 && filteredResolved.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                <p style={{ color: '#64748b', margin: 0, fontWeight: 800, fontSize: '14px' }}>No se encontraron disputas con los filtros seleccionados.</p>
+              </div>
+            )}
+          </section>
+          
+          <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '2px dashed #cbd5e1', textAlign: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+            Este documento es de carácter confidencial y estratégico para el operativo electoral de Intelecciones.
+          </footer>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
