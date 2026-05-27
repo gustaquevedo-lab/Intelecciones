@@ -677,7 +677,7 @@ const CommandCenter = () => {
       if (!element) throw new Error("No se pudo encontrar el contenedor del reporte");
 
       const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: true, windowHeight: element.scrollHeight + 1000 });
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       
       if (imgData === 'data:,' || canvas.width === 0 || canvas.height === 0) {
         throw new Error("El navegador bloqueó el renderizado o el contenedor no es visible (Canvas 0x0).");
@@ -692,13 +692,13 @@ const CommandCenter = () => {
       let heightLeft = pdfHeight;
       let position = 0;
       
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
       heightLeft -= pageHeight;
       
       while (heightLeft > 0) {
         position = heightLeft - pdfHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
         heightLeft -= pageHeight;
       }
       
@@ -824,7 +824,11 @@ const CommandCenter = () => {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '15px', alignItems: 'center' }}>
                         {/* Lado A */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                           <img src={c.photo_a ? getImageUrl(c.photo_a) : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.coord_a || 'A')}&background=random`} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+                           {c.photo_a ? (
+                             <img src={getImageUrl(c.photo_a)} crossOrigin="anonymous" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+                           ) : (
+                             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: '2px solid #cbd5e1' }}>{(c.coord_a || 'A')[0].toUpperCase()}</div>
+                           )}
                            <div>
                              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_a || 'Desconocido'}</p>
                              <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
@@ -841,7 +845,11 @@ const CommandCenter = () => {
                         
                         {/* Lado B */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: 'row-reverse', textAlign: 'right' }}>
-                           <img src={c.photo_b ? getImageUrl(c.photo_b) : `https://ui-avatars.com/api/?name=${encodeURIComponent(c.coord_b || 'B')}&background=random`} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+                           {c.photo_b ? (
+                             <img src={getImageUrl(c.photo_b)} crossOrigin="anonymous" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+                           ) : (
+                             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: '2px solid #cbd5e1' }}>{(c.coord_b || 'B')[0].toUpperCase()}</div>
+                           )}
                            <div>
                              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_b || 'Desconocido'}</p>
                              <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
