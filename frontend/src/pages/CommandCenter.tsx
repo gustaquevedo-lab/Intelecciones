@@ -724,6 +724,13 @@ const CommandCenter = () => {
       } catch { return String(d); }
     };
 
+    const renderAvatar = (url: string | null, fallbackInitial: string) => {
+      if (url && !url.includes('pravatar.cc') && !url.includes('ui-avatars.com')) {
+        return <img src={getImageUrl(url)} crossOrigin="anonymous" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />;
+      }
+      return <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: '2px solid #cbd5e1' }}>{(fallbackInitial || 'A')[0].toUpperCase()}</div>;
+    };
+
     const searchUpper = disputesReportSearch.toUpperCase();
     const filterItem = (item: any) => {
       if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
@@ -770,7 +777,7 @@ const CommandCenter = () => {
     const resolvedGroups = groupItems(filteredResolved, true);
 
     return (
-      <div style={{ position: 'fixed', top: '200vh', left: 0, zIndex: -9999 }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, opacity: 0.01, zIndex: -9999, width: '800px', pointerEvents: 'none' }}>
         <div id="disputes-premium-print-container" style={{ width: '800px', background: '#fff', color: '#000', padding: '40px', fontFamily: 'Inter, system-ui, sans-serif' }}>
           
           <header style={{ borderBottom: '4px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -824,11 +831,7 @@ const CommandCenter = () => {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '15px', alignItems: 'center' }}>
                         {/* Lado A */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                           {c.photo_a ? (
-                             <img src={getImageUrl(c.photo_a)} crossOrigin="anonymous" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
-                           ) : (
-                             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: '2px solid #cbd5e1' }}>{(c.coord_a || 'A')[0].toUpperCase()}</div>
-                           )}
+                           {renderAvatar(c.photo_a, c.coord_a)}
                            <div>
                              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_a || 'Desconocido'}</p>
                              <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
@@ -845,11 +848,7 @@ const CommandCenter = () => {
                         
                         {/* Lado B */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: 'row-reverse', textAlign: 'right' }}>
-                           {c.photo_b ? (
-                             <img src={getImageUrl(c.photo_b)} crossOrigin="anonymous" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />
-                           ) : (
-                             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: '2px solid #cbd5e1' }}>{(c.coord_b || 'B')[0].toUpperCase()}</div>
-                           )}
+                           {renderAvatar(c.photo_b, c.coord_b)}
                            <div>
                              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_b || 'Desconocido'}</p>
                              <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
