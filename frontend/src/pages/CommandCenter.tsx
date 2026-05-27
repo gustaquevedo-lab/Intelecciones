@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api, { getImageUrl } from '../services/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
@@ -666,256 +667,40 @@ const CommandCenter = () => {
     );
   };
 
-  const exportDisputesPDF = () => {
+  const exportDisputesPDF = async () => {
     setIsGeneratingDisputesPDF(true);
+    // Allow React time to render the hidden component and images to load
+    await new Promise(r => setTimeout(r, 1500));
+
     try {
-      const A4_W = 210;
-      const A4_H = 297;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const totalPagesExp = '{total_pages_count_string}';
+      const element = document.getElementById('disputes-premium-print-container');
+      if (!element) throw new Error("No se pudo encontrar el contenedor del reporte");
 
-      const safeDate = (d: any) => {
-        if (!d) return 'N/A';
-        try {
-          const dt = new Date(String(d).replace(' ', 'T'));
-          if (isNaN(dt.getTime())) return String(d);
-          return dt.toLocaleDateString('es-PY') + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch { return String(d); }
-      };
-
-      // Apply filters
-      const searchUpper = disputesReportSearch.toUpperCase();
-      const filterItem = (item: any) => {
-        if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
-        if (disputesReportLocalFilter && item.local_votacion && item.local_votacion !== disputesReportLocalFilter) return false;
-        return true;
-      };
-
-      const showActive = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'ACTIVAS';
-      const showResolved = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'RESUELTAS';
-      const filteredActive = showActive ? conflicts.filter(filterItem) : [];
-      const filteredResolved = showResolved ? conflictsHistory.filter(filterItem) : [];
-
-      // Group data
-      const groupItems = (items: any[], isHistory: boolean) => {
-        const groups: Record<string, any[]> = {};
-        if (disputesReportFilter === 'LISTA') {
-          items.forEach((c: any) => {
-            const la = c.list_a || c.list_id_a || '?';
-            const lb = c.list_b || c.list_id_b || la;
-            const key = isHistory ? `Lista ${la}` : `Lista ${la} vs Lista ${lb}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(c);
-          });
-        } else if (disputesReportFilter === 'DISTRITO') {
-          items.forEach((c: any) => {
-            const key = effectiveDistrict || 'Distrito General';
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(c);
-          });
-        } else if (disputesReportFilter === 'PADRINO') {
-          items.forEach((c: any) => {
-            const pa = c.padrino_a || c.padrino_name || 'Desconocido';
-            const pb = c.padrino_b || pa;
-            const key = isHistory ? `Padrino ${pa}` : `Padrino ${pa} vs Padrino ${pb}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(c);
-          });
-        } else {
-          if (items.length > 0) groups['General'] = items;
-        }
-        return groups;
-      };
-
-      const activeGroups = groupItems(filteredActive, false);
-      const resolvedGroups = groupItems(filteredResolved, true);
-
-      // --- Draw header ---
-      const drawHeader = (isFirst: boolean) => {
-        doc.setFillColor(0, 71, 171); // Premium Blue
-        doc.roundedRect(15, isFirst ? 12 : 8, isFirst ? 10 : 6, isFirst ? 10 : 6, 2, 2, 'F');
-        doc.setDrawColor(255, 255, 255);
-        doc.setLineWidth(0.6);
-        if (isFirst) {
-          doc.line(17, 17, 19, 19);
-          doc.line(19, 19, 23, 14);
-        } else {
-          doc.line(16.5, 11, 17.5, 12);
-          doc.line(17.5, 12, 19.5, 9.5);
-        }
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(isFirst ? 14 : 10);
-        doc.setTextColor(0, 71, 171); // Premium Blue
-        doc.text('Inte', isFirst ? 27 : 23, isFirst ? 17.5 : 12.5);
-        doc.setTextColor(16, 185, 129);
-        doc.text('lecciones', isFirst ? 36.2 : 29.5, isFirst ? 17.5 : 12.5);
-
-        if (isFirst) {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(6.8);
-          doc.setTextColor(100, 116, 139);
-          doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 27, 21.2);
-        }
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(isFirst ? 9 : 7);
-        doc.setTextColor(0, 71, 171);
-        doc.text('REPORTE TÁCTICO DE DISPUTAS', 195, isFirst ? 15 : 11, { align: 'right' });
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(71, 85, 105);
-        if (isFirst) {
-          doc.text(`Distrito: ${effectiveDistrict || 'Todos'}`, 195, 19, { align: 'right' });
-          doc.text(`Agrupación: ${disputesReportFilter}`, 195, 22.5, { align: 'right' });
-          doc.text(`Fecha Imp.: ${new Date().toLocaleString('es-PY')}`, 195, 26, { align: 'right' });
-        }
-
-        doc.setDrawColor(0, 71, 171); // Premium Blue
-        doc.setLineWidth(0.6);
-        doc.line(15, isFirst ? 29 : 16, 195, isFirst ? 29 : 16);
-      };
-
-      drawHeader(true);
-
-      // Title
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.setTextColor(0, 71, 171); // Premium Blue
-      doc.text('REPORTE TÁCTICO DE DISPUTAS', 15, 38);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(71, 85, 105);
-      const filterDesc = `Estado: ${disputesReportStatusFilter} | Agrupación: ${disputesReportFilter}${disputesReportSearch ? ` | Búsqueda: "${disputesReportSearch}"` : ''}${disputesReportLocalFilter ? ` | Local: ${disputesReportLocalFilter}` : ''}`;
-      doc.text(doc.splitTextToSize(filterDesc, 180), 15, 43);
-
-      // Summary boxes
-      const summaryY = 50;
-      doc.setFillColor(254, 242, 242);
-      doc.roundedRect(15, summaryY, 85, 14, 2, 2, 'F');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text('DISPUTAS ACTIVAS', 20, summaryY + 5);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.setTextColor(220, 38, 38);
-      doc.text(String(filteredActive.length), 20, summaryY + 11.5);
-
-      doc.setFillColor(240, 253, 244);
-      doc.roundedRect(110, summaryY, 85, 14, 2, 2, 'F');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text('DISPUTAS RESUELTAS', 115, summaryY + 5);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.setTextColor(16, 185, 129);
-      doc.text(String(filteredResolved.length), 115, summaryY + 11.5);
-
-      let currentY = summaryY + 22;
-
-      // Active disputes tables
-      Object.entries(activeGroups).forEach(([groupName, items]) => {
-        if (items.length === 0) return;
-        if (currentY > A4_H - 40) { doc.addPage(); currentY = 22; }
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(220, 38, 38);
-        doc.text(`${groupName} — ACTIVAS (${items.length})`, 15, currentY);
-        currentY += 3;
-
-        autoTable(doc, {
-          startY: currentY,
-          head: [['ELECTOR', 'CÉDULA', 'CAPTURA INICIAL', 'ÚLTIMA CAPTURA', 'TIPO', 'ESTADO']],
-          body: items.map((c: any) => [
-            `${c.elector_nombre} ${c.elector_apellido}`,
-            c.elector_ci,
-            `${c.coord_a || 'N/A'}${c.list_a ? ` (L${c.list_a})` : ''}`,
-            `${c.coord_b || 'N/A'}${c.list_b ? ` (L${c.list_b})` : ''}`,
-            c.conflict_type === 'INTERNAL' ? 'INTERNA' : 'INTER-LISTA',
-            c.conflict_status === 'WAITING_CONSENT' ? 'ESP. CONSENT.' : 'PENDIENTE',
-          ]),
-          margin: { left: 15, right: 15 },
-          styles: { fontSize: 7.5, cellPadding: 2.5, font: 'helvetica', textColor: [51, 65, 85], lineColor: [226, 232, 240], lineWidth: 0.1 },
-          headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.2 },
-          alternateRowStyles: { fillColor: [254, 242, 242] }, // Light red for active
-          columnStyles: {
-            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
-            4: { halign: 'center', fontSize: 6.5 },
-            5: { halign: 'center', fontStyle: 'bold', textColor: [220, 38, 38] },
-          },
-          didDrawPage: (data: any) => {
-            if (data.pageNumber > 1) drawHeader(false);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(6);
-            doc.setTextColor(100, 116, 139);
-            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial y estratégico`, 15, A4_H - 8);
-            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 8, { align: 'right' });
-          },
-        });
-        currentY = (doc as any).lastAutoTable.finalY + 10;
-      });
-
-      // Resolved disputes tables
-      Object.entries(resolvedGroups).forEach(([groupName, items]) => {
-        if (items.length === 0) return;
-        if (currentY > A4_H - 40) { doc.addPage(); currentY = 22; }
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(5, 150, 105);
-        doc.text(`${groupName} — RESUELTAS (${items.length})`, 15, currentY);
-        currentY += 3;
-
-        autoTable(doc, {
-          startY: currentY,
-          head: [['ELECTOR', 'CÉDULA', 'LOCAL / MESA', 'ADJUDICADO A', 'FECHA RESOLUCIÓN']],
-          body: items.map((h: any) => [
-            `${h.elector_nombre} ${h.elector_apellido}`,
-            h.elector_ci,
-            `${h.local_votacion || 'N/A'} (M. ${h.mesa || '?'})`,
-            h.winner_name || 'N/A',
-            safeDate(h.resolved_at),
-          ]),
-          margin: { left: 15, right: 15 },
-          styles: { fontSize: 7.5, cellPadding: 2.5, font: 'helvetica', textColor: [51, 65, 85], lineColor: [226, 232, 240], lineWidth: 0.1 },
-          headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0.2 },
-          alternateRowStyles: { fillColor: [240, 253, 244] }, // Light green for resolved
-          columnStyles: {
-            0: { fontStyle: 'bold', textColor: [15, 23, 42] },
-            3: { fontStyle: 'bold', textColor: [0, 71, 171] }, // Winner in Premium Blue
-            4: { halign: 'center' },
-          },
-          didDrawPage: (data: any) => {
-            if (data.pageNumber > 1) drawHeader(false);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(6);
-            doc.setTextColor(100, 116, 139);
-            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial y estratégico`, 15, A4_H - 8);
-            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 8, { align: 'right' });
-          },
-        });
-        currentY = (doc as any).lastAutoTable.finalY + 10;
-      });
-
-      // Empty state
-      if (filteredActive.length === 0 && filteredResolved.length === 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139);
-        doc.text('No se encontraron disputas con los filtros seleccionados.', A4_W / 2, currentY + 10, { align: 'center' });
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      let heightLeft = pdfHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft > 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
       }
-
-      if (typeof doc.putTotalPages === 'function') doc.putTotalPages(totalPagesExp);
-
-      const cleanDistrict = (effectiveDistrict || 'global').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      doc.save(`reporte-disputas-${cleanDistrict}-${disputesReportFilter.toLowerCase()}.pdf`);
+      
+      const cleanDistrict = (effectiveDistrict || 'global').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      pdf.save(`reporte-disputas-${cleanDistrict}-${disputesReportFilter.toLowerCase()}.pdf`);
     } catch (err: any) {
-      console.error('Error generating disputes PDF:', err);
+      console.error('Error generating disputes PDF via html2canvas:', err);
       alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
     } finally {
       setIsGeneratingDisputesPDF(false);
@@ -2472,6 +2257,7 @@ const CommandCenter = () => {
         </AnimatePresence>
 
         <TacticalReport />
+        <DisputesPremiumReportRenderer />
         <style>
           {`
             @media print {
