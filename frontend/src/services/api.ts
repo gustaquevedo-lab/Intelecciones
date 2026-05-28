@@ -83,7 +83,7 @@ export const getImageUrl = (url?: string) => {
   }
 
   if (!finalUrl.startsWith('http')) {
-    const base = API_BASE.replace('/api', '');
+    const base = API_BASE.replace(/\/api$/, '');
     finalUrl = `${base}${finalUrl.startsWith('/') ? '' : '/'}${finalUrl}`;
   }
   
