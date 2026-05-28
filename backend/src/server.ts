@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { z } from 'zod';
-import db, { runBootstrapChecks } from './db';
+import db from './db';
 import { whatsappService } from './whatsappService';
 import * as XLSX from 'xlsx';
 
@@ -5614,12 +5614,8 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 
-  // Run heavy bootstrap work in background so first request isn't blocked
-  setImmediate(() => {
-    runBootstrapChecks();
-    serverReady = true;
-    console.log('[SYSTEM] Server fully ready.');
-  });
+  serverReady = true;
+  console.log('[SYSTEM] Server fully ready.');
 
   setTimeout(() => {
     console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');

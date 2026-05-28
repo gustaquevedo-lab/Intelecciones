@@ -785,7 +785,7 @@ const CommandCenter = () => {
     const resolvedGroups = groupItems(filteredResolved, true);
 
     return (
-      <div style={{ position: 'fixed', top: '0', left: '0', width: '800px', zIndex: -9999, pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', top: '0', left: '0', width: '800px', opacity: 0.001, pointerEvents: 'none', zIndex: 9999 }}>
         <div id="disputes-premium-print-container" style={{ width: '800px', background: '#fff', color: '#000', padding: '40px', fontFamily: 'Inter, system-ui, sans-serif' }}>
           
           <header style={{ borderBottom: '4px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
