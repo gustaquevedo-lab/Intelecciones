@@ -317,9 +317,9 @@ const ElectorSchema = z.object({
 
 const CaptureSchema = z.object({
   elector_ci: z.string(),
-  coordinator_id: z.number(), 
-  lat: z.number(),
-  lng: z.number(),
+  coordinator_id: z.coerce.number(), 
+  lat: z.coerce.number(),
+  lng: z.coerce.number(),
   traffic_light: z.enum(['GREEN', 'YELLOW', 'RED', 'PURPLE']),
   needs_transport: z.boolean().optional(),
   telefono: z.string().min(6, "El teléfono es obligatorio"),
@@ -950,6 +950,7 @@ app.post('/api/captures', (req, res) => {
     const result = transaction();
     res.json(result);
   } catch (err: any) {
+    console.error('[CAPTURES POST ERROR]', err);
     res.status(400).json({ error: err.message || err.errors });
   }
 });

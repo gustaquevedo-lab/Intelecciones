@@ -543,34 +543,51 @@ try {
     db.transaction(() => {
       // 1. Clean Electors
       db.exec(`
-        UPDATE electors SET 
+        UPDATE OR IGNORE electors SET 
           ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
           ciudad = UPPER(TRIM(ciudad)), 
           distrito = UPPER(TRIM(distrito)) 
-        WHERE ci IS NOT NULL;
+        WHERE ci IS NOT NULL AND (
+          ci LIKE '%.%' OR 
+          ci LIKE '% %' OR 
+          ciudad != UPPER(TRIM(ciudad)) OR 
+          distrito != UPPER(TRIM(distrito))
+        );
       `);
       
       // 2. Clean Captures (Critical for JOINs)
       db.exec(`
-        UPDATE elector_captures SET 
+        UPDATE OR IGNORE elector_captures SET 
           elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
-        WHERE elector_ci IS NOT NULL;
+        WHERE elector_ci IS NOT NULL AND (
+          elector_ci LIKE '%.%' OR 
+          elector_ci LIKE '% %'
+        );
       `);
 
       // 3. Clean Conflicts
       db.exec(`
-        UPDATE capture_conflicts SET 
+        UPDATE OR IGNORE capture_conflicts SET 
           elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
-        WHERE elector_ci IS NOT NULL;
+        WHERE elector_ci IS NOT NULL AND (
+          elector_ci LIKE '%.%' OR 
+          elector_ci LIKE '% %'
+        );
       `);
 
       // 4. Clean Users (CI and Username are often the same)
       db.exec(`
-        UPDATE users SET 
+        UPDATE OR IGNORE users SET 
           ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
           username = REPLACE(REPLACE(TRIM(username), '.', ''), ' ', ''),
           distrito = UPPER(TRIM(distrito)) 
-        WHERE ci IS NOT NULL;
+        WHERE ci IS NOT NULL AND (
+          ci LIKE '%.%' OR 
+          ci LIKE '% %' OR 
+          username LIKE '%.%' OR 
+          username LIKE '% %' OR
+          distrito != UPPER(TRIM(distrito))
+        );
       `);
 
       // 5. RE-BACKFILL: Now that CIs are clean, we might find new duplicates that were fragmented
