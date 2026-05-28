@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
     const [activeListId, setActiveListId] = useState<number | null>(null);
     const [activeDistrict, setActiveDistrict] = useState<string | null>(null);
+    const isInitialMount = React.useRef(true);
 
     useEffect(() => {
         try {
@@ -102,6 +103,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [activeDistrict]);
 
     useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return; // Don't clear auth_user on first render — user starts null before hydration
+        }
         try {
             if (user) {
                 localStorage.setItem('auth_user', JSON.stringify(user));
