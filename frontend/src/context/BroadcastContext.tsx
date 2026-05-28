@@ -74,7 +74,10 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
         localStorage.removeItem(LS_KEY);
       }
-      // Fallback: check if there's an active broadcast from another session
+      // Fallback: check if there's an active broadcast from another session (authorized roles only)
+      const savedUser = localStorage.getItem('auth_user');
+      const savedRole = savedUser ? JSON.parse(savedUser)?.role : null;
+      if (savedRole !== 'SUPERUSUARIO' && savedRole !== 'JEFE_CAMPANA') return;
       try {
         const r = await api.get('/whatsapp/broadcast/active');
         if (r.data) {

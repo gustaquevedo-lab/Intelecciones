@@ -564,19 +564,10 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
         } else if (tableAlias === 'ec') {
           sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
           params.push(d, d);
-        } else if (tableAlias === 'cc') {
-          sql += ` AND (
-            cc.elector_ci IN (SELECT ci FROM electors WHERE ciudad = ? OR distrito = ?) OR
-            EXISTS (SELECT 1 FROM elector_captures ca2 JOIN users ua2 ON ca2.coordinator_id = ua2.id WHERE ca2.id = cc.capture_id AND ua2.distrito = ?) OR
-            EXISTS (SELECT 1 FROM elector_captures cb2 JOIN users ub2 ON cb2.coordinator_id = ub2.id WHERE cb2.id = cc.capture_id_b AND ub2.distrito = ?)
-          )`;
-          params.push(d, d, d, d);
-        } else if (tableAlias === 'cc_history') {
-          sql += ` AND (
-            cc.elector_ci IN (SELECT ci FROM electors WHERE ciudad = ? OR distrito = ?) OR
-            EXISTS (SELECT 1 FROM users u_win2 WHERE u_win2.id = cc.resolved_coordinator_id AND u_win2.distrito = ?)
-          )`;
-          params.push(d, d, d);
+        } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
+          // Both conflict endpoints already JOIN electors as 'e' — filter directly on that alias
+          sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
+          params.push(d, d);
         } else {
           // Determine which column to use based on table schema
           let col = 'distrito';
