@@ -1037,9 +1037,12 @@ const OutboxPanel: React.FC<OutboxPanelProps> = ({ logs, activeBroadcast, onRefr
   const [recipPage, setRecipPage] = useState(1);
   const [recipFilter, setRecipFilter] = useState<'ALL' | 'SENT' | 'FAILED'>('ALL');
   const [recipLoading, setRecipLoading] = useState(false);
+  const [recipError, setRecipError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<Set<number>>(new Set());
 
   const loadRecipients = async (logId: number, page = 1, filter: 'ALL' | 'SENT' | 'FAILED' = 'ALL') => {
     setRecipLoading(true);
+    setRecipError(null);
     try {
       const params: any = { page, limit: 200 };
       if (filter !== 'ALL') params.status = filter;
@@ -1047,19 +1050,34 @@ const OutboxPanel: React.FC<OutboxPanelProps> = ({ logs, activeBroadcast, onRefr
       setRecipients(r.data.recipients);
       setRecipTotal(r.data.total);
       setRecipPage(page);
-    } catch { /* no permission or not found */ }
-    finally { setRecipLoading(false); }
+    } catch (err: any) {
+      setRecipError(err?.response?.data?.error || 'No se pudo cargar el detalle de envíos.');
+      setRecipients([]);
+    } finally { setRecipLoading(false); }
   };
 
   const toggleExpand = (logId: number) => {
     if (expandedLogId === logId) {
       setExpandedLogId(null);
       setRecipients([]);
+      setRecipError(null);
     } else {
       setExpandedLogId(logId);
       setRecipFilter('ALL');
       setRecipPage(1);
       loadRecipients(logId, 1, 'ALL');
+    }
+  };
+
+  const retryFailed = async (logId: number) => {
+    setRetrying(prev => new Set(prev).add(logId));
+    try {
+      await api.post(`/whatsapp/broadcast/${logId}/retry-failed`);
+      onRefresh();
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Error al reintentar envíos fallidos.');
+    } finally {
+      setRetrying(prev => { const s = new Set(prev); s.delete(logId); return s; });
     }
   };
 
@@ -1140,6 +1158,18 @@ const OutboxPanel: React.FC<OutboxPanelProps> = ({ logs, activeBroadcast, onRefr
                 </div>
               </div>
 
+              {/* Retry button — only when there are failures and broadcast isn't running */}
+              {log.fail_count > 0 && log.status !== 'RUNNING' && log.status !== 'PAUSED' && (
+                <button
+                  onClick={e => { e.stopPropagation(); retryFailed(log.id); }}
+                  disabled={retrying.has(log.id)}
+                  style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.3rem 0.6rem', borderRadius: '7px', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.07)', color: '#ef4444', fontSize: '0.65rem', fontWeight: 800, cursor: retrying.has(log.id) ? 'not-allowed' : 'pointer', opacity: retrying.has(log.id) ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                >
+                  {retrying.has(log.id) ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                  {retrying.has(log.id) ? 'Reintentando…' : `Reintentar ${log.fail_count}`}
+                </button>
+              )}
+
               {/* Expand chevron */}
               <ChevronDown size={14} style={{ color: 'var(--text-3)', flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
             </div>
@@ -1177,7 +1207,17 @@ const OutboxPanel: React.FC<OutboxPanelProps> = ({ logs, activeBroadcast, onRefr
                       </div>
                     )}
 
-                    {!recipLoading && recipients.length === 0 && (
+                    {!recipLoading && recipError && (
+                      <div style={{ textAlign: 'center', padding: '1rem', color: '#ef4444', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>{recipError}</span>
+                        <button onClick={() => loadRecipients(log.id, recipPage, recipFilter)}
+                          style={{ padding: '0.25rem 0.7rem', borderRadius: '6px', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}>
+                          Reintentar carga
+                        </button>
+                      </div>
+                    )}
+
+                    {!recipLoading && !recipError && recipients.length === 0 && (
                       <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-3)', fontSize: '0.75rem' }}>
                         {log.status === 'RUNNING' ? 'Aún no se procesaron destinatarios...' : 'Sin destinatarios registrados.'}
                       </div>
