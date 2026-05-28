@@ -22,24 +22,37 @@ const UpdatePrompt = () => {
   const [offlineReady, setOfflineReady] = offlineReadyState || [false, () => {}];
   const [needUpdate, setNeedUpdate] = needUpdateState || [false, () => {}];
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [countdown, setCountdown] = useState(15);
   const { isDark } = useTheme();
   const { settings } = useSettings();
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
+  // Mandatory update: countdown auto-triggers if user doesn't act
+  useEffect(() => {
+    if (!needUpdate) {
+      setCountdown(15);
+      return;
+    }
+    if (countdown <= 0) {
+      updateServiceWorker(true);
+      setTimeout(() => window.location.reload(), 300);
+      return;
+    }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [needUpdate, countdown]);
+
   const close = () => {
     setOfflineReady(false);
-    setNeedUpdate(false);
+    // intentionally not clearing needUpdate — update is mandatory
   };
 
   const closeInstall = () => {
@@ -57,8 +70,86 @@ const UpdatePrompt = () => {
 
   return (
     <AnimatePresence>
-      {/* UPDATE / OFFLINE PROMPT */}
-      {(offlineReady || needUpdate) && (
+      {/* UPDATE PROMPT — mandatory, non-dismissable */}
+      {needUpdate && (
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 50, opacity: 0 }}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            zIndex: 9999,
+            maxWidth: '340px',
+            width: 'calc(100% - 40px)',
+            background: isDark ? 'var(--surface-light)' : '#FFFFFF',
+            border: `1px solid ${isDark ? 'var(--border)' : 'rgba(0, 71, 171, 0.2)'}`,
+            borderRadius: '20px',
+            padding: '1.25rem',
+            boxShadow: isDark ? 'var(--shadow-lg)' : '0 10px 40px rgba(0, 71, 171, 0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+            <div style={{
+              background: 'var(--plra-500)',
+              padding: '10px',
+              borderRadius: '12px',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 4px 12px rgba(0, 71, 171, 0.25)'
+            }}>
+              <RefreshCw size={20} color="#FFFFFF" className="spin-slow" />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
+                Nueva versión disponible
+              </h4>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                Actualizando en <strong>{countdown}s</strong>. Hay mejoras listas para ti.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                await updateServiceWorker(true);
+                setTimeout(() => window.location.reload(), 300);
+              } catch {
+                window.location.reload();
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'var(--plra-500)',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.6rem',
+              boxShadow: '0 4px 15px rgba(0, 71, 171, 0.3)'
+            }}
+          >
+            <RefreshCw size={16} color="#FFFFFF" /> Actualizar Ahora
+          </button>
+        </motion.div>
+      )}
+
+      {/* OFFLINE READY PROMPT — dismissable */}
+      {offlineReady && !needUpdate && (
         <motion.div
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -84,71 +175,33 @@ const UpdatePrompt = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <div style={{
-                background: needUpdate ? 'var(--plra-500)' : 'var(--green)',
+                background: 'var(--green)',
                 padding: '10px',
                 borderRadius: '12px',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: `0 4px 12px ${needUpdate ? 'rgba(0, 71, 171, 0.2)' : 'rgba(34, 197, 94, 0.2)'}`
+                boxShadow: '0 4px 12px rgba(34, 197, 94, 0.2)'
               }}>
-                <RefreshCw size={20} color="#FFFFFF" className={needUpdate ? 'spin-slow' : ''} />
+                <RefreshCw size={20} color="#FFFFFF" />
               </div>
               <div>
                 <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
-                  {needUpdate ? 'Nueva versión disponible' : 'App lista para usar offline'}
+                  App lista para usar offline
                 </h4>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-3)' }}>
-                  {needUpdate 
-                    ? 'Hay mejoras listas. Actualiza para ver los últimos cambios.' 
-                    : 'Ya puedes usar el sistema sin internet.'}
+                  Ya puedes usar el sistema sin internet.
                 </p>
               </div>
             </div>
-            <button 
+            <button
               onClick={close}
               style={{ background: 'rgba(0,0,0,0.05)', border: 'none', color: 'var(--text-3)', cursor: 'pointer', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <X size={16} />
             </button>
           </div>
-
-          {needUpdate && (
-            <button
-              onClick={async () => {
-                try {
-                  console.log("[PWA] Iniciando skipWaiting en Service Worker...");
-                  await updateServiceWorker(true);
-                  // Recarga de seguridad garantizada en 300ms
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 300);
-                } catch (e) {
-                  console.warn("[PWA] Error al actualizar, recargando de todos modos...", e);
-                  window.location.reload();
-                }
-              }}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: '12px',
-                border: 'none',
-                background: 'var(--plra-500)',
-                color: '#FFFFFF',
-                fontWeight: 800,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.6rem',
-                boxShadow: '0 4px 15px rgba(0, 71, 171, 0.3)'
-              }}
-            >
-              <RefreshCw size={16} color="#FFFFFF" /> Actualizar Ahora
-            </button>
-          )}
         </motion.div>
       )}
 

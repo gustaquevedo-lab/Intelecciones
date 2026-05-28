@@ -14,6 +14,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const BUILD_VERSION = Date.now().toString();
+
 // --- IN-MEMORY CACHE FOR HIGH-VOLUME AND HEAVY DATABASE QUERIES ---
 export const electorsCountCache = new Map<string, { count: number; ts: number }>();
 export const totalElectorsCache = new Map<string, { count: number; ts: number }>();
@@ -76,15 +78,24 @@ const storage = multer.diskStorage({
   }
 });
 
+// Attach build version to every response so clients can detect deploys
+app.use((_req, res, next) => {
+  res.setHeader('X-Build-Version', BUILD_VERSION);
+  next();
+});
+
 // 💓 Health Check & Warmup
 app.get('/api/ping', (_req, res) => {
   try {
-    // Light db query to verify connection
     db.prepare('SELECT 1').get();
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   } catch (e) {
     res.status(500).json({ status: 'error', message: 'Database unreachable' });
   }
+});
+
+app.get('/api/version', (_req, res) => {
+  res.json({ version: BUILD_VERSION });
 });
 // 📊 Robust Recursive Storage Diagnosis & Safe Cache Purge
 const performStorageMaintenance = async () => {
@@ -3709,23 +3720,47 @@ app.get('/api/structure/padrinos', (req, res) => {
     const padrinos = db.prepare(`
       SELECT u.id, u.nombre, u.photo_url, u.telefono, u.assigned_list_id,
              l.list_number, l.option_number,
-             (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id))) AS total_electors,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.needs_transport = 1)) AS transport_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'GREEN')) AS green_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'YELLOW')) AS yellow_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'RED') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'RED')) AS red_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'PURPLE')) AS purple_total
-       FROM users u
-       LEFT JOIN lists l ON u.assigned_list_id = l.id
-       WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
-       ORDER BY u.nombre
+             COALESCE(ch.coordinator_count, 0) AS coordinator_count,
+             COALESCE(d.total, 0) + COALESCE(ci.total, 0) AS total_electors,
+             COALESCE(d.transport, 0) + COALESCE(ci.transport, 0) AS transport_total,
+             COALESCE(d.green, 0) + COALESCE(ci.green, 0) AS green_total,
+             COALESCE(d.yellow, 0) + COALESCE(ci.yellow, 0) AS yellow_total,
+             COALESCE(d.red, 0) + COALESCE(ci.red, 0) AS red_total,
+             COALESCE(d.purple, 0) + COALESCE(ci.purple, 0) AS purple_total
+      FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN (
+        SELECT parent_id, COUNT(*) AS coordinator_count
+        FROM users
+        WHERE role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+        GROUP BY parent_id
+      ) ch ON ch.parent_id = u.id
+      LEFT JOIN (
+        SELECT coordinator_id,
+          COUNT(*) AS total,
+          SUM(needs_transport) AS transport,
+          SUM(CASE WHEN traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
+          SUM(CASE WHEN traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
+          SUM(CASE WHEN traffic_light='RED'    THEN 1 ELSE 0 END) AS red,
+          SUM(CASE WHEN traffic_light='PURPLE' THEN 1 ELSE 0 END) AS purple
+        FROM elector_captures
+        GROUP BY coordinator_id
+      ) d ON d.coordinator_id = u.id
+      LEFT JOIN (
+        SELECT uc.parent_id,
+          COUNT(ec.id) AS total,
+          SUM(ec.needs_transport) AS transport,
+          SUM(CASE WHEN ec.traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
+          SUM(CASE WHEN ec.traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
+          SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red,
+          SUM(CASE WHEN ec.traffic_light='PURPLE' THEN 1 ELSE 0 END) AS purple
+        FROM users uc
+        LEFT JOIN elector_captures ec ON ec.coordinator_id = uc.id
+        WHERE uc.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+        GROUP BY uc.parent_id
+      ) ci ON ci.parent_id = u.id
+      WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
+      ORDER BY u.nombre
     `).all(...sec.params);
     res.json(padrinos);
   } catch (err: any) {

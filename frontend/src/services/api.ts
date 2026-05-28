@@ -12,9 +12,36 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Response interceptor for error handling
+const BUILD_VERSION_KEY = 'app_build_version';
+
+// Response interceptor — error handling + deploy detection
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const serverVersion = response.headers['x-build-version'];
+    if (serverVersion) {
+      const stored = sessionStorage.getItem(BUILD_VERSION_KEY);
+      if (!stored) {
+        sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
+      } else if (stored !== serverVersion) {
+        sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
+        // New deploy detected — force SW update then reload
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration().then((reg) => {
+            if (reg) {
+              reg.update().then(() => {
+                setTimeout(() => window.location.reload(), 500);
+              });
+            } else {
+              window.location.reload();
+            }
+          });
+        } else {
+          window.location.reload();
+        }
+      }
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
       localStorage.removeItem('auth_user');
