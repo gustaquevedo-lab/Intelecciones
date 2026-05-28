@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { z } from 'zod';
-import db from './db';
+import db, { runBootstrapChecks } from './db';
 import { whatsappService } from './whatsappService';
 import * as XLSX from 'xlsx';
 
@@ -15,6 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const BUILD_VERSION = Date.now().toString();
+let serverReady = false;
 
 // --- IN-MEMORY CACHE FOR HIGH-VOLUME AND HEAVY DATABASE QUERIES ---
 export const electorsCountCache = new Map<string, { count: number; ts: number }>();
@@ -96,6 +97,10 @@ app.get('/api/ping', (_req, res) => {
 
 app.get('/api/version', (_req, res) => {
   res.json({ version: BUILD_VERSION });
+});
+
+app.get('/api/ready', (_req, res) => {
+  res.json({ ready: serverReady });
 });
 // 📊 Robust Recursive Storage Diagnosis & Safe Cache Purge
 const performStorageMaintenance = async () => {
@@ -5617,7 +5622,14 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
-  // Auto-connect default WhatsApp terminal on boot
+
+  // Run heavy bootstrap work in background so first request isn't blocked
+  setImmediate(() => {
+    runBootstrapChecks();
+    serverReady = true;
+    console.log('[SYSTEM] Server fully ready.');
+  });
+
   setTimeout(() => {
     console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');
     whatsappService.connect('default').catch(err => console.error('Error in auto-connect:', err));

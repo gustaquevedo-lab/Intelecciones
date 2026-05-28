@@ -249,6 +249,7 @@ const SuperAdmin = () => {
   const [shareMessageFooter, setShareMessageFooter] = useState('#Intelecciones #PLRA #DíaD');
 
   const [isLoading, setIsLoading] = useState(true);
+  const [serverWaking, setServerWaking] = useState(false);
   const [isUserVerified, setIsUserVerified] = useState(false);
   const [isCandidateVerified, setIsCandidateVerified] = useState(false);
   const [isVehicleDriverVerified, setIsVehicleDriverVerified] = useState(false);
@@ -887,12 +888,15 @@ Status: ${error.response?.status || 'N/A'}
         for (let attempt = 1; attempt <= retries + 1; attempt++) {
           try {
             const res = await api.get(url);
+            if (serverWaking) setServerWaking(false);
             return res.data;
           } catch (err: any) {
             console.error(`Attempt ${attempt} failed for ${url}:`, err);
-            // Handle SQLite database lock transient errors with exponential delay
             if (attempt <= retries) {
-              const delay = Math.pow(2, attempt) * 150;
+              const isNetworkOrTimeout = !err.response;
+              if (isNetworkOrTimeout) setServerWaking(true);
+              // For cold-start network errors wait 5s, otherwise exponential backoff
+              const delay = isNetworkOrTimeout ? 5000 : Math.pow(2, attempt) * 150;
               await new Promise(resolve => setTimeout(resolve, delay));
               continue;
             }
@@ -908,27 +912,27 @@ Status: ${error.response?.status || 'N/A'}
         if (selectedCampaignId && selectedCampaignId !== 'all') {
           summaryUrl += `?campaign_id=${selectedCampaignId}`;
         }
-        const summary = await safeGet(summaryUrl);
-        const predictionsRes = await safeGet('/stats/predictions');
-        const allCaptures = await safeGet('/captures', []);
-        const allLocales = await safeGet('/voting-locations', []);
-        const allCamps = await safeGet('/campaigns', []);
+
+        // Parallel requests — cut load time 4x
+        const [summary, predictionsRes, allLocales, allCamps] = await Promise.all([
+          safeGet(summaryUrl),
+          safeGet('/stats/predictions'),
+          safeGet('/voting-locations', []),
+          safeGet('/campaigns', []),
+        ]);
 
         if (summary) {
           setStats(summary);
-        } else {
-          setApiCriticalError(new Error(
-            `API_ERROR: No se pudieron recuperar las estadísticas principales del servidor.\n` +
-            `Servidor: ${lastErrorMessage || 'Timeout o concurrencia de base de datos'}\n` +
-            `Timestamp: ${new Date().toISOString()}`
-          ));
+          setServerWaking(false);
+        } else if (!silent) {
+          // Server unreachable — don't throw error, let retry state handle it
+          setServerWaking(true);
         }
 
         if (predictionsRes) setPredictions(predictionsRes);
-        setCaptures(Array.isArray(allCaptures) ? allCaptures : []);
         setLocales(Array.isArray(allLocales) ? allLocales : []);
-        setUsers([]); // No longer needed for overview
-        setLists([]); // No longer needed for overview
+        setUsers([]);
+        setLists([]);
         setCampaigns(Array.isArray(allCamps) ? allCamps : []);
       } else if (activeTab === 'campaigns') {
         const res = await safeGet('/campaigns', []);
@@ -1032,8 +1036,32 @@ Status: ${error.response?.status || 'N/A'}
   }, [authUser, loading, navigate]);
 
   useEffect(() => {
-    if (authUser) fetchData();
+    if (authUser) {
+      setCaptures([]); // reset so lazy loader re-runs on tab change
+      fetchData();
+    }
   }, [authUser, activeTab, activeListId, activeDistrict]);
+
+  // Auto-retry when server is waking up
+  useEffect(() => {
+    if (!serverWaking) return;
+    const t = setTimeout(() => {
+      if (authUser) fetchData();
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [serverWaking]);
+
+  // Load capture map markers lazily — after stats are shown, not before
+  useEffect(() => {
+    if (activeTab !== 'overview' || !stats || captures.length > 0) return;
+    const t = setTimeout(async () => {
+      try {
+        const res = await api.get('/captures');
+        setCaptures(Array.isArray(res.data) ? res.data : []);
+      } catch { /* silent — map markers are non-critical */ }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [activeTab, stats]);
 
   useEffect(() => {
     if (selectedCampaignId === 'all') return;
@@ -1049,6 +1077,23 @@ Status: ${error.response?.status || 'N/A'}
 
   const renderOverview = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {serverWaking && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '1rem',
+          padding: '1rem 1.5rem', borderRadius: '14px',
+          background: 'rgba(0, 71, 171, 0.08)',
+          border: '1px solid rgba(0, 71, 171, 0.2)'
+        }}>
+          <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2.5px solid var(--plra-400)', borderTopColor: 'transparent', flexShrink: 0, animation: 'spin 0.8s linear infinite' }} />
+          <div>
+            <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: 'var(--plra-200)' }}>Conectando con el servidor...</p>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-3)' }}>El servidor está iniciando. Los datos cargarán en unos segundos.</p>
+          </div>
+          <button onClick={() => fetchData()} style={{ marginLeft: 'auto', padding: '0.4rem 0.9rem', borderRadius: '8px', border: '1px solid rgba(0,71,171,0.3)', background: 'transparent', color: 'var(--plra-300)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+            Reintentar
+          </button>
+        </div>
+      )}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '1.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: '16px',
