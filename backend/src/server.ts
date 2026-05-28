@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { z } from 'zod';
-import db from './db';
+import db, { runBootstrapChecks } from './db';
 import { whatsappService } from './whatsappService';
 import * as XLSX from 'xlsx';
 
@@ -533,9 +533,9 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     const role = (user?.role || headerRole || 'GUEST').toUpperCase().trim();
     const normalizedActiveDistrict = activeDistrict ? activeDistrict.toUpperCase().trim() : null;
 
-    // 1. Column name mapping: 'lists' and 'electors' use 'ciudad', others use 'distrito'
+    // 1. Column name mapping: 'lists' uses 'ciudad', others use 'distrito'
     let distColumn = 'distrito';
-    if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
+    if (tableAlias === 'l') distColumn = 'ciudad';
 
     // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña and Subjefes see their scope
     if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO' || role === 'CANDIDATO' || role === 'CANDIDATE') {
@@ -562,22 +562,22 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
           )`;
           params.push(d, d, d);
         } else if (tableAlias === 'ec') {
-          sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
-          params.push(d, d);
+          sql += ` AND e.distrito = ?`;
+          params.push(d);
         } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
           // Both conflict endpoints already JOIN electors as 'e' — filter directly on that alias
-          sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
-          params.push(d, d);
+          sql += ` AND e.distrito = ?`;
+          params.push(d);
         } else {
           // Determine which column to use based on table schema
           let col = 'distrito';
-          if (tableAlias === 'l' || tableAlias === 'e') col = 'ciudad';
+          if (tableAlias === 'l') col = 'ciudad';
           
           sql += ` AND ${tableAlias}.${col} = ?`;
           params.push(d);
           
           // Fallback for tables that have both or might use either
-          if (tableAlias === 'e' || tableAlias === 'loc') {
+          if (tableAlias === 'loc') {
              sql = sql.slice(0, -1); // remove the last '?'
              sql = sql.replace(` AND ${tableAlias}.${col} = `, ` AND (${tableAlias}.ciudad = ? OR ${tableAlias}.distrito = ?)`);
              params.push(d); // add second param for the OR
@@ -649,14 +649,14 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     let params: any[] = [];
     let targetAlias = tableAlias;
     if (tableAlias === 'ec') {
-      sql = ` AND (e.ciudad = ? OR e.distrito = ?)`;
-      params = [user.distrito, user.distrito];
+      sql = ` AND e.distrito = ?`;
+      params = [user.distrito];
     } else if (tableAlias === 'cc') {
-      sql = ` AND (e.ciudad = ? OR e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
-      params = [user.distrito, user.distrito, user.distrito, user.distrito];
-    } else if (tableAlias === 'cc_history') {
-      sql = ` AND (e.ciudad = ? OR e.distrito = ? OR u_win.distrito = ?)`;
+      sql = ` AND (e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
       params = [user.distrito, user.distrito, user.distrito];
+    } else if (tableAlias === 'cc_history') {
+      sql = ` AND (e.distrito = ? OR u_win.distrito = ?)`;
+      params = [user.distrito, user.distrito];
     } else {
       let targetCol = distColumn;
       sql = ` AND ${targetAlias}.${targetCol} = ?`;
@@ -1799,6 +1799,48 @@ app.delete('/api/captures/:id', (req, res) => {
     }
     res.json({ success: true });
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/coordinators/:id/captures', (req, res) => {
+  const coordinatorId = req.params.id;
+  const userRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+
+  // Validate requester role
+  if (!['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(userRole)) {
+    return res.status(403).json({ error: 'Acceso denegado. Rol insuficiente.' });
+  }
+
+  try {
+    db.transaction(() => {
+      // First, get all captures for this coordinator
+      const captures = db.prepare('SELECT elector_ci FROM elector_captures WHERE coordinator_id = ?').all(coordinatorId) as any[];
+      
+      // Update electors status to Pendiente (optional legacy field)
+      for (const cap of captures) {
+        try {
+          db.prepare("UPDATE electors SET status = 'Pendiente' WHERE ci = ?").run(cap.elector_ci);
+        } catch (e) {
+          // ignore legacy column error
+        }
+      }
+      
+      // Delete captures
+      db.prepare('DELETE FROM elector_captures WHERE coordinator_id = ?').run(coordinatorId);
+      
+      // Clean up capture conflicts associated with deleted captures
+      db.prepare(`
+        DELETE FROM capture_conflicts 
+        WHERE capture_id NOT IN (SELECT id FROM elector_captures)
+           OR capture_id_b NOT IN (SELECT id FROM elector_captures)
+      `).run();
+    })();
+
+    clearElectorsCache();
+    res.json({ success: true, message: 'Todas las capturas del coordinador fueron eliminadas.' });
+  } catch (err: any) {
+    console.error('[WIPE COORDINATOR CAPTURES ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -3823,7 +3865,8 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
   const { id } = req.params;
   try {
     const electors = db.prepare(`
-      SELECT COALESCE(e.nombre, 'ELECTOR') as nombre, 
+      SELECT ec.id,
+             COALESCE(e.nombre, 'ELECTOR') as nombre, 
              COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
              ec.elector_ci, 
              COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
@@ -5799,6 +5842,11 @@ app.listen(Number(PORT), '0.0.0.0', () => {
 
   serverReady = true;
   console.log('[SYSTEM] Server fully ready.');
+
+  setImmediate(() => {
+    console.log('[SYSTEM] Running async bootstrap checks...');
+    runBootstrapChecks();
+  });
 
   setTimeout(() => {
     console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');

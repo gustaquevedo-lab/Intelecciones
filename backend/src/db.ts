@@ -314,10 +314,12 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id);
       CREATE INDEX IF NOT EXISTS idx_users_ci ON users(ci);
       CREATE INDEX IF NOT EXISTS idx_users_distrito ON users(distrito);
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
       CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
       CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
       CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(distrito);
+      CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors(ciudad);
 
       CREATE INDEX IF NOT EXISTS idx_captures_ci ON elector_captures(elector_ci);
       CREATE INDEX IF NOT EXISTS idx_captures_coord ON elector_captures(coordinator_id);
@@ -335,6 +337,9 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number);
       CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_log ON whatsapp_broadcast_recipients(log_id);
       CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_status ON whatsapp_broadcast_recipients(log_id, status);
+
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
     `);
 
     const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
