@@ -4629,13 +4629,24 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
   
   const user_id = req.headers['x-user-id'] as string;
   const user = getCachedUserInfo(user_id);
-  const terminalId = reqTerminalId || 'default';
+  const campaignId = user?.campaign_id || null;
+
+  const rotateTerminals = reqTerminalId === 'rotate' || req.body.rotateTerminals === true;
+  const terminalId = rotateTerminals ? 'rotate' : (reqTerminalId || 'default');
+
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
 
   try {
     if (!targets || !Array.isArray(targets) || targets.length === 0) {
       return res.status(400).json({ error: 'No se encontraron destinatarios con teléfono' });
+    }
+
+    const activeTerminals = (await whatsappService.getTerminals(campaignId))
+      .filter(t => t.status === 'CONNECTED');
+
+    if (rotateTerminals && activeTerminals.length === 0) {
+      return res.status(400).json({ error: 'No hay terminales activas de WhatsApp conectadas para rotar.' });
     }
 
     // 1. Log entry in DB
@@ -4651,7 +4662,7 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
       targets.length,
       minDelay,
       maxDelay,
-      user?.campaign_id || null
+      campaignId
     );
     const logId = logResult.lastInsertRowid;
 
@@ -4689,6 +4700,39 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           continue;
         }
 
+        // Determine active terminal to use
+        let currentTerminalId = terminalId;
+        if (rotateTerminals && activeTerminals.length > 0) {
+          const terminalIndex = sentInSession % activeTerminals.length;
+          currentTerminalId = activeTerminals[terminalIndex].id;
+        }
+
+        // Check if number is in opt-out list
+        const { isOptedOut } = require('./whatsappAutoresponder');
+        if (isOptedOut(target.telefono)) {
+          failCount++;
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Usuario solicitó exclusión (Opt-out)')`)
+            .run(logId, target.telefono, target.nombre || '');
+          db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
+            .run(successCount, failCount, logId);
+          continue;
+        }
+
+        // Validate number existence on WhatsApp using the selected terminal
+        try {
+          const exists = await whatsappService.checkNumberExists(currentTerminalId, target.telefono);
+          if (!exists) {
+            failCount++;
+            db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'El número no tiene WhatsApp registrado')`)
+              .run(logId, target.telefono, target.nombre || '');
+            db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
+              .run(successCount, failCount, logId);
+            continue;
+          }
+        } catch (err: any) {
+          console.warn(`[BROADCAST] No se pudo verificar la existencia de WhatsApp para ${target.telefono}:`, err.message);
+        }
+
         try {
           // Personalize message content
           let personalizedContent = message || '';
@@ -4712,11 +4756,11 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
 
           // Send message
           if (media_type === 'VOICE' && media_url) {
-            await whatsappService.sendVoice(terminalId, target.telefono, media_url);
+            await whatsappService.sendVoice(currentTerminalId, target.telefono, media_url);
           } else if (media_url) {
-            await whatsappService.sendMedia(terminalId, target.telefono, media_url, personalizedContent);
+            await whatsappService.sendMedia(currentTerminalId, target.telefono, media_url, personalizedContent);
           } else {
-            await whatsappService.sendMessage(terminalId, target.telefono, personalizedContent);
+            await whatsappService.sendMessage(currentTerminalId, target.telefono, personalizedContent);
           }
           successCount++;
           sentInSession++;
@@ -4724,7 +4768,7 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status) VALUES (?, ?, ?, 'SENT')`)
             .run(logId, target.telefono, target.nombre || '');
         } catch (err: any) {
-          console.error(`Broadcast ${logId} failed for ${target.telefono}:`, err);
+          console.error(`Broadcast ${logId} failed for ${target.telefono} on terminal ${currentTerminalId}:`, err);
           failCount++;
           // ❌ Log per-recipient failure
           db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', ?)`)
@@ -4856,6 +4900,129 @@ app.post('/api/whatsapp/broadcast/:id/cancel', (req, res) => {
     }
     db.prepare("UPDATE whatsapp_broadcast_logs SET status = 'CANCELLED' WHERE id = ?").run(logId);
     res.json({ success: true, status: 'CANCELLED' });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/whatsapp/broadcast/:id/retry-failed — re-send to all FAILED recipients of a log
+app.post('/api/whatsapp/broadcast/:id/retry-failed', async (req, res) => {
+  const role = getRole(req);
+  if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
+  const logId = parseInt(req.params.id);
+  const user_id = req.headers['x-user-id'] as string;
+  const user = getCachedUserInfo(user_id);
+
+  try {
+    const orig = db.prepare('SELECT * FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
+    if (!orig) return res.status(404).json({ error: 'Log no encontrado' });
+    if (role !== 'SUPERUSUARIO' && user?.campaign_id && orig.campaign_id && orig.campaign_id !== user.campaign_id) {
+      return res.status(403).json({ error: 'Prohibido' });
+    }
+
+    const failedRows = db.prepare(
+      `SELECT telefono, nombre FROM whatsapp_broadcast_recipients WHERE log_id = ? AND status = 'FAILED' AND telefono != ''`
+    ).all(logId) as { telefono: string; nombre: string }[];
+
+    if (failedRows.length === 0) return res.status(400).json({ error: 'No hay destinatarios fallidos para reintentar' });
+
+    const terminalId = orig.terminal_id || 'default';
+    const minDelay = orig.min_delay ?? 2;
+    const maxDelay = orig.max_delay ?? 5;
+
+    const rotateTerminals = terminalId === 'rotate';
+    const activeTerminals = rotateTerminals 
+      ? (await whatsappService.getTerminals(orig.campaign_id)).filter(t => t.status === 'CONNECTED')
+      : [];
+
+    if (rotateTerminals && activeTerminals.length === 0) {
+      return res.status(400).json({ error: 'No hay terminales activas de WhatsApp conectadas para rotar en el reintento.' });
+    }
+
+    const newLog = db.prepare(
+      `INSERT INTO whatsapp_broadcast_logs (template_id, custom_message, media_url, media_type, terminal_id, target_count, status, min_delay, max_delay, campaign_id)
+       VALUES (?, ?, ?, ?, ?, ?, 'RUNNING', ?, ?, ?)`
+    ).run(orig.template_id || null, orig.custom_message || null, orig.media_url || null, orig.media_type || null,
+          terminalId, failedRows.length, minDelay, maxDelay, orig.campaign_id || null);
+    const newLogId = newLog.lastInsertRowid;
+
+    const runRetry = async () => {
+      let successCount = 0; let failCount = 0; let sentInSession = 0;
+      for (let i = 0; i < failedRows.length; i++) {
+        const log = db.prepare('SELECT status FROM whatsapp_broadcast_logs WHERE id = ?').get(newLogId) as any;
+        if (!log || log.status === 'CANCELLED') break;
+        while (log.status === 'PAUSED') { await new Promise(r => setTimeout(r, 1000)); }
+
+        const target = failedRows[i];
+
+        // Determine active terminal to use
+        let currentTerminalId = terminalId;
+        if (rotateTerminals && activeTerminals.length > 0) {
+          const terminalIndex = sentInSession % activeTerminals.length;
+          currentTerminalId = activeTerminals[terminalIndex].id;
+        }
+
+        // Check if number is in opt-out list
+        const { isOptedOut } = require('./whatsappAutoresponder');
+        if (isOptedOut(target.telefono)) {
+          failCount++;
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Usuario solicitó exclusión (Opt-out)')`)
+            .run(newLogId, target.telefono, target.nombre || '');
+          db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?').run(successCount, failCount, newLogId);
+          continue;
+        }
+
+        // Validate number existence on WhatsApp using the selected terminal
+        try {
+          const exists = await whatsappService.checkNumberExists(currentTerminalId, target.telefono);
+          if (!exists) {
+            failCount++;
+            db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'El número no tiene WhatsApp registrado')`)
+              .run(newLogId, target.telefono, target.nombre || '');
+            db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?').run(successCount, failCount, newLogId);
+            continue;
+          }
+        } catch (err: any) {
+          console.warn(`[RETRY] No se pudo verificar la existencia de WhatsApp para ${target.telefono}:`, err.message);
+        }
+
+        try {
+          let content = orig.custom_message || '';
+          if (orig.template_id) {
+            const t = db.prepare('SELECT content FROM whatsapp_templates WHERE id = ?').get(orig.template_id) as any;
+            if (t?.content) content = t.content;
+          }
+          content = addSubtleVariation(content.replace(/{{nombre}}/g, target.nombre || 'Amigo/a'));
+
+          if (orig.media_type === 'VOICE' && orig.media_url) {
+            await whatsappService.sendVoice(currentTerminalId, target.telefono, orig.media_url);
+          } else if (orig.media_url) {
+            await whatsappService.sendMedia(currentTerminalId, target.telefono, orig.media_url, content);
+          } else {
+            await whatsappService.sendMessage(currentTerminalId, target.telefono, content);
+          }
+          successCount++;
+          sentInSession++;
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status) VALUES (?, ?, ?, 'SENT')`)
+            .run(newLogId, target.telefono, target.nombre || '');
+        } catch (err: any) {
+          failCount++;
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', ?)`)
+            .run(newLogId, target.telefono, target.nombre || '', err?.message || 'Error');
+        }
+        db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?').run(successCount, failCount, newLogId);
+        if (i < failedRows.length - 1) {
+          await new Promise(r => setTimeout(r, (minDelay + Math.random() * (maxDelay - minDelay)) * 1000));
+          if (sentInSession > 0 && sentInSession % 15 === 0) {
+            await new Promise(r => setTimeout(r, (20 + Math.random() * 20) * 1000));
+          }
+        }
+      }
+      const finalLog = db.prepare('SELECT status FROM whatsapp_broadcast_logs WHERE id = ?').get(newLogId) as any;
+      const finalStatus = (finalLog?.status === 'CANCELLED' || finalLog?.status === 'PAUSED') ? finalLog.status : 'COMPLETED';
+      db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ?, status = ? WHERE id = ?').run(successCount, failCount, finalStatus, newLogId);
+    };
+
+    runRetry();
+    res.json({ success: true, log_id: newLogId, target_count: failedRows.length });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

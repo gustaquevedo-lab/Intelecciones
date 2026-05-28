@@ -785,7 +785,16 @@ const CommandCenter = () => {
     const resolvedGroups = groupItems(filteredResolved, true);
 
     return (
-      <div style={{ position: 'fixed', top: '0', left: '0', width: '800px', opacity: 0.001, pointerEvents: 'none', zIndex: 9999 }}>
+      <>
+      {/* Full-screen overlay covers the print container so user sees a clean loading screen */}
+      <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+        <div style={{ color: '#fff', fontFamily: 'Inter, sans-serif', textAlign: 'center' }}>
+          <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>GENERANDO PDF...</p>
+        </div>
+      </div>
+      {/* Print container: fully rendered, in-viewport, behind overlay so html2canvas can capture it */}
+      <div style={{ position: 'fixed', top: '0', left: '0', width: '800px', zIndex: 9999, pointerEvents: 'none' }}>
         <div id="disputes-premium-print-container" style={{ width: '800px', background: '#fff', color: '#000', padding: '40px', fontFamily: 'Inter, system-ui, sans-serif' }}>
           
           <header style={{ borderBottom: '4px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -917,12 +926,13 @@ const CommandCenter = () => {
               </div>
             )}
           </section>
-          
+
           <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '2px dashed #cbd5e1', textAlign: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
             Este documento es de carácter confidencial y estratégico para el operativo electoral de Intelecciones.
           </footer>
         </div>
       </div>
+      </>
     );
   };
 

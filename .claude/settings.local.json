@@ -32,7 +32,19 @@
       "Bash(node -e \"const h = require\\('./node_modules/html2canvas/dist/html2canvas.js'\\); console.log\\(typeof h, typeof h.default\\)\")",
       "Bash(node -e ' *)",
       "Bash(node --input-type=module -e ' *)",
-      "Bash(Select-Object -First 30)"
+      "Bash(Select-Object -First 30)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" -Recurse -Force)",
+      "Bash(Select-Object -First 50)",
+      "Bash(Format-List FullName)",
+      "Bash(xargs grep -l \"version\\\\|update\\\\|reload\\\\|cache\")",
+      "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" diff --stat)",
+      "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" add backend/src/server.ts frontend/src/components/UpdatePrompt.tsx frontend/src/services/api.ts frontend/vercel.json)",
+      "Bash(git -C 'C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones' commit -m ' *)",
+      "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" push origin main)",
+      "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" add backend/src/db.ts backend/src/server.ts frontend/src/pages/SuperAdmin.tsx)",
+      "Bash(npm uninstall *)",
+      "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" add backend/src/whatsappService.ts backend/package.json backend/package-lock.json)"
     ]
   }
 }
