@@ -538,7 +538,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
 
     // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña and Subjefes see their scope
-    if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO') {
+    if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO' || role === 'CANDIDATO' || role === 'CANDIDATE') {
       let sql = '';
       let params: any[] = [];
 
@@ -546,7 +546,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       let effectiveDistrict = getDistrict(req);
       
       // CRITICAL: If they are a JEFE_CAMPANA/SUBJEFE, their profile district ALWAYS overrides or acts as fallback
-      if ((role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO') && user?.distrito) {
+      if ((role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO' || role === 'CANDIDATO' || role === 'CANDIDATE') && user?.distrito) {
         effectiveDistrict = user.distrito;
       }
 
@@ -586,7 +586,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       }
 
       // 2. Campaign/List Isolation for non-SuperUsers (only if no district is assigned)
-      if (role === 'JEFE_CAMPANA' && !effectiveDistrict) {
+      if ((role === 'JEFE_CAMPANA' || role === 'CANDIDATO' || role === 'CANDIDATE') && !effectiveDistrict) {
         if (user?.campaign_id) {
             if (tableAlias === 'e') {
               sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
@@ -825,12 +825,19 @@ app.get('/api/electors/:ci', (req, res) => {
     }
   }
   
+  const isReadOnlyRole = ['CANDIDATO', 'CANDIDATE', 'SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(role);
+  const effectiveListId = isReadOnlyRole ? null : list_id;
+
   const elector = db.prepare(`
-    SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, c.telefono
+    SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, 
+           c.telefono as capture_telefono, c.lat as capture_lat, c.lng as capture_lng, c.needs_transport,
+           u.nombre as coordinator_name, p.nombre as padrino_name
     FROM electors e
     LEFT JOIN elector_captures c ON e.ci = c.elector_ci AND (c.list_id = ? OR ? IS NULL)
+    LEFT JOIN users u ON c.coordinator_id = u.id
+    LEFT JOIN users p ON u.parent_id = p.id
     WHERE e.ci = ? ${distritoFilter}
-  `).get(list_id, list_id, ci);
+  `).get(effectiveListId, effectiveListId, ci);
   
   if (elector) {
     res.json(elector);
