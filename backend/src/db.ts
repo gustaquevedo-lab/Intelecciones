@@ -639,6 +639,23 @@ export const runBootstrapChecks = () => {
           SELECT capture_id_b FROM capture_conflicts WHERE status = 'PENDING' OR status = 'WAITING_CONSENT'
         )
       `).run();
+
+      // Self-healing: Assign lists to coordinators/padrinos who don't have one in production
+      const usersWithoutList = db.prepare(`
+        SELECT id, assigned_campaign_id 
+        FROM users 
+        WHERE assigned_list_id IS NULL AND role IN ('COORDINADOR', 'PADRINO', 'SUBJEFE')
+      `).all() as any[];
+
+      for (const u of usersWithoutList) {
+        if (u.assigned_campaign_id) {
+          const list = db.prepare('SELECT id FROM lists WHERE campaign_id = ? LIMIT 1').get(u.assigned_campaign_id) as any;
+          if (list) {
+            db.prepare('UPDATE users SET assigned_list_id = ? WHERE id = ?').run(list.id, u.id);
+            console.log(`[BOOTSTRAP SELF-HEALING] Assigned list ID ${list.id} to user ID ${u.id}`);
+          }
+        }
+      }
     })();
     console.log("DATABASE: Bootstrap checks complete.");
   } catch (e: any) {

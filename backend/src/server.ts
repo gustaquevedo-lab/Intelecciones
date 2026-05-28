@@ -2004,6 +2004,14 @@ app.post('/api/users', (req, res) => {
     }
   }
 
+  // If list is still not assigned, fall back to the first list of the campaign
+  if (!finalAssignedListId && finalCampaignId) {
+    const firstList = db.prepare('SELECT id FROM lists WHERE campaign_id = ? LIMIT 1').get(finalCampaignId) as any;
+    if (firstList) {
+      finalAssignedListId = firstList.id;
+    }
+  }
+
   const rawCI = ci || username; // Fallback to username if CI is not provided explicitly
   const cleanCI = rawCI ? rawCI.toString().replace(/\./g, '') : null;
   const finalUsername = username.toString().trim();

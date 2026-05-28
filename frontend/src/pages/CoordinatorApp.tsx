@@ -756,6 +756,7 @@ const CoordinatorApp = () => {
         setSuccessMsg('⚠️ Sin conexión. Registro de campo encolado localmente.');
       } else {
         setSuccessMsg('¡Elector registrado y captado con éxito!');
+        fetchHistory();
       }
 
       setShowUnregisteredModal(false);
@@ -813,6 +814,7 @@ const CoordinatorApp = () => {
         setSuccessMsg('⚠️ Sin conexión. El registro se guardó localmente y se sincronizará pronto.');
       } else {
         setSuccessMsg('¡Captura guardada correctamente!');
+        fetchHistory();
       }
       
       setShowModal(false);
