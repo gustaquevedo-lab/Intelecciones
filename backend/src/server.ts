@@ -2951,6 +2951,9 @@ app.get('/api/admin/conflicts', (req, res) => {
   
   try {
     let sql = `
+      WITH active_conflicts AS (
+        SELECT * FROM capture_conflicts WHERE status != 'RESOLVED'
+      )
       SELECT 
         cc.id as conflict_id,
         cc.status as conflict_status,
@@ -2990,7 +2993,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         lb.list_number as list_b,
         lb.option_number as option_b
 
-      FROM capture_conflicts cc
+      FROM active_conflicts cc
       LEFT JOIN electors e ON cc.elector_ci = e.ci
       LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
       LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
@@ -3000,7 +3003,7 @@ app.get('/api/admin/conflicts', (req, res) => {
       LEFT JOIN users pb ON ub.parent_id = pb.id
       LEFT JOIN lists la ON ca.list_id = la.id
       LEFT JOIN lists lb ON cb.list_id = lb.id
-      WHERE cc.status != 'RESOLVED'
+      WHERE 1=1
     `;
     const params: any[] = [];
 
@@ -3036,6 +3039,9 @@ app.get('/api/admin/conflicts/history', (req, res) => {
   
   try {
     let sql = `
+      WITH resolved_conflicts AS (
+        SELECT * FROM capture_conflicts WHERE status = 'RESOLVED'
+      )
       SELECT 
         cc.id as conflict_id,
         cc.status as conflict_status,
@@ -3049,12 +3055,12 @@ app.get('/api/admin/conflicts/history', (req, res) => {
         u_win.nombre as winner_name,
         u_win.role as winner_role,
         p_win.nombre as padrino_name
-      FROM capture_conflicts cc
+      FROM resolved_conflicts cc
       LEFT JOIN electors e ON cc.elector_ci = e.ci
       LEFT JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
       LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
       LEFT JOIN users p_win ON u_win.parent_id = p_win.id
-      WHERE cc.status = 'RESOLVED'
+      WHERE 1=1
     `;
     const params: any[] = [];
 
