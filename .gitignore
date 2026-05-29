@@ -7,3 +7,5 @@ build
 *.sqlite-journal
 sessions
 *.db
+*.db-wal
+*.db-shm
