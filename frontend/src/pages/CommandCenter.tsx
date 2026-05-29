@@ -9,7 +9,7 @@ import {
   ChevronDown,
   Download, MapPin, Bell, X, Search,
   ChevronRight, Truck, Target, MessageSquare, Mic, Clock,
-  RefreshCw, CheckCircle, Plus, ExternalLink, Trash2
+  RefreshCw, CheckCircle, Plus, ExternalLink, Trash2, Edit
 } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import MainLayout from '../components/MainLayout';
@@ -526,6 +526,10 @@ const CommandCenter = () => {
   const [subStructureData, setSubStructureData] = useState<any[]>([]);
   const [electorDetails, setElectorDetails] = useState<any[]>([]);
   const [padrinoCaptures, setPadrinoCaptures] = useState<any>(null);
+  const [editingCapture, setEditingCapture] = useState<any>(null);
+  const [editTrafficLight, setEditTrafficLight] = useState<string>('GREEN');
+  const [editNeedsTransport, setEditNeedsTransport] = useState<boolean>(false);
+  const [editTelefono, setEditTelefono] = useState<string>('');
   const [selectedLocal, setSelectedLocal] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(window.innerWidth > 768);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -1117,6 +1121,31 @@ const CommandCenter = () => {
     } catch (err: any) {
       console.error('Error deleting capture:', err);
       alert('Error al eliminar la captura: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleUpdateCapture = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCapture) return;
+    if (editTelefono && editTelefono.replace(/\s/g, '').length < 10) {
+      alert('El número de teléfono debe tener al menos 10 dígitos.');
+      return;
+    }
+    try {
+      await api.put(`/captures/${editingCapture.id}`, {
+        traffic_light: editTrafficLight,
+        needs_transport: editNeedsTransport,
+        telefono: editTelefono ? editTelefono.replace(/\s/g, '') : ''
+      });
+      alert('Elector actualizado correctamente.');
+      setEditingCapture(null);
+      if (selectedCoordDetails) {
+        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data));
+      }
+      loadData();
+    } catch (err: any) {
+      console.error('Error updating capture:', err);
+      alert('Error al actualizar la captura: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -1996,16 +2025,31 @@ const CommandCenter = () => {
                               </td>
                               <td style={{ padding: '1.25rem' }}>
                                 <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                                  <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Contactar por WhatsApp">
                                     <MessageSquare size={16} />
                                   </button>
                                   {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA', 'PADRINO', 'COORDINADOR', 'SUBJEFE'].includes(authUser?.role || '') && (
-                                    <button 
-                                      onClick={() => handleDeleteIndividualCapture(e.id, `${e.nombre} ${e.apellido}`)} 
-                                      style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
+                                    <>
+                                      <button 
+                                        onClick={() => {
+                                          setEditingCapture(e);
+                                          setEditTrafficLight(e.traffic_light || 'GREEN');
+                                          setEditNeedsTransport(e.needs_transport === 1);
+                                          setEditTelefono(e.telefono || '');
+                                        }}
+                                        title="Editar Color / Datos"
+                                        style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--plra-300)', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                      >
+                                        <Edit size={16} />
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteIndividualCapture(e.id, `${e.nombre} ${e.apellido}`)} 
+                                        title="Eliminar Captura"
+                                        style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               </td>
@@ -2553,6 +2597,150 @@ const CommandCenter = () => {
                 >
                   <Download size={16} /> {isGeneratingDisputesPDF ? 'GENERANDO...' : 'DESCARGAR PDF'}
                 </button>
+              </motion.div>
+            </div>
+          )}
+
+          {editingCapture && (
+            <div className="modal-overlay" onClick={() => setEditingCapture(null)} style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)', zIndex: 999999 }}>
+              <motion.div
+                className="modal-content"
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                onClick={e => e.stopPropagation()}
+                style={{ maxWidth: '500px', width: '95%', padding: 0, borderRadius: '24px', border: '1px solid var(--border)', overflow: 'hidden' }}
+              >
+                <div style={{ padding: '1.5rem', background: 'var(--surface-light)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: 'white' }}>Editar Elector</h3>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'var(--text-3)' }}>Modificar datos de la captura de elector</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setEditingCapture(null)}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.5rem', color: 'var(--text)', cursor: 'pointer' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdateCapture} style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {/* Elector Info */}
+                  <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid var(--border)' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>{editingCapture.nombre} {editingCapture.apellido}</p>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600 }}>CI: {editingCapture.elector_ci}</p>
+                  </div>
+
+                  {/* Phone Input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Teléfono (WhatsApp)</label>
+                    <input 
+                      type="text"
+                      placeholder="Ej: 0981123456"
+                      value={editTelefono}
+                      onChange={e => setEditTelefono(e.target.value.replace(/[^\d+]/g, ''))}
+                      style={{
+                        background: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        color: 'white',
+                        padding: '0.8rem 1rem',
+                        fontSize: '0.9rem',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Needs Transport Toggle */}
+                  <div 
+                    onClick={() => setEditNeedsTransport(!editNeedsTransport)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.85rem 1rem',
+                      background: editNeedsTransport ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${editNeedsTransport ? 'var(--plra-300)' : 'var(--border)'}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <Truck size={18} style={{ color: editNeedsTransport ? 'var(--plra-300)' : 'var(--text-3)' }} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>Necesita Transporte</span>
+                    </div>
+                    <div style={{
+                      width: '36px', height: '18px', borderRadius: '9px',
+                      background: editNeedsTransport ? 'var(--plra-300)' : 'rgba(255,255,255,0.1)',
+                      position: 'relative'
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 2, left: editNeedsTransport ? 20 : 2,
+                        width: '14px', height: '14px', borderRadius: '7px',
+                        background: 'white', transition: 'left 0.2s'
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Semáforo Color Picker */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Fidelidad (Semáforo)</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                      {[
+                        { id: 'GREEN', label: 'CASA', color: '#22C55E' },
+                        { id: 'YELLOW', label: 'FAMILIARES', color: '#EAB308' },
+                        { id: 'RED', label: 'OTROS', color: '#EF4444' },
+                        { id: 'PURPLE', label: 'VOLUNTARIO', color: '#A855F7' }
+                      ].map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setEditTrafficLight(item.id)}
+                          style={{
+                            padding: '0.6rem 0.25rem',
+                            borderRadius: '10px',
+                            fontSize: '0.65rem',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            background: editTrafficLight === item.id ? `${item.color}25` : 'rgba(255,255,255,0.02)',
+                            color: editTrafficLight === item.id ? item.color : 'var(--text-3)',
+                            border: `1px solid ${editTrafficLight === item.id ? item.color : 'var(--border)'}`
+                          }}
+                        >
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.color, margin: '0 auto 0.25rem' }} />
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setEditingCapture(null)}
+                      style={{
+                        flex: 1, padding: '0.8rem', borderRadius: '12px', border: '1px solid var(--border)',
+                        background: 'var(--surface-light)', color: 'var(--text-2)', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      style={{
+                        flex: 1, padding: '0.8rem', borderRadius: '12px', border: 'none',
+                        background: 'var(--plra-500)', color: 'white', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer'
+                      }}
+                    >
+                      Guardar Cambios
+                    </button>
+                  </div>
+
+                </form>
               </motion.div>
             </div>
           )}
