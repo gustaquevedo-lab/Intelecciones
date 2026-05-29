@@ -1999,7 +1999,11 @@ const CommandCenter = () => {
                                   <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <MessageSquare size={16} />
                                   </button>
+<<<<<<< HEAD
                                   {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA', 'PADRINO', 'COORDINADOR', 'SUBJEFE'].includes(authUser?.role || '') && (
+=======
+                                  {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(authUser?.role || '') && (
+>>>>>>> 8cae76e66059d4985908b2aad3dbd708610bf2d4
                                     <button 
                                       onClick={() => handleDeleteIndividualCapture(e.id, `${e.nombre} ${e.apellido}`)} 
                                       style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

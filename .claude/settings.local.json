@@ -44,9 +44,13 @@
       "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" push origin main)",
       "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" add backend/src/db.ts backend/src/server.ts frontend/src/pages/SuperAdmin.tsx)",
       "Bash(npm uninstall *)",
+<<<<<<< HEAD
       "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" add backend/src/whatsappService.ts backend/package.json backend/package-lock.json)",
       "Bash(cd \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\\\\frontend\" && npx tsc --noEmit 2>&1 | head -20 && cd \"..\\\\backend\" && npx tsc --noEmit 2>&1 | head -20)",
       "WebFetch(domain:intelecciones-production.up.railway.app)"
+=======
+      "Bash(git -C \"C:\\\\Users\\\\Gustavo\\\\OneDrive\\\\Dev\\\\Intelecciones\" add backend/src/whatsappService.ts backend/package.json backend/package-lock.json)"
+>>>>>>> 8cae76e66059d4985908b2aad3dbd708610bf2d4
     ]
   }
 }
