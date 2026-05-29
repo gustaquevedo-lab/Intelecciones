@@ -3963,16 +3963,14 @@ app.get('/api/structure/padrinos/:id/coordinators', (req, res) => {
   try {
     const coordinators = db.prepare(`
       SELECT u.id, u.nombre, u.photo_url, u.telefono,
-             COUNT(ec.id)                                           AS total_electors,
-             COUNT(CASE WHEN ec.traffic_light='GREEN'  THEN 1 END) AS green,
-             COUNT(CASE WHEN ec.traffic_light='YELLOW' THEN 1 END) AS yellow,
-             COUNT(CASE WHEN ec.traffic_light='RED'    THEN 1 END) AS red,
-             COUNT(CASE WHEN ec.traffic_light='PURPLE' THEN 1 END) AS purple,
-             COUNT(CASE WHEN ec.needs_transport=1      THEN 1 END) AS transport_total
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) AS total_electors,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='GREEN') AS green,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='YELLOW') AS yellow,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='RED') AS red,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='PURPLE') AS purple,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport=1) AS transport_total
       FROM users u
-      LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
-      GROUP BY u.id
       ORDER BY u.nombre
     `).all(id);
 
@@ -4228,16 +4226,15 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
       coordinators = db.prepare(`
         SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
                u.distrito, u.parent_id, l.list_number,
-               COUNT(ec.id) AS total_captures,
-               SUM(CASE WHEN ec.traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
-               SUM(CASE WHEN ec.traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
-               SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red,
-               SUM(CASE WHEN ec.needs_transport=1      THEN 1 ELSE 0 END) AS transport_total
+               (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) AS total_captures,
+               (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='GREEN') AS green,
+               (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='YELLOW') AS yellow,
+               (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='RED') AS red,
+               (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport=1) AS transport_total
         FROM users u
         LEFT JOIN lists l ON u.assigned_list_id = l.id
-        LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
         WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')
-        GROUP BY u.id ORDER BY u.nombre
+        ORDER BY u.nombre
       `).all(requesterId);
     }
 
@@ -4684,15 +4681,14 @@ app.get('/api/my-team/padrino/:id/coordinators', requireRole('SUPERUSUARIO','JEF
   try {
     const coordinators = db.prepare(`
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
-             COUNT(ec.id) AS total_captures,
-             SUM(CASE WHEN ec.traffic_light='GREEN'  THEN 1 ELSE 0 END) AS green,
-             SUM(CASE WHEN ec.traffic_light='YELLOW' THEN 1 ELSE 0 END) AS yellow,
-             SUM(CASE WHEN ec.traffic_light='RED'    THEN 1 ELSE 0 END) AS red,
-             SUM(CASE WHEN ec.needs_transport=1      THEN 1 ELSE 0 END) AS transport_total
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) AS total_captures,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='GREEN') AS green,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='YELLOW') AS yellow,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light='RED') AS red,
+             (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport=1) AS transport_total
       FROM users u
-      LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')
-      GROUP BY u.id ORDER BY u.nombre
+      ORDER BY u.nombre
     `).all(padrinoId);
     res.json(coordinators);
   } catch (err: any) {
