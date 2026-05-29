@@ -562,13 +562,15 @@ const getCachedUserInfo = (user_id: string): CachedUser | null => {
 const clearUserCache = (user_id: string | number) => _userCache.delete(String(user_id));
 
 // ── Role-based access middleware ────────────────────────────────────────────
-const requireRole = (...roles: string[]) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const role = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
-  if (!roles.map(r => r.toUpperCase()).includes(role)) {
-    return res.status(403).json({ error: 'Acceso denegado. Rol insuficiente.' });
-  }
-  next();
-};
+function requireRole(...roles: string[]) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const role = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+    if (!roles.map(r => r.toUpperCase()).includes(role)) {
+      return res.status(403).json({ error: 'Acceso denegado. Rol insuficiente.' });
+    }
+    next();
+  };
+}
 // ────────────────────────────────────────────────────────────────────────────
 
 const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
@@ -2183,10 +2185,69 @@ app.post('/api/users', (req, res) => {
 });
 
 app.get('/api/users', (req, res) => {
-  const sec = getSecurityFilter(req, 'u'); // Use 'u' for users table filter
-  const params = sec.params || [];
-  
+  const requesterId = req.headers['x-user-id'] as string;
+  const role = getRole(req);
+
   try {
+    let limitStr = '';
+    let offsetStr = '';
+    const limit = parseInt(req.query.limit as string);
+    const offset = parseInt(req.query.offset as string);
+    if (!isNaN(limit)) {
+      limitStr = ` LIMIT ${limit}`;
+      if (!isNaN(offset)) {
+         offsetStr = ` OFFSET ${offset}`;
+      }
+    } else {
+      // Default safety limit for massive tables
+      limitStr = ` LIMIT 1500`;
+    }
+
+    // Optimization: If parent_id is requested and requester is authorized, query directly without slow OR EXISTS security filter
+    if (req.query.parent_id) {
+      const parentId = String(req.query.parent_id);
+      let isAuthorized = false;
+
+      if (parentId === requesterId) {
+        isAuthorized = true;
+      } else if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN') {
+        isAuthorized = true;
+      } else if (role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
+        const requesterInfo = getCachedUserInfo(requesterId);
+        const targetParentInfo = getCachedUserInfo(parentId);
+        if (requesterInfo && targetParentInfo) {
+          const campaignMatch = !requesterInfo.campaign_id || !targetParentInfo.campaign_id || requesterInfo.campaign_id === targetParentInfo.campaign_id;
+          const districtMatch = !requesterInfo.distrito || !targetParentInfo.distrito || requesterInfo.distrito.toUpperCase().trim() === targetParentInfo.distrito.toUpperCase().trim();
+          if (campaignMatch && districtMatch) {
+            isAuthorized = true;
+          }
+        }
+      }
+
+      if (isAuthorized) {
+        const query = `
+          SELECT 
+            u.*, 
+            l.list_number, 
+            l.type as list_type, 
+            COALESCE(c.id, u.assigned_campaign_id) as effective_campaign_id,
+            c.name as campaign_name,
+            p.nombre as parent_name
+          FROM users u
+          LEFT JOIN lists l ON u.assigned_list_id = l.id
+          LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+          LEFT JOIN users p ON u.parent_id = p.id
+          WHERE u.parent_id = ?
+        `;
+        const users = db.prepare(query + limitStr + offsetStr).all(parentId);
+        console.log(`[ADMIN] Sirviendo ${users.length} usuarios por parent_id (bypass filtro de distrito).`);
+        return res.json(users);
+      }
+    }
+
+    // Fallback: Standard query with sec.sql filter
+    const sec = getSecurityFilter(req, 'u');
+    const params = sec.params || [];
     let query = `
       SELECT 
         u.*, 
@@ -2203,20 +2264,6 @@ app.get('/api/users', (req, res) => {
     `;
     
     let users;
-    let limitStr = '';
-    let offsetStr = '';
-    const limit = parseInt(req.query.limit as string);
-    const offset = parseInt(req.query.offset as string);
-    if (!isNaN(limit)) {
-      limitStr = ` LIMIT ${limit}`;
-      if (!isNaN(offset)) {
-         offsetStr = ` OFFSET ${offset}`;
-      }
-    } else {
-      // Default safety limit for massive tables
-      limitStr = ` LIMIT 1500`;
-    }
-
     if (req.query.parent_id) {
       users = db.prepare(query + ' AND u.parent_id = ?' + limitStr + offsetStr).all(...params, req.query.parent_id);
     } else {
@@ -3792,11 +3839,51 @@ app.get('/api/stats/command', (req, res) => {
 
 
 app.get('/api/padrino/team-stats', (req, res) => {
-  const padrino_id = req.query.padrino_id;
+  const padrino_id = req.query.padrino_id as string;
+  const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
-  const sec = getSecurityFilter(req, 'u');
 
   try {
+    // Determine if we should bypass the slow security filter
+    let isAuthorized = false;
+    if (padrino_id) {
+      if (padrino_id === requesterId) {
+        isAuthorized = true;
+      } else if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN') {
+        isAuthorized = true;
+      } else if (role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
+        const requesterInfo = getCachedUserInfo(requesterId);
+        const targetPadrinoInfo = getCachedUserInfo(padrino_id);
+        if (requesterInfo && targetPadrinoInfo) {
+          const campaignMatch = !requesterInfo.campaign_id || !targetPadrinoInfo.campaign_id || requesterInfo.campaign_id === targetPadrinoInfo.campaign_id;
+          const districtMatch = !requesterInfo.distrito || !targetPadrinoInfo.distrito || requesterInfo.distrito.toUpperCase().trim() === targetPadrinoInfo.distrito.toUpperCase().trim();
+          if (campaignMatch && districtMatch) {
+            isAuthorized = true;
+          }
+        }
+      }
+    }
+
+    if (padrino_id && isAuthorized) {
+      // Direct, indexed search by parent_id using subqueries - extremely fast (0ms)
+      const stats = db.prepare(`
+        SELECT 
+          u.id, u.nombre, u.username, u.photo_url, u.telefono, u.distrito,
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) as total_electors,
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') as green,
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') as yellow,
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'RED') as red,
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') as purple,
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) as transport_needed
+        FROM users u
+        WHERE u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA') AND u.parent_id = ?
+      `).all(padrino_id);
+      
+      return res.json(stats);
+    }
+
+    // Fallback to original slower path with security filter if queried without padrino_id or not explicitly authorized
+    const sec = getSecurityFilter(req, 'u');
     let whereClause = "u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')";
     let params: any[] = [];
 
