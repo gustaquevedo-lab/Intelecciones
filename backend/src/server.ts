@@ -387,6 +387,59 @@ app.get('/api/me', (req, res) => {
   }
 });
 
+// --- SSE Push Notifications System ---
+export const sseClients = new Map<string, express.Response>();
+
+app.get('/api/stream/events', (req, res) => {
+  const userId = req.query.userId as string;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+  // Set headers for Server-Sent Events
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders(); // flush the headers to establish SSE
+
+  // Tell the client that connection is established
+  res.write(`data: ${JSON.stringify({ type: 'CONNECTED', message: 'SSE Connection Established' })}\n\n`);
+
+  // Register client
+  sseClients.set(userId, res);
+  console.log(`[SSE] Client connected: ${userId}. Total clients: ${sseClients.size}`);
+
+  // Handle client disconnect
+  req.on('close', () => {
+    sseClients.delete(userId);
+    console.log(`[SSE] Client disconnected: ${userId}. Total clients: ${sseClients.size}`);
+  });
+});
+
+app.post('/api/command/push-message', requireRole('SUPERUSUARIO', 'COORDINADOR', 'SUPER_ADMIN'), (req, res) => {
+  const { targetUserId, title, body, type } = req.body;
+  if (!targetUserId || !title || !body) {
+    return res.status(400).json({ error: 'Missing targetUserId, title or body' });
+  }
+
+  const clientRes = sseClients.get(targetUserId.toString());
+  if (clientRes) {
+    const payload = {
+      type: 'PUSH_MESSAGE',
+      data: {
+        id: Date.now(),
+        title,
+        body,
+        type: type || 'info',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: false
+      }
+    };
+    clientRes.write(`data: ${JSON.stringify(payload)}\n\n`);
+    res.json({ success: true, message: 'Message sent via SSE' });
+  } else {
+    res.status(404).json({ error: 'User is not currently connected to SSE stream' });
+  }
+});
+
 app.get('/api/debug/db-info', (req, res) => {
   const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
   const dbPath = path.join(dbDir, 'intellecciones.db');

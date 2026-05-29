@@ -2278,7 +2278,7 @@ const CoordinatorApp = () => {
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 9000,
+              zIndex: 1000000,
               display: 'flex',
               alignItems: 'flex-end',
               justifyContent: 'center',
@@ -2521,7 +2521,7 @@ const CoordinatorApp = () => {
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 9100,
+              zIndex: 1000000,
               display: 'flex',
               alignItems: 'flex-end',
               justifyContent: 'center',
