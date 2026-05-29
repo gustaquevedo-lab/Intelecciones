@@ -9,7 +9,7 @@ import {
   ChevronDown,
   Download, MapPin, Bell, X, Search,
   ChevronRight, Truck, Target, MessageSquare, Mic, Clock,
-  RefreshCw, CheckCircle, Plus, ExternalLink
+  RefreshCw, CheckCircle, Plus, ExternalLink, Trash2
 } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import MainLayout from '../components/MainLayout';
@@ -1071,6 +1071,55 @@ const CommandCenter = () => {
     } catch (err) { console.error(err); }
   };
 
+  const handleWipeCoordinatorCaptures = async (coordinatorId: number) => {
+    const confirmText = `¿Está seguro de que desea eliminar TODAS las capturas de este coordinador? Esta acción no se puede deshacer y liberará a todos sus electores.`;
+    if (!window.confirm(confirmText)) return;
+    
+    const doubleCheck = prompt(`Por favor, escriba "ELIMINAR" para confirmar la eliminación masiva de capturas de ${selectedCoordDetails?.nombre}:`);
+    if (doubleCheck !== 'ELIMINAR') {
+      alert('Confirmación incorrecta. Acción cancelada.');
+      return;
+    }
+
+    try {
+      await api.delete(`/coordinators/${coordinatorId}/captures`);
+      alert('Todas las capturas del coordinador fueron eliminadas correctamente.');
+      setElectorDetails([]);
+      if (selectedPadrino) {
+        api.get(`/structure/padrinos/${selectedPadrino.id}/coordinators`).then(res => {
+          setSubStructureData(res.data.coordinators || []);
+          setPadrinoCaptures(res.data.padrino_captures || null);
+        });
+      }
+      loadData();
+    } catch (err: any) {
+      console.error('Error wiping coordinator captures:', err);
+      alert('Error al eliminar las capturas: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteIndividualCapture = async (captureId: number, electorName: string) => {
+    if (!window.confirm(`¿Está seguro de que desea eliminar la captura de ${electorName}? Esta acción liberará al elector.`)) return;
+
+    try {
+      await api.delete(`/captures/${captureId}`);
+      alert('La captura fue eliminada correctamente.');
+      if (selectedCoordDetails) {
+        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data));
+      }
+      if (selectedPadrino) {
+        api.get(`/structure/padrinos/${selectedPadrino.id}/coordinators`).then(res => {
+          setSubStructureData(res.data.coordinators || []);
+          setPadrinoCaptures(res.data.padrino_captures || null);
+        });
+      }
+      loadData();
+    } catch (err: any) {
+      console.error('Error deleting capture:', err);
+      alert('Error al eliminar la captura: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
 
   const handleLocalClick = (localId: string) => {
     setSelectedLocal(localId);
@@ -1891,9 +1940,23 @@ const CommandCenter = () => {
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0 }}>{electorDetails.length} electores bajo gestión operativa</p>
                         </div>
                       </div>
-                      <a href={`https://wa.me/${selectedCoordDetails.telefono?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ background: '#22C55E', color: 'white', padding: '0.6rem 1.25rem', borderRadius: '14px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <MessageSquare size={18} /> CONTACTAR
-                      </a>
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <a href={`https://wa.me/${selectedCoordDetails.telefono?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ background: '#22C55E', color: 'white', padding: '0.6rem 1.25rem', borderRadius: '14px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <MessageSquare size={18} /> CONTACTAR
+                        </a>
+                        {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(authUser?.role || '') && selectedCoordDetails.role !== 'PADRINO_DIRECT' && (
+                          <button
+                            onClick={() => handleWipeCoordinatorCaptures(selectedCoordDetails.id)}
+                            style={{
+                              background: '#EF4444', color: 'white', padding: '0.6rem 1.25rem', borderRadius: '14px',
+                              border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 900,
+                              display: 'flex', alignItems: 'center', gap: '0.6rem'
+                            }}
+                          >
+                            <Trash2 size={18} /> ELIMINAR TODAS LAS CAPTURAS
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -1932,9 +1995,19 @@ const CommandCenter = () => {
                                 </div>
                               </td>
                               <td style={{ padding: '1.25rem' }}>
-                                <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer' }}>
-                                  <MessageSquare size={16} />
-                                </button>
+                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                  <button onClick={() => window.open(`https://wa.me/${e.telefono?.replace(/\D/g, '')}`, '_blank')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <MessageSquare size={16} />
+                                  </button>
+                                  {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA', 'PADRINO', 'COORDINADOR', 'SUBJEFE'].includes(authUser?.role || '') && (
+                                    <button 
+                                      onClick={() => handleDeleteIndividualCapture(e.id, `${e.nombre} ${e.apellido}`)} 
+                                      style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', padding: '0.5rem', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}

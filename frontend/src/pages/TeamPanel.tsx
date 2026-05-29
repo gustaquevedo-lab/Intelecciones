@@ -788,6 +788,18 @@ const TeamPanel = () => {
     }
   };
 
+  const handleDeleteIndividualCapture = async (captureId: number, electorName: string) => {
+    if (!window.confirm(`¿Está seguro de que desea eliminar la captura de ${electorName}? Esta acción liberará al elector.`)) return;
+    try {
+      await api.delete(`/captures/${captureId}`);
+      alert('La captura fue eliminada correctamente.');
+      loadReportsData();
+    } catch (err: any) {
+      console.error('Error deleting capture:', err);
+      alert('Error al eliminar la captura: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   const handleEditUser = (targetUser: any, onSave: () => void) => {
     setEditingUser({
       ...targetUser,
@@ -2159,6 +2171,7 @@ const TeamPanel = () => {
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Captado Por</th>
                         <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Semáforo</th>
                         <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Transp.</th>
+                        <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#334155' }} className="no-print">Acción</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2188,6 +2201,27 @@ const TeamPanel = () => {
                           </td>
                           <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 700, color: e.needs_transport ? '#2563eb' : '#64748b' }}>
                             {e.needs_transport ? "SÍ" : "NO"}
+                          </td>
+                          <td style={{ padding: '4px 6px', textAlign: 'center' }} className="no-print">
+                            {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA', 'PADRINO', 'COORDINADOR', 'SUBJEFE'].includes(user?.role || '') && (
+                              <button
+                                title="Eliminar Captura"
+                                onClick={() => handleDeleteIndividualCapture(e.capture_id, `${e.nombre} ${e.apellido}`)}
+                                style={{
+                                  background: 'rgba(239,68,68,0.1)',
+                                  border: '1px solid rgba(239,68,68,0.2)',
+                                  color: '#EF4444',
+                                  padding: '0.3rem',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

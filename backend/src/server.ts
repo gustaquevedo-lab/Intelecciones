@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { z } from 'zod';
-import db from './db';
+import db, { runBootstrapChecks } from './db';
 import { whatsappService } from './whatsappService';
 import * as XLSX from 'xlsx';
 
@@ -317,9 +317,9 @@ const ElectorSchema = z.object({
 
 const CaptureSchema = z.object({
   elector_ci: z.string(),
-  coordinator_id: z.number(), 
-  lat: z.number(),
-  lng: z.number(),
+  coordinator_id: z.coerce.number(), 
+  lat: z.coerce.number(),
+  lng: z.coerce.number(),
   traffic_light: z.enum(['GREEN', 'YELLOW', 'RED', 'PURPLE']),
   needs_transport: z.boolean().optional(),
   telefono: z.string().min(6, "El teléfono es obligatorio"),
@@ -533,12 +533,12 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     const role = (user?.role || headerRole || 'GUEST').toUpperCase().trim();
     const normalizedActiveDistrict = activeDistrict ? activeDistrict.toUpperCase().trim() : null;
 
-    // 1. Column name mapping: 'lists' and 'electors' use 'ciudad', others use 'distrito'
+    // 1. Column name mapping: 'lists' uses 'ciudad', others use 'distrito'
     let distColumn = 'distrito';
-    if (tableAlias === 'l' || tableAlias === 'e') distColumn = 'ciudad';
+    if (tableAlias === 'l') distColumn = 'ciudad';
 
     // 2. Admin Isolation: SuperUsers see everything, Jefe de Campaña and Subjefes see their scope
-    if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO') {
+    if (role === 'SUPERUSUARIO' || role === 'SUPER_ADMIN' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO' || role === 'CANDIDATO' || role === 'CANDIDATE') {
       let sql = '';
       let params: any[] = [];
 
@@ -546,7 +546,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       let effectiveDistrict = getDistrict(req);
       
       // CRITICAL: If they are a JEFE_CAMPANA/SUBJEFE, their profile district ALWAYS overrides or acts as fallback
-      if ((role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO') && user?.distrito) {
+      if ((role === 'JEFE_CAMPANA' || role === 'SUBJEFE' || role === 'PADRINO' || role === 'CANDIDATO' || role === 'CANDIDATE') && user?.distrito) {
         effectiveDistrict = user.distrito;
       }
 
@@ -562,22 +562,22 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
           )`;
           params.push(d, d, d);
         } else if (tableAlias === 'ec') {
-          sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
-          params.push(d, d);
+          sql += ` AND e.distrito = ?`;
+          params.push(d);
         } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
           // Both conflict endpoints already JOIN electors as 'e' — filter directly on that alias
-          sql += ` AND (e.ciudad = ? OR e.distrito = ?)`;
-          params.push(d, d);
+          sql += ` AND e.distrito = ?`;
+          params.push(d);
         } else {
           // Determine which column to use based on table schema
           let col = 'distrito';
-          if (tableAlias === 'l' || tableAlias === 'e') col = 'ciudad';
+          if (tableAlias === 'l') col = 'ciudad';
           
           sql += ` AND ${tableAlias}.${col} = ?`;
           params.push(d);
           
           // Fallback for tables that have both or might use either
-          if (tableAlias === 'e' || tableAlias === 'loc') {
+          if (tableAlias === 'loc') {
              sql = sql.slice(0, -1); // remove the last '?'
              sql = sql.replace(` AND ${tableAlias}.${col} = `, ` AND (${tableAlias}.ciudad = ? OR ${tableAlias}.distrito = ?)`);
              params.push(d); // add second param for the OR
@@ -586,7 +586,7 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       }
 
       // 2. Campaign/List Isolation for non-SuperUsers (only if no district is assigned)
-      if (role === 'JEFE_CAMPANA' && !effectiveDistrict) {
+      if ((role === 'JEFE_CAMPANA' || role === 'CANDIDATO' || role === 'CANDIDATE') && !effectiveDistrict) {
         if (user?.campaign_id) {
             if (tableAlias === 'e') {
               sql += ` AND (e.campaign_id = ? OR e.campaign_id IS NULL)`;
@@ -649,14 +649,14 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
     let params: any[] = [];
     let targetAlias = tableAlias;
     if (tableAlias === 'ec') {
-      sql = ` AND (e.ciudad = ? OR e.distrito = ?)`;
-      params = [user.distrito, user.distrito];
+      sql = ` AND e.distrito = ?`;
+      params = [user.distrito];
     } else if (tableAlias === 'cc') {
-      sql = ` AND (e.ciudad = ? OR e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
-      params = [user.distrito, user.distrito, user.distrito, user.distrito];
-    } else if (tableAlias === 'cc_history') {
-      sql = ` AND (e.ciudad = ? OR e.distrito = ? OR u_win.distrito = ?)`;
+      sql = ` AND (e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
       params = [user.distrito, user.distrito, user.distrito];
+    } else if (tableAlias === 'cc_history') {
+      sql = ` AND (e.distrito = ? OR u_win.distrito = ?)`;
+      params = [user.distrito, user.distrito];
     } else {
       let targetCol = distColumn;
       sql = ` AND ${targetAlias}.${targetCol} = ?`;
@@ -825,12 +825,19 @@ app.get('/api/electors/:ci', (req, res) => {
     }
   }
   
+  const isReadOnlyRole = ['CANDIDATO', 'CANDIDATE', 'SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(role);
+  const effectiveListId = isReadOnlyRole ? null : list_id;
+
   const elector = db.prepare(`
-    SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, c.telefono
+    SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, 
+           c.telefono as capture_telefono, c.lat as capture_lat, c.lng as capture_lng, c.needs_transport,
+           u.nombre as coordinator_name, p.nombre as padrino_name
     FROM electors e
     LEFT JOIN elector_captures c ON e.ci = c.elector_ci AND (c.list_id = ? OR ? IS NULL)
+    LEFT JOIN users u ON c.coordinator_id = u.id
+    LEFT JOIN users p ON u.parent_id = p.id
     WHERE e.ci = ? ${distritoFilter}
-  `).get(list_id, list_id, ci);
+  `).get(effectiveListId, effectiveListId, ci);
   
   if (elector) {
     res.json(elector);
@@ -950,6 +957,7 @@ app.post('/api/captures', (req, res) => {
     const result = transaction();
     res.json(result);
   } catch (err: any) {
+    console.error('[CAPTURES POST ERROR]', err);
     res.status(400).json({ error: err.message || err.errors });
   }
 });
@@ -1148,14 +1156,21 @@ app.post('/api/voting-locations/:cod/icon', (req, res) => {
 });
 
 app.post('/api/admin/locales/sync-from-padron', (req, res) => {
+  const { district } = req.body;
   try {
-    const rawLocales = db.prepare(`
+    let query = `
       SELECT DISTINCT 
         UPPER(TRIM(local_votacion)) as nombre, 
         UPPER(TRIM(COALESCE(NULLIF(ciudad, ''), NULLIF(distrito, ''), 'SIN ASIGNAR'))) as ciudad
       FROM electors 
       WHERE local_votacion IS NOT NULL AND local_votacion != ''
-    `).all();
+    `;
+    const params: any[] = [];
+    if (district) {
+      query += ` AND (UPPER(TRIM(distrito)) = UPPER(TRIM(?)) OR UPPER(TRIM(ciudad)) = UPPER(TRIM(?)))`;
+      params.push(district, district);
+    }
+    const rawLocales = db.prepare(query).all(...params);
 
     let added = 0;
     const insertStmt = db.prepare(`
@@ -1795,6 +1810,48 @@ app.delete('/api/captures/:id', (req, res) => {
   }
 });
 
+app.delete('/api/coordinators/:id/captures', (req, res) => {
+  const coordinatorId = req.params.id;
+  const userRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+
+  // Validate requester role
+  if (!['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(userRole)) {
+    return res.status(403).json({ error: 'Acceso denegado. Rol insuficiente.' });
+  }
+
+  try {
+    db.transaction(() => {
+      // First, get all captures for this coordinator
+      const captures = db.prepare('SELECT elector_ci FROM elector_captures WHERE coordinator_id = ?').all(coordinatorId) as any[];
+      
+      // Update electors status to Pendiente (optional legacy field)
+      for (const cap of captures) {
+        try {
+          db.prepare("UPDATE electors SET status = 'Pendiente' WHERE ci = ?").run(cap.elector_ci);
+        } catch (e) {
+          // ignore legacy column error
+        }
+      }
+      
+      // Delete captures
+      db.prepare('DELETE FROM elector_captures WHERE coordinator_id = ?').run(coordinatorId);
+      
+      // Clean up capture conflicts associated with deleted captures
+      db.prepare(`
+        DELETE FROM capture_conflicts 
+        WHERE capture_id NOT IN (SELECT id FROM elector_captures)
+           OR capture_id_b NOT IN (SELECT id FROM elector_captures)
+      `).run();
+    })();
+
+    clearElectorsCache();
+    res.json({ success: true, message: 'Todas las capturas del coordinador fueron eliminadas.' });
+  } catch (err: any) {
+    console.error('[WIPE COORDINATOR CAPTURES ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/coordinators/:id/history', (req, res) => {
   try {
     const history = db.prepare(`
@@ -2001,6 +2058,14 @@ app.post('/api/users', (req, res) => {
       if (listInfo?.campaign_id) {
         finalCampaignId = listInfo.campaign_id;
       }
+    }
+  }
+
+  // If list is still not assigned, fall back to the first list of the campaign
+  if (!finalAssignedListId && finalCampaignId) {
+    const firstList = db.prepare('SELECT id FROM lists WHERE campaign_id = ? LIMIT 1').get(finalCampaignId) as any;
+    if (firstList) {
+      finalAssignedListId = firstList.id;
     }
   }
 
@@ -3807,7 +3872,8 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
   const { id } = req.params;
   try {
     const electors = db.prepare(`
-      SELECT COALESCE(e.nombre, 'ELECTOR') as nombre, 
+      SELECT ec.id,
+             COALESCE(e.nombre, 'ELECTOR') as nombre, 
              COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
              ec.elector_ci, 
              COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
@@ -4629,13 +4695,24 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
   
   const user_id = req.headers['x-user-id'] as string;
   const user = getCachedUserInfo(user_id);
-  const terminalId = reqTerminalId || 'default';
+  const campaignId = user?.campaign_id || null;
+
+  const rotateTerminals = reqTerminalId === 'rotate' || req.body.rotateTerminals === true;
+  const terminalId = rotateTerminals ? 'rotate' : (reqTerminalId || 'default');
+
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
 
   try {
     if (!targets || !Array.isArray(targets) || targets.length === 0) {
       return res.status(400).json({ error: 'No se encontraron destinatarios con teléfono' });
+    }
+
+    const activeTerminals = (await whatsappService.getTerminals(campaignId))
+      .filter(t => t.status === 'CONNECTED');
+
+    if (rotateTerminals && activeTerminals.length === 0) {
+      return res.status(400).json({ error: 'No hay terminales activas de WhatsApp conectadas para rotar.' });
     }
 
     // 1. Log entry in DB
@@ -4651,7 +4728,7 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
       targets.length,
       minDelay,
       maxDelay,
-      user?.campaign_id || null
+      campaignId
     );
     const logId = logResult.lastInsertRowid;
 
@@ -4689,6 +4766,39 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           continue;
         }
 
+        // Determine active terminal to use
+        let currentTerminalId = terminalId;
+        if (rotateTerminals && activeTerminals.length > 0) {
+          const terminalIndex = sentInSession % activeTerminals.length;
+          currentTerminalId = activeTerminals[terminalIndex].id;
+        }
+
+        // Check if number is in opt-out list
+        const { isOptedOut } = require('./whatsappAutoresponder');
+        if (isOptedOut(target.telefono)) {
+          failCount++;
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Usuario solicitó exclusión (Opt-out)')`)
+            .run(logId, target.telefono, target.nombre || '');
+          db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
+            .run(successCount, failCount, logId);
+          continue;
+        }
+
+        // Validate number existence on WhatsApp using the selected terminal
+        try {
+          const exists = await whatsappService.checkNumberExists(currentTerminalId, target.telefono);
+          if (!exists) {
+            failCount++;
+            db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'El número no tiene WhatsApp registrado')`)
+              .run(logId, target.telefono, target.nombre || '');
+            db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
+              .run(successCount, failCount, logId);
+            continue;
+          }
+        } catch (err: any) {
+          console.warn(`[BROADCAST] No se pudo verificar la existencia de WhatsApp para ${target.telefono}:`, err.message);
+        }
+
         try {
           // Personalize message content
           let personalizedContent = message || '';
@@ -4712,11 +4822,11 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
 
           // Send message
           if (media_type === 'VOICE' && media_url) {
-            await whatsappService.sendVoice(terminalId, target.telefono, media_url);
+            await whatsappService.sendVoice(currentTerminalId, target.telefono, media_url);
           } else if (media_url) {
-            await whatsappService.sendMedia(terminalId, target.telefono, media_url, personalizedContent);
+            await whatsappService.sendMedia(currentTerminalId, target.telefono, media_url, personalizedContent);
           } else {
-            await whatsappService.sendMessage(terminalId, target.telefono, personalizedContent);
+            await whatsappService.sendMessage(currentTerminalId, target.telefono, personalizedContent);
           }
           successCount++;
           sentInSession++;
@@ -4724,7 +4834,7 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status) VALUES (?, ?, ?, 'SENT')`)
             .run(logId, target.telefono, target.nombre || '');
         } catch (err: any) {
-          console.error(`Broadcast ${logId} failed for ${target.telefono}:`, err);
+          console.error(`Broadcast ${logId} failed for ${target.telefono} on terminal ${currentTerminalId}:`, err);
           failCount++;
           // ❌ Log per-recipient failure
           db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', ?)`)
@@ -4884,6 +4994,15 @@ app.post('/api/whatsapp/broadcast/:id/retry-failed', async (req, res) => {
     const minDelay = orig.min_delay ?? 2;
     const maxDelay = orig.max_delay ?? 5;
 
+    const rotateTerminals = terminalId === 'rotate';
+    const activeTerminals = rotateTerminals 
+      ? (await whatsappService.getTerminals(orig.campaign_id)).filter(t => t.status === 'CONNECTED')
+      : [];
+
+    if (rotateTerminals && activeTerminals.length === 0) {
+      return res.status(400).json({ error: 'No hay terminales activas de WhatsApp conectadas para rotar en el reintento.' });
+    }
+
     const newLog = db.prepare(
       `INSERT INTO whatsapp_broadcast_logs (template_id, custom_message, media_url, media_type, terminal_id, target_count, status, min_delay, max_delay, campaign_id)
        VALUES (?, ?, ?, ?, ?, ?, 'RUNNING', ?, ?, ?)`
@@ -4899,6 +5018,38 @@ app.post('/api/whatsapp/broadcast/:id/retry-failed', async (req, res) => {
         while (log.status === 'PAUSED') { await new Promise(r => setTimeout(r, 1000)); }
 
         const target = failedRows[i];
+
+        // Determine active terminal to use
+        let currentTerminalId = terminalId;
+        if (rotateTerminals && activeTerminals.length > 0) {
+          const terminalIndex = sentInSession % activeTerminals.length;
+          currentTerminalId = activeTerminals[terminalIndex].id;
+        }
+
+        // Check if number is in opt-out list
+        const { isOptedOut } = require('./whatsappAutoresponder');
+        if (isOptedOut(target.telefono)) {
+          failCount++;
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Usuario solicitó exclusión (Opt-out)')`)
+            .run(newLogId, target.telefono, target.nombre || '');
+          db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?').run(successCount, failCount, newLogId);
+          continue;
+        }
+
+        // Validate number existence on WhatsApp using the selected terminal
+        try {
+          const exists = await whatsappService.checkNumberExists(currentTerminalId, target.telefono);
+          if (!exists) {
+            failCount++;
+            db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'El número no tiene WhatsApp registrado')`)
+              .run(newLogId, target.telefono, target.nombre || '');
+            db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?').run(successCount, failCount, newLogId);
+            continue;
+          }
+        } catch (err: any) {
+          console.warn(`[RETRY] No se pudo verificar la existencia de WhatsApp para ${target.telefono}:`, err.message);
+        }
+
         try {
           let content = orig.custom_message || '';
           if (orig.template_id) {
@@ -4908,11 +5059,11 @@ app.post('/api/whatsapp/broadcast/:id/retry-failed', async (req, res) => {
           content = addSubtleVariation(content.replace(/{{nombre}}/g, target.nombre || 'Amigo/a'));
 
           if (orig.media_type === 'VOICE' && orig.media_url) {
-            await whatsappService.sendVoice(terminalId, target.telefono, orig.media_url);
+            await whatsappService.sendVoice(currentTerminalId, target.telefono, orig.media_url);
           } else if (orig.media_url) {
-            await whatsappService.sendMedia(terminalId, target.telefono, orig.media_url, content);
+            await whatsappService.sendMedia(currentTerminalId, target.telefono, orig.media_url, content);
           } else {
-            await whatsappService.sendMessage(terminalId, target.telefono, content);
+            await whatsappService.sendMessage(currentTerminalId, target.telefono, content);
           }
           successCount++;
           sentInSession++;
@@ -5698,6 +5849,11 @@ app.listen(Number(PORT), '0.0.0.0', () => {
 
   serverReady = true;
   console.log('[SYSTEM] Server fully ready.');
+
+  setImmediate(() => {
+    console.log('[SYSTEM] Running async bootstrap checks...');
+    runBootstrapChecks();
+  });
 
   setTimeout(() => {
     console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');

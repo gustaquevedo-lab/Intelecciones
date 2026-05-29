@@ -349,6 +349,7 @@ Status: ${error.response?.status || 'N/A'}
 
   // Form states
   const [showModal, setShowModal] = useState<string | null>(null);
+  const [selectedSyncDistrict, setSelectedSyncDistrict] = useState('');
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [editingList, setEditingList] = useState<List | null>(null);
@@ -999,13 +1000,46 @@ Status: ${error.response?.status || 'N/A'}
   };
 
   const handleSyncLocales = async () => {
+    setIsLoading(true);
     try {
-      const res = await api.post('/admin/locales/sync-from-padron');
-      alert(`Sincronización completada. Se agregaron ${res.data.added} nuevos locales.`);
+      const res = await api.get('/campaigns');
+      const camps = Array.isArray(res.data) ? res.data : [];
+      setCampaigns(camps);
+      
+      const distritos = Array.from(new Set(camps.map(c => c.distrito).filter(Boolean)));
+      if (distritos.length === 0) {
+        alert('No hay distritos configurados en las campañas. Cree una campaña con su distrito primero.');
+        setIsLoading(false);
+        return;
+      }
+      
+      setSelectedSyncDistrict(distritos[0]);
+      setShowModal('sync-distrito');
+    } catch (err) {
+      console.error(err);
+      alert('Error al cargar campañas y distritos.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfirmSyncLocales = async () => {
+    if (!selectedSyncDistrict) {
+      alert('Por favor, seleccione un distrito.');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const res = await api.post('/admin/locales/sync-from-padron', { district: selectedSyncDistrict });
+      alert(`Sincronización completada para el distrito ${selectedSyncDistrict}. Se agregaron ${res.data.added} nuevos locales.`);
+      setShowModal(null);
       fetchData();
     } catch (err) {
       console.error(err);
       alert('Error al sincronizar locales.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -3516,6 +3550,43 @@ Status: ${error.response?.status || 'N/A'}
                       </button>
                     </div>
                   </form>
+                </div>
+              )}
+              {showModal === 'sync-distrito' && (
+                <div style={{ padding: '0.5rem' }}>
+                  <div className="modal-header-premium-styled">
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Sincronizar Locales desde el Padrón</h2>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-3)' }}>Seleccione el distrito para el cual desea importar los locales electorales</p>
+                    </div>
+                    <button className="icon-btn" onClick={() => setShowModal(null)}><X size={20} /></button>
+                  </div>
+                  <div className="modal-body-premium-styled" style={{ marginTop: '1rem' }}>
+                    <div className="form-group">
+                      <label>Distrito Electoral</label>
+                      <select
+                        className="modern-input-premium-styled"
+                        value={selectedSyncDistrict}
+                        onChange={e => setSelectedSyncDistrict(e.target.value)}
+                        style={{ width: '100%' }}
+                      >
+                        {Array.from(new Set(campaigns.map(c => c.distrito).filter(Boolean))).map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="modal-footer-premium-styled" style={{ marginTop: '1.5rem' }}>
+                    <button type="button" onClick={() => setShowModal(null)} className="btn-cancel-styled">Cancelar</button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmSyncLocales}
+                      className="btn-confirm-styled"
+                      style={{ minWidth: '160px' }}
+                    >
+                      Sincronizar <Activity size={18} style={{ marginLeft: '8px' }} />
+                    </button>
+                  </div>
                 </div>
               )}
             </motion.div>

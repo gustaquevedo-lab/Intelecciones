@@ -34,7 +34,7 @@ const Login = () => {
     try {
       const ctrl = new AbortController();
       const timeout = setTimeout(() => ctrl.abort(), 8000);
-      const res = await fetch(`${API_BASE.replace('/api', '')}/api/health`, {
+      const res = await fetch(`${API_BASE}/health`, {
         signal: ctrl.signal,
         mode: 'cors',
         cache: 'no-store',

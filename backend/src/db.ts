@@ -314,10 +314,12 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id);
       CREATE INDEX IF NOT EXISTS idx_users_ci ON users(ci);
       CREATE INDEX IF NOT EXISTS idx_users_distrito ON users(distrito);
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
       CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
       CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
       CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(distrito);
+      CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors(ciudad);
 
       CREATE INDEX IF NOT EXISTS idx_captures_ci ON elector_captures(elector_ci);
       CREATE INDEX IF NOT EXISTS idx_captures_coord ON elector_captures(coordinator_id);
@@ -335,6 +337,9 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number);
       CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_log ON whatsapp_broadcast_recipients(log_id);
       CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_status ON whatsapp_broadcast_recipients(log_id, status);
+
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
     `);
 
     const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
@@ -543,34 +548,51 @@ try {
     db.transaction(() => {
       // 1. Clean Electors
       db.exec(`
-        UPDATE electors SET 
+        UPDATE OR IGNORE electors SET 
           ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
           ciudad = UPPER(TRIM(ciudad)), 
           distrito = UPPER(TRIM(distrito)) 
-        WHERE ci IS NOT NULL;
+        WHERE ci IS NOT NULL AND (
+          ci LIKE '%.%' OR 
+          ci LIKE '% %' OR 
+          ciudad != UPPER(TRIM(ciudad)) OR 
+          distrito != UPPER(TRIM(distrito))
+        );
       `);
       
       // 2. Clean Captures (Critical for JOINs)
       db.exec(`
-        UPDATE elector_captures SET 
+        UPDATE OR IGNORE elector_captures SET 
           elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
-        WHERE elector_ci IS NOT NULL;
+        WHERE elector_ci IS NOT NULL AND (
+          elector_ci LIKE '%.%' OR 
+          elector_ci LIKE '% %'
+        );
       `);
 
       // 3. Clean Conflicts
       db.exec(`
-        UPDATE capture_conflicts SET 
+        UPDATE OR IGNORE capture_conflicts SET 
           elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
-        WHERE elector_ci IS NOT NULL;
+        WHERE elector_ci IS NOT NULL AND (
+          elector_ci LIKE '%.%' OR 
+          elector_ci LIKE '% %'
+        );
       `);
 
       // 4. Clean Users (CI and Username are often the same)
       db.exec(`
-        UPDATE users SET 
+        UPDATE OR IGNORE users SET 
           ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
           username = REPLACE(REPLACE(TRIM(username), '.', ''), ' ', ''),
           distrito = UPPER(TRIM(distrito)) 
-        WHERE ci IS NOT NULL;
+        WHERE ci IS NOT NULL AND (
+          ci LIKE '%.%' OR 
+          ci LIKE '% %' OR 
+          username LIKE '%.%' OR 
+          username LIKE '% %' OR
+          distrito != UPPER(TRIM(distrito))
+        );
       `);
 
       // 5. RE-BACKFILL: Now that CIs are clean, we might find new duplicates that were fragmented
@@ -639,6 +661,23 @@ export const runBootstrapChecks = () => {
           SELECT capture_id_b FROM capture_conflicts WHERE status = 'PENDING' OR status = 'WAITING_CONSENT'
         )
       `).run();
+
+      // Self-healing: Assign lists to coordinators/padrinos who don't have one in production
+      const usersWithoutList = db.prepare(`
+        SELECT id, assigned_campaign_id 
+        FROM users 
+        WHERE assigned_list_id IS NULL AND role IN ('COORDINADOR', 'PADRINO', 'SUBJEFE')
+      `).all() as any[];
+
+      for (const u of usersWithoutList) {
+        if (u.assigned_campaign_id) {
+          const list = db.prepare('SELECT id FROM lists WHERE campaign_id = ? LIMIT 1').get(u.assigned_campaign_id) as any;
+          if (list) {
+            db.prepare('UPDATE users SET assigned_list_id = ? WHERE id = ?').run(list.id, u.id);
+            console.log(`[BOOTSTRAP SELF-HEALING] Assigned list ID ${list.id} to user ID ${u.id}`);
+          }
+        }
+      }
     })();
     console.log("DATABASE: Bootstrap checks complete.");
   } catch (e: any) {

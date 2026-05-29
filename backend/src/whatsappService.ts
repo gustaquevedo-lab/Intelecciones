@@ -4,12 +4,14 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   downloadMediaMessage,
   proto,
+  Browsers,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode';
 import db from './db';
 import fs from 'fs';
 import path from 'path';
+import { processIncomingMessage } from './whatsappAutoresponder';
 
 type WASocket = ReturnType<typeof makeWASocket>;
 
@@ -174,7 +176,7 @@ class WhatsAppManager {
       auth: state,
       logger: baileysLogger,
       printQRInTerminal: false,
-      browser: ['Intelecciones', 'Chrome', '121.0.0'],
+      browser: Browsers.macOS('Desktop'),
       generateHighQualityLinkPreview: false,
       syncFullHistory: false,
       connectTimeoutMs: 60000,
@@ -275,6 +277,13 @@ class WhatsAppManager {
               (terminal_id, contact_number, contact_name, body, type, media_url, is_incoming, campaign_id, phone_number)
             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
           `).run(terminalId, from, pushName, body, msgType, mediaUrl, terminal.campaign_id || null, phoneNumber);
+
+          // Run autoresponder asynchronously
+          if (body && msgType === 'chat') {
+            processIncomingMessage(sock, from, body, terminalId).catch(err => {
+              console.error(`[AUTORESPONDER] Error processing message from ${from}:`, err);
+            });
+          }
         } catch (err) {
           console.error('[WHATSAPP] Error saving message:', err);
         }
@@ -329,6 +338,21 @@ class WhatsAppManager {
 
   getStatus(terminalId: string = 'default') {
     return this.terminals.get(terminalId) || null;
+  }
+
+  async checkNumberExists(terminalId: string, number: string): Promise<boolean> {
+    const sock = this.clients.get(terminalId);
+    if (!sock || this.terminals.get(terminalId)?.status !== 'CONNECTED') {
+      throw new Error('Terminal no conectada');
+    }
+    const jid = toJid(number);
+    try {
+      const [result] = await sock.onWhatsApp(jid);
+      return !!result?.exists;
+    } catch (err) {
+      console.warn(`[WHATSAPP][${terminalId}] Error checking onWhatsApp for ${number}:`, err);
+      return true; // Default to true on connection or rate-limit issues to avoid false negatives
+    }
   }
 
   async sendMessage(terminalId: string, number: string, message: string) {

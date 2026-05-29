@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, User,
   Map, Building2, Home,
-  ClipboardCheck, ArrowRight, AlertCircle,
+  ClipboardCheck, ArrowRight, AlertCircle, AlertTriangle,
   CheckCheck, ThumbsUp, HelpCircle, X, Shield, Share2, History, Edit2, Trash2, MessageSquare, Fingerprint, Landmark,
   UserPlus, Camera, LayoutList, Users, Mic, Square, ChevronRight,
   Car, Inbox, Truck, Download, Activity
@@ -165,7 +165,7 @@ const CoordinatorApp = () => {
   const [showModal, setShowModal] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [needsTransport, setNeedsTransport] = useState(false);
-  const [activeTab, setActiveTab] = useState<'search' | 'history' | 'support' | 'coordinators'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'history' | 'support' | 'coordinators' | 'disputes'>('search');
   const [history, setHistory] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [editingCapture, setEditingCapture] = useState<any>(null);
@@ -173,6 +173,11 @@ const CoordinatorApp = () => {
   const [colorCounts, setColorCounts] = useState<any>(null);
   const [locationStats, setLocationStats] = useState<any[]>([]);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
+
+  // States for active disputes tab
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [disputesSearchQuery, setDisputesSearchQuery] = useState('');
+  const [isDisputesLoading, setIsDisputesLoading] = useState(false);
 
   const [showCoordModal, setShowCoordModal] = useState(false);
   const [newCoordCI, setNewCoordCI] = useState('');
@@ -522,7 +527,50 @@ const CoordinatorApp = () => {
     }
   };
 
-  const isReadOnly = user?.role === 'CANDIDATO' || user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+  const isReadOnly = user?.role === 'CANDIDATO' || user?.role === 'CANDIDATE' || user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA';
+
+  const saveElectorToHistory = (electorData: any) => {
+    if (!electorData || !user?.id) return;
+    try {
+      const key = `query_history_${user.id}`;
+      const saved = localStorage.getItem(key);
+      let list = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(list)) list = [];
+      
+      // Evitar duplicados
+      list = list.filter((item: any) => item.ci !== electorData.ci);
+      
+      // Agregar al principio con timestamp
+      const newEntry = {
+        ...electorData,
+        queriedAt: new Date().toISOString()
+      };
+      
+      list.unshift(newEntry);
+      
+      // Limitar a 50
+      if (list.length > 50) {
+        list = list.slice(0, 50);
+      }
+      
+      localStorage.setItem(key, JSON.stringify(list));
+      setHistory(list);
+    } catch (err) {
+      console.error("Error saving search history", err);
+    }
+  };
+
+  const fetchDisputes = async () => {
+    try {
+      setIsDisputesLoading(true);
+      const res = await api.get('/admin/conflicts');
+      setDisputes(res.data || []);
+    } catch (err) {
+      console.error("Error fetching disputes", err);
+    } finally {
+      setIsDisputesLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'history') fetchHistory();
@@ -531,6 +579,7 @@ const CoordinatorApp = () => {
       else if (user?.role === 'PADRINO') fetchMyPadrinoStats();
     }
     if (activeTab === 'support') fetchRequests();
+    if (activeTab === 'disputes') fetchDisputes();
   }, [activeTab, user]);
 
   const fetchRequests = async () => {
@@ -555,12 +604,14 @@ const CoordinatorApp = () => {
           const localResults = await searchElectorOffline(ci);
           if (localResults.length > 0) {
              setElector(localResults[0]);
+             if (isReadOnly) saveElectorToHistory(localResults[0]);
              setError('');
              setIsLoading(false);
              return;
           }
           const res = await api.get(`/electors/${ci}`);
           setElector(res.data);
+          if (isReadOnly) saveElectorToHistory(res.data);
           setError('');
         } catch {
           setElector(null);
@@ -592,8 +643,9 @@ const CoordinatorApp = () => {
       
       if (electorData) {
         setElector(electorData);
+        if (isReadOnly) saveElectorToHistory(electorData);
         if (electorData.traffic_light) {
-          if (electorData.coordinator_id !== user?.id) {
+          if (!isReadOnly && electorData.coordinator_id !== user?.id) {
             setError(`Este elector ya fue captado por ${electorData.coordinator_name || 'otro coordinador'}.`);
           }
         }
@@ -609,6 +661,7 @@ const CoordinatorApp = () => {
       const localResults = await searchElectorOffline(ci);
       if (localResults.length > 0) {
         setElector(localResults[0]);
+        if (isReadOnly) saveElectorToHistory(localResults[0]);
       } else {
         setCustomElectorCI(ci);
         setCustomElectorName('');
@@ -756,6 +809,7 @@ const CoordinatorApp = () => {
         setSuccessMsg('⚠️ Sin conexión. Registro de campo encolado localmente.');
       } else {
         setSuccessMsg('¡Elector registrado y captado con éxito!');
+        fetchHistory();
       }
 
       setShowUnregisteredModal(false);
@@ -813,6 +867,7 @@ const CoordinatorApp = () => {
         setSuccessMsg('⚠️ Sin conexión. El registro se guardó localmente y se sincronizará pronto.');
       } else {
         setSuccessMsg('¡Captura guardada correctamente!');
+        fetchHistory();
       }
       
       setShowModal(false);
@@ -832,8 +887,8 @@ const CoordinatorApp = () => {
 
   const handleUpdateCapture = async (color: string) => {
     if (!editingCapture) return;
-    if (!telefono || telefono.length < 10) {
-      setError('El número de teléfono es obligatorio.');
+    if (telefono && telefono.replace(/\s/g, '').length < 10) {
+      setError('El número de teléfono debe tener al menos 10 dígitos.');
       return;
     }
     try {
@@ -841,7 +896,7 @@ const CoordinatorApp = () => {
       await api.put(`/captures/${editingCapture.id}`, {
         traffic_light: color,
         needs_transport: needsTransport,
-        telefono: telefono.replace(/\s/g, '')
+        telefono: telefono ? telefono.replace(/\s/g, '') : ''
       });
       setSuccessMsg('Registro actualizado.');
       setShowModal(false);
@@ -875,6 +930,29 @@ const CoordinatorApp = () => {
   const fetchHistory = async () => {
     if (!user) return;
     setIsStatsLoading(true);
+    if (isReadOnly) {
+      try {
+        const key = `query_history_${user.id}`;
+        const saved = localStorage.getItem(key);
+        let list = saved ? JSON.parse(saved) : [];
+        if (!Array.isArray(list)) list = [];
+        setHistory(list);
+        
+        const stats = { green: 0, yellow: 0, red: 0, purple: 0 };
+        list.forEach((c: any) => {
+          if (c.traffic_light === 'GREEN') stats.green++;
+          else if (c.traffic_light === 'YELLOW') stats.yellow++;
+          else if (c.traffic_light === 'RED') stats.red++;
+          else if (c.traffic_light === 'PURPLE') stats.purple++;
+        });
+        setColorCounts(stats);
+      } catch (err) {
+        console.error("Error fetching local query history", err);
+      }
+      setIsStatsLoading(false);
+      return;
+    }
+
     try {
       const res = await api.get(`/coordinator/${user.id}/captures`);
       const data = res.data;
@@ -923,7 +1001,24 @@ const CoordinatorApp = () => {
     setShowModal(true);
   };
 
-  const handleDeleteCapture = async (id: number) => {
+  const handleDeleteCapture = async (id: number, electorCi?: string) => {
+    if (isReadOnly) {
+      if (!confirm('¿Seguro que desea eliminar esta consulta del historial?')) return;
+      try {
+        const key = `query_history_${user?.id}`;
+        const saved = localStorage.getItem(key);
+        let list = saved ? JSON.parse(saved) : [];
+        if (Array.isArray(list)) {
+          list = list.filter((item: any) => item.ci !== electorCi && item.id !== id);
+          localStorage.setItem(key, JSON.stringify(list));
+          setHistory(list);
+        }
+      } catch (err) {
+        console.error("Error deleting local query history item", err);
+      }
+      return;
+    }
+
     if (!confirm('¿Seguro que desea eliminar este registro?')) return;
     try {
       setIsLoading(true);
@@ -1013,7 +1108,7 @@ const CoordinatorApp = () => {
           {[
             { id: 'search', icon: <Search size={16} />, label: 'Consulta' },
             { id: 'history', icon: <History size={16} />, label: 'Historial' },
-            { id: 'support', icon: <HelpCircle size={16} />, label: 'Soporte' },
+            ...(isReadOnly ? [{ id: 'disputes', icon: <AlertTriangle size={16} />, label: 'Disputas' }] : [{ id: 'support', icon: <HelpCircle size={16} />, label: 'Soporte' }]),
             ...((user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') ? [{ id: 'coordinators', icon: <Users size={16} />, label: user?.role === 'JEFE_CAMPANA' ? 'Padrinos' : 'Equipos' }] : [])
           ].map((item: any) => (
             <button
@@ -1349,6 +1444,98 @@ const CoordinatorApp = () => {
                 </div>
               </div>
 
+              {elector.traffic_light && (
+                <div className="card-section" style={{ background: 'var(--surface-light)', borderTop: '1px solid var(--border)' }}>
+                  <SectionLabel icon={<AlertCircle size={13} />} text="Detalle de Captación" color="var(--yellow)" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <DataItem 
+                      icon={<User size={18} />} 
+                      iconColor="blue" 
+                      label="Capturado por" 
+                      value={elector.coordinator_name || `Coordinador (ID: ${elector.captured_by})`} 
+                    />
+                    {elector.padrino_name && (
+                      <DataItem 
+                        icon={<Users size={18} />} 
+                        iconColor="purple" 
+                        label="Padrino" 
+                        value={elector.padrino_name} 
+                      />
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '0.75rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.25rem'
+                      }}>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>Prioridad / Color</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                          <span style={{ 
+                            width: '10px', 
+                            height: '10px', 
+                            borderRadius: '50%', 
+                            background: elector.traffic_light === 'GREEN' ? 'var(--green)' : elector.traffic_light === 'YELLOW' ? 'var(--yellow)' : elector.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)' 
+                          }} />
+                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white' }}>
+                            {elector.traffic_light === 'GREEN' ? 'VERDE (Seguro)' : elector.traffic_light === 'YELLOW' ? 'AMARILLO (Dudoso)' : elector.traffic_light === 'PURPLE' ? 'MORADO (Otros)' : 'ROJO (Opositor)'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '0.75rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.25rem'
+                      }}>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase' }}>Transporte</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: elector.needs_transport === 1 ? 'var(--yellow)' : 'var(--text-3)', marginTop: '0.2rem' }}>
+                          {elector.needs_transport === 1 ? '🚗 Necesita transporte' : 'No requiere'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {(elector.capture_lat && elector.capture_lng) ? (
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${elector.capture_lat},${elector.capture_lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          background: 'rgba(59,130,246,0.1)',
+                          border: '1px solid rgba(59,130,246,0.2)',
+                          borderRadius: '12px',
+                          padding: '0.75rem 1rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          color: 'var(--blue-400)',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <MapPin size={16} />
+                        <span>Ver Ubicación de Captura en Google Maps</span>
+                      </a>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0', opacity: 0.5 }}>
+                        <MapPin size={16} style={{ color: 'var(--text-3)' }} />
+                        <span style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>Ubicación geográfica no registrada</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="card-cta-section">
                 <button
                   onClick={handleConfirm}
@@ -1569,7 +1756,7 @@ const CoordinatorApp = () => {
               </div>
             </div>
 
-            <SectionLabel icon={<History size={13} />} text="Mis Capturas Recientes" />
+            <SectionLabel icon={<History size={13} />} text={isReadOnly ? "Historial de Consultas" : "Mis Capturas Recientes"} />
             {isLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {[0, 1, 2].map(i => (
@@ -1579,12 +1766,14 @@ const CoordinatorApp = () => {
             ) : history.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '4rem 2rem', opacity: 0.5 }}>
                 <ClipboardCheck size={40} style={{ marginBottom: '1rem', color: 'var(--text-3)' }} />
-                <p style={{ fontSize: '0.8rem', fontWeight: 600 }}>Aún no has registrado ningún elector.</p>
+                <p style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                  {isReadOnly ? "Aún no has realizado ninguna consulta." : "Aún no has registrado ningún elector."}
+                </p>
               </div>
             ) : (
               history.map((cap) => (
-                <motion.div key={cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : 'var(--red)', border: '1px solid currentColor' }}>
+                <motion.div key={cap.ci || cap.elector_ci || cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : cap.traffic_light === 'RED' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : cap.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)', border: '1px solid currentColor' }}>
                     <User size={20} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1592,11 +1781,16 @@ const CoordinatorApp = () => {
                       <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
                       {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
                     </div>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion}</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.ci || cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion || cap.local}</p>
+                    {isReadOnly && cap.traffic_light && (
+                      <p style={{ fontSize: '0.65rem', color: 'var(--yellow)', marginTop: '0.2rem' }}>
+                        Captado por: {cap.coordinator_name || 'Otro coordinador'} {cap.padrino_name ? `• Padrino: ${cap.padrino_name}` : ''}
+                      </p>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>
-                    <button onClick={() => handleDeleteCapture(cap.id)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    {!isReadOnly && <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>}
+                    <button onClick={() => handleDeleteCapture(cap.id, cap.ci || cap.elector_ci)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
                   </div>
                 </motion.div>
               ))
@@ -1738,6 +1932,145 @@ const CoordinatorApp = () => {
                 </div>
               ))}
             </div>
+          </motion.div>
+        ) : activeTab === 'disputes' ? (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <SectionLabel icon={<AlertTriangle size={13} />} text="Disputas Activas de Captación" color="var(--red)" />
+            
+            <div style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
+              <input
+                type="text"
+                placeholder="Buscar elector en disputa..."
+                value={disputesSearchQuery}
+                onChange={(e) => setDisputesSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '1rem 1rem 1rem 2.75rem',
+                  borderRadius: '16px',
+                  background: 'var(--surface-light)',
+                  border: '1px solid var(--border)',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  outline: 'none',
+                  boxShadow: 'var(--shadow-sm)',
+                  fontFamily: 'var(--font-sans)',
+                  transition: 'all 0.2s',
+                }}
+                onFocus={(e) => e.target.style.borderColor = 'var(--plra-500)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+              />
+            </div>
+
+            {isDisputesLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[0, 1, 2].map(i => (
+                  <Skeleton key={i} height={120} borderRadius="20px" />
+                ))}
+              </div>
+            ) : disputes.length === 0 ? (
+              <div style={{ padding: '4rem 2rem', textAlign: 'center', background: 'var(--surface)', borderRadius: '24px', border: '1px dashed var(--border)' }}>
+                <CheckCheck size={40} style={{ color: 'var(--green)', marginBottom: '1.5rem', opacity: 0.5 }} />
+                <h3 style={{ color: 'var(--text)', fontSize: '1rem', marginBottom: '0.5rem', fontWeight: 700 }}>Territorio Controlado</h3>
+                <p style={{ color: 'var(--text-3)', fontSize: '0.78rem' }}>No hay disputas activas registradas en este distrito.</p>
+              </div>
+            ) : (
+              (() => {
+                const filteredDisputes = disputes.filter(d => 
+                  !disputesSearchQuery || 
+                  `${d.elector_nombre} ${d.elector_apellido} ${d.elector_ci}`.toUpperCase().includes(disputesSearchQuery.toUpperCase())
+                );
+                if (filteredDisputes.length === 0) {
+                  return (
+                    <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.8rem' }}>
+                      No se encontraron resultados para la búsqueda.
+                    </div>
+                  );
+                }
+                return filteredDisputes.map((d: any) => (
+                  <motion.div
+                    key={d.conflict_id}
+                    layout
+                    style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '20px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                      <div>
+                        <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                          {d.elector_nombre} {d.elector_apellido}
+                        </h4>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: '2px 0 0' }}>CI: {Number(d.elector_ci).toLocaleString('es-PY')}</p>
+                      </div>
+                      <span style={{
+                        background: 'rgba(239,68,68,0.1)',
+                        color: 'var(--red)',
+                        border: '1px solid rgba(239,68,68,0.2)',
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '6px',
+                        fontSize: '0.62rem',
+                        fontWeight: 900,
+                        textTransform: 'uppercase'
+                      }}>
+                        Disputa Activa
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Captura Inicial</span>
+                        <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', margin: 0 }}>{d.coord_a || 'Coordinador A'}</p>
+                        {d.padrino_a && <p style={{ fontSize: '0.68rem', color: 'var(--plra-300)', margin: 0 }}>Padrino: {d.padrino_a}</p>}
+                        
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
+                          <span style={{
+                            background: d.tl_a === 'GREEN' ? 'rgba(34,197,94,0.15)' : d.tl_a === 'YELLOW' ? 'rgba(245,158,11,0.15)' : d.tl_a === 'PURPLE' ? 'rgba(168,85,247,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: d.tl_a === 'GREEN' ? 'var(--green)' : d.tl_a === 'YELLOW' ? 'var(--yellow)' : d.tl_a === 'PURPLE' ? '#A855F7' : 'var(--red)',
+                            fontSize: '0.55rem', fontWeight: 900, padding: '0.1rem 0.35rem', borderRadius: '4px'
+                          }}>
+                            {d.tl_a}
+                          </span>
+                          {d.transport_a === 1 && (
+                            <span style={{ background: 'rgba(59,130,246,0.15)', color: 'var(--blue-400)', fontSize: '0.55rem', fontWeight: 900, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                              🚗 TRANSPORTE
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Última Captura</span>
+                        <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', margin: 0 }}>{d.coord_b || 'Coordinador B'}</p>
+                        {d.padrino_b && <p style={{ fontSize: '0.68rem', color: 'var(--plra-300)', margin: 0 }}>Padrino: {d.padrino_b}</p>}
+                        
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
+                          <span style={{
+                            background: d.tl_b === 'GREEN' ? 'rgba(34,197,94,0.15)' : d.tl_b === 'YELLOW' ? 'rgba(245,158,11,0.15)' : d.tl_b === 'PURPLE' ? 'rgba(168,85,247,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: d.tl_b === 'GREEN' ? 'var(--green)' : d.tl_b === 'YELLOW' ? 'var(--yellow)' : d.tl_b === 'PURPLE' ? '#A855F7' : 'var(--red)',
+                            fontSize: '0.55rem', fontWeight: 900, padding: '0.1rem 0.35rem', borderRadius: '4px'
+                          }}>
+                            {d.tl_b}
+                          </span>
+                          {d.transport_b === 1 && (
+                            <span style={{ background: 'rgba(59,130,246,0.15)', color: 'var(--blue-400)', fontSize: '0.55rem', fontWeight: 900, padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
+                              🚗 TRANSPORTE
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ));
+              })()
+            )}
           </motion.div>
         ) : null}
         
@@ -1898,8 +2231,8 @@ const CoordinatorApp = () => {
                       )}
                     </div>
                       
-                      {cap.telefono && (
-                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
+                        {cap.telefono && (
                           <a 
                             href={`https://wa.me/${formatWhatsApp(cap.telefono)}`} 
                             target="_blank" 
@@ -1908,20 +2241,22 @@ const CoordinatorApp = () => {
                           >
                             <MessageSquare size={12} /> WHATSAPP
                           </a>
-                          <button 
-                            onClick={() => handleEditHistory(cap)}
-                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.4rem', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteCapture(cap.id)}
-                            style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.4rem', color: 'var(--red)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
+                        )}
+                        <button 
+                          onClick={() => handleEditHistory(cap)}
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.4rem', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: cap.telefono ? 'none' : 1 }}
+                        >
+                          <Edit2 size={14} />
+                          {!cap.telefono && <span style={{ marginLeft: '4px', fontSize: '0.65rem', fontWeight: 800 }}>EDITAR</span>}
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCapture(cap.id)}
+                          style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.4rem', color: 'var(--red)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: cap.telefono ? 'none' : 1 }}
+                        >
+                          <Trash2 size={14} />
+                          {!cap.telefono && <span style={{ marginLeft: '4px', fontSize: '0.65rem', fontWeight: 800 }}>ELIMINAR</span>}
+                        </button>
+                      </div>
                     </div>
                 ))}
               </div>
