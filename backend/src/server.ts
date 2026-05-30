@@ -66,6 +66,13 @@ app.options('*', cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'x-district', 'Accept']
 }));
+// CORS rejection logging
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && err.message && err.message.includes('CORS')) {
+    console.error('CORS error:', err);
+  }
+  next(err);
+});
 
 // Global request timeout (30s) — prevents hanging queries on slow mobile connections
 app.use((_req, res, next) => {
@@ -4048,7 +4055,10 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
 app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
   const { id } = req.params;
   try {
-    const maxElectors = parseInt(req.query.maxElectors as string) || 2000;
+    let maxElectors = parseInt(req.query.maxElectors as string);
+    if (isNaN(maxElectors) || maxElectors <= 0) {
+        maxElectors = 2000;
+    }
     const padrino = db.prepare(`
       SELECT u.nombre, l.list_number, l.option_number, u.distrito
       FROM users u
