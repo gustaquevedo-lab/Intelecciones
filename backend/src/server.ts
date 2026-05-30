@@ -4042,7 +4042,10 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
     if (!padrino) return res.status(404).json({ error: 'Padrino no encontrado' });
 
     const coordinators = db.prepare(`
-      WITH coord_stats AS (
+      WITH coordinator_ids AS (
+        SELECT id FROM users WHERE parent_id = ? AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+      ),
+      coord_stats AS (
         SELECT coordinator_id,
                COUNT(id) as total_electors,
                SUM(CASE WHEN traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
@@ -4051,6 +4054,7 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
                SUM(CASE WHEN traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
                SUM(CASE WHEN needs_transport = 1 THEN 1 ELSE 0 END) as transport_needed
         FROM elector_captures
+        WHERE coordinator_id IN (SELECT id FROM coordinator_ids)
         GROUP BY coordinator_id
       )
       SELECT u.id, u.nombre, u.telefono,
@@ -4063,7 +4067,7 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
       FROM users u
       LEFT JOIN coord_stats cs ON cs.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
-    `).all(id) as any[];
+    `).all(id, id) as any[];
 
     const fullHierarchy = coordinators.map(c => {
       const electors = db.prepare(`
