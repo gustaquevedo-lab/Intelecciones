@@ -2228,7 +2228,9 @@ app.get('/api/users', (req, res) => {
       if (isAuthorized) {
         const query = `
           SELECT 
-            u.*, 
+            u.id, u.username, u.role, u.assigned_list_id, u.assigned_campaign_id,
+            u.assigned_local, u.assigned_mesa, u.nombre, NULL as photo_url,
+            u.needs_password_change, u.parent_id, u.telefono, u.distrito, u.ci, u.status, u.enabled_modules, 
             l.list_number, 
             l.type as list_type, 
             COALESCE(c1.id, c2.id) as effective_campaign_id,
@@ -2252,7 +2254,9 @@ app.get('/api/users', (req, res) => {
     const params = sec.params || [];
     let query = `
       SELECT 
-        u.*, 
+        u.id, u.username, u.role, u.assigned_list_id, u.assigned_campaign_id,
+        u.assigned_local, u.assigned_mesa, u.nombre, NULL as photo_url,
+        u.needs_password_change, u.parent_id, u.telefono, u.distrito, u.ci, u.status, u.enabled_modules, 
         l.list_number, 
         l.type as list_type, 
         COALESCE(c1.id, c2.id) as effective_campaign_id,
@@ -2975,7 +2979,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         ca.lat as lat_a,
         ca.lng as lng_a,
         ua.nombre as coord_a,
-        ua.photo_url as photo_a,
+        NULL as photo_a,
         pa.nombre as padrino_a,
         la.list_number as list_a,
         la.option_number as option_a,
@@ -2988,7 +2992,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         cb.lat as lat_b,
         cb.lng as lng_b,
         ub.nombre as coord_b,
-        ub.photo_url as photo_b,
+        NULL as photo_b,
         pb.nombre as padrino_b,
         lb.list_number as list_b,
         lb.option_number as option_b
