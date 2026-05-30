@@ -32,7 +32,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 19; // Update this to trigger migrations
+const currentSchemaVersion = 20; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -434,6 +434,10 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_coord_light ON elector_captures(coordinator_id, traffic_light, needs_transport);
+      -- Covering index for reports CTE aggregation (avoids full table scan)
+      CREATE INDEX IF NOT EXISTS idx_captures_coord_agg ON elector_captures(coordinator_id, traffic_light, needs_transport);
+      -- Composite index for coord_map CTE (role + parent lookup)
+      CREATE INDEX IF NOT EXISTS idx_users_role_parent ON users(role, parent_id);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC);
     `);

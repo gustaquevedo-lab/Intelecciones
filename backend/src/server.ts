@@ -4328,9 +4328,11 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
 
   try {
+    const t0 = Date.now();
     const requester = getCachedUserInfo(requesterId);
     const filter = getSecurityFilter(req, 'u');
     const districtName = requester?.distrito || getDistrict(req) || 'GLOBAL';
+    console.log(`[REPORTS] type=${reportType} role=${role} user=${requesterId} district=${districtName} filter.sql="${filter.sql}"`);
 
     // ── ALWAYS: lightweight filter options (fast, no aggregates) ──
     let filterPadrinos: any[] = [];
@@ -4711,6 +4713,9 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       localesSql += ` GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO'), COALESCE(e.distrito, 'REGISTRO DE CAMPO') ORDER BY total_captures DESC`;
       locales = db.prepare(localesSql).all(...localesParams);
     }
+
+    const elapsed = Date.now() - t0;
+    console.log(`[REPORTS] completed in ${elapsed}ms — padrinos=${padrinos.length} coords=${coordinators.length} electors=${electors.length} locales=${locales.length}`);
 
     res.json({
       district: districtName,

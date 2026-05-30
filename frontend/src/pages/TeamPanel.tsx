@@ -977,8 +977,10 @@ const TeamPanel = () => {
   }, [selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter]);
 
   // Load reports data
+  const [reportsError, setReportsError] = useState<string | null>(null);
   const loadReportsData = useCallback(async () => {
     setLoadingReports(true);
+    setReportsError(null);
     try {
       const queryParams = new URLSearchParams();
       queryParams.append('report_type', reportType);
@@ -989,15 +991,16 @@ const TeamPanel = () => {
       if (padrino !== 'ALL') queryParams.append('padrino_id', padrino);
       if (coord !== 'ALL') queryParams.append('coordinator_id', coord);
 
-      const res = await api.get(`/my-team/reports?${queryParams.toString()}`);
+      const res = await api.get(`/my-team/reports?${queryParams.toString()}`, { timeout: 90000 });
       setReportData(res.data);
     } catch (err: any) {
       console.error('Error fetching reports data', err);
-      setApiCriticalError(new Error(
-        `API_ERROR: No se pudieron cargar los reportes de tu equipo.\n` +
-        `Servidor: ${err.response?.data?.error || err.message || 'Error de sincronización con la base de datos'}\n` +
-        `Timestamp: ${new Date().toISOString()}`
-      ));
+      // NON-FATAL: show inline error with retry instead of crashing the whole app
+      const msg = err.response?.data?.error || err.message || 'Error desconocido';
+      setReportsError(msg.includes('timeout') 
+        ? 'El servidor está procesando demasiados datos. Intentá de nuevo en unos segundos, o seleccioná filtros más específicos.'
+        : `Error al cargar reportes: ${msg}`
+      );
     } finally {
       setLoadingReports(false);
     }
@@ -1972,8 +1975,29 @@ const TeamPanel = () => {
             </div>
           )}
 
+          {/* Error state with retry */}
+          {!loadingReports && reportsError && (
+            <div style={{
+              padding: '2rem', textAlign: 'center', background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', margin: '1rem 0'
+            }}>
+              <div style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>⚠️</div>
+              <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: '0.5rem' }}>{reportsError}</div>
+              <button
+                onClick={() => loadReportsData()}
+                style={{
+                  marginTop: '0.5rem', padding: '0.6rem 1.5rem', borderRadius: '8px',
+                  background: '#3B82F6', color: 'white', border: 'none', fontWeight: 700,
+                  cursor: 'pointer', fontSize: '0.85rem'
+                }}
+              >
+                🔄 Reintentar
+              </button>
+            </div>
+          )}
+
           {/* Simulated A4 Vertical Paper Sheet on Screen */}
-          {!loadingReports && reportData ? (
+          {!loadingReports && !reportsError && reportData ? (
             <div style={{ overflowX: 'auto', padding: '0.5rem' }}>
               <div 
                 id="printable-report-area"
