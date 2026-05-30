@@ -2,9 +2,10 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const db = new Database(path.join(__dirname, '../intellecciones.db'));
 
-console.log("=== VERIFYING NEWLY OPTIMIZED QUERIES ===");
+console.log("=== BENCHMARKING MY TEAM QUERIES ===");
 
 const district = 'PEDRO JUAN CABALLERO';
+const requesterId = '8'; // Mock Padrino ID
 
 // Mock getSecurityFilter SQL for table u
 const sec_u = {
@@ -14,12 +15,6 @@ const sec_u = {
     EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND c2.distrito = ?)
   )`,
   params: [district, district, district]
-};
-
-// Mock getSecurityFilter SQL for table cc (conflicts)
-const sec_cc = {
-  sql: ` AND e.distrito = ?`,
-  params: [district]
 };
 
 function runTest(name, query, params) {
@@ -36,179 +31,50 @@ function runTest(name, query, params) {
   }
 }
 
-// 1. /api/users standard fallback
-const usersQuery = `
-  WITH filtered_users AS (
-    SELECT * FROM users u
-    WHERE 1=1 ${sec_u.sql}
-    LIMIT -1
+// 1. my-team query for Padrino / Subjefe
+const padrinoMyTeam = `
+  WITH coordinator_ids AS (
+    SELECT id FROM users WHERE parent_id = ? AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+  ),
+  stats AS (
+    SELECT 
+      coordinator_id,
+      COUNT(*) as total_captures,
+      SUM(CASE WHEN traffic_light='GREEN' THEN 1 ELSE 0 END) as green,
+      SUM(CASE WHEN traffic_light='YELLOW' THEN 1 ELSE 0 END) as yellow,
+      SUM(CASE WHEN traffic_light='RED' THEN 1 ELSE 0 END) as red,
+      SUM(CASE WHEN needs_transport=1 THEN 1 ELSE 0 END) as transport_total
+    FROM elector_captures
+    WHERE coordinator_id IN (SELECT id FROM coordinator_ids)
+    GROUP BY coordinator_id
   )
-  SELECT 
-    u.*, 
-    l.list_number, 
-    l.type as list_type, 
-    COALESCE(c1.id, c2.id) as effective_campaign_id,
-    COALESCE(c1.name, c2.name) as campaign_name,
-    p.nombre as parent_name
-  FROM filtered_users u
+  SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
+         u.distrito, u.parent_id, l.list_number,
+         COALESCE(s.total_captures, 0) as total_captures,
+         COALESCE(s.green, 0) as green,
+         COALESCE(s.yellow, 0) as yellow,
+         COALESCE(s.red, 0) as red,
+         COALESCE(s.transport_total, 0) as transport_total
+  FROM users u
   LEFT JOIN lists l ON u.assigned_list_id = l.id
-  LEFT JOIN campaigns c1 ON l.campaign_id = c1.id
-  LEFT JOIN campaigns c2 ON u.assigned_campaign_id = c2.id
-  LEFT JOIN users p ON u.parent_id = p.id
-  WHERE 1=1
+  LEFT JOIN stats s ON u.id = s.coordinator_id
+  WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')
+  ORDER BY u.nombre
 `;
-runTest("1. Users Query (Fallback)", usersQuery, sec_u.params);
+runTest("1. My Team Padrino Query", padrinoMyTeam, [requesterId, requesterId]);
 
-// 2. /api/admin/conflicts
-const conflictsQuery = `
-  WITH active_conflicts AS (
-    SELECT * FROM capture_conflicts WHERE status != 'RESOLVED' LIMIT -1
-  ),
-  active_conflicts_with_elector AS (
-    SELECT 
-      cc.*,
-      e.nombre as elector_nombre,
-      e.apellido as elector_apellido,
-      e.distrito as distrito
-    FROM active_conflicts cc
-    LEFT JOIN electors e ON cc.elector_ci = e.ci
-    LIMIT -1
-  )
-  SELECT 
-    e.id as conflict_id,
-    e.status as conflict_status,
-    e.conflict_type,
-    e.jefe_decision_id,
-    e.consent_a,
-    e.consent_b,
-    e.list_id_a,
-    e.list_id_b,
-    e.elector_ci as elector_ci,
-    e.elector_nombre,
-    e.elector_apellido,
-    
-    -- Capture A
-    ca.id as capture_a_id,
-    ca.traffic_light as tl_a,
-    ca.needs_transport as transport_a,
-    ca.timestamp as time_a,
-    ca.lat as lat_a,
-    ca.lng as lng_a,
-    ua.nombre as coord_a,
-    ua.photo_url as photo_a,
-    pa.nombre as padrino_a,
-    la.list_number as list_a,
-    la.option_number as option_a,
-    
-    -- Capture B
-    cb.id as capture_b_id,
-    cb.traffic_light as tl_b,
-    cb.needs_transport as transport_b,
-    cb.timestamp as time_b,
-    cb.lat as lat_b,
-    cb.lng as lng_b,
-    ub.nombre as coord_b,
-    ub.photo_url as photo_b,
-    pb.nombre as padrino_b,
-    lb.list_number as list_b,
-    lb.option_number as option_b
-
-  FROM active_conflicts_with_elector e
-  LEFT JOIN elector_captures ca ON e.capture_id = ca.id
-  LEFT JOIN elector_captures cb ON e.capture_id_b = cb.id
-  LEFT JOIN users ua ON ca.coordinator_id = ua.id
-  LEFT JOIN users ub ON cb.coordinator_id = ub.id
-  LEFT JOIN users pa ON ua.parent_id = pa.id
-  LEFT JOIN users pb ON ub.parent_id = pb.id
-  LEFT JOIN lists la ON ca.list_id = la.id
-  LEFT JOIN lists lb ON cb.list_id = lb.id
-  WHERE 1=1 ${sec_cc.sql}
+// 2. my-team query for Jefe de Campaña / Admin (using sec_u filter)
+const adminMyTeam = `
+  SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
+         u.assigned_list_id, l.list_number, l.candidate_alias,
+         (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
+         ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) + 
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id))) AS total_captures,
+         ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) + 
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.needs_transport = 1)) AS needs_transport
+   FROM users u
+   LEFT JOIN lists l ON u.assigned_list_id = l.id
+   WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec_u.sql}
+   ORDER BY u.nombre
 `;
-runTest("2. Conflicts Query", conflictsQuery, sec_cc.params);
-
-// 3. /api/admin/conflicts/history
-const conflictsHistoryQuery = `
-  WITH resolved_conflicts AS (
-    SELECT * FROM capture_conflicts WHERE status = 'RESOLVED' LIMIT -1
-  ),
-  resolved_conflicts_with_elector AS (
-    SELECT 
-      cc.*,
-      e.ci as elector_ci_ref,
-      e.nombre as elector_nombre,
-      e.apellido as elector_apellido,
-      e.local_votacion as local_votacion,
-      e.mesa as mesa,
-      e.distrito as distrito,
-      e.ciudad as ciudad
-    FROM resolved_conflicts cc
-    LEFT JOIN electors e ON cc.elector_ci = e.ci
-    LIMIT -1
-  )
-  SELECT 
-    e.id as conflict_id,
-    e.status as conflict_status,
-    e.resolved_at,
-    COALESCE(e.elector_ci_ref, e.elector_ci) as elector_ci,
-    COALESCE(e.elector_nombre, 'ELECTOR') as elector_nombre,
-    COALESCE(e.elector_apellido, 'NO REGISTRADO') as elector_apellido,
-    COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
-    COALESCE(e.mesa, 0) as mesa,
-    
-    COALESCE(u_win_1.nombre, u_win_2.nombre) as winner_name,
-    COALESCE(u_win_1.role, u_win_2.role) as winner_role,
-    p_win.nombre as padrino_name
-  FROM resolved_conflicts_with_elector e
-  LEFT JOIN elector_captures ec_win_1 ON e.winner_capture_id = ec_win_1.id
-  LEFT JOIN elector_captures ec_win_2 ON e.jefe_decision_id = ec_win_2.id
-  LEFT JOIN users u_win_1 ON ec_win_1.coordinator_id = u_win_1.id
-  LEFT JOIN users u_win_2 ON ec_win_2.coordinator_id = u_win_2.id
-  LEFT JOIN users p_win ON COALESCE(u_win_1.parent_id, u_win_2.parent_id) = p_win.id
-  WHERE 1=1 ${sec_cc.sql}
-`;
-runTest("3. Conflicts History Query", conflictsHistoryQuery, sec_cc.params);
-
-// 4. /api/admin/activity (First occurrence)
-const activityFirstQuery = `
-  WITH filtered_users AS (
-    SELECT id, nombre, photo_url FROM users u
-    WHERE 1=1 ${sec_u.sql}
-    LIMIT -1
-  )
-  SELECT al.*, u.nombre as user_name, u.photo_url as user_photo
-  FROM filtered_users u
-  JOIN audit_logs al ON al.user_id = u.id
-  ORDER BY al.timestamp DESC LIMIT 50
-`;
-runTest("4. Activity Audit Logs Query", activityFirstQuery, sec_u.params);
-
-// 5. /api/admin/activity (Second occurrence union query)
-const activitySecondQuery = `
-  WITH filtered_users AS (
-    SELECT id, nombre FROM users u
-    WHERE 1=1 ${sec_u.sql}
-    LIMIT -1
-  )
-  SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Nueva Captura' as detail
-  FROM elector_captures ec
-  LEFT JOIN electors e ON ec.elector_ci = e.ci
-  JOIN filtered_users u ON ec.coordinator_id = u.id
-  
-  UNION ALL
-  
-  SELECT 'REQUEST' as type, r.timestamp, u.nombre as user_name, r.type as entity_name, r.description as detail
-  FROM field_requests r
-  JOIN filtered_users u ON r.coordinator_id = u.id
-  
-  UNION ALL
-  
-  SELECT 'CONFLICT' as type, cc.timestamp, 'Sistema' as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Doble Captura' as detail
-  FROM capture_conflicts cc
-  LEFT JOIN electors e ON cc.elector_ci = e.ci
-  JOIN elector_captures ec ON cc.capture_id = ec.id
-  JOIN filtered_users u ON ec.coordinator_id = u.id
-  
-  ORDER BY timestamp DESC
-  LIMIT 20
-`;
-runTest("5. Activity Unified Union Query", activitySecondQuery, sec_u.params);
+runTest("2. My Team Admin Query", adminMyTeam, sec_u.params);
