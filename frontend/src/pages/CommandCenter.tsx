@@ -553,7 +553,7 @@ const CommandCenter = () => {
   const handleExportReport = async (padrinoId: number) => {
     setIsGeneratingReport(true);
     try {
-      const res = await api.get(`/structure/padrinos/${padrinoId}/full-report`);
+      const res = await api.get(`/structure/padrinos/${padrinoId}/full-report?maxElectors=2000`);
       setReportData(res.data);
       setTimeout(() => {
         window.print();
