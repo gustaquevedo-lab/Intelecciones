@@ -538,11 +538,12 @@ const getCachedUserInfo = (user_id: string): CachedUser | null => {
   if (hit && now - hit.ts < USER_CACHE_TTL) return hit;
   const user = db.prepare(`
     SELECT u.id, u.role, u.assigned_list_id, u.assigned_campaign_id,
-           COALESCE(u.distrito, l.ciudad, c.distrito) as distrito,
+           COALESCE(u.distrito, l.ciudad, c1.distrito, c2.distrito) as distrito,
            COALESCE(l.campaign_id, u.assigned_campaign_id) as campaign_id
     FROM users u
     LEFT JOIN lists l ON u.assigned_list_id = l.id
-    LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+    LEFT JOIN campaigns c1 ON l.campaign_id = c1.id
+    LEFT JOIN campaigns c2 ON u.assigned_campaign_id = c2.id
     WHERE u.id = ?
   `).get(user_id) as any;
   if (!user) return null;
@@ -2250,10 +2251,9 @@ app.get('/api/users', (req, res) => {
     const sec = getSecurityFilter(req, 'u');
     const params = sec.params || [];
     let query = `
-      WITH filtered_users AS (
+      WITH filtered_users AS MATERIALIZED (
         SELECT * FROM users u
         WHERE 1=1 ${sec.sql}
-        LIMIT -1
       )
       SELECT 
         u.*, 
@@ -2958,10 +2958,10 @@ app.get('/api/admin/conflicts', (req, res) => {
   
   try {
     let sql = `
-      WITH active_conflicts AS (
-        SELECT * FROM capture_conflicts WHERE status != 'RESOLVED' LIMIT -1
+      WITH active_conflicts AS MATERIALIZED (
+        SELECT * FROM capture_conflicts WHERE status != 'RESOLVED'
       ),
-      active_conflicts_with_elector AS (
+      active_conflicts_with_elector AS MATERIALIZED (
         SELECT 
           cc.*,
           e.nombre as elector_nombre,
@@ -2969,7 +2969,6 @@ app.get('/api/admin/conflicts', (req, res) => {
           e.distrito as distrito
         FROM active_conflicts cc
         LEFT JOIN electors e ON cc.elector_ci = e.ci
-        LIMIT -1
       )
       SELECT 
         e.id as conflict_id,
@@ -3033,7 +3032,7 @@ app.get('/api/admin/conflicts', (req, res) => {
 
     // ONLY filter by list_id for Subjefes/Contenders. Jefes de Campaña and SuperAdmins see ALL active conflicts in their district/campaign
     if (role === 'SUBJEFE' && list_id && !isNaN(list_id) && list_id !== 0) {
-      sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
+      sql += " AND (e.list_id_a = ? OR e.list_id_b = ?)";
       params.push(list_id, list_id);
     }
 
@@ -3055,10 +3054,10 @@ app.get('/api/admin/conflicts/history', (req, res) => {
   
   try {
     let sql = `
-      WITH resolved_conflicts AS (
-        SELECT * FROM capture_conflicts WHERE status = 'RESOLVED' LIMIT -1
+      WITH resolved_conflicts AS MATERIALIZED (
+        SELECT * FROM capture_conflicts WHERE status = 'RESOLVED'
       ),
-      resolved_conflicts_with_elector AS (
+      resolved_conflicts_with_elector AS MATERIALIZED (
         SELECT 
           cc.*,
           e.ci as elector_ci_ref,
@@ -3070,7 +3069,6 @@ app.get('/api/admin/conflicts/history', (req, res) => {
           e.ciudad as ciudad
         FROM resolved_conflicts cc
         LEFT JOIN electors e ON cc.elector_ci = e.ci
-        LIMIT -1
       )
       SELECT 
         e.id as conflict_id,
@@ -3110,11 +3108,11 @@ app.get('/api/admin/conflicts/history', (req, res) => {
 
     // ONLY filter by list_id for Subjefes/Contenders. Jefes de Campaña and SuperAdmins see ALL resolved conflicts
     if (role === 'SUBJEFE' && list_id && !isNaN(list_id) && list_id !== 0) {
-      sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
+      sql += " AND (e.list_id_a = ? OR e.list_id_b = ?)";
       params.push(list_id, list_id);
     }
 
-    sql += " ORDER BY cc.resolved_at DESC LIMIT 100";
+    sql += " ORDER BY e.resolved_at DESC LIMIT 100";
 
     const history = db.prepare(sql).all(...params);
     res.json(history);
@@ -3237,10 +3235,9 @@ app.get('/api/admin/activity', (req, res) => {
   const sec = getSecurityFilter(req, 'u');
   try {
     const activities = db.prepare(`
-      WITH filtered_users AS (
+      WITH filtered_users AS MATERIALIZED (
         SELECT id, nombre, photo_url FROM users u
         WHERE 1=1 ${sec.sql}
-        LIMIT -1
       )
       SELECT al.*, u.nombre as user_name, u.photo_url as user_photo
       FROM filtered_users u
@@ -4044,8 +4041,8 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
   const { id } = req.params;
   try {
     const electors = db.prepare(`
-      WITH captures AS (
-        SELECT * FROM elector_captures WHERE coordinator_id = ? LIMIT -1
+      WITH captures AS MATERIALIZED (
+        SELECT * FROM elector_captures WHERE coordinator_id = ?
       )
       SELECT ec.id,
              COALESCE(e.nombre, 'ELECTOR') as nombre, 
@@ -4106,8 +4103,8 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
 
     const fullHierarchy = coordinators.map(c => {
       const electors = db.prepare(`
-        WITH captures AS (
-          SELECT * FROM elector_captures WHERE coordinator_id = ? LIMIT -1
+        WITH captures AS MATERIALIZED (
+          SELECT * FROM elector_captures WHERE coordinator_id = ?
         )
         SELECT COALESCE(e.nombre, 'ELECTOR') as nombre, 
                COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
@@ -4136,8 +4133,8 @@ app.get('/api/coordinator/:id/captures', (req, res) => {
   const { id } = req.params;
   try {
     const captures = db.prepare(`
-      WITH captures AS (
-        SELECT * FROM elector_captures WHERE coordinator_id = ? LIMIT -1
+      WITH captures AS MATERIALIZED (
+        SELECT * FROM elector_captures WHERE coordinator_id = ?
       )
       SELECT ec.*, 
              COALESCE(e.nombre, 'ELECTOR') as nombre, 
@@ -4233,10 +4230,9 @@ app.get('/api/admin/activity', (req, res) => {
 
   try {
     const query = `
-      WITH filtered_users AS (
+      WITH filtered_users AS MATERIALIZED (
         SELECT id, nombre FROM users u
         WHERE 1=1 ${sec.sql}
-        LIMIT -1
       )
       SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Nueva Captura' as detail
       FROM elector_captures ec
@@ -4549,13 +4545,12 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
         }
 
         q1_ids = `
-          WITH captures AS (
+          WITH captures AS MATERIALIZED (
             SELECT ec.id, ec.timestamp, ec.elector_ci, ec.coordinator_id, ec.list_id
             FROM elector_captures ec
             ${needsUsersJoin ? 'LEFT JOIN users u ON ec.coordinator_id = u.id' : ''}
             ${needsListsJoin ? 'LEFT JOIN lists l ON ec.list_id = l.id' : ''}
             WHERE 1=1 ${extraFilters}
-            LIMIT -1
           )
           SELECT ec.id, ec.timestamp
           FROM captures ec
@@ -4642,10 +4637,9 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
 
       if (selectedDistrict && selectedDistrict !== 'ALL') {
         localesSql = `
-          WITH captures AS (
+          WITH captures AS MATERIALIZED (
             SELECT ec.id, ec.elector_ci, ec.traffic_light, ec.needs_transport, ec.coordinator_id, ec.list_id
             FROM elector_captures ec
-            LIMIT -1
           )
           SELECT COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
                  COALESCE(e.distrito, 'REGISTRO DE CAMPO') as distrito,
