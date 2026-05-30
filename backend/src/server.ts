@@ -4326,6 +4326,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
   const selectedCoordinator = req.query.coordinator_id as string;
   const reportType = (req.query.report_type as string) || 'all';
 
+
   try {
     const requester = getCachedUserInfo(requesterId);
     const filter = getSecurityFilter(req, 'u');
@@ -4359,45 +4360,74 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       `).all(...filter.params);
     }
 
-    // ── 1. Padrinos report (full metrics) — only when requested ──
+    // ── 1. Padrinos report (full metrics) — CTE-based, single aggregation pass ──
     let padrinos: any[] = [];
     if (reportType === 'padrinos' && (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE')) {
-      let padrinoSql = `
-        SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
-               u.assigned_list_id, l.list_number, l.candidate_alias,
-               (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
-               ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id) + 
-                (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id))) AS total_captures,
-               ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.needs_transport = 1) + 
-                (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.needs_transport = 1)) AS needs_transport,
-               ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') + 
-                (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'GREEN')) AS green,
-               ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') + 
-                (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'YELLOW')) AS yellow,
-               ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'RED') + 
-                (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'RED')) AS red,
-               ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') + 
-                (SELECT COUNT(*) FROM elector_captures ec WHERE ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'PURPLE')) AS purple
-         FROM users u
-         LEFT JOIN lists l ON u.assigned_list_id = l.id
-         WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
-      `;
-      const padrinoParams = [...filter.params];
+      // Build optional WHERE filters
+      const padrinoFilters: string[] = [];
+      const padrinoParams: any[] = [...filter.params];
 
       if (selectedDistrict && selectedDistrict !== 'ALL') {
-        padrinoSql += ` AND u.distrito = ?`;
+        padrinoFilters.push(`u.distrito = ?`);
         padrinoParams.push(selectedDistrict);
       }
       if (selectedList && selectedList !== 'ALL') {
-        padrinoSql += ` AND l.list_number = ?`;
+        padrinoFilters.push(`l.list_number = ?`);
         padrinoParams.push(selectedList);
       }
       if (selectedPadrino && selectedPadrino !== 'ALL') {
-        padrinoSql += ` AND u.id = ?`;
+        padrinoFilters.push(`u.id = ?`);
         padrinoParams.push(parseInt(selectedPadrino));
       }
 
-      padrinoSql += ` ORDER BY u.nombre`;
+      const extraWhere = padrinoFilters.length ? 'AND ' + padrinoFilters.join(' AND ') : '';
+
+      // Single CTE aggregation — avoids 10 correlated sub-selects per row
+      const padrinoSql = `
+        WITH coord_map AS (
+          -- Map each coordinator/member to its padrino (parent)
+          SELECT id AS coord_id, parent_id AS padrino_id
+          FROM users
+          WHERE role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+        ),
+        capture_stats AS (
+          -- Aggregate all capture metrics in a single GROUP BY pass
+          SELECT
+            COALESCE(cm.padrino_id, ec.coordinator_id) AS padrino_id,
+            COUNT(*)                                                              AS total_captures,
+            SUM(CASE WHEN ec.traffic_light = 'GREEN'  THEN 1 ELSE 0 END)         AS green,
+            SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END)         AS yellow,
+            SUM(CASE WHEN ec.traffic_light = 'RED'    THEN 1 ELSE 0 END)         AS red,
+            SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END)         AS purple,
+            SUM(CASE WHEN ec.needs_transport = 1      THEN 1 ELSE 0 END)         AS needs_transport
+          FROM elector_captures ec
+          LEFT JOIN coord_map cm ON cm.coord_id = ec.coordinator_id
+          GROUP BY COALESCE(cm.padrino_id, ec.coordinator_id)
+        ),
+        coord_count AS (
+          SELECT parent_id AS padrino_id, COUNT(*) AS coordinator_count
+          FROM users
+          WHERE role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+          GROUP BY parent_id
+        )
+        SELECT
+          u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
+          u.assigned_list_id, l.list_number, l.candidate_alias,
+          COALESCE(cc.coordinator_count, 0)  AS coordinator_count,
+          COALESCE(cs.total_captures, 0)     AS total_captures,
+          COALESCE(cs.needs_transport, 0)    AS needs_transport,
+          COALESCE(cs.green, 0)              AS green,
+          COALESCE(cs.yellow, 0)             AS yellow,
+          COALESCE(cs.red, 0)                AS red,
+          COALESCE(cs.purple, 0)             AS purple
+        FROM users u
+        LEFT JOIN lists l          ON u.assigned_list_id = l.id
+        LEFT JOIN capture_stats cs ON cs.padrino_id = u.id
+        LEFT JOIN coord_count cc   ON cc.padrino_id = u.id
+        WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql} ${extraWhere}
+        ORDER BY u.nombre
+      `;
+
       padrinos = db.prepare(padrinoSql).all(...padrinoParams);
     }
 
