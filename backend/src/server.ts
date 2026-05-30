@@ -4035,6 +4035,7 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
 app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
   const { id } = req.params;
   try {
+    const maxElectors = parseInt(req.query.maxElectors as string) || 2000;
     const padrino = db.prepare(`
       SELECT u.nombre, l.list_number, l.option_number, u.distrito
       FROM users u
