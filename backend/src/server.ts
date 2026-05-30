@@ -2230,12 +2230,13 @@ app.get('/api/users', (req, res) => {
             u.*, 
             l.list_number, 
             l.type as list_type, 
-            COALESCE(c.id, u.assigned_campaign_id) as effective_campaign_id,
-            c.name as campaign_name,
+            COALESCE(c1.id, c2.id) as effective_campaign_id,
+            COALESCE(c1.name, c2.name) as campaign_name,
             p.nombre as parent_name
           FROM users u
           LEFT JOIN lists l ON u.assigned_list_id = l.id
-          LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+          LEFT JOIN campaigns c1 ON l.campaign_id = c1.id
+          LEFT JOIN campaigns c2 ON u.assigned_campaign_id = c2.id
           LEFT JOIN users p ON u.parent_id = p.id
           WHERE u.parent_id = ?
         `;
@@ -2249,18 +2250,24 @@ app.get('/api/users', (req, res) => {
     const sec = getSecurityFilter(req, 'u');
     const params = sec.params || [];
     let query = `
+      WITH filtered_users AS (
+        SELECT * FROM users u
+        WHERE 1=1 ${sec.sql}
+        LIMIT -1
+      )
       SELECT 
         u.*, 
         l.list_number, 
         l.type as list_type, 
-        COALESCE(c.id, u.assigned_campaign_id) as effective_campaign_id,
-        c.name as campaign_name,
+        COALESCE(c1.id, c2.id) as effective_campaign_id,
+        COALESCE(c1.name, c2.name) as campaign_name,
         p.nombre as parent_name
-      FROM users u
+      FROM filtered_users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
-      LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+      LEFT JOIN campaigns c1 ON l.campaign_id = c1.id
+      LEFT JOIN campaigns c2 ON u.assigned_campaign_id = c2.id
       LEFT JOIN users p ON u.parent_id = p.id
-      WHERE 1=1 ${sec.sql}
+      WHERE 1=1
     `;
     
     let users;
@@ -2953,19 +2960,29 @@ app.get('/api/admin/conflicts', (req, res) => {
     let sql = `
       WITH active_conflicts AS (
         SELECT * FROM capture_conflicts WHERE status != 'RESOLVED' LIMIT -1
+      ),
+      active_conflicts_with_elector AS (
+        SELECT 
+          cc.*,
+          e.nombre as elector_nombre,
+          e.apellido as elector_apellido,
+          e.distrito as distrito
+        FROM active_conflicts cc
+        LEFT JOIN electors e ON cc.elector_ci = e.ci
+        LIMIT -1
       )
       SELECT 
-        cc.id as conflict_id,
-        cc.status as conflict_status,
-        cc.conflict_type,
-        cc.jefe_decision_id,
-        cc.consent_a,
-        cc.consent_b,
-        cc.list_id_a,
-        cc.list_id_b,
-        cc.elector_ci as elector_ci,
-        e.nombre as elector_nombre,
-        e.apellido as elector_apellido,
+        e.id as conflict_id,
+        e.status as conflict_status,
+        e.conflict_type,
+        e.jefe_decision_id,
+        e.consent_a,
+        e.consent_b,
+        e.list_id_a,
+        e.list_id_b,
+        e.elector_ci as elector_ci,
+        e.elector_nombre,
+        e.elector_apellido,
         
         -- Capture A
         ca.id as capture_a_id,
@@ -2993,10 +3010,9 @@ app.get('/api/admin/conflicts', (req, res) => {
         lb.list_number as list_b,
         lb.option_number as option_b
 
-      FROM active_conflicts cc
-      LEFT JOIN electors e ON cc.elector_ci = e.ci
-      LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
-      LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
+      FROM active_conflicts_with_elector e
+      LEFT JOIN elector_captures ca ON e.capture_id = ca.id
+      LEFT JOIN elector_captures cb ON e.capture_id_b = cb.id
       LEFT JOIN users ua ON ca.coordinator_id = ua.id
       LEFT JOIN users ub ON cb.coordinator_id = ub.id
       LEFT JOIN users pa ON ua.parent_id = pa.id
@@ -3041,25 +3057,40 @@ app.get('/api/admin/conflicts/history', (req, res) => {
     let sql = `
       WITH resolved_conflicts AS (
         SELECT * FROM capture_conflicts WHERE status = 'RESOLVED' LIMIT -1
+      ),
+      resolved_conflicts_with_elector AS (
+        SELECT 
+          cc.*,
+          e.ci as elector_ci_ref,
+          e.nombre as elector_nombre,
+          e.apellido as elector_apellido,
+          e.local_votacion as local_votacion,
+          e.mesa as mesa,
+          e.distrito as distrito,
+          e.ciudad as ciudad
+        FROM resolved_conflicts cc
+        LEFT JOIN electors e ON cc.elector_ci = e.ci
+        LIMIT -1
       )
       SELECT 
-        cc.id as conflict_id,
-        cc.status as conflict_status,
-        cc.resolved_at,
-        COALESCE(e.ci, cc.elector_ci) as elector_ci,
-        COALESCE(e.nombre, 'ELECTOR') as elector_nombre,
-        COALESCE(e.apellido, 'NO REGISTRADO') as elector_apellido,
+        e.id as conflict_id,
+        e.status as conflict_status,
+        e.resolved_at,
+        COALESCE(e.elector_ci_ref, e.elector_ci) as elector_ci,
+        COALESCE(e.elector_nombre, 'ELECTOR') as elector_nombre,
+        COALESCE(e.elector_apellido, 'NO REGISTRADO') as elector_apellido,
         COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
         COALESCE(e.mesa, 0) as mesa,
         
-        u_win.nombre as winner_name,
-        u_win.role as winner_role,
+        COALESCE(u_win_1.nombre, u_win_2.nombre) as winner_name,
+        COALESCE(u_win_1.role, u_win_2.role) as winner_role,
         p_win.nombre as padrino_name
-      FROM resolved_conflicts cc
-      LEFT JOIN electors e ON cc.elector_ci = e.ci
-      LEFT JOIN elector_captures ec_win ON (cc.winner_capture_id = ec_win.id OR cc.jefe_decision_id = ec_win.id)
-      LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
-      LEFT JOIN users p_win ON u_win.parent_id = p_win.id
+      FROM resolved_conflicts_with_elector e
+      LEFT JOIN elector_captures ec_win_1 ON e.winner_capture_id = ec_win_1.id
+      LEFT JOIN elector_captures ec_win_2 ON e.jefe_decision_id = ec_win_2.id
+      LEFT JOIN users u_win_1 ON ec_win_1.coordinator_id = u_win_1.id
+      LEFT JOIN users u_win_2 ON ec_win_2.coordinator_id = u_win_2.id
+      LEFT JOIN users p_win ON COALESCE(u_win_1.parent_id, u_win_2.parent_id) = p_win.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -3069,7 +3100,7 @@ app.get('/api/admin/conflicts/history', (req, res) => {
     params.push(...sec.params);
 
     if (district && district !== 'null' && district !== 'undefined') {
-      sql += " AND (UPPER(TRIM(COALESCE(e.distrito, u_win.distrito))) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(COALESCE(e.ciudad, u_win.distrito))) LIKE UPPER(TRIM(?)))";
+      sql += " AND (UPPER(TRIM(COALESCE(e.distrito, u_win_1.distrito, u_win_2.distrito))) LIKE UPPER(TRIM(?)) OR UPPER(TRIM(COALESCE(e.ciudad, u_win_1.distrito, u_win_2.distrito))) LIKE UPPER(TRIM(?)))";
       params.push(`%${district}%`, `%${district}%`);
     }
 
@@ -3206,10 +3237,14 @@ app.get('/api/admin/activity', (req, res) => {
   const sec = getSecurityFilter(req, 'u');
   try {
     const activities = db.prepare(`
+      WITH filtered_users AS (
+        SELECT id, nombre, photo_url FROM users u
+        WHERE 1=1 ${sec.sql}
+        LIMIT -1
+      )
       SELECT al.*, u.nombre as user_name, u.photo_url as user_photo
-      FROM audit_logs al
-      LEFT JOIN users u ON al.user_id = u.id
-      WHERE 1=1 ${sec.sql}
+      FROM filtered_users u
+      JOIN audit_logs al ON al.user_id = u.id
       ORDER BY al.timestamp DESC LIMIT 50
     `).all(...sec.params);
     res.json(activities);
@@ -4198,18 +4233,21 @@ app.get('/api/admin/activity', (req, res) => {
 
   try {
     const query = `
+      WITH filtered_users AS (
+        SELECT id, nombre FROM users u
+        WHERE 1=1 ${sec.sql}
+        LIMIT -1
+      )
       SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Nueva Captura' as detail
       FROM elector_captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
-      JOIN users u ON ec.coordinator_id = u.id
-      WHERE 1=1 ${sec.sql}
+      JOIN filtered_users u ON ec.coordinator_id = u.id
       
       UNION ALL
       
       SELECT 'REQUEST' as type, r.timestamp, u.nombre as user_name, r.type as entity_name, r.description as detail
       FROM field_requests r
-      JOIN users u ON r.coordinator_id = u.id
-      WHERE 1=1 ${sec.sql}
+      JOIN filtered_users u ON r.coordinator_id = u.id
       
       UNION ALL
       
@@ -4217,13 +4255,12 @@ app.get('/api/admin/activity', (req, res) => {
       FROM capture_conflicts cc
       LEFT JOIN electors e ON cc.elector_ci = e.ci
       JOIN elector_captures ec ON cc.capture_id = ec.id
-      JOIN users u ON ec.coordinator_id = u.id
-      WHERE 1=1 ${sec.sql}
+      JOIN filtered_users u ON ec.coordinator_id = u.id
       
       ORDER BY timestamp DESC
       LIMIT 20
     `;
-    const activity = db.prepare(query).all(...sec.params, ...sec.params, ...sec.params);
+    const activity = db.prepare(query).all(...sec.params);
     res.json(activity);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

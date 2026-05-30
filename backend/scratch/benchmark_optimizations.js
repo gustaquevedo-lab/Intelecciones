@@ -3,48 +3,48 @@ const path = require('path');
 const db = new Database(path.join(__dirname, '..', 'intellecciones.db'));
 
 const district = 'PEDRO JUAN CABALLERO';
+const secSql = `AND (
+  u.distrito = ? OR 
+  EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND l2.ciudad = ?) OR 
+  EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND c2.distrito = ?)
+)`;
+const secParams = [district, district, district];
 
-// 1. Original Locales query using INDEXED BY idx_electors_distrito
-const oldLocales = `
-  SELECT COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
-         COALESCE(e.distrito, 'REGISTRO DE CAMPO') as distrito,
-         COUNT(ec.id) as total_captures,
-         SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
-         SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
-         SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
-         SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
-         SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport
-  FROM electors e INDEXED BY idx_electors_distrito
-  INNER JOIN elector_captures ec ON ec.elector_ci = e.ci
-  LEFT JOIN users u ON ec.coordinator_id = u.id
-  LEFT JOIN lists l ON ec.list_id = l.id
-  WHERE e.distrito = ?
-  GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO'), COALESCE(e.distrito, 'REGISTRO DE CAMPO')
-  ORDER BY total_captures DESC
+// 1. Current query
+const oldUsers = `
+  SELECT 
+    u.*, 
+    l.list_number, 
+    l.type as list_type, 
+    COALESCE(c.id, u.assigned_campaign_id) as effective_campaign_id,
+    c.name as campaign_name,
+    p.nombre as parent_name
+  FROM users u
+  LEFT JOIN lists l ON u.assigned_list_id = l.id
+  LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+  LEFT JOIN users p ON u.parent_id = p.id
+  WHERE 1=1 ${secSql}
+  LIMIT 1500
 `;
 
-// 2. Optimized Locales query driving from captures
-const newLocales = `
-  WITH captures AS (
-    SELECT ec.id, ec.elector_ci, ec.traffic_light, ec.needs_transport, ec.coordinator_id, ec.list_id
-    FROM elector_captures ec
-    LIMIT -1
+// 2. Fully optimized CTE query
+const cteUsers = `
+  WITH filtered_users AS (
+    SELECT * FROM users u WHERE 1=1 ${secSql} LIMIT -1
   )
-  SELECT COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
-         COALESCE(e.distrito, 'REGISTRO DE CAMPO') as distrito,
-         COUNT(ec.id) as total_captures,
-         SUM(CASE WHEN ec.traffic_light = 'GREEN' THEN 1 ELSE 0 END) as green,
-         SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END) as yellow,
-         SUM(CASE WHEN ec.traffic_light = 'RED' THEN 1 ELSE 0 END) as red,
-         SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END) as purple,
-         SUM(CASE WHEN ec.needs_transport = 1 THEN 1 ELSE 0 END) as needs_transport
-  FROM captures ec
-  INNER JOIN electors e ON ec.elector_ci = e.ci
-  LEFT JOIN users u ON ec.coordinator_id = u.id
-  LEFT JOIN lists l ON ec.list_id = l.id
-  WHERE e.distrito = ?
-  GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO'), COALESCE(e.distrito, 'REGISTRO DE CAMPO')
-  ORDER BY total_captures DESC
+  SELECT 
+    u.*, 
+    l.list_number, 
+    l.type as list_type, 
+    COALESCE(c1.id, c2.id) as effective_campaign_id,
+    COALESCE(c1.name, c2.name) as campaign_name,
+    p.nombre as parent_name
+  FROM filtered_users u
+  LEFT JOIN lists l ON u.assigned_list_id = l.id
+  LEFT JOIN campaigns c1 ON l.campaign_id = c1.id
+  LEFT JOIN campaigns c2 ON u.assigned_campaign_id = c2.id
+  LEFT JOIN users p ON u.parent_id = p.id
+  LIMIT 1500
 `;
 
 function runBenchmark(name, sql, params) {
@@ -72,9 +72,9 @@ function runBenchmark(name, sql, params) {
   }
 }
 
-runBenchmark("Old Locales Query", oldLocales, [district]);
-runBenchmark("New Locales Query (Materialized CTE)", newLocales, [district]);
+runBenchmark("Old Users Query", oldUsers, secParams);
+runBenchmark("New Users Query (CTE + Split Join)", cteUsers, secParams);
 console.log("\nAre results identical?", 
-  JSON.stringify(db.prepare(oldLocales).all(district)) === 
-  JSON.stringify(db.prepare(newLocales).all(district))
+  JSON.stringify(db.prepare(oldUsers).all(...secParams)) === 
+  JSON.stringify(db.prepare(cteUsers).all(...secParams))
 );
