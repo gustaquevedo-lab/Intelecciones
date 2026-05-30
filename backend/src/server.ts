@@ -711,8 +711,8 @@ const getSecurityFilter = (req: express.Request, tableAlias: string = 'c') => {
       sql = ` AND (e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
       params = [user.distrito, user.distrito, user.distrito];
     } else if (tableAlias === 'cc_history') {
-      sql = ` AND (e.distrito = ? OR u_win.distrito = ?)`;
-      params = [user.distrito, user.distrito];
+      sql = ` AND (e.distrito = ? OR u_win_1.distrito = ? OR u_win_2.distrito = ?)`;
+      params = [user.distrito, user.distrito, user.distrito];
     } else {
       let targetCol = distColumn;
       sql = ` AND ${targetAlias}.${targetCol} = ?`;
@@ -2251,10 +2251,6 @@ app.get('/api/users', (req, res) => {
     const sec = getSecurityFilter(req, 'u');
     const params = sec.params || [];
     let query = `
-      WITH filtered_users AS MATERIALIZED (
-        SELECT * FROM users u
-        WHERE 1=1 ${sec.sql}
-      )
       SELECT 
         u.*, 
         l.list_number, 
@@ -2262,12 +2258,12 @@ app.get('/api/users', (req, res) => {
         COALESCE(c1.id, c2.id) as effective_campaign_id,
         COALESCE(c1.name, c2.name) as campaign_name,
         p.nombre as parent_name
-      FROM filtered_users u
+      FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN campaigns c1 ON l.campaign_id = c1.id
       LEFT JOIN campaigns c2 ON u.assigned_campaign_id = c2.id
       LEFT JOIN users p ON u.parent_id = p.id
-      WHERE 1=1
+      WHERE 1=1 ${sec.sql}
     `;
     
     let users;
@@ -2958,30 +2954,18 @@ app.get('/api/admin/conflicts', (req, res) => {
   
   try {
     let sql = `
-      WITH active_conflicts AS MATERIALIZED (
-        SELECT * FROM capture_conflicts WHERE status != 'RESOLVED'
-      ),
-      active_conflicts_with_elector AS MATERIALIZED (
-        SELECT 
-          cc.*,
-          e.nombre as elector_nombre,
-          e.apellido as elector_apellido,
-          e.distrito as distrito
-        FROM active_conflicts cc
-        LEFT JOIN electors e ON cc.elector_ci = e.ci
-      )
       SELECT 
-        e.id as conflict_id,
-        e.status as conflict_status,
-        e.conflict_type,
-        e.jefe_decision_id,
-        e.consent_a,
-        e.consent_b,
-        e.list_id_a,
-        e.list_id_b,
-        e.elector_ci as elector_ci,
-        e.elector_nombre,
-        e.elector_apellido,
+        cc.id as conflict_id,
+        cc.status as conflict_status,
+        cc.conflict_type,
+        cc.jefe_decision_id,
+        cc.consent_a,
+        cc.consent_b,
+        cc.list_id_a,
+        cc.list_id_b,
+        cc.elector_ci as elector_ci,
+        e.nombre as elector_nombre,
+        e.apellido as elector_apellido,
         
         -- Capture A
         ca.id as capture_a_id,
@@ -3009,16 +2993,17 @@ app.get('/api/admin/conflicts', (req, res) => {
         lb.list_number as list_b,
         lb.option_number as option_b
 
-      FROM active_conflicts_with_elector e
-      LEFT JOIN elector_captures ca ON e.capture_id = ca.id
-      LEFT JOIN elector_captures cb ON e.capture_id_b = cb.id
+      FROM capture_conflicts cc
+      CROSS JOIN electors e ON cc.elector_ci = e.ci
+      LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
+      LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
       LEFT JOIN users ua ON ca.coordinator_id = ua.id
       LEFT JOIN users ub ON cb.coordinator_id = ub.id
       LEFT JOIN users pa ON ua.parent_id = pa.id
       LEFT JOIN users pb ON ub.parent_id = pb.id
       LEFT JOIN lists la ON ca.list_id = la.id
       LEFT JOIN lists lb ON cb.list_id = lb.id
-      WHERE 1=1
+      WHERE cc.status != 'RESOLVED'
     `;
     const params: any[] = [];
 
@@ -3032,7 +3017,7 @@ app.get('/api/admin/conflicts', (req, res) => {
 
     // ONLY filter by list_id for Subjefes/Contenders. Jefes de Campaña and SuperAdmins see ALL active conflicts in their district/campaign
     if (role === 'SUBJEFE' && list_id && !isNaN(list_id) && list_id !== 0) {
-      sql += " AND (e.list_id_a = ? OR e.list_id_b = ?)";
+      sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
       params.push(list_id, list_id);
     }
 
@@ -3054,42 +3039,27 @@ app.get('/api/admin/conflicts/history', (req, res) => {
   
   try {
     let sql = `
-      WITH resolved_conflicts AS MATERIALIZED (
-        SELECT * FROM capture_conflicts WHERE status = 'RESOLVED'
-      ),
-      resolved_conflicts_with_elector AS MATERIALIZED (
-        SELECT 
-          cc.*,
-          e.ci as elector_ci_ref,
-          e.nombre as elector_nombre,
-          e.apellido as elector_apellido,
-          e.local_votacion as local_votacion,
-          e.mesa as mesa,
-          e.distrito as distrito,
-          e.ciudad as ciudad
-        FROM resolved_conflicts cc
-        LEFT JOIN electors e ON cc.elector_ci = e.ci
-      )
       SELECT 
-        e.id as conflict_id,
-        e.status as conflict_status,
-        e.resolved_at,
-        COALESCE(e.elector_ci_ref, e.elector_ci) as elector_ci,
-        COALESCE(e.elector_nombre, 'ELECTOR') as elector_nombre,
-        COALESCE(e.elector_apellido, 'NO REGISTRADO') as elector_apellido,
+        cc.id as conflict_id,
+        cc.status as conflict_status,
+        cc.resolved_at,
+        cc.elector_ci as elector_ci,
+        COALESCE(e.nombre, 'ELECTOR') as elector_nombre,
+        COALESCE(e.apellido, 'NO REGISTRADO') as elector_apellido,
         COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
         COALESCE(e.mesa, 0) as mesa,
         
         COALESCE(u_win_1.nombre, u_win_2.nombre) as winner_name,
         COALESCE(u_win_1.role, u_win_2.role) as winner_role,
         p_win.nombre as padrino_name
-      FROM resolved_conflicts_with_elector e
-      LEFT JOIN elector_captures ec_win_1 ON e.winner_capture_id = ec_win_1.id
-      LEFT JOIN elector_captures ec_win_2 ON e.jefe_decision_id = ec_win_2.id
+      FROM capture_conflicts cc
+      CROSS JOIN electors e ON cc.elector_ci = e.ci
+      LEFT JOIN elector_captures ec_win_1 ON cc.winner_capture_id = ec_win_1.id
+      LEFT JOIN elector_captures ec_win_2 ON cc.jefe_decision_id = ec_win_2.id
       LEFT JOIN users u_win_1 ON ec_win_1.coordinator_id = u_win_1.id
       LEFT JOIN users u_win_2 ON ec_win_2.coordinator_id = u_win_2.id
       LEFT JOIN users p_win ON COALESCE(u_win_1.parent_id, u_win_2.parent_id) = p_win.id
-      WHERE 1=1
+      WHERE cc.status = 'RESOLVED'
     `;
     const params: any[] = [];
 
@@ -3108,11 +3078,11 @@ app.get('/api/admin/conflicts/history', (req, res) => {
 
     // ONLY filter by list_id for Subjefes/Contenders. Jefes de Campaña and SuperAdmins see ALL resolved conflicts
     if (role === 'SUBJEFE' && list_id && !isNaN(list_id) && list_id !== 0) {
-      sql += " AND (e.list_id_a = ? OR e.list_id_b = ?)";
+      sql += " AND (cc.list_id_a = ? OR cc.list_id_b = ?)";
       params.push(list_id, list_id);
     }
 
-    sql += " ORDER BY e.resolved_at DESC LIMIT 100";
+    sql += " ORDER BY cc.resolved_at DESC LIMIT 100";
 
     const history = db.prepare(sql).all(...params);
     res.json(history);
@@ -3235,13 +3205,10 @@ app.get('/api/admin/activity', (req, res) => {
   const sec = getSecurityFilter(req, 'u');
   try {
     const activities = db.prepare(`
-      WITH filtered_users AS MATERIALIZED (
-        SELECT id, nombre, photo_url FROM users u
-        WHERE 1=1 ${sec.sql}
-      )
       SELECT al.*, u.nombre as user_name, u.photo_url as user_photo
-      FROM filtered_users u
-      JOIN audit_logs al ON al.user_id = u.id
+      FROM users u
+      CROSS JOIN audit_logs al ON al.user_id = u.id
+      WHERE 1=1 ${sec.sql}
       ORDER BY al.timestamp DESC LIMIT 50
     `).all(...sec.params);
     res.json(activities);
@@ -4230,33 +4197,32 @@ app.get('/api/admin/activity', (req, res) => {
 
   try {
     const query = `
-      WITH filtered_users AS MATERIALIZED (
-        SELECT id, nombre FROM users u
-        WHERE 1=1 ${sec.sql}
-      )
       SELECT 'CAPTURE' as type, ec.timestamp, u.nombre as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Nueva Captura' as detail
-      FROM elector_captures ec
+      FROM users u
+      CROSS JOIN elector_captures ec ON ec.coordinator_id = u.id
       LEFT JOIN electors e ON ec.elector_ci = e.ci
-      JOIN filtered_users u ON ec.coordinator_id = u.id
+      WHERE 1=1 ${sec.sql}
       
       UNION ALL
       
       SELECT 'REQUEST' as type, r.timestamp, u.nombre as user_name, r.type as entity_name, r.description as detail
-      FROM field_requests r
-      JOIN filtered_users u ON r.coordinator_id = u.id
+      FROM users u
+      CROSS JOIN field_requests r ON r.coordinator_id = u.id
+      WHERE 1=1 ${sec.sql}
       
       UNION ALL
       
       SELECT 'CONFLICT' as type, cc.timestamp, 'Sistema' as user_name, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as entity_name, 'Doble Captura' as detail
-      FROM capture_conflicts cc
+      FROM users u
+      CROSS JOIN elector_captures ec ON ec.coordinator_id = u.id
+      CROSS JOIN capture_conflicts cc ON cc.capture_id = ec.id
       LEFT JOIN electors e ON cc.elector_ci = e.ci
-      JOIN elector_captures ec ON cc.capture_id = ec.id
-      JOIN filtered_users u ON ec.coordinator_id = u.id
+      WHERE 1=1 ${sec.sql}
       
       ORDER BY timestamp DESC
       LIMIT 20
     `;
-    const activity = db.prepare(query).all(...sec.params);
+    const activity = db.prepare(query).all(...sec.params, ...sec.params, ...sec.params);
     res.json(activity);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
