@@ -305,6 +305,32 @@ app.get('/api/ready', (_req, res) => {
   res.json({ ready: serverReady });
 });
 
+// TEMP: Test conflicts query directly (no auth filter)
+app.get('/api/diagnostics/conflicts-test', (_req, res) => {
+  try {
+    const sample = db.prepare(`
+      SELECT cc.id as conflict_id, cc.status, cc.elector_ci, e.nombre, e.apellido, e.distrito,
+             ua.nombre as coord_a, ub.nombre as coord_b
+      FROM capture_conflicts cc
+      CROSS JOIN electors e ON cc.elector_ci = e.ci
+      LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
+      LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
+      LEFT JOIN users ua ON ca.coordinator_id = ua.id
+      LEFT JOIN users ub ON cb.coordinator_id = ub.id
+      WHERE cc.status != 'RESOLVED' AND e.distrito = 'PEDRO JUAN CABALLERO'
+      LIMIT 5
+    `).all();
+    const total = db.prepare(`
+      SELECT COUNT(*) as c FROM capture_conflicts cc
+      CROSS JOIN electors e ON cc.elector_ci = e.ci
+      WHERE cc.status != 'RESOLVED' AND e.distrito = 'PEDRO JUAN CABALLERO'
+    `).get() as any;
+    res.json({ total: total.c, sample });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 🔍 Database diagnostic endpoint (no auth required) — shows data counts per district
 app.get('/api/diagnostics/data-health', (_req, res) => {
   try {
