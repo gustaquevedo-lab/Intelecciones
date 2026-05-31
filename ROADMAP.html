@@ -1,0 +1,256 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intelecciones — Roadmap de Optimización</title>
+<style>
+  :root {
+    --blue: #2E84F0; --blue-dark: #1558B0; --green: #22C47E;
+    --green-dark: #169058; --navy: #091624; --navy-light: #0f2236;
+    --gray-text: #A8B4C8; --gray-muted: #6B7A90; --border: #1a3352;
+    --bg: #060e18; --bg-card: #0c1a2e; --bg-card-hover: #112240;
+    --risk-high: #E53E3E; --risk-medium: #D97706; --risk-low: #22C47E;
+    --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: var(--bg); color: #e2e8f0; line-height: 1.6; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, var(--navy) 0%, #0a1929 100%); border-bottom: 1px solid var(--border); padding: 24px 0; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); }
+  .header-inner { max-width: 1400px; margin: 0 auto; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--blue), var(--blue-dark)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; }
+  .logo-text { font-size: 22px; font-weight: 700; }
+  .logo-text .inteli { color: var(--blue); } .logo-text .suffix { color: var(--gray-text); font-weight: 300; font-size: 16px; margin-left: 8px; }
+  .stats-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .stat { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+  .stat-value { font-weight: 700; font-size: 16px; font-family: var(--mono); } .stat-label { color: var(--gray-text); }
+  .stat.completed .stat-value { color: var(--green); } .stat.pending .stat-value { color: var(--risk-medium); } .stat.total .stat-value { color: var(--blue); }
+  .progress-global { width: 200px; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .progress-global-fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: 4px; transition: width 0.5s ease; }
+  .main { max-width: 1400px; margin: 0 auto; padding: 32px; display: flex; gap: 32px; }
+  .sidebar { width: 260px; flex-shrink: 0; position: sticky; top: 100px; align-self: flex-start; max-height: calc(100vh - 120px); overflow-y: auto; }
+  .sidebar::-webkit-scrollbar { width: 4px; } .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .nav-section { margin-bottom: 8px; }
+  .nav-phase { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 600; color: var(--gray-text); border: 1px solid transparent; }
+  .nav-phase:hover { background: var(--bg-card); color: #e2e8f0; border-color: var(--border); }
+  .nav-phase.active { background: rgba(46,132,240,0.1); color: var(--blue); border-color: rgba(46,132,240,0.3); }
+  .nav-phase .nav-badge { margin-left: auto; font-size: 11px; font-family: var(--mono); padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.06); }
+  .nav-phase.phase-complete .nav-badge { background: rgba(34,196,126,0.15); color: var(--green); }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .nav-dot.dot-0 { background: var(--gray-muted); } .nav-dot.dot-1 { background: var(--blue); } .nav-dot.dot-2 { background: #8B5CF6; } .nav-dot.dot-3 { background: var(--risk-medium); } .nav-dot.dot-4 { background: var(--risk-high); } .nav-dot.dot-5 { background: #EC4899; } .nav-dot.dot-6 { background: var(--green); }
+  .content { flex: 1; min-width: 0; }
+  .phase { margin-bottom: 48px; scroll-margin-top: 110px; }
+  .phase-header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  .phase-number { font-size: 36px; font-weight: 800; font-family: var(--mono); background: linear-gradient(135deg, var(--blue), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; }
+  .phase-title { font-size: 24px; font-weight: 700; }
+  .phase-weeks { font-size: 13px; color: var(--gray-muted); padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px; margin-left: auto; white-space: nowrap; }
+  .phase-objective { color: var(--gray-text); font-size: 15px; margin-bottom: 20px; padding: 8px 16px; background: rgba(255,255,255,0.02); border-left: 3px solid var(--border); border-radius: 0 8px 8px 0; }
+  .phase-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; font-size: 13px; color: var(--gray-muted); }
+  .phase-progress-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .phase-progress-fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: 2px; transition: width 0.5s ease; }
+  .task-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .task-group-header { padding: 16px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.2s; user-select: none; }
+  .task-group-header:hover { background: var(--bg-card-hover); }
+  .task-group-toggle { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: var(--gray-muted); transition: transform 0.3s; flex-shrink: 0; font-size: 12px; }
+  .task-group.expanded .task-group-toggle { transform: rotate(90deg); }
+  .task-group-id { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--blue); background: rgba(46,132,240,0.1); padding: 2px 10px; border-radius: 6px; flex-shrink: 0; }
+  .task-group-name { font-weight: 600; font-size: 15px; flex: 1; }
+  .task-group-effort { font-size: 12px; color: var(--gray-muted); padding: 3px 10px; border: 1px solid var(--border); border-radius: 6px; white-space: nowrap; }
+  .task-group-status { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 6px; white-space: nowrap; }
+  .status-pending { background: rgba(255,255,255,0.06); color: var(--gray-muted); }
+  .status-in-progress { background: rgba(46,132,240,0.15); color: var(--blue); }
+  .status-done { background: rgba(34,196,126,0.15); color: var(--green); }
+  .task-group-body { display: none; border-top: 1px solid var(--border); }
+  .task-group.expanded .task-group-body { display: block; }
+  .task-desc { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .task-desc p { color: var(--gray-text); font-size: 14px; margin-bottom: 8px; }
+  .task-desc .dep-tag { display: inline-block; font-size: 12px; padding: 2px 8px; background: rgba(139,92,246,0.12); color: #a78bfa; border-radius: 4px; margin-right: 6px; }
+  .task-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.15s; }
+  .task-item:last-child { border-bottom: none; } .task-item:hover { background: rgba(255,255,255,0.02); }
+  .task-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 5px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; margin-top: 1px; }
+  .task-check:hover { border-color: var(--blue); background: rgba(46,132,240,0.1); }
+  .task-check.checked { background: var(--green); border-color: var(--green); }
+  .task-check.checked::after { content: '\2713'; color: #fff; font-size: 12px; font-weight: 700; }
+  .task-content { flex: 1; min-width: 0; } .task-label { font-size: 14px; cursor: pointer; }
+  .task-item.completed .task-label { color: var(--gray-muted); text-decoration: line-through; }
+  .task-briefing { margin-top: 6px; padding: 8px 12px; background: rgba(34,196,126,0.08); border-left: 3px solid var(--green); border-radius: 0 6px 6px 0; font-size: 13px; color: var(--green); display: flex; align-items: flex-start; gap: 8px; }
+  .task-briefing .briefing-icon { flex-shrink: 0; margin-top: 1px; }
+  .task-briefing-input { display: none; margin-top: 8px; width: 100%; }
+  .task-item.completing .task-briefing-input { display: flex; gap: 8px; }
+  .task-briefing-input textarea { flex: 1; background: var(--navy); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: #e2e8f0; font-family: var(--font); font-size: 13px; resize: vertical; min-height: 60px; }
+  .task-briefing-input textarea:focus { outline: none; border-color: var(--blue); }
+  .task-briefing-input button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; align-self: flex-end; }
+  .btn-save { background: var(--green); color: #fff; } .btn-cancel { background: rgba(255,255,255,0.08); color: var(--gray-text); }
+  .task-timestamp { font-size: 11px; color: var(--gray-muted); margin-top: 4px; }
+  .prompt-toggle { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 10px; background: rgba(46,132,240,0.08); border: 1px solid rgba(46,132,240,0.2); border-radius: 6px; color: var(--blue); font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .prompt-toggle:hover { background: rgba(46,132,240,0.15); border-color: rgba(46,132,240,0.4); }
+  .prompt-block { display: none; margin-top: 12px; padding: 16px; background: rgba(9,22,36,0.8); border: 1px solid var(--border); border-radius: 8px; position: relative; }
+  .prompt-block.visible { display: block; }
+  .prompt-block pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: #cbd5e1; white-space: pre-wrap; word-break: break-word; }
+  .prompt-copy { position: absolute; top: 8px; right: 8px; padding: 4px 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 4px; color: var(--gray-text); font-size: 11px; cursor: pointer; }
+  .prompt-copy:hover { background: rgba(255,255,255,0.15); } .prompt-copy.copied { color: var(--green); border-color: var(--green); }
+  .last-saved { font-size: 11px; color: var(--gray-muted); padding: 4px 10px; }
+  .export-btn { padding: 6px 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; color: var(--gray-text); font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .export-btn:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+  @media (max-width: 900px) { .main { flex-direction: column; } .sidebar { width: 100%; position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 4px; } .nav-phase { padding: 6px 10px; font-size: 12px; } .header-inner { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">iX</div>
+      <div class="logo-text"><span class="inteli">Intelecciones</span> <span class="suffix">/ optimización</span></div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat completed"><span class="stat-label">Hechas</span> <span class="stat-value" id="stat-done">0</span></div>
+      <div class="stat pending"><span class="stat-label">Pendientes</span> <span class="stat-value" id="stat-pending">0</span></div>
+      <div class="stat total"><span class="stat-label">Total</span> <span class="stat-value" id="stat-total">0</span></div>
+      <div class="progress-global"><div class="progress-global-fill" id="global-progress"></div></div>
+      <span class="last-saved" id="last-saved"></span>
+      <span class="last-saved" id="conn-status" style="font-weight:600"></span>
+      <button class="export-btn" onclick="connectToFile()">📁 Vincular archivo</button>
+      <button class="export-btn" onclick="loadFromFile()">📂 Cargar archivo</button>
+      <button class="export-btn" onclick="exportData()">Exportar JSON</button>
+      <label class="export-btn" style="cursor:pointer">Importar <input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
+    </div>
+  </div>
+</div>
+<div class="main">
+  <nav class="sidebar" id="sidebar"></nav>
+  <div class="content" id="content"></div>
+</div>
+<script>
+const STORAGE_KEY = 'intelecciones_roadmap';
+const STATE_FILENAME = 'roadmap-state.json';
+const API_CANDIDATES = (() => {
+  const loc = window.location;
+  const urls = [];
+  if (loc.protocol !== "file:") urls.push(loc.origin + "/api");
+  if (loc.port !== "4900") urls.push("http://localhost:4900/api");
+  return urls;
+})();
+let _stateCache = null, _saveDebounce = null, _apiBase = null, _fileHandle = null, _persistMode = "local";
+async function initState() {
+  for (const base of API_CANDIDATES) {
+    try {
+      const res = await fetch(base + "/roadmap-state", { signal: AbortSignal.timeout(2000) });
+      if (res.ok) { _stateCache = await res.json(); _apiBase = base; _persistMode = "server"; localStorage.setItem(STORAGE_KEY, JSON.stringify(_stateCache)); updateConnectionStatus(); return; }
+    } catch {}
+  }
+  try { const raw = localStorage.getItem(STORAGE_KEY); _stateCache = raw ? JSON.parse(raw) : {}; } catch { _stateCache = {}; }
+  _persistMode = "local"; updateConnectionStatus();
+}
+function loadState() { return _stateCache || {}; }
+function saveState(state) {
+  state._lastSaved = new Date().toISOString(); _stateCache = state;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); updateLastSaved(state._lastSaved);
+  if (_saveDebounce) clearTimeout(_saveDebounce); _saveDebounce = setTimeout(() => persistState(state), 300);
+}
+async function persistState(state) {
+  const json = JSON.stringify(state, null, 2);
+  if (_apiBase) { try { const r = await fetch(_apiBase + "/roadmap-state", { method: "PUT", headers: {"Content-Type":"application/json"}, body: json, signal: AbortSignal.timeout(5000) }); if (r.ok) { _persistMode = "server"; updateConnectionStatus(); return; } } catch {} _apiBase = null; }
+  if (_fileHandle) { try { const w = await _fileHandle.createWritable(); await w.write(json); await w.close(); _persistMode = "file"; updateConnectionStatus(); return; } catch { _fileHandle = null; } }
+  _persistMode = "local"; updateConnectionStatus();
+}
+async function connectToFile() {
+  if (!("showSaveFilePicker" in window)) { alert("Usá Chrome/Edge o iniciá un servidor local."); return; }
+  try { _fileHandle = await window.showSaveFilePicker({ suggestedName: STATE_FILENAME, types: [{ description: "JSON", accept: {"application/json":[".json"]} }] }); const s = loadState(); const w = await _fileHandle.createWritable(); await w.write(JSON.stringify(s, null, 2)); await w.close(); _persistMode = "file"; updateConnectionStatus(); } catch(e) { if(e.name!=="AbortError") alert(e.message); }
+}
+async function loadFromFile() {
+  if (!("showOpenFilePicker" in window)) { alert("Usá Chrome/Edge."); return; }
+  try { const [h] = await window.showOpenFilePicker({ types: [{ description: "JSON", accept: {"application/json":[".json"]} }] }); _fileHandle = h; const f = await h.getFile(); const t = await f.text(); _stateCache = JSON.parse(t); localStorage.setItem(STORAGE_KEY, JSON.stringify(_stateCache)); _persistMode = "file"; updateConnectionStatus(); render(); } catch(e) { if(e.name!=="AbortError") alert(e.message); }
+}
+function updateConnectionStatus() {
+  const el = document.getElementById("conn-status"); if (!el) return;
+  const modes = { server: {text:"Servidor",color:"var(--green)",icon:"●"}, file: {text:"Archivo local",color:"var(--green)",icon:"●"}, local: {text:"localStorage",color:"var(--risk-medium)",icon:"○"} };
+  const m = modes[_persistMode]; el.innerHTML = '<span style="color:'+m.color+'">'+m.icon+"</span> "+m.text; el.style.color = m.color;
+}
+function getTaskKey(g,t){return g+"__"+t}
+function isCompleted(state,g,t){const k=getTaskKey(g,t);return state[k]&&state[k].completed||false}
+function getBriefing(state,g,t){const k=getTaskKey(g,t);return state[k]?state[k].briefing:null}
+function getTimestamp(state,g,t){const k=getTaskKey(g,t);return state[k]?state[k].timestamp:null}
+function toggleTask(g,t,b) {
+  const s=loadState(),k=getTaskKey(g,t);if(!s[k])s[k]={};
+  if(s[k].completed){s[k].completed=false;s[k].briefing=null;s[k].timestamp=null}
+  else{s[k].completed=true;s[k].briefing=b;s[k].timestamp=new Date().toISOString()}
+  saveState(s);render();
+}
+function escapeHtml(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function getPhaseStats(p,s){let t=0,d=0;p.groups.forEach(g=>{g.tasks.forEach((_,ti)=>{t++;if(isCompleted(s,g.id,ti))d++})});return{total:t,done:d,pct:t?Math.round(d/t*100):0}}
+function updateStats(s){let t=0,d=0;ROADMAP.forEach(p=>{const st=getPhaseStats(p,s);t+=st.total;d+=st.done});document.getElementById("stat-done").textContent=d;document.getElementById("stat-pending").textContent=t-d;document.getElementById("stat-total").textContent=t;document.getElementById("global-progress").style.width=(t?d/t*100:0)+"%"}
+function updateLastSaved(ts){const el=document.getElementById("last-saved");if(ts){const d=new Date(ts);el.textContent="Guardado: "+d.toLocaleDateString("es-PY")+" "+d.toLocaleTimeString("es-PY",{hour:"2-digit",minute:"2-digit"})}}
+function scrollToPhase(id){document.getElementById(id).scrollIntoView({behavior:"smooth"});document.querySelectorAll(".nav-phase").forEach(n=>n.classList.remove("active"));event.currentTarget.classList.add("active")}
+function toggleGroup(id){document.getElementById("group-"+id).classList.toggle("expanded")}
+function togglePrompt(e,id){e.stopPropagation();document.getElementById("prompt-"+id).classList.toggle("visible")}
+function copyPrompt(e,id){
+  e.stopPropagation();const g=ROADMAP.flatMap(p=>p.groups).find(g=>g.id===id);
+  navigator.clipboard.writeText(g.prompt).then(()=>{const btn=e.target;btn.textContent="✓ Copiado";btn.classList.add("copied");setTimeout(()=>{btn.textContent="Copiar";btn.classList.remove("copied")},2000)});
+}
+function handleTaskClick(g,t){const s=loadState();if(isCompleted(s,g,t)){toggleTask(g,t)}else{const el=document.getElementById("task-"+g+"-"+t);el.classList.add("completing");document.getElementById("briefing-"+g+"-"+t).focus()}}
+function saveBriefing(g,t){const ta=document.getElementById("briefing-"+g+"-"+t);const b=ta.value.trim()||"Completado";toggleTask(g,t,b)}
+function cancelBriefing(g,t){document.getElementById("task-"+g+"-"+t).classList.remove("completing")}
+function exportData(){const s=loadState();const b=new Blob([JSON.stringify(s,null,2)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="intelecciones-roadmap-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u)}
+function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){try{const d=JSON.parse(ev.target.result);_stateCache=d;saveState(d);render();alert("Importado correctamente")}catch{alert("JSON inválido")}};r.readAsText(f)}
+</script>
+<script src="roadmap-data.js"></script>
+<script>
+function renderSidebar(state) {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.innerHTML = ROADMAP.map(function(p) {
+    const s = getPhaseStats(p, state);
+    const isComplete = s.done === s.total && s.total > 0;
+    return '<div class="nav-section"><div class="nav-phase ' + (isComplete ? "phase-complete" : "") + '" onclick="scrollToPhase(\'' + p.id + '\')"><span class="nav-dot dot-' + p.phase + '"></span>Fase ' + p.phase + ": " + p.title + '<span class="nav-badge">' + s.done + "/" + s.total + '</span></div></div>';
+  }).join("");
+}
+
+function renderContent(state) {
+  var content = document.getElementById("content");
+  content.innerHTML = ROADMAP.map(function(phase) {
+    var ps = getPhaseStats(phase, state);
+    var groupsHtml = phase.groups.map(function(group) {
+      return renderGroup(group, state);
+    }).join("");
+    return '<div class="phase" id="' + phase.id + '"><div class="phase-header"><span class="phase-number">' + phase.phase + '</span><span class="phase-title">' + phase.title + '</span><span class="phase-weeks">' + phase.weeks + '</span></div><div class="phase-objective">' + phase.objective + '</div><div class="phase-progress"><span>' + ps.pct + '% completado</span><div class="phase-progress-bar"><div class="phase-progress-fill" style="width:' + ps.pct + '%"></div></div><span>' + ps.done + "/" + ps.total + '</span></div>' + groupsHtml + '</div>';
+  }).join("");
+}
+
+function renderGroup(group, state) {
+  var totalTasks = group.tasks.length;
+  var doneTasks = 0;
+  for (var i = 0; i < group.tasks.length; i++) { if (isCompleted(state, group.id, i)) doneTasks++; }
+  var statusClass = doneTasks === 0 ? "status-pending" : doneTasks === totalTasks ? "status-done" : "status-in-progress";
+  var statusText = doneTasks === 0 ? "Pendiente" : doneTasks === totalTasks ? "Completado" : doneTasks + "/" + totalTasks;
+  var deps = group.dependencies.length > 0 ? "<p>" + group.dependencies.map(function(d) { return '<span class="dep-tag">Depende de ' + d + "</span>"; }).join("") + "</p>" : "";
+  var tasksHtml = group.tasks.map(function(task, ti) { return renderTask(group.id, ti, task, state); }).join("");
+  return '<div class="task-group" id="group-' + group.id + '"><div class="task-group-header" onclick="toggleGroup(\'' + group.id + '\')"><span class="task-group-toggle">&#9654;</span><span class="task-group-id">' + group.id + '</span><span class="task-group-name">' + group.name + '</span><span class="task-group-effort">' + group.effort + '</span><span class="task-group-status ' + statusClass + '">' + statusText + '</span></div><div class="task-group-body"><div class="task-desc"><p>' + group.description + "</p>" + deps + '<div class="prompt-toggle" onclick="togglePrompt(event,\'' + group.id + '\')"><span>&#128203;</span> Ver prompt de implementaci&oacute;n</div><div class="prompt-block" id="prompt-' + group.id + '"><button class="prompt-copy" onclick="copyPrompt(event,\'' + group.id + '\')">Copiar</button><pre>' + escapeHtml(group.prompt) + "</pre></div></div>" + tasksHtml + "</div></div>";
+}
+
+function renderTask(groupId, taskIdx, taskText, state) {
+  var completed = isCompleted(state, groupId, taskIdx);
+  var briefing = getBriefing(state, groupId, taskIdx);
+  var timestamp = getTimestamp(state, groupId, taskIdx);
+  var briefingHtml = "";
+  if (completed && briefing) {
+    briefingHtml = '<div class="task-briefing"><span class="briefing-icon">&#9989;</span><span>' + escapeHtml(briefing) + "</span></div>";
+    if (timestamp) briefingHtml += '<div class="task-timestamp">' + new Date(timestamp).toLocaleString("es-PY") + "</div>";
+  }
+  return '<div class="task-item ' + (completed ? "completed" : "") + '" id="task-' + groupId + "-" + taskIdx + '"><div class="task-check ' + (completed ? "checked" : "") + '" onclick="handleTaskClick(\'' + groupId + "'," + taskIdx + ')"></div><div class="task-content"><span class="task-label" onclick="handleTaskClick(\'' + groupId + "'," + taskIdx + ')">' + escapeHtml(taskText) + "</span>" + briefingHtml + '<div class="task-briefing-input"><textarea id="briefing-' + groupId + "-" + taskIdx + '" placeholder="Breve descripci&oacute;n de lo que se hizo..."></textarea><div style="display:flex;flex-direction:column;gap:4px"><button class="btn-save" onclick="saveBriefing(\'' + groupId + "'," + taskIdx + ')">Guardar</button><button class="btn-cancel" onclick="cancelBriefing(\'' + groupId + "'," + taskIdx + ')">Cancelar</button></div></div></div></div>';
+}
+
+function render() {
+  var state = loadState();
+  renderSidebar(state);
+  renderContent(state);
+  updateStats(state);
+  updateLastSaved(state._lastSaved);
+}
+
+(async function() {
+  await initState();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1091,7 +1091,8 @@ Status: ${error.response?.status || 'N/A'}
     const t = setTimeout(async () => {
       try {
         const res = await api.get('/captures');
-        setCaptures(Array.isArray(res.data) ? res.data : []);
+        const d = res.data;
+        setCaptures(Array.isArray(d) ? d : (d && Array.isArray(d.data) ? d.data : []));
       } catch { /* silent — map markers are non-critical */ }
     }, 1500);
     return () => clearTimeout(t);

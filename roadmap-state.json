@@ -1,0 +1,157 @@
+{
+  "0.1__0": {
+    "completed": true,
+    "briefing": "Instalado axios-retry@4 en frontend/package.json",
+    "timestamp": "2026-05-31T03:57:00Z"
+  },
+  "0.1__1": {
+    "completed": true,
+    "briefing": "Configurado retryCondition en api.ts para reintentos automáticos (3 veces) solo ante errores de red, timeouts (ECONNABORTED) y errores de servidor (5xx)",
+    "timestamp": "2026-05-31T03:57:00Z"
+  },
+  "0.1__2": {
+    "completed": true,
+    "briefing": "Añadidos timeouts dinámicos: 120s para reportes pesados, 300s para offline/padron, 15s para auth/escrituras y 30s por defecto",
+    "timestamp": "2026-05-31T03:57:00Z"
+  },
+  "0.1__3": {
+    "completed": true,
+    "briefing": "Configurado y validado el orden de interceptores: 401 primero, retry en el medio, y build-version al final",
+    "timestamp": "2026-05-31T03:57:00Z"
+  },
+  "0.2__0": {
+    "completed": true,
+    "briefing": "Consolidados e identificados los índices duplicados en db.ts (14 declaraciones repetidas removidas)",
+    "timestamp": "2026-05-31T03:59:00Z"
+  },
+  "0.2__1": {
+    "completed": true,
+    "briefing": "Creado el script backend/scripts/drop-duplicate-indexes.ts para realizar la limpieza en la base de datos de producción de forma segura",
+    "timestamp": "2026-05-31T03:59:00Z"
+  },
+  "0.2__2": {
+    "completed": true,
+    "briefing": "Ejecutado con éxito el script drop-duplicate-indexes.ts contra la base de datos local y verificado el proceso de migración de esquema v21",
+    "timestamp": "2026-05-31T03:59:00Z"
+  },
+  "0.2__3": {
+    "completed": true,
+    "briefing": "Verificado el correcto funcionamiento del esquema limpio y los pragmas de performance sin índices redundantes",
+    "timestamp": "2026-05-31T03:59:00Z"
+  },
+  "0.3__0": {
+    "completed": true,
+    "briefing": "Implementada paginación en GET /api/offline/padron: límite de 10000 registros sin distrito y 5000 por defecto para distritos",
+    "timestamp": "2026-05-31T04:02:00Z"
+  },
+  "0.3__1": {
+    "completed": true,
+    "briefing": "Agregada paginación (?page=1&perPage=50) e inclusión de total count en GET /api/captures, adaptando el frontend para compatibilidad con el nuevo formato",
+    "timestamp": "2026-05-31T04:02:00Z"
+  },
+  "0.3__2": {
+    "completed": true,
+    "briefing": "Implementado límite dinámico en GET /api/activities (?limit=50, máximo 200) para evitar sobrecargas de lectura",
+    "timestamp": "2026-05-31T04:02:00Z"
+  },
+  "0.3__3": {
+    "completed": true,
+    "briefing": "Forzado el LIMIT 100 en las consultas del buscador de electores en GET /api/admin/electors/search",
+    "timestamp": "2026-05-31T04:02:00Z"
+  },
+  "0.3__4": {
+    "completed": true,
+    "briefing": "Convertida la exportación de auditoría (GET /api/audit/export) a paginación obligatoria, retornando error 400 si falta el parámetro 'page' y limitando descargas a 1000 por página",
+    "timestamp": "2026-05-31T04:02:00Z"
+  },
+  "0.4__0": {
+    "completed": true,
+    "briefing": "Creado el índice compuesto idx_captures_campaign_list_disputed en elector_captures",
+    "timestamp": "2026-05-31T04:04:00Z"
+  },
+  "0.4__1": {
+    "completed": true,
+    "briefing": "Creado el índice compuesto idx_captures_coord_timestamp para agilizar consultas cronológicas por coordinador",
+    "timestamp": "2026-05-31T04:04:00Z"
+  },
+  "0.4__2": {
+    "completed": true,
+    "briefing": "Creado el índice idx_conflicts_status_ci en capture_conflicts para optimizar la búsqueda de disputas activas",
+    "timestamp": "2026-05-31T04:04:00Z"
+  },
+  "0.4__3": {
+    "completed": true,
+    "briefing": "Creado el índice idx_audit_logs_user_timestamp en audit_logs para acelerar la consulta del feed de auditoría",
+    "timestamp": "2026-05-31T04:04:00Z"
+  },
+  "0.4__4": {
+    "completed": true,
+    "briefing": "Creado el índice idx_users_role_distrito_parent en users para optimizar la consulta de estructuras jerárquicas",
+    "timestamp": "2026-05-31T04:04:00Z"
+  },
+  "0.4__5": {
+    "completed": true,
+    "briefing": "Creado el índice idx_electors_ciudad_distrito en electors para optimizar la búsqueda y segmentación geográfica",
+    "timestamp": "2026-05-31T04:04:00Z"
+  },
+  "0.5__0": {
+    "completed": true,
+    "briefing": "Creado el helper createCache con soporte para get, set, invalidate, y cleanup en server.ts",
+    "timestamp": "2026-05-31T04:12:00Z"
+  },
+  "0.5__1": {
+    "completed": true,
+    "briefing": "Aplicada la caché fullReportCache con TTL 60s al endpoint GET /api/structure/padrinos/:id/full-report",
+    "timestamp": "2026-05-31T04:12:00Z"
+  },
+  "0.5__2": {
+    "completed": true,
+    "briefing": "Aplicada la caché myTeamReportsCache con TTL 30s al endpoint GET /api/my-team/reports",
+    "timestamp": "2026-05-31T04:12:00Z"
+  },
+  "0.5__3": {
+    "completed": true,
+    "briefing": "Aplicada la caché commandStatsCache con TTL 15s al endpoint GET /api/stats/command",
+    "timestamp": "2026-05-31T04:12:00Z"
+  },
+  "0.5__4": {
+    "completed": true,
+    "briefing": "Aplicada la caché diadCoverageCache con TTL 30s al endpoint GET /api/diad/coverage",
+    "timestamp": "2026-05-31T04:12:00Z"
+  },
+  "0.5__5": {
+    "completed": true,
+    "briefing": "Implementada la invalidación en cascada en las mutaciones de capturas, usuarios y sincronizaciones",
+    "timestamp": "2026-05-31T04:12:00Z"
+  },
+  "0.5__6": {
+    "completed": true,
+    "briefing": "Configurado cleanup periódico para expirar elementos en caché cada 5 minutos",
+    "timestamp": "2026-05-31T04:12:00Z"
+  },
+  "0.6__0": {
+    "completed": true,
+    "briefing": "Creada la utilidad debug.ts para filtrar logs en el frontend según el entorno",
+    "timestamp": "2026-05-31T04:13:00Z"
+  },
+  "0.6__1": {
+    "completed": true,
+    "briefing": "Reemplazado console.log por debug.log en syncService, offlineDb, api y AuthContext",
+    "timestamp": "2026-05-31T04:13:00Z"
+  },
+  "0.6__2": {
+    "completed": true,
+    "briefing": "Asegurado que console.warn y console.error estén condicionados a desarrollo o sigan el logger en páginas críticas",
+    "timestamp": "2026-05-31T04:13:00Z"
+  },
+  "0.6__3": {
+    "completed": true,
+    "briefing": "Creado el logger centralizado en backend/src/utils/logger.ts",
+    "timestamp": "2026-05-31T04:13:00Z"
+  },
+  "0.6__4": {
+    "completed": true,
+    "briefing": "Redireccionados los métodos de consola globales en backend/src/server.ts para prevenir bloqueos del event loop en producción",
+    "timestamp": "2026-05-31T04:13:00Z"
+  }
+}

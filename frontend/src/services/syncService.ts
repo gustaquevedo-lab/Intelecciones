@@ -1,5 +1,6 @@
 import api from './api';
 import { getPendingActions, removePendingAction, getPendingActionsCount } from './offlineDb';
+import { debug } from '../utils/debug';
 
 // Mutex for sync to prevent race conditions across tabs via BroadcastChannel
 let isSyncing = false;
@@ -24,7 +25,7 @@ const isDuplicateRequest = (url: string, data: any): boolean => {
   const lastRequest = recentRequests.get(key);
   
   if (lastRequest && (now - lastRequest) < DEDUP_WINDOW_MS) {
-    console.log(`[SYNC] Deduplicated duplicate request: ${key}`);
+    debug.log(`[SYNC] Deduplicated duplicate request: ${key}`);
     return true;
   }
   
@@ -85,7 +86,7 @@ if (syncChannel) {
 export const syncPendingActions = async (): Promise<{ successCount: number; failedCount: number; totalProcessed: number }> => {
   // Try to acquire lock (prevents race conditions across tabs)
   if (!acquireSyncLock()) {
-    console.log('[SYNC] Another tab is syncing, skipping...');
+    debug.log('[SYNC] Another tab is syncing, skipping...');
     return { successCount: 0, failedCount: 0, totalProcessed: 0 };
   }
   
@@ -95,7 +96,7 @@ export const syncPendingActions = async (): Promise<{ successCount: number; fail
     return { successCount: 0, failedCount: 0, totalProcessed: 0 };
   }
 
-  console.log(`[SYNC] Iniciando sincronización de ${pending.length} acciones pendientes...`);
+  debug.log(`[SYNC] Iniciando sincronización de ${pending.length} acciones pendientes...`);
 
   let successCount = 0;
   let failedCount = 0;
@@ -110,13 +111,13 @@ export const syncPendingActions = async (): Promise<{ successCount: number; fail
       
       await removePendingAction(action.id);
       successCount++;
-      console.log(`[SYNC] Acción ${action.id} (${action.type}) sincronizada con éxito.`);
+      debug.log(`[SYNC] Acción ${action.id} (${action.type}) sincronizada con éxito.`);
     } catch (err: any) {
-      console.error(`[SYNC] Error al sincronizar acción ${action.id}:`, err);
+      debug.error(`[SYNC] Error al sincronizar acción ${action.id}:`, err);
       
       // 4xx errors (client errors) - remove the action, it's broken
       if (err.response && err.response.status >= 400 && err.response.status < 500) {
-        console.warn(`[SYNC] Eliminando acción defectuosa (${err.response.status}):`, action);
+        debug.warn(`[SYNC] Eliminando acción defectuosa (${err.response.status}):`, action);
         await removePendingAction(action.id);
         failedCount++;
         continue;
@@ -124,7 +125,7 @@ export const syncPendingActions = async (): Promise<{ successCount: number; fail
       
       // 5xx errors or network errors - KEEP the action in queue, will retry next sync
       // This is the key fix: don't break the loop, just log and continue
-      console.warn(`[SYNC] Error de servidor/red (${err.response?.status || 'network'}), manteniendo acción para retry:`, action);
+      debug.warn(`[SYNC] Error de servidor/red (${err.response?.status || 'network'}), manteniendo acción para retry:`, action);
       failedCount++;
       // Don't break anymore - continue processing remaining actions
       // The action stays in the queue and will be retried on next sync
@@ -144,7 +145,7 @@ export const syncPendingActions = async (): Promise<{ successCount: number; fail
 export const safePost = async (type: string, url: string, data: any) => {
   // Check for duplicate requests before sending
   if (isDuplicateRequest(url, data)) {
-    console.log(`[SYNC] Duplicate request detected for ${type}, skipping`);
+    debug.log(`[SYNC] Duplicate request detected for ${type}, skipping`);
     return { data: { duplicate: true, message: 'Solicitud duplicada, omitida' } };
   }
   
@@ -156,7 +157,7 @@ export const safePost = async (type: string, url: string, data: any) => {
       return res;
     }
   } catch (err: any) {
-    console.warn(`[SYNC] Fallo envío online para ${type}, encolando...`, err);
+    debug.warn(`[SYNC] Fallo envío online para ${type}, encolando...`, err);
     
     // Network error or server error - enqueue for later
     const { queuePendingAction } = await import('./offlineDb');
@@ -170,7 +171,7 @@ export const safePost = async (type: string, url: string, data: any) => {
     
     // Try to sync immediately in background (non-blocking)
     setTimeout(() => {
-      syncPendingActions().catch(console.error);
+      syncPendingActions().catch(debug.error);
     }, 1000);
     
     return { data: { offline: true, message: 'Guardado localmente, se sincronizará cuando haya conexión' } };
@@ -194,20 +195,20 @@ if (typeof window !== 'undefined') {
   let wasOffline = !navigator.onLine;
   
   window.addEventListener('online', () => {
-    console.log('[SYNC] Conexión detectada. Sincronizando...');
+    debug.log('[SYNC] Conexión detectada. Sincronizando...');
     
     // Only trigger sync if we were actually offline (avoid unnecessary syncs on page load)
     if (wasOffline) {
       wasOffline = false;
       // Small delay to ensure connection is stable
       setTimeout(() => {
-        syncPendingActions().catch(console.error);
+        syncPendingActions().catch(debug.error);
       }, 2000);
     }
   });
   
   window.addEventListener('offline', () => {
-    console.log('[SYNC] Sin conexión, guardando localmente...');
+    debug.log('[SYNC] Sin conexión, guardando localmente...');
     wasOffline = true;
   });
   
@@ -216,8 +217,8 @@ if (typeof window !== 'undefined') {
     if (navigator.onLine) {
       getPendingActionsCount().then(count => {
         if (count > 0) {
-          console.log(`[SYNC] ${count} acciones pendientes, sincronizando...`);
-          syncPendingActions().catch(console.error);
+          debug.log(`[SYNC] ${count} acciones pendientes, sincronizando...`);
+          syncPendingActions().catch(debug.error);
         }
       }).catch(() => {});
     }

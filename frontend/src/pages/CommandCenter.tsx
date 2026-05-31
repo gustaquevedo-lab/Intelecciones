@@ -985,6 +985,8 @@ const CommandCenter = () => {
           const res = await api.get(url);
           if (Array.isArray(res.data)) {
             setter(res.data);
+          } else if (res.data && Array.isArray(res.data.data)) {
+            setter(res.data.data);
           } else {
             console.warn(`Ignored invalid data from ${url} (not an array)`);
           }

@@ -1,3 +1,5 @@
+import { debug } from '../utils/debug';
+
 const DB_NAME = 'InteleccionesOffline';
 const DB_VERSION = 3; // Incremented for new indexes
 const STORE_NAME = 'electors';
@@ -18,7 +20,7 @@ export const initOfflineDB = (): Promise<IDBDatabase> => {
   
   dbInitPromise = new Promise((resolve, reject) => {
     try {
-      console.log(`[DB] Opening IndexedDB: ${DB_NAME} v${DB_VERSION}`);
+      debug.log(`[DB] Opening IndexedDB: ${DB_NAME} v${DB_VERSION}`);
       
       // Close existing connection if version mismatch
       if (dbInstance) {
@@ -29,7 +31,7 @@ export const initOfflineDB = (): Promise<IDBDatabase> => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.error("[DB] Error opening IndexedDB:", request.error);
+        debug.error("[DB] Error opening IndexedDB:", request.error);
         dbInitPromise = null;
         reject(request.error);
       };
@@ -41,7 +43,7 @@ export const initOfflineDB = (): Promise<IDBDatabase> => {
         
         // Handle version change for existing connections
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          console.warn(`[DB] Store ${STORE_NAME} missing, recreating...`);
+          debug.warn(`[DB] Store ${STORE_NAME} missing, recreating...`);
           db.close();
           dbInitPromise = null;
           // Trigger reopen
@@ -75,10 +77,10 @@ export const initOfflineDB = (): Promise<IDBDatabase> => {
           syncStore.createIndex('type', 'type', { unique: false });
         }
         
-        console.log(`[DB] IndexedDB schema updated to v${DB_VERSION}`);
+        debug.log(`[DB] IndexedDB schema updated to v${DB_VERSION}`);
       };
     } catch (e) {
-      console.error("[DB] Critical error opening DB:", e);
+      debug.error("[DB] Critical error opening DB:", e);
       dbInitPromise = null;
       reject(e);
     }
@@ -102,7 +104,7 @@ export const queuePendingAction = async (action: { type: string; url: string; me
   return new Promise((resolve, reject) => {
     // Check if transaction is active
     if (!db.objectStoreNames.contains(SYNC_STORE)) {
-      console.error('[DB] Sync store not available');
+      debug.error('[DB] Sync store not available');
       reject(new Error('Sync store not available'));
       return;
     }
@@ -113,22 +115,22 @@ export const queuePendingAction = async (action: { type: string; url: string; me
       const request = store.add(action);
       
       request.onsuccess = () => {
-        console.log(`[DB] Action queued: ${action.type} (ID: ${request.result})`);
+        debug.log(`[DB] Action queued: ${action.type} (ID: ${request.result})`);
         resolve(request.result);
       };
       
       request.onerror = () => {
-        console.error('[DB] Failed to queue action:', request.error);
+        debug.error('[DB] Failed to queue action:', request.error);
         reject(request.error);
       };
       
       // Handle transaction errors
       transaction.onerror = () => {
-        console.error('[DB] Transaction error:', transaction.error);
+        debug.error('[DB] Transaction error:', transaction.error);
         reject(transaction.error);
       };
     } catch (err) {
-      console.error('[DB] Exception queueing action:', err);
+      debug.error('[DB] Exception queueing action:', err);
       // Reset connection on error
       resetOfflineDB();
       reject(err);
@@ -152,21 +154,21 @@ export const getPendingActions = async (): Promise<any[]> => {
       
       request.onsuccess = () => {
         const results = request.result || [];
-        console.log(`[DB] Retrieved ${results.length} pending actions`);
+        debug.log(`[DB] Retrieved ${results.length} pending actions`);
         resolve(results);
       };
       
       request.onerror = () => {
-        console.error('[DB] Failed to get pending actions:', request.error);
+        debug.error('[DB] Failed to get pending actions:', request.error);
         reject(request.error);
       };
       
       transaction.onerror = () => {
-        console.error('[DB] Transaction error:', transaction.error);
+        debug.error('[DB] Transaction error:', transaction.error);
         reject(transaction.error);
       };
     } catch (err) {
-      console.error('[DB] Exception getting pending actions:', err);
+      debug.error('[DB] Exception getting pending actions:', err);
       resolve([]); // Return empty on error rather than crashing
     }
   });
@@ -209,16 +211,16 @@ export const removePendingAction = async (id: number): Promise<void> => {
       const request = store.delete(id);
       
       request.onsuccess = () => {
-        console.log(`[DB] Action removed: ID ${id}`);
+        debug.log(`[DB] Action removed: ID ${id}`);
         resolve();
       };
       
       request.onerror = () => {
-        console.error('[DB] Failed to remove action:', request.error);
+        debug.error('[DB] Failed to remove action:', request.error);
         reject(request.error);
       };
     } catch (err) {
-      console.error('[DB] Exception removing action:', err);
+      debug.error('[DB] Exception removing action:', err);
       resolve(); // Don't fail on remove errors
     }
   });
@@ -295,7 +297,7 @@ export const savePadronOffline = async (electors: any[], onProgress?: (pct: numb
     await new Promise(r => setTimeout(r, 0));
   }
 
-  console.log(`Successfully saved ${total} electors offline in chunks.`);
+  debug.log(`Successfully saved ${total} electors offline in chunks.`);
 };
 
 export const searchElectorOffline = async (query: string): Promise<any[]> => {

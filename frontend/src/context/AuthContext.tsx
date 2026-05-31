@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { debug } from '../utils/debug';
 
 interface User {
     id: number;
@@ -84,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
         } catch (err) {
-            console.warn("Storage access denied in this environment.");
+            debug.warn("Storage access denied in this environment.");
         } finally {
             setTimeout(() => setLoading(false), 100);
         }

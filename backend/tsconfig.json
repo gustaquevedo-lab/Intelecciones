@@ -16,5 +16,6 @@
     "strict": false,
     "jsx": "react-jsx",
     "isolatedModules": false
-  }
+  },
+  "exclude": ["node_modules", "dist", "scripts"]
 }

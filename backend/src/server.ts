@@ -8,6 +8,12 @@ import { z } from 'zod';
 import db, { runBootstrapChecks } from './db';
 import { whatsappService } from './whatsappService';
 import * as XLSX from 'xlsx';
+import logger from './utils/logger';
+
+// Redirect global console methods to prevent event loop blocking in production
+console.log = logger.info;
+console.warn = logger.warn;
+console.error = logger.error;
 
 dotenv.config();
 
@@ -28,6 +34,62 @@ export const clearElectorsCache = () => {
   totalElectorsCache.clear();
   electorCountsByLocalCache.clear();
 };
+
+interface CacheEntry<T> {
+  data: T;
+  expiry: number;
+}
+
+export function createCache<T>(defaultTtlMs: number) {
+  const store = new Map<string, CacheEntry<T>>();
+
+  const get = (key: string): T | null => {
+    const entry = store.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiry) {
+      store.delete(key);
+      return null;
+    }
+    return entry.data;
+  };
+
+  const set = (key: string, data: T, ttlMs?: number): void => {
+    const expiry = Date.now() + (ttlMs !== undefined ? ttlMs : defaultTtlMs);
+    store.set(key, { data, expiry });
+  };
+
+  const invalidate = (): void => {
+    store.clear();
+  };
+
+  const cleanup = (): void => {
+    const now = Date.now();
+    for (const [key, entry] of store.entries()) {
+      if (now > entry.expiry) {
+        store.delete(key);
+      }
+    }
+  };
+
+  return { get, set, invalidate, cleanup };
+}
+
+export const fullReportCache = createCache<any>(60000); // 60s
+export const myTeamReportsCache = createCache<any>(30000); // 30s
+export const commandStatsCache = createCache<any>(15000); // 15s
+export const diadCoverageCache = createCache<any>(30000); // 30s
+
+const allCaches = [fullReportCache, myTeamReportsCache, commandStatsCache, diadCoverageCache];
+
+export const invalidateAllReportsCaches = () => {
+  console.log('[CACHE] Invalidating all heavy reports caches due to mutation...');
+  allCaches.forEach(c => c.invalidate());
+};
+
+// Periodic cleanup every 5 minutes
+setInterval(() => {
+  allCaches.forEach(c => c.cleanup());
+}, 300000);
 
 
 
@@ -259,6 +321,26 @@ app.get('/api/offline/padron', (req, res) => {
       // If NOT SuperUser and NO district found, return empty to prevent data leak/overload
       return res.json([]);
     }
+
+    // Apply limits: 10000 without district, default 5000 with district
+    let limit = activeDistrito ? 5000 : 10000;
+    if (req.query.limit) {
+      const parsedLimit = parseInt(req.query.limit as string);
+      if (!isNaN(parsedLimit)) {
+        limit = Math.min(parsedLimit, activeDistrito ? 5000 : 10000);
+      }
+    }
+    
+    let offset = 0;
+    if (req.query.offset) {
+      const parsedOffset = parseInt(req.query.offset as string);
+      if (!isNaN(parsedOffset)) {
+        offset = parsedOffset;
+      }
+    }
+
+    query += " LIMIT ? OFFSET ?";
+    params.push(limit, offset);
 
     const electors = db.prepare(query).all(...params);
     
@@ -1019,6 +1101,7 @@ app.post('/api/captures', (req, res) => {
     });
 
     const result = transaction();
+    invalidateAllReportsCaches();
     res.json(result);
   } catch (err: any) {
     console.error('[CAPTURES POST ERROR]', err);
@@ -1252,6 +1335,7 @@ app.post('/api/admin/locales/sync-from-padron', (req, res) => {
 
     transaction(rawLocales);
     clearElectorsCache();
+    invalidateAllReportsCaches();
     res.json({ success: true, added });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1472,6 +1556,7 @@ app.put('/api/captures/:id', (req, res) => {
       WHERE id = ?
     `).run(traffic_light, needs_transport ? 1 : 0, telefono, req.params.id);
     
+    invalidateAllReportsCaches();
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1605,6 +1690,9 @@ app.get('/api/activities', (req, res) => {
   const params = sec.params || [];
 
   try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const queryParams = [...params, limit];
+
     const activities = db.prepare(`
       SELECT ec.*, COALESCE(e.nombre || ' ' || e.apellido, 'ELECTOR') as elector_nombre, u.username as coordinator_name, l.list_number
       FROM elector_captures ec
@@ -1613,8 +1701,8 @@ app.get('/api/activities', (req, res) => {
       JOIN lists l ON ec.list_id = l.id
       JOIN campaigns c ON l.campaign_id = c.id
       WHERE 1=1 ${sec.sql}
-      ORDER BY ec.timestamp DESC LIMIT 20
-    `).all(...params);
+      ORDER BY ec.timestamp DESC LIMIT ?
+    `).all(...queryParams);
     res.json(activities);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1644,6 +1732,23 @@ app.get('/api/captures', (req, res) => {
       params.push(local_id);
     }
 
+    // Run COUNT query for total captures
+    const totalCountRes = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM elector_captures ec
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
+      JOIN users u ON ec.coordinator_id = u.id
+      WHERE 1=1 ${sec.sql} ${listFilter} ${localFilter}
+    `).get(...params) as any;
+    const total = totalCountRes?.count || 0;
+
+    // Pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = Math.min(parseInt(req.query.perPage as string) || 50, 200);
+    const offset = (page - 1) * perPage;
+
+    const queryParams = [...params, perPage, offset];
+
     const captures = db.prepare(`
       SELECT 
         ec.*, 
@@ -1662,9 +1767,16 @@ app.get('/api/captures', (req, res) => {
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
       WHERE 1=1 ${sec.sql} ${listFilter} ${localFilter}
-      ORDER BY ec.timestamp DESC LIMIT 1000
-    `).all(...params);
-    res.json(captures);
+      ORDER BY ec.timestamp DESC LIMIT ? OFFSET ?
+    `).all(...queryParams);
+
+    res.json({
+      data: captures,
+      total,
+      page,
+      perPage,
+      totalPages: Math.ceil(total / perPage)
+    });
   } catch (err: any) {
     console.error('[CAPTURES ERROR]', err);
     res.status(500).json({ error: err.message });
@@ -1868,6 +1980,7 @@ app.delete('/api/captures/:id', (req, res) => {
       }
       db.prepare('DELETE FROM elector_captures WHERE id = ?').run(req.params.id);
     }
+    invalidateAllReportsCaches();
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1909,6 +2022,7 @@ app.delete('/api/coordinators/:id/captures', (req, res) => {
     })();
 
     clearElectorsCache();
+    invalidateAllReportsCaches();
     res.json({ success: true, message: 'Todas las capturas del coordinador fueron eliminadas.' });
   } catch (err: any) {
     console.error('[WIPE COORDINATOR CAPTURES ERROR]', err);
@@ -2186,6 +2300,7 @@ app.post('/api/users', (req, res) => {
     );
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${finalUsername} with role ${role}`);
+    invalidateAllReportsCaches();
     res.json({ id: Number(result.lastInsertRowid), success: true });
   } catch (err: any) {
     console.error("Error creating user:", err);
@@ -2369,6 +2484,7 @@ app.delete('/api/users/:id', (req, res) => {
     });
 
     transaction();
+    invalidateAllReportsCaches();
     res.json({ success: true });
   } catch (err: any) {
     console.error('[DELETE USER ERROR]:', err);
@@ -2539,6 +2655,7 @@ app.put('/api/users/:id', (req, res) => {
       req.params.id
     );
     clearUserCache(req.params.id); // invalidate cache after update
+    invalidateAllReportsCaches();
     logAction(1, 'UPDATE', 'USER', req.params.id, `Updated user ${nombre} (${role || existingUser.role})`);
     res.json({ success: true });
   } catch (err: any) {
@@ -2853,13 +2970,22 @@ app.get('/api/stats/predictions', (req, res) => {
 });
 
 app.get('/api/audit/export', (req, res) => {
+  const page = parseInt(req.query.page as string);
+  if (isNaN(page) || page < 1) {
+    return res.status(400).json({ error: 'La paginación es obligatoria. Especifique el parámetro "page".' });
+  }
+
+  const perPage = Math.min(parseInt(req.query.perPage as string) || 1000, 5000);
+  const offset = (page - 1) * perPage;
+
   try {
     const logs = db.prepare(`
       SELECT a.timestamp, u.username, a.action, a.details
       FROM audit_logs a
       LEFT JOIN users u ON a.user_id = u.id
       ORDER BY a.timestamp DESC
-    `).all() as any[];
+      LIMIT ? OFFSET ?
+    `).all(perPage, offset) as any[];
     
     let csv = '\uFEFFDate,User,Action,Details\n'; // Added BOM for Excel UTF-8 support
     logs.forEach(log => {
@@ -2867,7 +2993,7 @@ app.get('/api/audit/export', (req, res) => {
     });
     
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=auditoria.csv');
+    res.setHeader('Content-Disposition', `attachment; filename=auditoria_pagina_${page}.csv`);
     res.status(200).send(csv);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -3320,7 +3446,7 @@ let cityFilter = '';
         LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
         LEFT JOIN users u ON ec.coordinator_id = u.id
         WHERE e.ci = ? ${cityFilter}
-        LIMIT 50
+        LIMIT 100
       `).all(queryStr);
     } else {
       // Split search term by spaces to search by both first and last name if provided, which is much faster and more precise!
@@ -3335,7 +3461,7 @@ let cityFilter = '';
           LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
           LEFT JOIN users u ON ec.coordinator_id = u.id
           WHERE ((e.nombre LIKE ? AND e.apellido LIKE ?) OR (e.nombre LIKE ? AND e.apellido LIKE ?)) ${cityFilter}
-          LIMIT 50
+          LIMIT 100
         `).all(p1, p2, p2, p1);
       } else {
         const term = `%${queryStr}%`;
@@ -3345,7 +3471,7 @@ let cityFilter = '';
           LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
           LEFT JOIN users u ON ec.coordinator_id = u.id
           WHERE (e.nombre LIKE ? OR e.apellido LIKE ? OR e.ci LIKE ?) ${cityFilter}
-          LIMIT 50
+          LIMIT 100
         `).all(term, term, term);
       }
     }
@@ -3665,6 +3791,12 @@ app.get('/api/stats/command', (req, res) => {
   const sec = getSecurityFilter(req, 'e');
   const secL = getSecurityFilter(req, 'l');
   const secLoc = getSecurityFilter(req, 'loc');
+
+  const cacheKey = `${requesterId || 'global'}_${list_id || ''}_${local_id || ''}`;
+  const cached = commandStatsCache.get(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
     
   // Dynamic goal: SUM(goal) from lists filtered by district/security, or specific list if requested
   let globalGoal = 1000;
@@ -3830,7 +3962,7 @@ app.get('/api/stats/command', (req, res) => {
     `).get(...captureParams) as any;
 
     const totalCap = totalCaptures?.count || 0;
-    res.json({
+    const responseData = {
       green:   stats.find(s => s.traffic_light === 'GREEN')?.count  || 0,
       yellow:  stats.find(s => s.traffic_light === 'YELLOW')?.count || 0,
       red:     stats.find(s => s.traffic_light === 'RED')?.count    || 0,
@@ -3846,7 +3978,10 @@ app.get('/api/stats/command', (req, res) => {
           ? ((loc.total_captures / loc.total_electors) * 100).toFixed(1)
           : '0',
       })),
-    });
+    };
+
+    commandStatsCache.set(cacheKey, responseData);
+    res.json(responseData);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   } finally {
@@ -4042,11 +4177,17 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
 
 app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
   const { id } = req.params;
+  let maxElectors = parseInt(req.query.maxElectors as string);
+  if (isNaN(maxElectors) || maxElectors <= 0) {
+      maxElectors = 2000;
+  }
+  const cacheKey = `${id}_${maxElectors}`;
+  const cached = fullReportCache.get(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+
   try {
-    let maxElectors = parseInt(req.query.maxElectors as string);
-    if (isNaN(maxElectors) || maxElectors <= 0) {
-        maxElectors = 2000;
-    }
     const padrino = db.prepare(`
       SELECT u.nombre, l.list_number, l.option_number, u.distrito
       FROM users u
@@ -4102,11 +4243,13 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
       return { ...c, electors };
     });
 
-    res.json({
+    const responseData = {
       padrino,
       coordinators: fullHierarchy,
       timestamp: new Date().toISOString()
-    });
+    };
+    fullReportCache.set(cacheKey, responseData);
+    res.json(responseData);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -4326,6 +4469,11 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
   const selectedCoordinator = req.query.coordinator_id as string;
   const reportType = (req.query.report_type as string) || 'all';
 
+  const cacheKey = `${requesterId}_${selectedDistrict || ''}_${selectedList || ''}_${selectedPadrino || ''}_${selectedCoordinator || ''}_${reportType}`;
+  const cached = myTeamReportsCache.get(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
 
   try {
     const t0 = Date.now();
@@ -4717,7 +4865,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
     const elapsed = Date.now() - t0;
     console.log(`[REPORTS] completed in ${elapsed}ms — padrinos=${padrinos.length} coords=${coordinators.length} electors=${electors.length} locales=${locales.length}`);
 
-    res.json({
+    const responseData = {
       district: districtName,
       filterPadrinos,
       filterCoordinators,
@@ -4725,7 +4873,10 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       coordinators,
       electors,
       locales
-    });
+    };
+    
+    myTeamReportsCache.set(cacheKey, responseData);
+    res.json(responseData);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -5446,9 +5597,9 @@ app.get('/api/whatsapp/messages', (req, res) => {
       sql += ' AND campaign_id = ?';
       params.push(user.campaign_id);
     }
-    sql += ' ORDER BY timestamp ASC';
-    const messages = db.prepare(sql).all(...params);
-    res.json(messages);
+    sql += ' ORDER BY timestamp DESC LIMIT 1000';
+    const messages = db.prepare(sql).all(...params) as any[];
+    res.json(messages.reverse());
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -5720,6 +5871,12 @@ app.get('/api/diad/coverage', (req, res) => {
   const list_id = getListId(req);
   const role = getRole(req);
   const user_id = req.headers['x-user-id'];
+
+  const cacheKey = `${user_id || 'global'}_${list_id || ''}`;
+  const cached = diadCoverageCache.get(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
   
   let districtName = '';
   let distritoFilter = '';
@@ -5795,7 +5952,7 @@ app.get('/api/diad/coverage', (req, res) => {
       ${list_id && !isNaN(list_id) ? `AND (v.assigned_list_id = ${list_id})` : ''}
     `).get() as any;
 
-    res.json({
+    const responseData = {
       total_mesas,
       mesas_operativas: assigned_mesas || 0,
       op_porcentaje: total_mesas > 0 ? (assigned_mesas / total_mesas) * 100 : 0,
@@ -5806,7 +5963,10 @@ app.get('/api/diad/coverage', (req, res) => {
       total_coordinadores: total_coordinadores || 0,
       total_vehiculos: total_vehiculos || 0,
       mesas
-    });
+    };
+
+    diadCoverageCache.set(cacheKey, responseData);
+    res.json(responseData);
   } catch (err: any) {
     console.error('[DIAD COVERAGE ERROR]', err);
     res.status(500).json({ error: err.message });
@@ -6085,6 +6245,7 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
     })();
 
     clearElectorsCache();
+    invalidateAllReportsCaches();
     res.json({ success: true, message: distrito && distrito !== 'ALL' ? `Datos del distrito ${distrito} purgados` : 'Sistema purgado globalmente' });
   } catch (err: any) {
     console.error('[WIPE ERROR]', err);

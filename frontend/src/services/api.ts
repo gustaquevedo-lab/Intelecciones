@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 let baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 if (!baseURL.startsWith('http')) baseURL = `https://${baseURL}`;
@@ -12,9 +13,43 @@ const api = axios.create({
   timeout: 30000,
 });
 
+// Configure axios-retry
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    // Only retry on timeout (ECONNABORTED), network error, or 5xx. NO on 4xx nor 429.
+    const isNetworkError = !error.response;
+    const isTimeout = error.code === 'ECONNABORTED';
+    const is5xx = error.response && error.response.status >= 500;
+    
+    if (isNetworkError || isTimeout || is5xx) {
+      if (import.meta.env.DEV) {
+        console.log(`[API Retry] Retrying request to ${error.config?.url} due to:`, error.message || error.code);
+      }
+      return true;
+    }
+    return false;
+  }
+});
+
 const BUILD_VERSION_KEY = 'app_build_version';
 
-// Response interceptor — error handling + deploy detection
+// 401 Interceptor - MUST run first (runs first if added first in FIFO response chain)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('active_list_id');
+      localStorage.removeItem('active_district');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Build Version Interceptor - runs last
 api.interceptors.response.use(
   (response) => {
     const serverVersion = response.headers['x-build-version'];
@@ -43,17 +78,23 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
-      localStorage.removeItem('auth_user');
-      localStorage.removeItem('active_list_id');
-      localStorage.removeItem('active_district');
-      window.location.href = '/login';
-    }
     return Promise.reject(error);
   }
 );
 
 api.interceptors.request.use((config) => {
+  // Dynamic timeouts based on endpoint type
+  const url = config.url || '';
+  if (url.includes('/my-team/reports') || url.includes('/full-report') || url.includes('/coverage') || url.includes('/stats/command')) {
+    config.timeout = 120000; // 120s for reports
+  } else if (url.includes('/offline/padron')) {
+    config.timeout = 300000; // 300s for offline padron
+  } else if (config.method?.toLowerCase() === 'post' || config.method?.toLowerCase() === 'put' || config.method?.toLowerCase() === 'delete' || url.includes('/login')) {
+    config.timeout = 15000; // 15s for login/writes
+  } else {
+    config.timeout = 30000; // 30s default
+  }
+
   const userStr = localStorage.getItem('auth_user');
   const activeListId = localStorage.getItem('active_list_id');
   const activeDistrict = localStorage.getItem('active_district');

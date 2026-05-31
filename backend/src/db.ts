@@ -32,7 +32,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 20; // Update this to trigger migrations
+const currentSchemaVersion = 22; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -308,7 +308,6 @@ if (dbVersion < currentSchemaVersion) {
         details TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
-
       CREATE INDEX IF NOT EXISTS idx_users_list ON users(assigned_list_id);
       CREATE INDEX IF NOT EXISTS idx_users_campaign ON users(assigned_campaign_id);
       CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id);
@@ -333,7 +332,7 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_lists_campaign ON lists(campaign_id);
       CREATE INDEX IF NOT EXISTS idx_lists_ciudad ON lists(ciudad);
       
-      CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id);
+      CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_contact ON whatsapp_messages(contact_number);
       CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_log ON whatsapp_broadcast_recipients(log_id);
       CREATE INDEX IF NOT EXISTS idx_broadcast_recipients_status ON whatsapp_broadcast_recipients(log_id, status);
@@ -415,31 +414,25 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("vehicles", "assigned_user_id", "INTEGER");
     addColumnIfNotExists("vehicles", "type", "TEXT");
     addColumnIfNotExists("vehicles", "plate", "TEXT");
-
+ 
     // Indexes for better JOIN performance
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa);
-      CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors (ciudad);
-      CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors (distrito);
       CREATE INDEX IF NOT EXISTS idx_electors_nombre ON electors (nombre, apellido);
-      CREATE INDEX IF NOT EXISTS idx_users_parent ON users (parent_id);
-      CREATE INDEX IF NOT EXISTS idx_users_ci ON users (ci);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
-      CREATE INDEX IF NOT EXISTS idx_users_list ON users (assigned_list_id);
-      CREATE INDEX IF NOT EXISTS idx_users_campaign ON users (assigned_campaign_id);
-      CREATE INDEX IF NOT EXISTS idx_lists_campaign ON lists (campaign_id);
-      CREATE INDEX IF NOT EXISTS idx_lists_ciudad ON lists (ciudad);
-      CREATE INDEX IF NOT EXISTS idx_elector_captures_ci ON elector_captures(elector_ci);
-      CREATE INDEX IF NOT EXISTS idx_elector_captures_list ON elector_captures(list_id);
-      CREATE INDEX IF NOT EXISTS idx_elector_captures_coord ON elector_captures(coordinator_id);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC);
-      CREATE INDEX IF NOT EXISTS idx_elector_captures_coord_light ON elector_captures(coordinator_id, traffic_light, needs_transport);
       -- Covering index for reports CTE aggregation (avoids full table scan)
       CREATE INDEX IF NOT EXISTS idx_captures_coord_agg ON elector_captures(coordinator_id, traffic_light, needs_transport);
       -- Composite index for coord_map CTE (role + parent lookup)
       CREATE INDEX IF NOT EXISTS idx_users_role_parent ON users(role, parent_id);
-      CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
-      CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_terminal ON whatsapp_messages(terminal_id, timestamp DESC);
+      
+      -- Missing composite indexes for heavy query optimization (Fase 0.4)
+      CREATE INDEX IF NOT EXISTS idx_captures_campaign_list_disputed ON elector_captures(campaign_id, list_id, is_disputed);
+      CREATE INDEX IF NOT EXISTS idx_captures_coord_timestamp ON elector_captures(coordinator_id, timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_conflicts_status_ci ON capture_conflicts(status, elector_ci);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user_timestamp ON audit_logs(user_id, timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_role_distrito_parent ON users(role, distrito, parent_id);
+      CREATE INDEX IF NOT EXISTS idx_electors_ciudad_distrito ON electors(ciudad, distrito);
     `);
 
     db.prepare('CREATE INDEX IF NOT EXISTS idx_conflicts_capture ON capture_conflicts(capture_id)').run();
