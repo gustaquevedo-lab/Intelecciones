@@ -376,13 +376,29 @@ app.get('/api/diagnostics/data-health', (_req, res) => {
       SELECT status, COUNT(*) as c FROM capture_conflicts GROUP BY status
     `).all();
     const conflictTotal = db.prepare('SELECT COUNT(*) as c FROM capture_conflicts').get() as any;
+    // Debug: check how many pending conflicts survive the CROSS JOIN with electors
+    const pendingWithElector = db.prepare(`
+      SELECT COUNT(*) as c FROM capture_conflicts cc
+      CROSS JOIN electors e ON cc.elector_ci = e.ci
+      WHERE cc.status != 'RESOLVED'
+    `).get() as any;
+    const pendingPJC = db.prepare(`
+      SELECT COUNT(*) as c FROM capture_conflicts cc
+      CROSS JOIN electors e ON cc.elector_ci = e.ci
+      WHERE cc.status != 'RESOLVED' AND e.distrito = 'PEDRO JUAN CABALLERO'
+    `).get() as any;
+    const pendingOrphan = db.prepare(`
+      SELECT COUNT(*) as c FROM capture_conflicts cc
+      WHERE cc.status != 'RESOLVED'
+      AND cc.elector_ci NOT IN (SELECT ci FROM electors)
+    `).get() as any;
 
     res.json({
       voting_locations: { total: totalLocations.c, with_geo: locationsWithGeo.c },
       captures: { total: totalCaptures.c, with_geo: capturesWithGeo.c },
       electors: { total: totalElectors.c },
       users: { total: totalUsers.c },
-      conflicts: { total: conflictTotal.c, by_status: conflictCounts },
+      conflicts: { total: conflictTotal.c, by_status: conflictCounts, pending_with_elector: pendingWithElector.c, pending_pjc: pendingPJC.c, pending_orphan: pendingOrphan.c },
       locations_by_district: locationsByDistrict,
       captures_by_district: capturesByDistrict,
       pjc_detail: {
