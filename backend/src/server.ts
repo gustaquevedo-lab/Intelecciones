@@ -1405,8 +1405,11 @@ app.get('/api/voting-locations', (req, res) => {
   const sec = getSecurityFilter(req, 'loc');
   try {
     const locations = db.prepare(`SELECT * FROM voting_locations loc WHERE 1=1 ${sec.sql}`).all(...sec.params);
+    const withGeo = locations.filter((l: any) => l.lat != null && l.lng != null);
+    console.log(`[VOTING-LOCATIONS] user=${req.headers['x-user-id']} district=${req.headers['x-district'] || req.query.district || 'none'} total=${locations.length} withGeo=${withGeo.length} secSQL="${sec.sql}" secParams=${JSON.stringify(sec.params)}`);
     res.json(locations);
   } catch (err: any) {
+    console.error('[VOTING-LOCATIONS ERROR]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1875,7 +1878,7 @@ app.get('/api/captures', (req, res) => {
 
     // Pagination parameters
     const page = parseInt(req.query.page as string) || 1;
-    const perPage = Math.min(parseInt(req.query.perPage as string) || 50, 200);
+    const perPage = Math.min(parseInt(req.query.perPage as string) || 50, 5000);
     const offset = (page - 1) * perPage;
 
     const queryParams = [...params, perPage, offset];
@@ -1901,6 +1904,8 @@ app.get('/api/captures', (req, res) => {
       ORDER BY ec.timestamp DESC LIMIT ? OFFSET ?
     `).all(...queryParams);
 
+    const withGeo = captures.filter((c: any) => c.lat != null && c.lng != null);
+    console.log(`[CAPTURES] user=${req.headers['x-user-id']} district=${req.headers['x-district'] || req.query.district || 'none'} total=${total} returned=${captures.length} withGeo=${withGeo.length} perPage=${perPage} page=${page}`);
     res.json({
       data: captures,
       total,
@@ -4036,7 +4041,8 @@ app.get('/api/stats/command', async (req, res) => {
   const secL = getSecurityFilter(req, 'l');
   const secLoc = getSecurityFilter(req, 'loc');
 
-  const cacheKey = `${requesterId || 'global'}_${list_id || ''}_${local_id || ''}`;
+  const district = getDistrict(req);
+  const cacheKey = `${requesterId || 'global'}_${list_id || ''}_${local_id || ''}_${district || 'all'}`;
   const cached = await commandStatsCache.get(cacheKey);
   if (cached) {
     return res.json(cached);

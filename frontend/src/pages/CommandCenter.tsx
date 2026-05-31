@@ -719,9 +719,9 @@ const CommandCenter = () => {
         }
       };
 
-      // 2. TACTICAL DATA: Always fetch captures (for the map) but prioritize based on tab
-      // On mobile, we might want to skip some non-essential fetches if the connection is slow
-      fetchToState(`/captures?${queryStr}`, setCaptures);
+      // 2. TACTICAL DATA: Always fetch captures (for the map) — fetch ALL for map pins
+      // perPage=5000 ensures all captures with lat/lng show on the map, not just the first 50
+      fetchToState(`/captures?${queryStr}&perPage=5000`, setCaptures);
 
       // 3. TAB-SPECIFIC PRIORITY: Only fetch heavy detail data if the tab is active
       // 'hierarchy' replaces old 'structure'
