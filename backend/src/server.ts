@@ -304,6 +304,44 @@ app.get('/api/version', (_req, res) => {
 app.get('/api/ready', (_req, res) => {
   res.json({ ready: serverReady });
 });
+
+// 🔍 Database diagnostic endpoint (no auth required) — shows data counts per district
+app.get('/api/diagnostics/data-health', (_req, res) => {
+  try {
+    const totalLocations = db.prepare('SELECT COUNT(*) as c FROM voting_locations').get() as any;
+    const locationsWithGeo = db.prepare('SELECT COUNT(*) as c FROM voting_locations WHERE lat IS NOT NULL AND lng IS NOT NULL').get() as any;
+    const totalCaptures = db.prepare('SELECT COUNT(*) as c FROM elector_captures').get() as any;
+    const capturesWithGeo = db.prepare('SELECT COUNT(*) as c FROM elector_captures WHERE lat IS NOT NULL AND lng IS NOT NULL').get() as any;
+    const totalElectors = db.prepare('SELECT COUNT(*) as c FROM electors').get() as any;
+    const totalUsers = db.prepare('SELECT COUNT(*) as c FROM users').get() as any;
+
+    const locationsByDistrict = db.prepare(`
+      SELECT COALESCE(distrito, ciudad, 'SIN_DISTRITO') as district,
+             COUNT(*) as total,
+             SUM(CASE WHEN lat IS NOT NULL AND lng IS NOT NULL THEN 1 ELSE 0 END) as with_geo
+      FROM voting_locations GROUP BY COALESCE(distrito, ciudad, 'SIN_DISTRITO') ORDER BY total DESC LIMIT 20
+    `).all();
+
+    const capturesByDistrict = db.prepare(`
+      SELECT COALESCE(e.distrito, 'SIN_DISTRITO') as district,
+             COUNT(*) as total,
+             SUM(CASE WHEN ec.lat IS NOT NULL AND ec.lng IS NOT NULL THEN 1 ELSE 0 END) as with_geo
+      FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci
+      GROUP BY COALESCE(e.distrito, 'SIN_DISTRITO') ORDER BY total DESC LIMIT 20
+    `).all();
+
+    res.json({
+      voting_locations: { total: totalLocations.c, with_geo: locationsWithGeo.c },
+      captures: { total: totalCaptures.c, with_geo: capturesWithGeo.c },
+      electors: { total: totalElectors.c },
+      users: { total: totalUsers.c },
+      locations_by_district: locationsByDistrict,
+      captures_by_district: capturesByDistrict,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // 📊 Robust Recursive Storage Diagnosis & Safe Cache Purge
 const performStorageMaintenance = async () => {
   if (process.env.NODE_ENV !== 'production') return;
