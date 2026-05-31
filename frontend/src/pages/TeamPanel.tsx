@@ -78,6 +78,21 @@ const TRAFFIC_COLORS: Record<string, string> = {
   PURPLE: '#8B5CF6'
 };
 
+const EXPORT_COLUMNS = [
+  { key: 'name', label: 'Nombre' },
+  { key: 'ci', label: 'Cédula' },
+  { key: 'phone', label: 'Teléfono' },
+  { key: 'traffic_light', label: 'Semáforo' },
+  { key: 'district', label: 'Distrito' },
+  { key: 'city', label: 'Ciudad' },
+  { key: 'voting_location', label: 'Local de Votación' },
+  { key: 'table_number', label: 'Mesa' },
+  { key: 'coordinator', label: 'Coordinador' },
+  { key: 'padrino', label: 'Padrino' },
+  { key: 'list_number', label: 'Lista' },
+  { key: 'capture_count', label: 'Capturas' },
+] as const;
+
 const RolePill = ({ role }: { role: string }) => (
   <span style={{
     display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
@@ -821,6 +836,18 @@ const TeamPanel = () => {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Column selector & batch export state
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('teamPanel_exportColumns');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return ['name', 'ci', 'phone', 'traffic_light', 'district', 'voting_location', 'coordinator', 'padrino', 'list_number'];
+  });
+  const [selectedRowIds, setSelectedRowIds] = useState<number[]>([]);
+  const columnSelectorRef = useRef<HTMLDivElement>(null);
+
   // Advanced Filters
   const [selectedDistrictFilter, setSelectedDistrictFilter] = useState('ALL');
   const [selectedListFilter, setSelectedListFilter] = useState('ALL');
@@ -1010,10 +1037,32 @@ const TeamPanel = () => {
     }
   }, [activeTab, loadReportsData]);
 
+  useEffect(() => {
+    localStorage.setItem('teamPanel_exportColumns', JSON.stringify(selectedExportColumns));
+  }, [selectedExportColumns]);
+
+  useEffect(() => {
+    setSelectedRowIds([]);
+  }, [reportType]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (columnSelectorRef.current && !columnSelectorRef.current.contains(e.target as Node)) {
+        setShowColumnSelector(false);
+      }
+    };
+    if (showColumnSelector) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showColumnSelector]);
+
   // Server-side CSV Exporter
-  const exportToCSV = async () => {
+  const exportToCSV = async (selectedIds?: number[]) => {
     try {
-      const res = await api.get(`/reports/team/csv?reportType=${reportType}`, { responseType: 'blob' });
+      const params = new URLSearchParams();
+      params.append('reportType', reportType);
+      if (selectedExportColumns.length > 0) params.append('columns', selectedExportColumns.join(','));
+      if (selectedIds && selectedIds.length > 0) params.append('ids', selectedIds.join(','));
+      const res = await api.get(`/reports/team/csv?${params.toString()}`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -1021,6 +1070,7 @@ const TeamPanel = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setShowColumnSelector(false);
     } catch (err: any) {
       console.error("Error exporting team CSV:", err);
       alert("Error al exportar CSV: " + (err?.message || "Error desconocido"));
@@ -1735,20 +1785,96 @@ const TeamPanel = () => {
                 />
               </div>
 
-              <button
-                onClick={exportToCSV}
-                disabled={loadingReports || !reportData}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
-                  borderRadius: '10px', color: 'var(--text-2)', padding: '0.5rem 0.9rem',
-                  fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-              >
-                <Download size={14} /> CSV / Excel
-              </button>
+              <div ref={columnSelectorRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowColumnSelector(prev => !prev)}
+                  disabled={loadingReports || !reportData}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+                    borderRadius: '10px', color: 'var(--text-2)', padding: '0.5rem 0.9rem',
+                    fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                >
+                  <Download size={14} /> CSV / Excel <ChevronDown size={12} style={{ opacity: 0.6 }} />
+                </button>
+                {showColumnSelector && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', left: '0', zIndex: 100,
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: '12px', padding: '0.75rem', minWidth: '210px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+                  }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.5rem', padding: '0 0.25rem' }}>
+                      Columnas a exportar
+                    </div>
+                    {EXPORT_COLUMNS.map(col => (
+                      <label key={col.key} style={{
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        padding: '0.3rem 0.25rem', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-2)',
+                        borderRadius: '6px', transition: 'background 0.15s'
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedExportColumns.includes(col.key)}
+                          onChange={e => {
+                            setSelectedExportColumns(prev =>
+                              e.target.checked ? [...prev, col.key] : prev.filter(k => k !== col.key)
+                            );
+                          }}
+                          style={{ accentColor: '#10B981' }}
+                        />
+                        {col.label}
+                      </label>
+                    ))}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border)' }}>
+                      <button
+                        onClick={() => exportToCSV()}
+                        disabled={selectedExportColumns.length === 0}
+                        style={{
+                          flex: 1, padding: '0.4rem 0', fontSize: '0.72rem', fontWeight: 800,
+                          background: '#10B981', border: 'none', borderRadius: '8px', color: 'white',
+                          cursor: selectedExportColumns.length === 0 ? 'not-allowed' : 'pointer',
+                          opacity: selectedExportColumns.length === 0 ? 0.5 : 1
+                        }}
+                      >
+                        Exportar
+                      </button>
+                      <button
+                        onClick={() => setShowColumnSelector(false)}
+                        style={{
+                          flex: 1, padding: '0.4rem 0', fontSize: '0.72rem', fontWeight: 800,
+                          background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)',
+                          borderRadius: '8px', color: 'var(--text-2)', cursor: 'pointer'
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {selectedRowIds.length > 0 && (
+                <button
+                  onClick={() => { exportToCSV(selectedRowIds); setSelectedRowIds([]); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: '10px', color: '#10B981', padding: '0.5rem 0.9rem',
+                    fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,185,129,0.12)'}
+                >
+                  <Download size={14} /> Exportar Seleccionados ({selectedRowIds.length})
+                </button>
+              )}
 
               <button
                 onClick={exportToPDF}
@@ -2013,6 +2139,14 @@ const TeamPanel = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                        <th className="no-print" style={{ padding: '8px 6px', textAlign: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#334155', width: '30px' }}>
+                          <input
+                            type="checkbox"
+                            checked={filteredPadrinos.length > 0 && selectedRowIds.length === filteredPadrinos.length}
+                            onChange={e => setSelectedRowIds(e.target.checked ? filteredPadrinos.map(p => p.id) : [])}
+                            style={{ accentColor: '#10B981' }}
+                          />
+                        </th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>Foto</th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>Padrino / Cédula</th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>Teléfono</th>
@@ -2029,6 +2163,14 @@ const TeamPanel = () => {
                     <tbody>
                       {filteredPadrinos.map(p => (
                         <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
+                          <td className="no-print" style={{ padding: '4px 6px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedRowIds.includes(p.id)}
+                              onChange={e => setSelectedRowIds(prev => e.target.checked ? [...prev, p.id] : prev.filter(id => id !== p.id))}
+                              style={{ accentColor: '#10B981' }}
+                            />
+                          </td>
                           <td style={{ padding: '4px 6px' }}>
                             <div className="avatar-print" style={{
                               width: '22px', height: '22px', borderRadius: '50%',
@@ -2068,6 +2210,14 @@ const TeamPanel = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                        <th className="no-print" style={{ padding: '8px 6px', textAlign: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#334155', width: '30px' }}>
+                          <input
+                            type="checkbox"
+                            checked={filteredCoordinators.length > 0 && selectedRowIds.length === filteredCoordinators.length}
+                            onChange={e => setSelectedRowIds(e.target.checked ? filteredCoordinators.map(c => c.id) : [])}
+                            style={{ accentColor: '#10B981' }}
+                          />
+                        </th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>Foto</th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>Coordinador / CI</th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 800, color: '#334155' }}>Padrino Asignado</th>
@@ -2083,6 +2233,14 @@ const TeamPanel = () => {
                     <tbody>
                       {filteredCoordinators.map(c => (
                         <tr key={c.id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
+                          <td className="no-print" style={{ padding: '4px 6px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedRowIds.includes(c.id)}
+                              onChange={e => setSelectedRowIds(prev => e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id))}
+                              style={{ accentColor: '#10B981' }}
+                            />
+                          </td>
                           <td style={{ padding: '4px 6px' }}>
                             <div className="avatar-print" style={{
                               width: '22px', height: '22px', borderRadius: '50%',
@@ -2119,6 +2277,14 @@ const TeamPanel = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                        <th className="no-print" style={{ padding: '8px 6px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: '#334155', width: '30px' }}>
+                          <input
+                            type="checkbox"
+                            checked={filteredElectors.length > 0 && selectedRowIds.length === filteredElectors.length}
+                            onChange={e => setSelectedRowIds(e.target.checked ? filteredElectors.map(el => el.capture_id) : [])}
+                            style={{ accentColor: '#10B981' }}
+                          />
+                        </th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Elector / CI</th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Teléfono</th>
                         <th style={{ padding: '8px 6px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: '#334155' }}>Local de Votación</th>
@@ -2133,6 +2299,14 @@ const TeamPanel = () => {
                     <tbody>
                       {filteredElectors.map(e => (
                         <tr key={e.capture_id} style={{ borderBottom: '1px solid #e2e8f0', height: '36px' }}>
+                          <td className="no-print" style={{ padding: '4px 6px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedRowIds.includes(e.capture_id)}
+                              onChange={e => setSelectedRowIds(prev => e.target.checked ? [...prev, e.capture_id] : prev.filter(id => id !== e.capture_id))}
+                              style={{ accentColor: '#10B981' }}
+                            />
+                          </td>
                           <td style={{ padding: '4px 6px', fontSize: '0.7rem', fontWeight: 700, color: '#0f172a' }}>
                             <div>{e.nombre} {e.apellido}</div>
                             <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {e.elector_ci}</div>

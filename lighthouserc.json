@@ -1,0 +1,22 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./frontend/dist",
+      "numberOfRuns": 3
+    },
+    "assert": {
+      "assertions": {
+        "total-byte-weight": ["error", { "maxNumericValue": 500000 }],
+        "first-contentful-paint": ["warn", { "maxNumericValue": 1500 }],
+        "interactive": ["warn", { "maxNumericValue": 3000 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+        "speed-index": ["warn", { "maxNumericValue": 3000 }],
+        "server-response-time": ["warn", { "maxNumericValue": 200 }]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

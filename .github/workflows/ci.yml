@@ -66,3 +66,11 @@ jobs:
       - name: Build
         working-directory: ./frontend
         run: npm run build
+
+      - name: Lighthouse CI
+        if: github.event_name == 'pull_request'
+        run: |
+          npm install -g @lhci/cli@0.14.x
+          lhci autorun --config=lighthouserc.json
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

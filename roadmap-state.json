@@ -708,5 +708,81 @@
     "completed": true,
     "briefing": "Verificados otros archivos con logger - todos usan formato correcto de pino",
     "timestamp": "2026-05-31T18:40:00Z"
+  },
+  "5.1__0": {
+    "completed": true,
+    "briefing": "Skeletons en LogisticsApp: stats, clusters, pending requests, flota activa con Skeleton",
+    "timestamp": "2026-05-31T18:50:00Z"
+  },
+  "5.1__1": {
+    "completed": true,
+    "briefing": "Skeletons en VeedorApp: reemplazados spinners por Skeleton en VeeduriaTab y ActaFinalTab",
+    "timestamp": "2026-05-31T18:50:00Z"
+  },
+  "5.1__2": {
+    "completed": true,
+    "briefing": "Skeletons en SuperAdmin: SkeletonTable en tabs Usuarios/Campañas/Listas/Locales",
+    "timestamp": "2026-05-31T18:50:00Z"
+  },
+  "5.1__3": {
+    "completed": true,
+    "briefing": "Skeletons en Communications: chats, broadcasts, templates lists",
+    "timestamp": "2026-05-31T18:50:00Z"
+  },
+  "5.1__4": {
+    "completed": true,
+    "briefing": "Skeletons en DiaDApp: cobertura KPIs, resultados, miembros table, actas list",
+    "timestamp": "2026-05-31T18:50:00Z"
+  },
+  "5.2__0": {
+    "completed": true,
+    "briefing": "useOnlineStatus hook ya existía. Agregado banner de conectividad en MainLayout con AnimatePresence",
+    "timestamp": "2026-05-31T19:00:00Z"
+  },
+  "5.2__1": {
+    "completed": true,
+    "briefing": "SW cache GET /api con NetworkFirst ya estaba configurado en vite.config.ts. HeaderConnectionStatus badge ya mostraba pendientes/sync",
+    "timestamp": "2026-05-31T19:00:00Z"
+  },
+  "5.2__2": {
+    "completed": true,
+    "briefing": "syncService.ts ya tenía auto-sync on reconnect, safePost con encolado offline, y periodic sync cada 30s",
+    "timestamp": "2026-05-31T19:00:00Z"
+  },
+  "5.3__0": {
+    "completed": true,
+    "briefing": "xlsx endpoint ya existía en GET /api/reports/export/xlsx con filtros por columns, district, traffic_light, ids",
+    "timestamp": "2026-05-31T19:05:00Z"
+  },
+  "5.3__1": {
+    "completed": true,
+    "briefing": "Agregado selector de columnas (popover con checkboxes) en TeamPanel, persistencia en localStorage, export batch con selección múltiple",
+    "timestamp": "2026-05-31T19:10:00Z"
+  },
+  "5.4__0": {
+    "completed": true,
+    "briefing": "Creado lighthouserc.json con budgets: JS<500KB, TTFB<200ms, FCP<1.5s, TTI<3s, CLS<0.1",
+    "timestamp": "2026-05-31T19:15:00Z"
+  },
+  "5.4__1": {
+    "completed": true,
+    "briefing": "Creado useWebVitals hook con PerformanceObserver para LCP, CLS, INP, TTFB. Integrado en App.tsx",
+    "timestamp": "2026-05-31T19:15:00Z"
+  },
+  "5.4__2": {
+    "completed": true,
+    "briefing": "Fix build: excluidos tests/ y vitest.config.ts de tsconfig para evitar error TS6059 en Docker build",
+    "timestamp": "2026-05-31T19:20:00Z"
+  },
+  "5.2__3": {
+    "completed": true,
+    "briefing": "Banner de recovery online 'Conexion restablecida - sincronizando...' con 4s auto-hide en MainLayout",
+    "timestamp": "2026-05-31T21:00:00Z"
+  },
+  "5.4__3": {
+    "completed": true,
+    "briefing": "Agregado step de Lighthouse CI en .github/workflows/ci.yml (solo en PRs)",
+    "timestamp": "2026-05-31T21:00:00Z"
   }
+}
 }

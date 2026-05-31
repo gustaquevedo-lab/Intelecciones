@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 const Login = React.lazy(() => import('./pages/Login'));
 const CoordinatorApp = React.lazy(() => import('./pages/CoordinatorApp'));
@@ -22,6 +22,7 @@ import { BroadcastProvider } from './context/BroadcastContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UpdatePrompt from './components/UpdatePrompt';
 import './services/syncService'; // Initialize sync listeners
+import { useWebVitals } from './hooks/useWebVitals';
 import { useAuth } from './context/AuthContext';
 import { warmup } from './services/api';
 
@@ -69,6 +70,7 @@ const AppRoutes = () => {
 };
 
 function App() {
+  useWebVitals();
   React.useEffect(() => {
     warmup();
   }, []);
@@ -104,3 +106,4 @@ function App() {
 }
 
 export default App;
+
