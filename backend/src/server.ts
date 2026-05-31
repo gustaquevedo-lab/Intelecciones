@@ -330,6 +330,47 @@ app.get('/api/diagnostics/data-health', (_req, res) => {
       GROUP BY COALESCE(e.distrito, 'SIN_DISTRITO') ORDER BY total DESC LIMIT 20
     `).all();
 
+    // Detailed PJC breakdown
+    const pjcBreakdown = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN ec.is_disputed = 0 THEN 1 ELSE 0 END) as not_disputed,
+        SUM(CASE WHEN ec.is_disputed = 1 THEN 1 ELSE 0 END) as disputed,
+        SUM(CASE WHEN ec.lat IS NOT NULL AND ec.lng IS NOT NULL THEN 1 ELSE 0 END) as with_geo,
+        SUM(CASE WHEN ec.is_disputed = 0 AND ec.lat IS NOT NULL AND ec.lng IS NOT NULL THEN 1 ELSE 0 END) as valid_with_geo,
+        SUM(CASE WHEN ec.traffic_light = 'GREEN' AND ec.is_disputed = 0 THEN 1 ELSE 0 END) as green,
+        SUM(CASE WHEN ec.traffic_light = 'YELLOW' AND ec.is_disputed = 0 THEN 1 ELSE 0 END) as yellow,
+        SUM(CASE WHEN ec.traffic_light = 'RED' AND ec.is_disputed = 0 THEN 1 ELSE 0 END) as red,
+        SUM(CASE WHEN ec.traffic_light = 'PURPLE' AND ec.is_disputed = 0 THEN 1 ELSE 0 END) as purple
+      FROM elector_captures ec
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
+      WHERE e.distrito = 'PEDRO JUAN CABALLERO'
+    `).get() as any;
+
+    // Check what list_ids exist for PJC captures
+    const pjcLists = db.prepare(`
+      SELECT ec.list_id, l.list_number, COUNT(*) as count
+      FROM elector_captures ec
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN lists l ON ec.list_id = l.id
+      WHERE e.distrito = 'PEDRO JUAN CABALLERO' AND ec.is_disputed = 0
+      GROUP BY ec.list_id ORDER BY count DESC
+    `).all();
+
+    // Voting locations — show ALL columns for PJC
+    const pjcLocations = db.prepare(`
+      SELECT cod_local, nombre, ciudad, distrito, lat, lng, icon
+      FROM voting_locations
+      WHERE distrito = 'PEDRO JUAN CABALLERO' OR ciudad = 'PEDRO JUAN CABALLERO'
+    `).all();
+
+    // How many distinct locales have electors in PJC?
+    const pjcElectorLocales = db.prepare(`
+      SELECT local_votacion, COUNT(*) as electors
+      FROM electors WHERE distrito = 'PEDRO JUAN CABALLERO'
+      GROUP BY local_votacion ORDER BY electors DESC
+    `).all();
+
     res.json({
       voting_locations: { total: totalLocations.c, with_geo: locationsWithGeo.c },
       captures: { total: totalCaptures.c, with_geo: capturesWithGeo.c },
@@ -337,6 +378,12 @@ app.get('/api/diagnostics/data-health', (_req, res) => {
       users: { total: totalUsers.c },
       locations_by_district: locationsByDistrict,
       captures_by_district: capturesByDistrict,
+      pjc_detail: {
+        captures: pjcBreakdown,
+        lists: pjcLists,
+        voting_locations: pjcLocations,
+        elector_locales: pjcElectorLocales,
+      }
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
