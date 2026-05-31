@@ -64,4 +64,15 @@ describe('Stats and Reports Endpoints Integration Tests', () => {
     expect(res.body).toHaveProperty('mesas_operativas');
     expect(res.body).toHaveProperty('mesas_reportadas');
   });
+
+  it('debería responder con éxito a la exportación Excel en /api/reports/export/xlsx', async () => {
+    const res = await request(app)
+      .get('/api/reports/export/xlsx')
+      .set('x-user-role', 'SUPERUSUARIO')
+      .set('x-user-id', '1')
+      .set('x-district', 'TEST_DISTRICT');
+
+    expect(res.status).toBe(200);
+    expect(res.header['content-type']).toContain('spreadsheetml.sheet');
+  });
 });

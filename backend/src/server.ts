@@ -3128,6 +3128,120 @@ app.get('/api/audit/export', (req, res) => {
   }
 });
 
+app.get('/api/reports/export/xlsx', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), (req, res) => {
+  const columnsParam = req.query.columns as string;
+  const districtParam = req.query.district as string;
+  const trafficLightParam = req.query.traffic_light as string;
+  const idsParam = req.query.ids as string;
+  const listNumParam = req.query.list_number as string;
+
+  const sec = getSecurityFilter(req, 'u');
+  let whereClauses = ['1=1'];
+  let params: any[] = [];
+
+  // Security filters
+  if (sec.sql) {
+    whereClauses.push(sec.sql.replace(' AND ', ''));
+    params.push(...sec.params);
+  }
+
+  // Query parameter filters
+  if (districtParam && districtParam !== 'ALL' && districtParam !== 'GLOBAL') {
+    whereClauses.push('(UPPER(e.distrito) = UPPER(?) OR UPPER(u.distrito) = UPPER(?))');
+    params.push(districtParam, districtParam);
+  }
+
+  if (trafficLightParam && trafficLightParam !== 'ALL') {
+    whereClauses.push('ec.traffic_light = ?');
+    params.push(trafficLightParam);
+  }
+
+  if (listNumParam && listNumParam !== 'ALL') {
+    whereClauses.push('l.list_number = ?');
+    params.push(listNumParam);
+  }
+
+  if (idsParam) {
+    const ids = idsParam.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+    if (ids.length > 0) {
+      whereClauses.push(`ec.id IN (${ids.map(() => '?').join(',')})`);
+      params.push(...ids);
+    }
+  }
+
+  try {
+    const query = `
+      SELECT 
+        ec.id,
+        COALESCE(e.nombre, 'ELECTOR') as nombre,
+        COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
+        ec.elector_ci as ci,
+        ec.telefono,
+        ec.traffic_light as semaforo,
+        (CASE WHEN ec.needs_transport = 1 THEN 'SI' ELSE 'NO' END) as transporte,
+        COALESCE(u.nombre, '—') as coordinador,
+        COALESCE(p.nombre, '—') as referente,
+        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local,
+        COALESCE(e.mesa, 0) as mesa,
+        COALESCE(e.orden, 0) as orden,
+        COALESCE(e.ciudad, '—') as ciudad,
+        COALESCE(e.distrito, '—') as distrito
+      FROM elector_captures ec
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      WHERE ${whereClauses.join(' AND ')}
+      ORDER BY ec.timestamp DESC
+    `;
+
+    const rows = db.prepare(query).all(...params) as any[];
+
+    // Column filtering & header mapping
+    const defaultColumns = [
+      { key: 'nombre', header: 'Nombre' },
+      { key: 'apellido', header: 'Apellido' },
+      { key: 'ci', header: 'C.I.' },
+      { key: 'telefono', header: 'Teléfono' },
+      { key: 'semaforo', header: 'Semáforo' },
+      { key: 'transporte', header: '¿Transporte?' },
+      { key: 'coordinador', header: 'Coordinador' },
+      { key: 'referente', header: 'Referente/Padrino' },
+      { key: 'local', header: 'Local de Votación' },
+      { key: 'mesa', header: 'Mesa' },
+      { key: 'orden', header: 'Orden' },
+      { key: 'ciudad', header: 'Ciudad' },
+      { key: 'distrito', header: 'Distrito' }
+    ];
+
+    let columnsToExport = defaultColumns;
+    if (columnsParam) {
+      const selectedKeys = columnsParam.split(',');
+      columnsToExport = defaultColumns.filter(c => selectedKeys.includes(c.key));
+    }
+
+    // Format data for sheet
+    const sheetData = rows.map(row => {
+      const formatted: any = {};
+      columnsToExport.forEach(col => {
+        formatted[col.header] = row[col.key];
+      });
+      return formatted;
+    });
+
+    const wb = XLSX.book_new();
+    const ws = XLSX.json_to_sheet(sheetData);
+    XLSX.book_append_sheet(wb, ws, 'Capturas');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=reporte_capturas.xlsx');
+    res.end(buffer);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/settings', (req, res) => {
   const settings = req.body;
   try {

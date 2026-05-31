@@ -3,6 +3,7 @@ import { useSSE } from '../hooks/useSSE';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { Skeleton } from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Send, Users, FileText,
@@ -297,12 +298,14 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   const [searchQ, setSearchQ] = useState('');
   const [showIntel, setShowIntel] = useState(false);
   const [sending, setSending] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const selectedChatRef = useRef<string | null>(null);
   selectedChatRef.current = selectedChat;
 
   const loadChats = useCallback(() => {
-    api.get('/whatsapp/chats').then(r => setChats(r.data)).catch(() => {});
+    setDataLoading(true);
+    api.get('/whatsapp/chats').then(r => setChats(r.data)).catch(() => {}).finally(() => setDataLoading(false));
   }, []);
 
   const loadMessages = useCallback((number: string) => {
@@ -391,7 +394,15 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {filteredChats.length === 0 ? (
+          {dataLoading ? (
+            <div style={{ padding: '1rem' }}>
+              {[0,1,2,3,4].map(i => (
+                <div key={i} style={{ marginBottom: '0.75rem' }}>
+                  <Skeleton height={60} borderRadius={12} />
+                </div>
+              ))}
+            </div>
+          ) : filteredChats.length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.75rem' }}>
               <MessageSquare size={28} style={{ margin: '0 auto 0.5rem', opacity: 0.3 }} />
               Sin conversaciones
@@ -1300,11 +1311,15 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   const [mediaType, setMediaType] = useState<'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE'>('TEXT');
   const [mediaUrl, setMediaUrl] = useState('');
   const [logs, setLogs] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   // ── Global broadcast context (survives navigation) ──────────────────────────
   const { broadcast: broadcastLog, setBroadcast: setBroadcastCtx, pause: ctxPause, resume: ctxResume, cancel: ctxCancel } = useBroadcast();
   useEffect(() => {
-    api.get('/whatsapp/templates').then(r => setTemplates(r.data)).catch(() => {});
-    api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {});
+    setDataLoading(true);
+    Promise.all([
+      api.get('/whatsapp/templates').then(r => setTemplates(r.data)).catch(() => {}),
+      api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {})
+    ]).finally(() => setDataLoading(false));
   }, []);
 
   // Refresh logs list when broadcast completes
@@ -1789,7 +1804,18 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
             </div>
 
             {/* Saved templates */}
-            {templates.length > 0 && (
+            {dataLoading ? (
+              <div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-2)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Plantillas Guardadas
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {[0,1,2].map(i => (
+                    <Skeleton key={i} width={100} height={28} borderRadius={6} />
+                  ))}
+                </div>
+              </div>
+            ) : templates.length > 0 && (
               <div>
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-2)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Plantillas Guardadas
@@ -2044,7 +2070,19 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
         </>)}
 
         {/* Broadcast history (Outbox Mode) — community view scoped to campaign */}
-        {mode === 'outbox' && <OutboxPanel logs={logs} activeBroadcast={broadcastLog} onRefresh={() => api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {})} />}
+        {mode === 'outbox' && (
+          dataLoading ? (
+            <div style={{ padding: '1rem' }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{ marginBottom: '0.75rem' }}>
+                  <Skeleton height={80} borderRadius={12} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <OutboxPanel logs={logs} activeBroadcast={broadcastLog} onRefresh={() => api.get('/whatsapp/broadcast/logs').then(r => setLogs(r.data)).catch(() => {})} />
+          )
+        )}
 
       </div>
     </div>
@@ -2055,6 +2093,7 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
 
 const TemplatesTab: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: '', content: '', media_url: '', media_type: 'TEXT' as Template['media_type'],
@@ -2063,7 +2102,10 @@ const TemplatesTab: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [templateUploading, setTemplateUploading] = useState(false);
 
-  const load = () => api.get('/whatsapp/templates').then(r => setTemplates(r.data)).catch(() => {});
+  const load = () => {
+    setDataLoading(true);
+    api.get('/whatsapp/templates').then(r => setTemplates(r.data)).catch(() => {}).finally(() => setDataLoading(false));
+  };
 
   const handleTemplateFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2240,14 +2282,23 @@ const TemplatesTab: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {templates.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
-            <FileText size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.25 }} />
-            <div style={{ fontSize: '0.8rem' }}>Sin plantillas guardadas</div>
-            <div style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>Crea tu primera plantilla personalizada</div>
-          </div>
-        ) : templates.map(t => {
+      {dataLoading ? (
+        <div style={{ padding: '1rem' }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ marginBottom: '0.75rem' }}>
+              <Skeleton height={60} borderRadius={12} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {templates.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
+              <FileText size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.25 }} />
+              <div style={{ fontSize: '0.8rem' }}>Sin plantillas guardadas</div>
+              <div style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>Crea tu primera plantilla personalizada</div>
+            </div>
+          ) : templates.map(t => {
           const Icon = MEDIA_ICONS[t.media_type] || FileText;
           return (
             <div key={t.id} style={{
@@ -2278,6 +2329,7 @@ const TemplatesTab: React.FC = () => {
           );
         })}
       </div>
+      )}
     </div>
   );
 };

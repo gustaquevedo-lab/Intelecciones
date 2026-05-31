@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
+import { Skeleton } from '../components/Skeleton';
 import api from '../services/api';
 
 interface ListaVotos {
@@ -236,9 +237,13 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
       </header>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '5rem' }}>
-          <div className="loading-spinner" style={{ margin: '0 auto' }} />
-          <p style={{ marginTop: '1rem', color: 'var(--text-3)' }}>Configurando mesa...</p>
+        <div style={{ padding: '1rem' }}>
+          <Skeleton height={100} borderRadius={16} style={{ marginBottom: '1rem' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(85px, 1fr))', gap: '0.75rem' }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton key={i} height={90} borderRadius={16} />
+            ))}
+          </div>
         </div>
       ) : (
         <div style={{
@@ -472,9 +477,17 @@ const ActaFinalTab = () => {
   };
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: '5rem' }}>
-      <div className="loading-spinner" style={{ margin: '0 auto' }} />
-      <p style={{ marginTop: '1rem', color: 'var(--text-3)' }}>Cargando datos del acta...</p>
+    <div style={{ padding: '1rem' }}>
+      <Skeleton height={80} borderRadius={16} style={{ marginBottom: '1rem' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} height={60} borderRadius={16} />
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+        <Skeleton height={80} borderRadius={16} />
+        <Skeleton height={80} borderRadius={16} />
+      </div>
     </div>
   );
 

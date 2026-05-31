@@ -38,6 +38,7 @@ import {
 import MainLayout from '../components/MainLayout';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { ManagementTable } from '../components/ManagementTable';
+import { Skeleton, SkeletonTable } from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
@@ -2707,17 +2708,23 @@ Status: ${error.response?.status || 'N/A'}
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'overview' && renderOverview()}
-              {activeTab === 'campaigns' && renderCampaigns()}
-              {activeTab === 'lists' && renderLists()}
-              {activeTab === 'users' && renderUsers()}
-              {activeTab === 'logistics' && renderLogistics()}
-              {activeTab === 'system' && renderSystem()}
-              {activeTab === 'audit' && renderAudit()}
-              {activeTab === 'locales' && renderLocales()}
-              {activeTab === 'padrones' && renderPadrones()}
-              {activeTab === 'whatsapp' && <Navigate to="/comunicaciones" />}
-              {activeTab === 'settings' && renderSettings()}
+              {isLoading ? (
+                <SkeletonTable rows={8} columns={5} />
+              ) : (
+                <>
+                  {activeTab === 'overview' && renderOverview()}
+                  {activeTab === 'campaigns' && renderCampaigns()}
+                  {activeTab === 'lists' && renderLists()}
+                  {activeTab === 'users' && renderUsers()}
+                  {activeTab === 'logistics' && renderLogistics()}
+                  {activeTab === 'system' && renderSystem()}
+                  {activeTab === 'audit' && renderAudit()}
+                  {activeTab === 'locales' && renderLocales()}
+                  {activeTab === 'padrones' && renderPadrones()}
+                  {activeTab === 'whatsapp' && <Navigate to="/comunicaciones" />}
+                  {activeTab === 'settings' && renderSettings()}
+                </>
+              )}
             </motion.div>
           </AnimatePresence>
         </main>

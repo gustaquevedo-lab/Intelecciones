@@ -16,6 +16,7 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ImageCropperModal } from '../components/ImageCropperModal';
+import { Skeleton, SkeletonTable } from '../components/Skeleton';
 
 // ─── D'Hondt Algorithm ──────────────────────────────────────────────────────
 const MapHandler = ({ activeDistrict, locales }: { activeDistrict?: string, locales?: any[] }) => {
@@ -141,12 +142,12 @@ const DiaDApp: React.FC = () => {
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
 
   // Data queries (TanStack Query)
-  const { data: coverageData, refetch: refetchCoverage } = useCoverage(activeDistrict);
-  const { data: locationsData, refetch: refetchLocations } = useLocales(activeDistrict);
-  const { data: fleetLocationsData, refetch: refetchFleet } = useLogisticsClusters(activeDistrict);
-  const { data: resultadosData, refetch: refetchResults } = useDiadResults(activeDistrict);
-  const { data: actasData, refetch: refetchActas } = useDiadActas(activeDistrict);
-  const { data: membersListData, refetch: refetchMembers } = useDiadMembers(activeDistrict);
+  const { data: coverageData, isLoading: coverageLoading, refetch: refetchCoverage } = useCoverage(activeDistrict);
+  const { data: locationsData, isLoading: locationsLoading, refetch: refetchLocations } = useLocales(activeDistrict);
+  const { data: fleetLocationsData, isLoading: fleetLoading, refetch: refetchFleet } = useLogisticsClusters(activeDistrict);
+  const { data: resultadosData, isLoading: resultadosLoading, refetch: refetchResults } = useDiadResults(activeDistrict);
+  const { data: actasData, isLoading: actasLoading, refetch: refetchActas } = useDiadActas(activeDistrict);
+  const { data: membersListData, isLoading: membersLoading, refetch: refetchMembers } = useDiadMembers(activeDistrict);
 
   const coverage = coverageData || {
     total_mesas: 0, 
@@ -161,6 +162,11 @@ const DiaDApp: React.FC = () => {
   const resultados = resultadosData || [];
   const actas = actasData || [];
   const membersList = membersListData || [];
+
+  const isLoadingCoverage = coverageLoading || locationsLoading || fleetLoading;
+  const isLoadingResults = resultadosLoading || coverageLoading;
+  const isLoadingMembers = membersLoading || coverageLoading;
+  const isLoadingActas = actasLoading;
 
   const [bancasConcejal, setBancasConcejal] = useState(15);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -500,22 +506,28 @@ const DiaDApp: React.FC = () => {
                   </div>
 
                   {/* KPIs Operativos */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
-                    <StatCard
-                      label="Total Mesas"
-                      value={coverage.total_mesas}
-                      color="var(--text)"
-                      icon={<Activity size={12} />}
-                    />
-                    <StatCard
-                      label="Mesas Cubiertas"
-                      value={coverage.mesas_operativas}
-                      color="var(--blue-lt)"
-                      icon={<Users size={12} />}
-                    />
-                    <StatCard
-                      label="Cobertura Operativa"
-                      value={`${coverage.op_porcentaje.toFixed(1)}%`}
+                  {isLoadingCoverage ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
+                      {[0,1,2,3,4].map(i => <Skeleton key={i} height={100} borderRadius={16} />)}
+                      <Skeleton height={200} borderRadius={16} style={{ gridColumn: 'span 3' }} />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
+                      <StatCard
+                        label="Total Mesas"
+                        value={coverage.total_mesas}
+                        color="var(--text)"
+                        icon={<Activity size={12} />}
+                      />
+                      <StatCard
+                        label="Mesas Cubiertas"
+                        value={coverage.mesas_operativas}
+                        color="var(--blue-lt)"
+                        icon={<Users size={12} />}
+                      />
+                      <StatCard
+                        label="Cobertura Operativa"
+                        value={`${coverage.op_porcentaje.toFixed(1)}%`}
                       color={coverage.op_porcentaje >= 90 ? 'var(--green)' : coverage.op_porcentaje >= 50 ? '#F59E0B' : 'var(--red)'}
                       sub="Disponibilidad de personal"
                       icon={<TrendingUp size={12} />}
@@ -619,6 +631,7 @@ const DiaDApp: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                    )}
                 </div>
 
                 {/* Map */}
@@ -769,17 +782,22 @@ const DiaDApp: React.FC = () => {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
-                    <StatCard
-                      label="Campaña Activa"
-                      value={settings.app_name || 'PLRA 2026'}
-                      color="var(--blue-lt)"
-                      icon={<Shield size={12} />}
-                      sub={settings.campaign_slogan}
-                    />
-                    <StatCard
-                      label="Votos Contabilizados"
-                      value={coverage.votos_procesados.toLocaleString('es-PY')}
+                  {isLoadingResults ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
+                      {[0,1,2].map(i => <Skeleton key={i} height={100} borderRadius={16} />)}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
+                      <StatCard
+                        label="Campaña Activa"
+                        value={settings.app_name || 'PLRA 2026'}
+                        color="var(--blue-lt)"
+                        icon={<Shield size={12} />}
+                        sub={settings.campaign_slogan}
+                      />
+                      <StatCard
+                        label="Votos Contabilizados"
+                        value={coverage.votos_procesados.toLocaleString('es-PY')}
                       color="var(--green)"
                       icon={<Users size={12} />}
                     />
@@ -790,6 +808,7 @@ const DiaDApp: React.FC = () => {
                       sub={`${coverage.mesas_reportadas} de ${coverage.total_mesas} mesas`}
                     />
                   </div>
+                    )}
                 </div>
 
                 {/* Intendente */}
@@ -1060,8 +1079,13 @@ const DiaDApp: React.FC = () => {
                 <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'start', width: '100%' }}>
                   
                   {/* Left Panel (2/3 width) - Grid of Mesas grouped by Voting Location */}
-                  <div style={{ flex: '2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {locations.map(loc => {
+                  {isLoadingMembers ? (
+                    <div style={{ flex: '2' }}>
+                      <SkeletonTable rows={6} columns={4} />
+                    </div>
+                  ) : (
+                    <div style={{ flex: '2', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                      {locations.map(loc => {
                       const mesasInLoc = coverage.mesas.filter(m => m.local === loc.nombre);
                       if (mesasInLoc.length === 0) return null;
 
@@ -1221,6 +1245,7 @@ const DiaDApp: React.FC = () => {
                       );
                     })}
                   </div>
+                    )}
 
                   {/* Right Panel (1/3 width) - Sticky Standby Pool (Banco de Suplentes) */}
                   <div style={{ 
@@ -1415,7 +1440,13 @@ const DiaDApp: React.FC = () => {
                   </h3>
                 </div>
 
-                {actas.length === 0 ? (
+                {isLoadingActas ? (
+                  <div style={{ padding: '1rem' }}>
+                    <Skeleton height={60} borderRadius={12} style={{ marginBottom: '0.6rem' }} />
+                    <Skeleton height={60} borderRadius={12} style={{ marginBottom: '0.6rem' }} />
+                    <Skeleton height={60} borderRadius={12} style={{ marginBottom: '0.6rem' }} />
+                  </div>
+                ) : actas.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>
                     <FileText size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
                     <p style={{ fontWeight: 700 }}>Sin actas cargadas</p>

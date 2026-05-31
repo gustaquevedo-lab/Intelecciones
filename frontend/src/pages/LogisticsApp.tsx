@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import LogisticsMap from '../components/LogisticsMap';
+import { Skeleton } from '../components/Skeleton';
 import api from '../services/api';
 
 const LogisticsApp: React.FC = () => {
@@ -14,6 +15,7 @@ const LogisticsApp: React.FC = () => {
   const [locales, setLocales] = useState<any[]>([]);
   const [clusters, setClusters] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState<string | null>(null);
 
 
@@ -36,6 +38,7 @@ const LogisticsApp: React.FC = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       if (activeDistrict) params.append('district', activeDistrict);
       const queryStr = params.toString();
@@ -54,6 +57,8 @@ const LogisticsApp: React.FC = () => {
       setLocales(l.data);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -152,29 +157,35 @@ const LogisticsApp: React.FC = () => {
         
         {/* TOP STATS BAR */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          {[
-            { label: 'Móviles Totales', value: stats?.total_vehicles || 0, icon: Truck, color: 'var(--plra-300)' },
-            { label: 'Móviles Disponibles', value: stats?.available || 0, icon: CheckCircle, color: 'var(--green)' },
-            { label: 'Pendientes', value: stats?.total_requests || 0, icon: Clock, color: 'var(--yellow)' },
-            { label: 'Prioritarios', value: stats?.priority || 0, icon: AlertTriangle, color: 'var(--red)' }
-          ].map((stat, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="card-premium-styled" 
-              style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}
-            >
-              <div style={{ padding: '0.75rem', borderRadius: '12px', background: `${stat.color}15`, color: stat.color }}>
-                <stat.icon size={24} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>{stat.label}</p>
-                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)' }}>{stat.value}</p>
-              </div>
-            </motion.div>
-          ))}
+          {loading
+            ? [0, 1, 2, 3].map(i => (
+                <div key={i} className="card-premium-styled" style={{ padding: '1.25rem' }}>
+                  <Skeleton height={56} borderRadius={12} />
+                </div>
+              ))
+            : [
+                { label: 'Móviles Totales', value: stats?.total_vehicles || 0, icon: Truck, color: 'var(--plra-300)' },
+                { label: 'Móviles Disponibles', value: stats?.available || 0, icon: CheckCircle, color: 'var(--green)' },
+                { label: 'Pendientes', value: stats?.total_requests || 0, icon: Clock, color: 'var(--yellow)' },
+                { label: 'Prioritarios', value: stats?.priority || 0, icon: AlertTriangle, color: 'var(--red)' }
+              ].map((stat, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="card-premium-styled" 
+                  style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}
+                >
+                  <div style={{ padding: '0.75rem', borderRadius: '12px', background: `${stat.color}15`, color: stat.color }}>
+                    <stat.icon size={24} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>{stat.label}</p>
+                    <p style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)' }}>{stat.value}</p>
+                  </div>
+                </motion.div>
+              ))}
         </div>
 
         <div style={{ 
@@ -213,7 +224,14 @@ const LogisticsApp: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem', WebkitOverflowScrolling: 'touch' }}>
-              {clusters.map((cluster, i) => (
+              {loading
+                ? [0, 1, 2].map(i => (
+                    <div key={i} className="card-premium-styled" style={{ minWidth: '220px', padding: '1rem', background: 'var(--glass-bg)' }}>
+                      <Skeleton width="60%" height={14} style={{ marginBottom: 8 }} />
+                      <Skeleton width="30%" height={12} />
+                    </div>
+                  ))
+                : clusters.map((cluster, i) => (
                 <div key={i} className="card-premium-styled" style={{ minWidth: '220px', padding: '1rem', background: 'var(--glass-bg)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--plra-300)' }}>{cluster.barrio || 'GENERAL'}</span>
@@ -237,7 +255,18 @@ const LogisticsApp: React.FC = () => {
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)' }}>{pendingLogistics.length} Pendientes</span>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {pendingLogistics.map(req => (
+                {loading
+                  ? [0, 1, 2].map(i => (
+                      <div key={i} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                        <Skeleton width="60%" height={16} style={{ marginBottom: 6 }} />
+                        <Skeleton width="40%" height={14} />
+                      </div>
+                    ))
+                  : pendingLogistics.length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.8rem' }}>
+                      No hay solicitudes pendientes.
+                    </div>
+                  ) : pendingLogistics.map(req => (
                   <motion.div 
                     layout
                     key={req.id} 
@@ -275,11 +304,6 @@ const LogisticsApp: React.FC = () => {
                       </div>
                   </motion.div>
                 ))}
-                {pendingLogistics.length === 0 && (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.8rem' }}>
-                    No hay solicitudes pendientes.
-                  </div>
-                )}
               </div>
             </div>
 
@@ -291,7 +315,23 @@ const LogisticsApp: React.FC = () => {
                 </h3>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {vehicles.map(v => (
+                {loading
+                  ? [0, 1, 2].map(i => (
+                      <div key={i} style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                        <Skeleton width="70%" height={16} style={{ marginBottom: 8 }} />
+                        <Skeleton width="40%" height={14} style={{ marginBottom: 8 }} />
+                        <Skeleton height={4} borderRadius={2} />
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                          <Skeleton width={80} height={28} borderRadius={6} />
+                          <Skeleton width={80} height={28} borderRadius={6} />
+                        </div>
+                      </div>
+                    ))
+                  : vehicles.length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.8rem' }}>
+                      No hay móviles registrados.
+                    </div>
+                  ) : vehicles.map(v => (
                   <div key={v.id} style={{ 
                     padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', 
                     borderRadius: '12px'
