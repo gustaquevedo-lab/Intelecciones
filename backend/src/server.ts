@@ -191,7 +191,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'x-district', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'x-district', 'Accept', 'If-None-Match'],
+  exposedHeaders: ['ETag', 'X-Build-Version']
 }));
 // app.options wildcard removed – global cors() middleware already handles preflight for all routes
 // CORS rejection logging & global error reporting
