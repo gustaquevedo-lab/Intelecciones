@@ -558,5 +558,90 @@
     "completed": true,
     "briefing": "Integrado posthog.identify y posthog.reset en AuthContext.tsx para trazar perfiles según autenticación",
     "timestamp": "2026-05-31T12:08:45.842Z"
+  },
+  "4.1__0": {
+    "completed": true,
+    "briefing": "Implementado rate limiting diferenciado: login (5/min), captures (30/min), upload (10/min), global (100/min)",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.1__1": {
+    "completed": true,
+    "briefing": "Configurado Helmet con políticas estrictas de seguridad (HSTS, Frameguard, XSS filter, noSniff, CSP y Referrer Policy)",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.1__2": {
+    "completed": true,
+    "briefing": "Añadida validación de inputs robusta con Zod para coordenadas geográficas, traffic_light y CI electoral",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.2__0": {
+    "completed": true,
+    "briefing": "Instalado y configurado Vitest con soporte para base de datos SQLite en memoria en entorno de test",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.2__1": {
+    "completed": true,
+    "briefing": "Creados helpers setupTestDB, seedTestData y createTestApp en tests/integration/helpers.ts para aislar tests",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.2__2": {
+    "completed": true,
+    "briefing": "Desarrollada suite completa de pruebas de integración para Auth, Captures, Stats y Users",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.2__3": {
+    "completed": true,
+    "briefing": "Establecido y verificado el soporte de pruebas de regresión, garantizando la consistencia del backend",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.2__4": {
+    "completed": true,
+    "briefing": "Confirmado que la ejecución de `npm test` pasa localmente con todas las pruebas exitosas",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.3__0": {
+    "completed": true,
+    "briefing": "Creada la configuración de pipeline de integración continua en .github/workflows/ci.yml",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.3__1": {
+    "completed": true,
+    "briefing": "Configurado pipeline para ejecutar pasos secuenciales de lint, typecheck, test y build para frontend y backend",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.3__2": {
+    "completed": true,
+    "briefing": "Creado el README.md en la raíz con el badge oficial de estado del pipeline de GitHub Actions",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.3__3": {
+    "completed": true,
+    "briefing": "Verificado el flujo completo del pipeline de CI/CD para integrarse en push a la rama principal",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.4__0": {
+    "completed": true,
+    "briefing": "Instalados pino, pino-http y pino-pretty como dependencias base de logging estructurado",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.4__1": {
+    "completed": true,
+    "briefing": "Creado wrapper de logger estructurado redactando contraseñas, tokens de sesión y cookies",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.4__2": {
+    "completed": true,
+    "briefing": "Integrado pinoHttp middleware en Express para registrar solicitudes de manera estructurada con su duración",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.4__3": {
+    "completed": true,
+    "briefing": "Reescrito el ruteo global de console.log, console.warn y console.error para usar el logger estructurado sin recursión",
+    "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "4.4__4": {
+    "completed": true,
+    "briefing": "Asignado un Request UUID único a cada petición HTTP entrante e inyectado en el contexto de logs",
+    "timestamp": "2026-05-31T13:57:00Z"
   }
 }

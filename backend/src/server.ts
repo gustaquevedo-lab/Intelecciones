@@ -2,6 +2,9 @@ import express from 'express';
 import crypto from 'crypto';
 import cors from 'cors';
 import { PostHog } from 'posthog-node';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import pinoHttp from 'pino-http';
 
 const posthogClient = process.env.POSTHOG_API_KEY
   ? new PostHog(process.env.POSTHOG_API_KEY, { host: process.env.POSTHOG_HOST || 'https://us.i.posthog.com' })
@@ -30,15 +33,97 @@ import { whatsappService } from './whatsappService';
 import * as XLSX from 'xlsx';
 import logger from './utils/logger';
 
-// Redirect global console methods to prevent event loop blocking in production
-console.log = logger.info;
-console.warn = logger.warn;
-console.error = logger.error;
+// Safe wrapper for global console logging methods to prevent recursion and log cleanly using Pino
+console.log = (...args: any[]) => {
+  if (args.length === 1 && typeof args[0] === 'string') {
+    logger.info(args[0]);
+  } else {
+    logger.info({ args }, 'Console log');
+  }
+};
+console.warn = (...args: any[]) => {
+  if (args.length === 1 && typeof args[0] === 'string') {
+    logger.warn(args[0]);
+  } else {
+    logger.warn({ args }, 'Console warn');
+  }
+};
+console.error = (...args: any[]) => {
+  if (args.length === 1 && typeof args[0] === 'string') {
+    logger.error(args[0]);
+  } else {
+    logger.error({ args }, 'Console error');
+  }
+};
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 app.disable('etag');
+
+// Logging HTTP estructurado
+app.use(pinoHttp({
+  logger,
+  genReqId: (req) => req.headers['x-request-id'] || crypto.randomUUID(),
+  autoLogging: {
+    ignore: (req) => {
+      const ignoredUrls = ['/api/ping', '/api/health'];
+      return ignoredUrls.includes(req.url || '');
+    }
+  }
+}));
+
+// Cabeceras de seguridad Helmet
+app.use(helmet({
+  hsts: {
+    maxAge: 31536000, // 1 año en segundos
+    includeSubDomains: true,
+    preload: true
+  },
+  frameguard: {
+    action: 'deny'
+  },
+  referrerPolicy: {
+    policy: 'strict-origin'
+  }
+}));
+
+// Rate limiters específicos
+export const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Demasiados intentos de inicio de sesión. Intente de nuevo en 1 minuto.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'Límite de peticiones excedido (100/min).' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const captureLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Límite de capturas de electores excedido (30/min).' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Límite de subidas de archivos excedido (10/min).' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Aplicar rate limiter general a todas las rutas de API
+app.use('/api', apiLimiter);
+
 const PORT = process.env.PORT || 5000;
 
 const BUILD_VERSION = Date.now().toString();
@@ -414,7 +499,7 @@ const logAction = (user_id: number | null, action: string, entity: string, entit
   }
 };
 
-app.post('/api/upload-photo', upload.single('photo'), (req, res) => {
+app.post('/api/upload-photo', uploadLimiter, upload.single('photo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   
   const host = req.get('host') || '';
@@ -450,10 +535,10 @@ const ElectorSchema = z.object({
 });
 
 const CaptureSchema = z.object({
-  elector_ci: z.string(),
+  elector_ci: z.string().refine(validateCI, { message: 'Formato de C.I. del elector inválido' }),
   coordinator_id: z.coerce.number(), 
-  lat: z.coerce.number(),
-  lng: z.coerce.number(),
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
   traffic_light: z.enum(['GREEN', 'YELLOW', 'RED', 'PURPLE']),
   needs_transport: z.boolean().optional(),
   telefono: z.string().min(6, "El teléfono es obligatorio"),
@@ -900,7 +985,7 @@ const applyTenantFilter = (query: string, req: express.Request, params: any[] = 
   return { filteredQuery, filteredParams: params };
 };
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', loginLimiter, (req, res) => {
   const { username, password, lat, lng } = req.body;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const userAgent = req.headers['user-agent'] || 'Unknown';
@@ -1037,7 +1122,7 @@ app.get('/api/electors/:ci', (req, res) => {
 });
 
 // Capture Endpoints
-app.post('/api/captures', (req, res) => {
+app.post('/api/captures', captureLimiter, (req, res) => {
   try {
     const rawCapture = CaptureSchema.parse(req.body);
     const capture = { ...rawCapture, elector_ci: rawCapture.elector_ci.replace(/\./g, '').replace(/,/g, '').trim() };
@@ -5936,11 +6021,11 @@ app.get('/api/diad/coverage', async (req, res) => {
 
   try {
     // 1. Total Mesas from electors
-    const { total_mesas } = db.prepare(`SELECT COUNT(DISTINCT local_votacion || "-" || mesa) as total_mesas FROM electors ${distritoFilter}`).get() as any;
+    const { total_mesas } = db.prepare(`SELECT COUNT(DISTINCT local_votacion || '-' || mesa) as total_mesas FROM electors ${distritoFilter}`).get() as any;
     
     // 2. Operational Coverage: Mesas with at least 1 member assigned (VEEDOR or MIEMBRO_MESA)
     const { assigned_mesas } = db.prepare(`
-      SELECT COUNT(DISTINCT u.assigned_local || "-" || u.assigned_mesa) as assigned_mesas 
+      SELECT COUNT(DISTINCT u.assigned_local || '-' || u.assigned_mesa) as assigned_mesas 
       FROM users u
       JOIN voting_locations vl ON u.assigned_local = vl.nombre
       WHERE (u.role = 'VEEDOR' OR u.role = 'MIEMBRO_MESA') 
@@ -5952,7 +6037,7 @@ app.get('/api/diad/coverage', async (req, res) => {
 
     // 3. Results Coverage: Mesas with actas submitted
     const { reported_mesas } = db.prepare(`
-      SELECT COUNT(DISTINCT r.local_votacion || "-" || r.mesa) as reported_mesas 
+      SELECT COUNT(DISTINCT r.local_votacion || '-' || r.mesa) as reported_mesas 
       FROM results r
       JOIN voting_locations vl ON r.local_votacion = vl.nombre
       WHERE 1=1 ${vlFilter}
@@ -6296,19 +6381,21 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
   }
 });
 
-app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
 
-  serverReady = true;
-  console.log('[SYSTEM] Server fully ready.');
+    serverReady = true;
+    console.log('[SYSTEM] Server fully ready.');
 
-  setImmediate(() => {
-    console.log('[SYSTEM] Running async bootstrap checks...');
-    runBootstrapChecks();
+    setImmediate(() => {
+      console.log('[SYSTEM] Running async bootstrap checks...');
+      runBootstrapChecks();
+    });
+
+    setTimeout(() => {
+      console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');
+      whatsappService.connect('default').catch(err => console.error('Error in auto-connect:', err));
+    }, 5000);
   });
-
-  setTimeout(() => {
-    console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');
-    whatsappService.connect('default').catch(err => console.error('Error in auto-connect:', err));
-  }, 5000);
-});
+}

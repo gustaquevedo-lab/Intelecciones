@@ -10,7 +10,7 @@ if (process.env.NODE_ENV !== 'production') {
     dbDir = rootBackendPath;
   }
 }
-const dbPath = path.join(dbDir, 'intellecciones.db');
+const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(dbDir, 'intellecciones.db');
 
 
 
@@ -126,7 +126,9 @@ if (dbVersion < currentSchemaVersion) {
         ciudad TEXT DEFAULT '',
         distrito TEXT DEFAULT '',
         barrio TEXT DEFAULT '',
-        campaign_id INTEGER
+        campaign_id INTEGER,
+        photo_ci_frente TEXT,
+        photo_ci_verso TEXT
       );
 
       CREATE TABLE IF NOT EXISTS participation_logs (
@@ -164,6 +166,8 @@ if (dbVersion < currentSchemaVersion) {
         telefono TEXT,
         phone_hash TEXT,
         original_capture_id INTEGER,
+        photo_ci_frente TEXT,
+        photo_ci_verso TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -367,6 +371,10 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("electors", "ciudad", "TEXT DEFAULT ''");
     addColumnIfNotExists("electors", "distrito", "TEXT DEFAULT ''");
     addColumnIfNotExists("electors", "barrio", "TEXT DEFAULT ''");
+    addColumnIfNotExists("electors", "photo_ci_frente", "TEXT");
+    addColumnIfNotExists("electors", "photo_ci_verso", "TEXT");
+    addColumnIfNotExists("elector_captures", "photo_ci_frente", "TEXT");
+    addColumnIfNotExists("elector_captures", "photo_ci_verso", "TEXT");
     addColumnIfNotExists("participation_logs", "veedor_id", "INTEGER");
     addColumnIfNotExists("results", "veedor_id", "INTEGER");
     addColumnIfNotExists("voting_locations", "lat", "REAL");
