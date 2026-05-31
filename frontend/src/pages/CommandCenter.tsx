@@ -433,15 +433,66 @@ const CommandCenter = () => {
   const exportDisputesPDF = async () => {
     setIsGeneratingDisputesPDF(true);
     try {
-      const res = await api.get('/reports/disputes/pdf', { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `reporte-disputas-${(effectiveDistrict || 'global').toLowerCase()}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(link.href);
+      // Wait for React to render the DisputesPremiumReportRenderer
+      await new Promise(r => setTimeout(r, 600));
+
+      const container = document.getElementById('disputes-premium-print-container');
+      if (!container) throw new Error('No se encontró el contenedor de reporte');
+
+      // Wait for images to load
+      const images = container.querySelectorAll('img');
+      await Promise.all(Array.from(images).map(img =>
+        img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
+      ));
+
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: 800,
+        windowWidth: 800,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const pxW = canvas.width;
+      const pxH = canvas.height;
+
+      const PDF_W_MM = 210; // A4 width
+      const PDF_MARGIN = 10;
+      const contentW = PDF_W_MM - PDF_MARGIN * 2;
+      const contentH = (pxH * contentW) / pxW;
+      const pageH = 297 - PDF_MARGIN * 2; // A4 usable height
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      if (contentH <= pageH) {
+        doc.addImage(imgData, 'JPEG', PDF_MARGIN, PDF_MARGIN, contentW, contentH);
+      } else {
+        // Multi-page: slice the canvas
+        const totalPages = Math.ceil(contentH / pageH);
+        for (let i = 0; i < totalPages; i++) {
+          if (i > 0) doc.addPage();
+          const srcY = (i * pageH * pxW) / contentW;
+          const srcH = Math.min((pageH * pxW) / contentW, pxH - srcY);
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = pxW;
+          sliceCanvas.height = srcH;
+          const ctx = sliceCanvas.getContext('2d')!;
+          ctx.drawImage(canvas, 0, srcY, pxW, srcH, 0, 0, pxW, srcH);
+          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+          const sliceH_mm = (srcH * contentW) / pxW;
+          doc.addImage(sliceData, 'JPEG', PDF_MARGIN, PDF_MARGIN, contentW, sliceH_mm);
+        }
+      }
+
+      doc.save(`reporte-disputas-${(effectiveDistrict || 'global').toLowerCase()}.pdf`);
     } catch (err: any) {
-      console.error('Error downloading disputes PDF:', err);
+      console.error('Error generating disputes PDF:', err);
       alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
     } finally {
       setIsGeneratingDisputesPDF(false);

@@ -673,6 +673,18 @@ export const runBootstrapChecks = () => {
         )
       `).run();
 
+      // --- SEED DATA CLEANUP: Remove test/seed records that shouldn't be in production ---
+      const seedLocales = ['COLEGIO ASUNCION ESCALADA', 'CENTRO REGIONAL DE EDUCACION', 'ESCUELA BASICA 1300'];
+      for (const locale of seedLocales) {
+        const countRes = db.prepare(`SELECT COUNT(*) as c FROM electors WHERE local_votacion = ?`).get(locale) as any;
+        if (countRes.c > 0 && countRes.c <= 10) {
+          // Only delete if very few records (clearly seed data, not real production data)
+          db.prepare(`DELETE FROM elector_captures WHERE elector_ci IN (SELECT ci FROM electors WHERE local_votacion = ?)`).run(locale);
+          db.prepare(`DELETE FROM electors WHERE local_votacion = ?`).run(locale);
+          console.log(`[BOOTSTRAP CLEANUP] Removed ${countRes.c} seed electors from locale "${locale}"`);
+        }
+      }
+
       // Self-healing: Assign lists to coordinators/padrinos who don't have one in production
       const usersWithoutList = db.prepare(`
         SELECT id, assigned_campaign_id 

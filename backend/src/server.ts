@@ -3448,7 +3448,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         ca.lat as lat_a,
         ca.lng as lng_a,
         ua.nombre as coord_a,
-        NULL as photo_a,
+        ua.photo_url as photo_a,
         pa.nombre as padrino_a,
         la.list_number as list_a,
         la.option_number as option_a,
@@ -3461,7 +3461,7 @@ app.get('/api/admin/conflicts', (req, res) => {
         cb.lat as lat_b,
         cb.lng as lng_b,
         ub.nombre as coord_b,
-        NULL as photo_b,
+        ub.photo_url as photo_b,
         pb.nombre as padrino_b,
         lb.list_number as list_b,
         lb.option_number as option_b
