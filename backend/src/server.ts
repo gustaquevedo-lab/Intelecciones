@@ -3504,6 +3504,7 @@ app.get('/api/admin/conflicts', (req, res) => {
     const params: any[] = [];
 
     const sec = getSecurityFilter(req, 'cc');
+    console.log(`[CONFLICTS DEBUG] role=${req.headers['x-user-role']}, user_id=${req.headers['x-user-id']}, district_q=${req.query.district}, district_h=${req.headers['x-district']}, sec.sql="${sec.sql}", sec.params=${JSON.stringify(sec.params)}`);
     sql += ` ${sec.sql}`;
     params.push(...sec.params);
 
