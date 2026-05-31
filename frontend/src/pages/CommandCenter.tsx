@@ -2055,7 +2055,6 @@ const CommandCenter = () => {
           )}
         </AnimatePresence>
 
-        <TacticalReport />
         <DisputesPremiumReportRenderer />
         <style>
           {`
