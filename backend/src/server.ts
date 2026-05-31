@@ -371,11 +371,18 @@ app.get('/api/diagnostics/data-health', (_req, res) => {
       GROUP BY local_votacion ORDER BY electors DESC
     `).all();
 
+    // Conflict table diagnostics
+    const conflictCounts = db.prepare(`
+      SELECT status, COUNT(*) as c FROM capture_conflicts GROUP BY status
+    `).all();
+    const conflictTotal = db.prepare('SELECT COUNT(*) as c FROM capture_conflicts').get() as any;
+
     res.json({
       voting_locations: { total: totalLocations.c, with_geo: locationsWithGeo.c },
       captures: { total: totalCaptures.c, with_geo: capturesWithGeo.c },
       electors: { total: totalElectors.c },
       users: { total: totalUsers.c },
+      conflicts: { total: conflictTotal.c, by_status: conflictCounts },
       locations_by_district: locationsByDistrict,
       captures_by_district: capturesByDistrict,
       pjc_detail: {
