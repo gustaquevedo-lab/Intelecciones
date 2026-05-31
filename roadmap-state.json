@@ -643,5 +643,70 @@
     "completed": true,
     "briefing": "Asignado un Request UUID único a cada petición HTTP entrante e inyectado en el contexto de logs",
     "timestamp": "2026-05-31T13:57:00Z"
+  },
+  "6.1__0": {
+    "completed": true,
+    "briefing": "Instalado piscina como dependencia del backend para worker thread pool",
+    "timestamp": "2026-05-31T18:30:00Z"
+  },
+  "6.1__1": {
+    "completed": true,
+    "briefing": "Creado db-worker.ts con conexión SQLite read-only, WAL mode, pragmas optimizados (cache 32MB, mmap 256MB)",
+    "timestamp": "2026-05-31T18:30:00Z"
+  },
+  "6.1__2": {
+    "completed": true,
+    "briefing": "Creado db-async.ts con pool piscina (3 threads max, 1 min), exportando dbQueryAsync y dbGetAsync",
+    "timestamp": "2026-05-31T18:30:00Z"
+  },
+  "6.1__3": {
+    "completed": true,
+    "briefing": "Migrado stats/command (7 queries pesadas) a dbQueryAsync/dbGetAsync desbloquando event loop en cache miss",
+    "timestamp": "2026-05-31T18:35:00Z"
+  },
+  "6.1__4": {
+    "completed": true,
+    "briefing": "Migrado my-team/reports (filterPadrinos, filterCoordinators, padrinos CTE, coordinators CTE, electors, locales) a async workers",
+    "timestamp": "2026-05-31T18:35:00Z"
+  },
+  "6.1__5": {
+    "completed": true,
+    "briefing": "Migrado diad/coverage (7 queries: mesas totales, asignadas, reportadas, votos, mesas map, coordinadores, vehículos) a async workers",
+    "timestamp": "2026-05-31T18:35:00Z"
+  },
+  "6.1__6": {
+    "completed": true,
+    "briefing": "Migrado full-report (padrino lookup, coordinators CTE, electors per coordinator via Promise.all) a async workers",
+    "timestamp": "2026-05-31T18:35:00Z"
+  },
+  "6.2__0": {
+    "completed": true,
+    "briefing": "Corregido verify-phone para usar phone_hash = normalizePhone(phone) en vez de LIKE '%phone%'",
+    "timestamp": "2026-05-31T18:40:00Z"
+  },
+  "6.2__1": {
+    "completed": true,
+    "briefing": "Corregido resolveRegisteredName para usar phone_hash = normalizePhone(phone) en vez de LIKE '%phone%'",
+    "timestamp": "2026-05-31T18:40:00Z"
+  },
+  "6.2__2": {
+    "completed": true,
+    "briefing": "Corregido whatsapp/recipients/search: detecta búsqueda numérica y usa phone_hash = ? en vez de telefono LIKE ?",
+    "timestamp": "2026-05-31T18:40:00Z"
+  },
+  "6.2__3": {
+    "completed": true,
+    "briefing": "Verificado que phone_hash está indexado en users y elector_captures (idx_users_phone_hash, idx_captures_phone_hash)",
+    "timestamp": "2026-05-31T18:40:00Z"
+  },
+  "6.3__0": {
+    "completed": true,
+    "briefing": "Corregidas 6 llamadas a logger.error en cache.ts de formato console.error a formato pino { err }, 'msg'",
+    "timestamp": "2026-05-31T18:40:00Z"
+  },
+  "6.3__1": {
+    "completed": true,
+    "briefing": "Verificados otros archivos con logger - todos usan formato correcto de pino",
+    "timestamp": "2026-05-31T18:40:00Z"
   }
 }

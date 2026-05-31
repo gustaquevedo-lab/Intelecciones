@@ -264,5 +264,34 @@ const ROADMAP = [
         tasks: ["Definir performance budgets (JS<500KB, TTFB<200ms, FCP<1.5s)","Configurar Lighthouse CI en GitHub Actions","Web Vitals tracking con PerformanceObserver","Lighthouse budget config file"]
       }
     ]
+  },
+  {
+    id: "fase-6", phase: 6,
+    title: "Ajustes Finos — Event Loop & Query Optimization",
+    weeks: "Semana 7",
+    objective: "Desbloquear el event loop de Node.js moviendo queries pesadas a worker threads (piscina), completar migración de phone_hash, y eliminar LIKE en búsquedas de teléfono.",
+    groups: [
+      {
+        id: "6.1", name: "Worker threads con piscina para queries pesadas", effort: "1 día",
+        description: "better-sqlite3 es sincrónico y bloquea el event loop en cada query. Usar piscina (pool de worker threads) para ejecutar lecturas pesadas en threads separados, liberando el event loop para servir otros requests.",
+        dependencies: ["0.4"],
+        prompt: "Tarea: Implementar worker thread pool con piscina.\n\n1. npm install piscina\n2. Crear backend/src/db-worker.ts: abre conexión SQLite read-only con WAL, exporta función runQuery({sql, params, method})\n3. Crear backend/src/db-async.ts: pool de piscina (3 threads max), exporta dbQueryAsync<T>(sql, params) y dbGetAsync<T>(sql, params)\n4. Migrar endpoints pesados a usar dbQueryAsync/dbGetAsync: stats/command, my-team/reports, diad/coverage, full-report\n5. Mantener db.prepare() para writes y queries ligeras (<5ms)",
+        tasks: ["Instalar piscina","Crear db-worker.ts con conexión read-only","Crear db-async.ts con pool wrapper","Migrar stats/command a async workers","Migrar my-team/reports a async workers","Migrar diad/coverage a async workers","Migrar full-report a async workers"]
+      },
+      {
+        id: "6.2", name: "Completar migración phone_hash", effort: "Medio día",
+        description: "La tarea 1.6 del roadmap fue marcada como completada pero quedaron queries usando LIKE '%phone%' en endpoints de búsqueda (whatsapp/recipients/search, verify-phone, resolveRegisteredName).",
+        dependencies: ["1.6"],
+        prompt: "Tarea: Completar migración a phone_hash en todas las queries de teléfono.\n\n1. verify-phone: cambiar LIKE '%phone%' por phone_hash = normalizePhone(phone)\n2. resolveRegisteredName: cambiar LIKE '%phone%' por phone_hash = normalizePhone(phone)\n3. whatsapp/recipients/search: detectar si query es numérica → usar phone_hash = ? en vez de telefono LIKE ?\n4. Importar normalizePhone en server.ts",
+        tasks: ["Fix verify-phone endpoint","Fix resolveRegisteredName","Fix whatsapp/recipients/search","Verificar que phone_hash está indexado"]
+      },
+      {
+        id: "6.3", name: "Corregir logger pino en servicios", effort: "30 min",
+        description: "pino no soporta logger.error('msg:', err) estilo console.error. Corregir todas las llamadas a logger.error({ err }, 'message') en cache.ts y otros servicios.",
+        dependencies: ["0.6"],
+        prompt: "Tarea: Corregir firmas de logger pino.\n\nArchivo: backend/src/services/cache.ts\n\nCambiar: logger.error('msg:', err) → logger.error({ err }, 'msg')\nCambiar: logger.warn('msg') OK\nCambiar: logger.info('msg') OK\n\nPino espera: logger.level(mergingObject, 'message')",
+        tasks: ["Corregir 6 llamadas a logger.error en cache.ts","Verificar otros archivos con logger"]
+      }
+    ]
   }
 ];

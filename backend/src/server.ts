@@ -32,6 +32,8 @@ import db, { runBootstrapChecks } from './db';
 import { whatsappService } from './whatsappService';
 import * as XLSX from 'xlsx';
 import logger from './utils/logger';
+import { normalizePhone } from './utils/phone';
+import { dbQueryAsync, dbGetAsync } from './db-async';
 
 // Safe wrapper for global console logging methods to prevent recursion and log cleanly using Pino
 console.log = (...args: any[]) => {
@@ -3229,9 +3231,9 @@ app.get('/api/reports/export/xlsx', requireRole('SUPERUSUARIO','JEFE_CAMPANA','P
       return formatted;
     });
 
-    const wb = XLSX.book_new();
-    const ws = XLSX.json_to_sheet(sheetData);
-    XLSX.book_append_sheet(wb, ws, 'Capturas');
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Capturas');
 
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -3727,9 +3729,9 @@ app.get('/api/admin/verify-phone/:phone', (req, res) => {
   try {
     const rawPhone = req.params.phone;
     const cleanPhone = rawPhone.includes('@') ? rawPhone.split('@')[0] : rawPhone;
-    const phone = cleanPhone.replace(/\D/g, '');
-    const phoneWithCountry = phone.startsWith('595') ? phone : `595${phone.replace(/^0/, '')}`;
-    const phoneShort = phone.replace(/^595/, '0');
+    const hash = normalizePhone(cleanPhone);
+
+    if (!hash) return res.status(400).json({ error: 'Teléfono inválido' });
 
     const elector = db.prepare(`
       SELECT e.*, ec.traffic_light, ec.needs_transport, ec.lat, ec.lng,
@@ -3743,9 +3745,9 @@ app.get('/api/admin/verify-phone/:phone', (req, res) => {
       LEFT JOIN users p ON u.parent_id = p.id
       LEFT JOIN users gp ON p.parent_id = gp.id
       LEFT JOIN lists l ON ec.list_id = l.id
-      WHERE ec.telefono LIKE ? OR ec.telefono LIKE ?
+      WHERE ec.phone_hash = ?
       LIMIT 1
-    `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+    `).get(hash) as any;
 
     if (elector) {
       return res.json({ type: 'ELECTOR', data: sanitizeElectorData(elector) });
@@ -3758,9 +3760,9 @@ app.get('/api/admin/verify-phone/:phone', (req, res) => {
       FROM users u
       LEFT JOIN users p ON u.parent_id = p.id
       LEFT JOIN users gp ON p.parent_id = gp.id
-      WHERE u.telefono LIKE ? OR u.telefono LIKE ?
+      WHERE u.phone_hash = ?
       LIMIT 1
-    `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+    `).get(hash) as any;
 
     if (user) {
       return res.json({ type: 'USER', data: user });
@@ -4043,11 +4045,11 @@ app.get('/api/stats/command', async (req, res) => {
   // Dynamic goal: SUM(goal) from lists filtered by district/security, or specific list if requested
   let globalGoal = 1000;
   if (list_id && !isNaN(list_id)) {
-    const listGoalRow = db.prepare(`SELECT goal FROM lists WHERE id = ?`).get(list_id) as any;
+    const listGoalRow = await dbGetAsync<any>(`SELECT goal FROM lists WHERE id = ?`, [list_id]);
     globalGoal = listGoalRow?.goal || 1000;
   } else {
-    const listsGoal = db.prepare(`SELECT SUM(goal) as total FROM lists l WHERE 1=1 ${secL.sql}`).get(...secL.params) as any;
-    const dbGoalSetting = db.prepare("SELECT value FROM settings WHERE key = 'goal'").get() as any;
+    const listsGoal = await dbGetAsync<any>(`SELECT SUM(goal) as total FROM lists l WHERE 1=1 ${secL.sql}`, secL.params);
+    const dbGoalSetting = await dbGetAsync<any>("SELECT value FROM settings WHERE key = 'goal'", []);
     globalGoal = Math.max(1, parseInt(listsGoal?.total || '0') || parseInt(dbGoalSetting?.value || '1000'));
   }
   console.time(`STATS_COMMAND_${requesterId}`);
@@ -4106,13 +4108,13 @@ app.get('/api/stats/command', async (req, res) => {
       WHERE ec.is_disputed = 0 ${sec.sql} ${listFilterSql} ${localFilterSql} ${hierarchyFilterSql}
     `;
 
-    const stats = db.prepare(`
+    const stats = await dbQueryAsync<any>(`
       SELECT traffic_light, COUNT(*) as count ${captureJoins} ${captureWhere} GROUP BY traffic_light
-    `).all(...captureParams) as any[];
+    `, captureParams);
 
-    const totalCaptures = db.prepare(`
+    const totalCaptures = await dbGetAsync<any>(`
       SELECT COUNT(*) as count ${captureJoins} ${captureWhere}
-    `).get(...captureParams) as any;
+    `, captureParams);
 
     // --- OPTIMIZED STATIC/LIVE HYBRID ELECTORS CALCULATION ---
     const secElectors = getSecurityFilter(req, 'e');
@@ -4126,11 +4128,11 @@ app.get('/api/stats/command', async (req, res) => {
     if (cachedTotal !== null) {
       totalEl = cachedTotal;
     } else {
-      const res = db.prepare(`
+      const elRes = await dbGetAsync<any>(`
         SELECT COUNT(*) as count FROM electors e
         WHERE 1=1 ${localFilterSql} ${secElectors.sql}
-      `).get(...electorParams) as any;
-      totalEl = res?.count || 0;
+      `, electorParams);
+      totalEl = elRes?.count || 0;
       await cacheService.set(`electors:total:${cacheKeyTotal}`, totalEl, 300);
     }
 
@@ -4141,12 +4143,12 @@ app.get('/api/stats/command', async (req, res) => {
     if (cachedByLocal !== null) {
       electorCountsMap = new Map(Object.entries(cachedByLocal));
     } else {
-      const rows = db.prepare(`
+      const rows = await dbQueryAsync<{ local_votacion: string; total: number }>(`
         SELECT local_votacion, COUNT(*) as total
         FROM electors e WHERE 1=1 ${secElectors.sql}
         GROUP BY local_votacion
-      `).all(...secElectors.params) as { local_votacion: string; total: number }[];
-      
+      `, secElectors.params);
+
       const newMap = new Map<string, number>();
       rows.forEach(r => {
         if (r.local_votacion) newMap.set(r.local_votacion.toUpperCase().trim(), r.total);
@@ -4173,7 +4175,7 @@ app.get('/api/stats/command', async (req, res) => {
       ...listFilterParams,
       ...hierarchyFilterParams
     ];
-    const liveCapturesList = db.prepare(capturesQuery).all(...capturesParams) as any[];
+    const liveCapturesList = await dbQueryAsync<any>(capturesQuery, capturesParams);
     
     const capturesMap = new Map<string, { total: number; green: number }>();
     liveCapturesList.forEach(c => {
@@ -4183,7 +4185,7 @@ app.get('/api/stats/command', async (req, res) => {
     });
 
     // 4. Fetch voting locations
-    const locations = db.prepare(`SELECT cod_local, nombre FROM voting_locations loc WHERE 1=1 ${secLoc.sql}`).all(...(secLoc.params || [])) as any[];
+    const locations = await dbQueryAsync<any>(`SELECT cod_local, nombre FROM voting_locations loc WHERE 1=1 ${secLoc.sql}`, secLoc.params || []);
 
     // 5. Merge stats in memory (O(N) lookup)
     const locationStats = locations.map(loc => {
@@ -4199,9 +4201,9 @@ app.get('/api/stats/command', async (req, res) => {
       };
     });
 
-    const transportNeeded = db.prepare(`
+    const transportNeeded = await dbGetAsync<any>(`
       SELECT COUNT(*) as count ${captureJoins} ${captureWhere} AND ec.needs_transport = 1
-    `).get(...captureParams) as any;
+    `, captureParams);
 
     const totalCap = totalCaptures?.count || 0;
     const responseData = {
@@ -4430,16 +4432,16 @@ app.get('/api/structure/padrinos/:id/full-report', async (req, res) => {
   }
 
   try {
-    const padrino = db.prepare(`
+    const padrino = await dbGetAsync<any>(`
       SELECT u.nombre, l.list_number, l.option_number, u.distrito
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       WHERE u.id = ?
-    `).get(id) as any;
+    `, [id]);
 
     if (!padrino) return res.status(404).json({ error: 'Padrino no encontrado' });
 
-    const coordinators = db.prepare(`
+    const coordinators = await dbQueryAsync<any>(`
       WITH coordinator_ids AS (
         SELECT id FROM users WHERE parent_id = ? AND role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
       ),
@@ -4465,25 +4467,25 @@ app.get('/api/structure/padrinos/:id/full-report', async (req, res) => {
       FROM users u
       LEFT JOIN coord_stats cs ON cs.coordinator_id = u.id
       WHERE u.parent_id = ? AND u.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
-    `).all(id, id) as any[];
+    `, [id, id]);
 
-    const fullHierarchy = coordinators.map(c => {
-      const electors = db.prepare(`
+    const fullHierarchy = await Promise.all(coordinators.map(async (c: any) => {
+      const electors = await dbQueryAsync<any>(`
         WITH captures AS MATERIALIZED (
           SELECT * FROM elector_captures WHERE coordinator_id = ?
         )
-        SELECT COALESCE(e.nombre, 'ELECTOR') as nombre, 
-               COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
-               ec.elector_ci, 
-               COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
-               COALESCE(e.mesa, 0) as mesa, 
+        SELECT COALESCE(e.nombre, 'ELECTOR') as nombre,
+               COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
+               ec.elector_ci,
+               COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
+               COALESCE(e.mesa, 0) as mesa,
                COALESCE(e.orden, 0) as orden,
                ec.traffic_light, ec.needs_transport, ec.telefono
         FROM captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
-      `).all(c.id);
+      `, [c.id]);
       return { ...c, electors };
-    });
+    }));
 
     const responseData = {
       padrino,
@@ -4727,29 +4729,29 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
     // ── ALWAYS: lightweight filter options (fast, no aggregates) ──
     let filterPadrinos: any[] = [];
     if (role === 'SUPERUSUARIO' || role === 'JEFE_CAMPANA' || role === 'SUBJEFE') {
-      filterPadrinos = db.prepare(`
+      filterPadrinos = await dbQueryAsync<any>(`
         SELECT u.id, u.nombre, u.distrito, l.list_number
         FROM users u LEFT JOIN lists l ON u.assigned_list_id = l.id
         WHERE u.role IN ('PADRINO','SUBJEFE') ${filter.sql}
         ORDER BY u.nombre
-      `).all(...filter.params);
+      `, filter.params);
     }
 
     let filterCoordinators: any[] = [];
     if (role === 'PADRINO') {
-      filterCoordinators = db.prepare(`
+      filterCoordinators = await dbQueryAsync<any>(`
         SELECT u.id, u.nombre, u.distrito, u.parent_id, l.list_number
         FROM users u LEFT JOIN lists l ON u.assigned_list_id = l.id
         WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA')
         ORDER BY u.nombre
-      `).all(requesterId);
+      `, [requesterId]);
     } else {
-      filterCoordinators = db.prepare(`
+      filterCoordinators = await dbQueryAsync<any>(`
         SELECT u.id, u.nombre, u.distrito, u.parent_id, l.list_number
         FROM users u LEFT JOIN lists l ON u.assigned_list_id = l.id
         WHERE u.role IN ('COORDINADOR','MIEMBRO_DE_MESA') ${filter.sql}
         ORDER BY u.nombre
-      `).all(...filter.params);
+      `, filter.params);
     }
 
     // ── 1. Padrinos report (full metrics) — CTE-based, single aggregation pass ──
@@ -4820,7 +4822,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
         ORDER BY u.nombre
       `;
 
-      padrinos = db.prepare(padrinoSql).all(...padrinoParams);
+      padrinos = await dbQueryAsync<any>(padrinoSql, padrinoParams);
     }
 
     // ── 2. Coordinators report (full metrics) ──
@@ -4880,7 +4882,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       }
 
       coordSql += ` ORDER BY u.nombre`;
-      coordinators = db.prepare(coordSql).all(...coordParams);
+      coordinators = await dbQueryAsync<any>(coordSql, coordParams);
     }
 
     // ── 3. Electors report ──
@@ -5030,7 +5032,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
         electorSql += ` ORDER BY ec.timestamp DESC LIMIT 3000`;
       }
 
-      electors = db.prepare(electorSql).all(...electorParams);
+      electors = await dbQueryAsync<any>(electorSql, electorParams);
     }
 
     // ── 4. Locales report ──
@@ -5101,7 +5103,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       }
 
       localesSql += ` GROUP BY COALESCE(e.local_votacion, 'REGISTRO DE CAMPO'), COALESCE(e.distrito, 'REGISTRO DE CAMPO') ORDER BY total_captures DESC`;
-      locales = db.prepare(localesSql).all(...localesParams);
+      locales = await dbQueryAsync<any>(localesSql, localesParams);
     }
 
     const elapsed = Date.now() - t0;
@@ -5871,28 +5873,26 @@ app.get('/api/whatsapp/chats', (req, res) => {
 
     const resolveRegisteredName = (phone: string | null) => {
       if (!phone) return null;
-      const clean = phone.replace(/\D/g, '');
-      if (!clean) return null;
-      const phoneWithCountry = clean.startsWith('595') ? clean : `595${clean.replace(/^0/, '')}`;
-      const phoneShort = clean.replace(/^595/, '0');
-      
+      const hash = normalizePhone(phone);
+      if (!hash) return null;
+
       try {
         const elector = db.prepare(`
           SELECT e.nombre, e.apellido
           FROM electors e
           JOIN elector_captures ec ON e.ci = ec.elector_ci
-          WHERE ec.telefono LIKE ? OR ec.telefono LIKE ?
+          WHERE ec.phone_hash = ?
           LIMIT 1
-        `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+        `).get(hash) as any;
         if (elector) return `${elector.nombre} ${elector.apellido || ''}`.trim();
       } catch (e) {}
 
       try {
         const u = db.prepare(`
           SELECT nombre FROM users
-          WHERE telefono LIKE ? OR telefono LIKE ?
+          WHERE phone_hash = ?
           LIMIT 1
-        `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`) as any;
+        `).get(hash) as any;
         if (u) return u.nombre;
       } catch (e) {}
 
@@ -6053,26 +6053,28 @@ app.get('/api/whatsapp/recipients/coordinator/:id/electors', (req, res) => {
 app.get('/api/whatsapp/recipients/search', (req, res) => {
   const role = getRole(req);
   if (role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') return res.status(403).json({ error: 'Prohibido' });
-  const q = `%${req.query.q || ''}%`;
+  const rawQ = (req.query.q as string) || '';
+  const q = `%${rawQ}%`;
+  const isPhoneSearch = /^\d+$/.test(rawQ.replace(/\D/g, ''));
   try {
     const sec = getSecurityFilter(req, 'u');
     const users = db.prepare(`
       SELECT u.id, u.nombre, u.telefono, u.ci, u.role, u.distrito FROM users u
       WHERE u.telefono IS NOT NULL AND u.telefono != '' AND u.status = 'ACTIVE'
-        AND (u.nombre LIKE ? OR u.telefono LIKE ? OR u.ci LIKE ?) ${sec.sql}
+        AND (u.nombre LIKE ? OR u.ci LIKE ? ${isPhoneSearch ? 'OR u.phone_hash = ?' : 'OR u.telefono LIKE ?'}) ${sec.sql}
       LIMIT 10
-    `).all(q, q, q, ...sec.params);
+    `).all(q, q, isPhoneSearch ? normalizePhone(rawQ) : q, ...sec.params);
 
     const electors = db.prepare(`
       SELECT ec.elector_ci, ec.telefono, ec.traffic_light,
-        COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
+        COALESCE(e.nombre, 'ELECTOR') as nombre, COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
         COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden
       FROM elector_captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
       WHERE ec.telefono IS NOT NULL AND ec.telefono != ''
-        AND (COALESCE(e.nombre, '') LIKE ? OR COALESCE(e.apellido, '') LIKE ? OR ec.telefono LIKE ? OR ec.elector_ci LIKE ?)
+        AND (COALESCE(e.nombre, '') LIKE ? OR COALESCE(e.apellido, '') LIKE ? OR ec.elector_ci LIKE ? ${isPhoneSearch ? 'OR ec.phone_hash = ?' : 'OR ec.telefono LIKE ?'})
       LIMIT 10
-    `).all(q, q, q, q);
+    `).all(q, q, q, isPhoneSearch ? normalizePhone(rawQ) : q);
 
     res.json({ users, electors: (electors as any[]).map(sanitizeElectorData) });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -6135,40 +6137,43 @@ app.get('/api/diad/coverage', async (req, res) => {
 
   try {
     // 1. Total Mesas from electors
-    const { total_mesas } = db.prepare(`SELECT COUNT(DISTINCT local_votacion || '-' || mesa) as total_mesas FROM electors ${distritoFilter}`).get() as any;
-    
+    const mesasTotal = await dbGetAsync<any>(`SELECT COUNT(DISTINCT local_votacion || '-' || mesa) as total_mesas FROM electors ${distritoFilter}`, []);
+    const total_mesas = mesasTotal?.total_mesas || 0;
+
     // 2. Operational Coverage: Mesas with at least 1 member assigned (VEEDOR or MIEMBRO_MESA)
-    const { assigned_mesas } = db.prepare(`
-      SELECT COUNT(DISTINCT u.assigned_local || '-' || u.assigned_mesa) as assigned_mesas 
+    const assignedRow = await dbGetAsync<any>(`
+      SELECT COUNT(DISTINCT u.assigned_local || '-' || u.assigned_mesa) as assigned_mesas
       FROM users u
       JOIN voting_locations vl ON u.assigned_local = vl.nombre
-      WHERE (u.role = 'VEEDOR' OR u.role = 'MIEMBRO_MESA') 
-      AND u.assigned_local IS NOT NULL 
+      WHERE (u.role = 'VEEDOR' OR u.role = 'MIEMBRO_MESA')
+      AND u.assigned_local IS NOT NULL
       AND u.assigned_mesa IS NOT NULL
       ${vlFilter}
       ${list_id && !isNaN(list_id) ? `AND u.assigned_list_id = ${list_id}` : ''}
-    `).get() as any;
+    `, []);
+    const assigned_mesas = assignedRow?.assigned_mesas || 0;
 
     // 3. Results Coverage: Mesas with actas submitted
-    const { reported_mesas } = db.prepare(`
-      SELECT COUNT(DISTINCT r.local_votacion || '-' || r.mesa) as reported_mesas 
+    const reportedRow = await dbGetAsync<any>(`
+      SELECT COUNT(DISTINCT r.local_votacion || '-' || r.mesa) as reported_mesas
       FROM results r
       JOIN voting_locations vl ON r.local_votacion = vl.nombre
       WHERE 1=1 ${vlFilter}
       ${list_id && !isNaN(list_id) ? `AND r.tenant_id = ${list_id}` : ''}
-    `).get() as any;
+    `, []);
+    const reported_mesas = reportedRow?.reported_mesas || 0;
 
     // 4. Votos Procesados
-    const votos = db.prepare(`
-      SELECT 
+    const votos = await dbGetAsync<any>(`
+      SELECT
         (SELECT COALESCE(SUM(ar.votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id JOIN voting_locations vl ON r2.local_votacion = vl.nombre WHERE 1=1 ${vlFilter} ${list_id && !isNaN(list_id) ? `AND r2.tenant_id = ${list_id}` : ''}) +
         (SELECT COALESCE(SUM(r3.votos_blancos + r3.votos_nulos), 0) FROM results r3 JOIN voting_locations vl ON r3.local_votacion = vl.nombre WHERE 1=1 ${vlFilter} ${list_id && !isNaN(list_id) ? `AND r3.tenant_id = ${list_id}` : ''}) as total
-    `).get() as any;
+    `, []);
 
     // 5. Mesas details for the map (Most critical for performance)
-    const mesas = db.prepare(`
-      SELECT 
-        e.local_votacion as local, e.mesa as numero, 
+    const mesas = await dbQueryAsync<any>(`
+      SELECT
+        e.local_votacion as local, e.mesa as numero,
         vl.lat, vl.lng,
         (CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) as reportada,
         (CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) as operativa
@@ -6177,33 +6182,35 @@ app.get('/api/diad/coverage', async (req, res) => {
       LEFT JOIN (SELECT id, local_votacion, mesa FROM results GROUP BY local_votacion, mesa) r ON r.local_votacion = e.local_votacion AND r.mesa = e.mesa
       LEFT JOIN (SELECT id, assigned_local, assigned_mesa FROM users WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') GROUP BY assigned_local, assigned_mesa) u ON u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa
       WHERE 1=1 ${vlFilter}
-    `).all();
+    `, []);
 
     // 6. Active Coordinators
-    const { total_coordinadores } = db.prepare(`
+    const coordRow = await dbGetAsync<any>(`
       SELECT COUNT(*) as total_coordinadores FROM users u
       WHERE role = 'COORDINADOR'
       ${districtName ? `AND (UPPER(u.distrito) = UPPER('${districtName}'))` : ''}
       ${list_id && !isNaN(list_id) ? `AND u.assigned_list_id = ${list_id}` : ''}
-    `).get() as any;
+    `, []);
+    const total_coordinadores = coordRow?.total_coordinadores || 0;
 
     // 7. Active Vehicles (Móviles)
-    const { total_vehiculos } = db.prepare(`
+    const vehicRow = await dbGetAsync<any>(`
       SELECT COUNT(*) as total_vehiculos FROM vehicles v
       WHERE 1=1
       ${list_id && !isNaN(list_id) ? `AND (v.assigned_list_id = ${list_id})` : ''}
-    `).get() as any;
+    `, []);
+    const total_vehiculos = vehicRow?.total_vehiculos || 0;
 
     const responseData = {
       total_mesas,
-      mesas_operativas: assigned_mesas || 0,
+      mesas_operativas: assigned_mesas,
       op_porcentaje: total_mesas > 0 ? (assigned_mesas / total_mesas) * 100 : 0,
-      mesas_reportadas: reported_mesas || 0,
-      mesas_pendientes: total_mesas - (reported_mesas || 0),
+      mesas_reportadas: reported_mesas,
+      mesas_pendientes: total_mesas - reported_mesas,
       porcentaje: total_mesas > 0 ? (reported_mesas / total_mesas) * 100 : 0,
-      votos_procesados: votos.total || 0,
-      total_coordinadores: total_coordinadores || 0,
-      total_vehiculos: total_vehiculos || 0,
+      votos_procesados: votos?.total || 0,
+      total_coordinadores,
+      total_vehiculos,
       mesas
     };
 

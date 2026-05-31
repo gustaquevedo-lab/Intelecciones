@@ -29,11 +29,11 @@ class CacheService {
         });
 
         this.redis.on('error', (err) => {
-          logger.error('[CACHE] Redis error:', err);
+          logger.error({ err }, '[CACHE] Redis error');
           this.redisConnected = false;
         });
       } catch (e) {
-        logger.error('[CACHE] Failed to create Redis client. Running in degraded memory mode:', e);
+        logger.error({ err: e }, '[CACHE] Failed to create Redis client. Running in degraded memory mode');
       }
     } else {
       logger.info('[CACHE] No REDIS_URL environment variable found. Operating in local memory cache mode.');
@@ -47,7 +47,7 @@ class CacheService {
         if (val) return JSON.parse(val) as T;
         return null;
       } catch (e) {
-        logger.error(`[CACHE] Redis get error for key ${key}:`, e);
+        logger.error({ err: e }, `[CACHE] Redis get error for key ${key}`);
       }
     }
 
@@ -67,7 +67,7 @@ class CacheService {
         await this.redis.set(key, JSON.stringify(value), 'EX', ttlSec);
         return;
       } catch (e) {
-        logger.error(`[CACHE] Redis set error for key ${key}:`, e);
+        logger.error({ err: e }, `[CACHE] Redis set error for key ${key}`);
       }
     }
 
@@ -85,7 +85,7 @@ class CacheService {
         }
         return;
       } catch (e) {
-        logger.error(`[CACHE] Redis invalidate error for prefix ${prefix}:`, e);
+        logger.error({ err: e }, `[CACHE] Redis invalidate error for prefix ${prefix}`);
       }
     }
 
@@ -103,7 +103,7 @@ class CacheService {
         await this.redis.flushdb();
         return;
       } catch (e) {
-        logger.error(`[CACHE] Redis flushdb error:`, e);
+        logger.error({ err: e }, '[CACHE] Redis flushdb error');
       }
     }
     this.memoryCache.clear();
