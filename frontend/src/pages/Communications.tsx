@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSSE } from '../hooks/useSSE';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -297,6 +298,8 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   const [showIntel, setShowIntel] = useState(false);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const selectedChatRef = useRef<string | null>(null);
+  selectedChatRef.current = selectedChat;
 
   const loadChats = useCallback(() => {
     api.get('/whatsapp/chats').then(r => setChats(r.data)).catch(() => {});
@@ -308,19 +311,25 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
     }).catch(() => {});
   }, []);
 
+  // Initial load + 30-second fallback (SSE handles real-time updates)
   useEffect(() => {
     loadChats();
-    const t = setInterval(loadChats, 10000);
+    const t = setInterval(loadChats, 30000);
     return () => clearInterval(t);
   }, [loadChats]);
 
+  // Load messages on chat selection
   useEffect(() => {
-    if (selectedChat) {
-      loadMessages(selectedChat);
-      const t = setInterval(() => loadMessages(selectedChat), 5000);
-      return () => clearInterval(t);
-    }
+    if (selectedChat) loadMessages(selectedChat);
   }, [selectedChat, loadMessages]);
+
+  // SSE: refresh chats/messages when a new WhatsApp message arrives
+  useSSE(useCallback((event) => {
+    if (event.type === 'whatsapp.message') {
+      loadChats();
+      if (selectedChatRef.current) loadMessages(selectedChatRef.current);
+    }
+  }, [loadChats, loadMessages]));
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -2311,14 +2320,19 @@ const LinesTab: React.FC = () => {
     } catch {}
   }, []);
 
-  // Smart polling: faster (3s) when any terminal is CONNECTING, else 8s
+  // Initial load + 30s fallback. SSE handles real-time terminal status updates.
   useEffect(() => {
     loadTerminals();
-    const hasConnecting = terminals.some(t => t.status === 'CONNECTING') || connectingSet.size > 0;
-    const interval = hasConnecting ? 3000 : 8000;
-    const t = setInterval(loadTerminals, interval);
+    const t = setInterval(loadTerminals, 30000);
     return () => clearInterval(t);
-  }, [loadTerminals, terminals.length, connectingSet.size]);
+  }, [loadTerminals]);
+
+  // SSE: reload terminals on status change or new QR code
+  useSSE(useCallback((event) => {
+    if (event.type === 'whatsapp.terminal' || event.type === 'whatsapp.qr') {
+      loadTerminals();
+    }
+  }, [loadTerminals]));
 
   const connect = async (id: string) => {
     setConnectingSet(prev => new Set(prev).add(id));
@@ -2512,17 +2526,25 @@ const Communications: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const r = await api.get(`/whatsapp/status?terminalId=${activeTerminalId}`);
-        setTerminalStatus(r.data.status);
-      } catch {}
-    };
-    poll();
-    const t = setInterval(poll, 8000);
-    return () => clearInterval(t);
+  const fetchTerminalStatus = useCallback(async () => {
+    try {
+      const r = await api.get(`/whatsapp/status?terminalId=${activeTerminalId}`);
+      setTerminalStatus(r.data.status);
+    } catch {}
   }, [activeTerminalId]);
+
+  // Initial status check
+  useEffect(() => { fetchTerminalStatus(); }, [fetchTerminalStatus]);
+
+  // SSE: update terminal status in real-time
+  useSSE(useCallback((event) => {
+    if (event.type === 'whatsapp.terminal') {
+      setTerminalStatus(prev =>
+        event.data?.terminalId === activeTerminalId ? (event.data.status || prev) : prev
+      );
+    }
+  }, [activeTerminalId]));
+
 
   const TABS = [
     { id: 'inbox', label: 'Bandeja', icon: MessageSquare },

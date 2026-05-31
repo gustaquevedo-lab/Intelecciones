@@ -32,7 +32,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 22; // Update this to trigger migrations
+const currentSchemaVersion = 23; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -95,6 +95,7 @@ if (dbVersion < currentSchemaVersion) {
         needs_password_change INTEGER DEFAULT 0,
         parent_id INTEGER,
         telefono TEXT,
+        phone_hash TEXT,
         distrito TEXT,
         ci TEXT,
         status TEXT DEFAULT 'ACTIVE',
@@ -161,6 +162,7 @@ if (dbVersion < currentSchemaVersion) {
         is_disputed BOOLEAN DEFAULT 0,
         needs_transport BOOLEAN DEFAULT 0,
         telefono TEXT,
+        phone_hash TEXT,
         original_capture_id INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -414,6 +416,8 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("vehicles", "assigned_user_id", "INTEGER");
     addColumnIfNotExists("vehicles", "type", "TEXT");
     addColumnIfNotExists("vehicles", "plate", "TEXT");
+    addColumnIfNotExists("users", "phone_hash", "TEXT");
+    addColumnIfNotExists("elector_captures", "phone_hash", "TEXT");
  
     // Indexes for better JOIN performance
     db.exec(`
@@ -433,6 +437,8 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user_timestamp ON audit_logs(user_id, timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_users_role_distrito_parent ON users(role, distrito, parent_id);
       CREATE INDEX IF NOT EXISTS idx_electors_ciudad_distrito ON electors(ciudad, distrito);
+      CREATE INDEX IF NOT EXISTS idx_users_phone_hash ON users(phone_hash);
+      CREATE INDEX IF NOT EXISTS idx_captures_phone_hash ON elector_captures(phone_hash);
     `);
 
     db.prepare('CREATE INDEX IF NOT EXISTS idx_conflicts_capture ON capture_conflicts(capture_id)').run();

@@ -1,4 +1,5 @@
 import db from './db';
+import { normalizePhone } from './utils/phone';
 
 // Ensure opt-out table exists
 try {
@@ -60,10 +61,8 @@ export function addOptOut(phone: string): void {
  * Finds elector details associated with a phone number
  */
 function findElectorByPhone(phone: string): ElectorInfo | null {
-  const clean = cleanPhone(phone);
-  // Support match with or without Paraguayan country code 595
-  const phoneWithCountry = clean.startsWith('595') ? clean : `595${clean.replace(/^0/, '')}`;
-  const phoneShort = clean.replace(/^595/, '0');
+  const hash = normalizePhone(phone);
+  if (!hash) return null;
 
   try {
     // 1. Search in elector_captures
@@ -71,9 +70,9 @@ function findElectorByPhone(phone: string): ElectorInfo | null {
       SELECT e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden, e.distrito, e.ciudad
       FROM electors e
       JOIN elector_captures ec ON e.ci = ec.elector_ci
-      WHERE ec.telefono LIKE ? OR ec.telefono LIKE ? OR ec.telefono = ?
+      WHERE ec.phone_hash = ?
       LIMIT 1
-    `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`, clean) as ElectorInfo | undefined;
+    `).get(hash) as ElectorInfo | undefined;
 
     if (elector) return elector;
 
@@ -81,9 +80,9 @@ function findElectorByPhone(phone: string): ElectorInfo | null {
     const user = db.prepare(`
       SELECT ci, nombre, '' as apellido, distrito
       FROM users
-      WHERE telefono LIKE ? OR telefono LIKE ? OR telefono = ?
+      WHERE phone_hash = ?
       LIMIT 1
-    `).get(`%${phoneWithCountry}%`, `%${phoneShort}%`, clean) as any;
+    `).get(hash) as any;
 
     if (user && user.ci) {
       const electorFromCi = db.prepare(`

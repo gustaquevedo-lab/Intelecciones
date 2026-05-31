@@ -1,5 +1,25 @@
 import express from 'express';
+import crypto from 'crypto';
 import cors from 'cors';
+import { PostHog } from 'posthog-node';
+
+const posthogClient = process.env.POSTHOG_API_KEY
+  ? new PostHog(process.env.POSTHOG_API_KEY, { host: process.env.POSTHOG_HOST || 'https://us.i.posthog.com' })
+  : null;
+
+export const trackEvent = (userId: string | number | null, event: string, properties: Record<string, any> = {}) => {
+  if (posthogClient) {
+    try {
+      posthogClient.capture({
+        distinctId: userId ? String(userId) : 'anonymous',
+        event,
+        properties
+      });
+    } catch (e) {
+      console.error('[POSTHOG ERROR]', e);
+    }
+  }
+};
 import dotenv from 'dotenv';
 import multer from 'multer';
 import path from 'path';
@@ -18,78 +38,49 @@ console.error = logger.error;
 dotenv.config();
 
 const app = express();
+app.disable('etag');
 const PORT = process.env.PORT || 5000;
 
 const BUILD_VERSION = Date.now().toString();
 let serverReady = false;
 
-// --- IN-MEMORY CACHE FOR HIGH-VOLUME AND HEAVY DATABASE QUERIES ---
-export const electorsCountCache = new Map<string, { count: number; ts: number }>();
-export const totalElectorsCache = new Map<string, { count: number; ts: number }>();
-export const electorCountsByLocalCache = new Map<string, { data: Map<string, number>; ts: number }>();
-export const ELECTORS_COUNT_TTL = 300_000; // 5 minutes cache TTL for static elector calculations
-export const clearElectorsCache = () => {
-  console.log('[CACHE] Clearing all electors-related cache maps...');
-  electorsCountCache.clear();
-  totalElectorsCache.clear();
-  electorCountsByLocalCache.clear();
+import { cacheService } from './services/cache';
+
+// --- REDIS-BACKED CACHE (WITH LOCAL MEMORY FALLBACK) ---
+export const clearElectorsCache = async () => {
+  console.log('[CACHE] Clearing all electors-related cache entries...');
+  await cacheService.invalidate('electors:');
 };
 
-interface CacheEntry<T> {
-  data: T;
-  expiry: number;
+export function createCache<T>(prefix: string, defaultTtlMs: number) {
+  return {
+    get: async (key: string): Promise<T | null> => {
+      return cacheService.get<T>(`${prefix}:${key}`);
+    },
+    set: async (key: string, data: T, ttlMs?: number): Promise<void> => {
+      const ttlSec = Math.round((ttlMs !== undefined ? ttlMs : defaultTtlMs) / 1000);
+      await cacheService.set<T>(`${prefix}:${key}`, data, ttlSec);
+    },
+    invalidate: async (): Promise<void> => {
+      await cacheService.invalidate(`${prefix}:`);
+    },
+    cleanup: () => {}
+  };
 }
 
-export function createCache<T>(defaultTtlMs: number) {
-  const store = new Map<string, CacheEntry<T>>();
-
-  const get = (key: string): T | null => {
-    const entry = store.get(key);
-    if (!entry) return null;
-    if (Date.now() > entry.expiry) {
-      store.delete(key);
-      return null;
-    }
-    return entry.data;
-  };
-
-  const set = (key: string, data: T, ttlMs?: number): void => {
-    const expiry = Date.now() + (ttlMs !== undefined ? ttlMs : defaultTtlMs);
-    store.set(key, { data, expiry });
-  };
-
-  const invalidate = (): void => {
-    store.clear();
-  };
-
-  const cleanup = (): void => {
-    const now = Date.now();
-    for (const [key, entry] of store.entries()) {
-      if (now > entry.expiry) {
-        store.delete(key);
-      }
-    }
-  };
-
-  return { get, set, invalidate, cleanup };
-}
-
-export const fullReportCache = createCache<any>(60000); // 60s
-export const myTeamReportsCache = createCache<any>(30000); // 30s
-export const commandStatsCache = createCache<any>(15000); // 15s
-export const diadCoverageCache = createCache<any>(30000); // 30s
+export const fullReportCache = createCache<any>('fullReport', 60000); // 60s
+export const myTeamReportsCache = createCache<any>('myTeamReports', 30000); // 30s
+export const commandStatsCache = createCache<any>('commandStats', 15000); // 15s
+export const diadCoverageCache = createCache<any>('diadCoverage', 30000); // 30s
 
 const allCaches = [fullReportCache, myTeamReportsCache, commandStatsCache, diadCoverageCache];
 
-export const invalidateAllReportsCaches = () => {
+export const invalidateAllReportsCaches = async () => {
   console.log('[CACHE] Invalidating all heavy reports caches due to mutation...');
-  allCaches.forEach(c => c.invalidate());
+  for (const c of allCaches) {
+    await c.invalidate();
+  }
 };
-
-// Periodic cleanup every 5 minutes
-setInterval(() => {
-  allCaches.forEach(c => c.cleanup());
-}, 300000);
 
 
 
@@ -116,11 +107,22 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-list-id', 'x-user-role', 'x-user-id', 'x-district', 'Accept']
 }));
 // app.options wildcard removed – global cors() middleware already handles preflight for all routes
-// CORS rejection logging
+// CORS rejection logging & global error reporting
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err && err.message && err.message.includes('CORS')) {
     console.error('CORS error:', err);
   }
+  const userId = req.headers['x-user-id'] as string || null;
+  const role = req.headers['x-user-role'] as string || null;
+  const district = req.headers['x-district'] as string || null;
+  trackEvent(userId, 'server_error', {
+    message: err.message || String(err),
+    stack: err.stack || '',
+    path: req.path,
+    method: req.method,
+    role,
+    district
+  });
   next(err);
 });
 
@@ -152,6 +154,48 @@ const storage = multer.diskStorage({
 // Attach build version to every response so clients can detect deploys
 app.use((_req, res, next) => {
   res.setHeader('X-Build-Version', BUILD_VERSION);
+  next();
+});
+
+// HTTP Cache-Control and Vary Header Middleware
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    const p = req.path;
+    res.setHeader('Vary', 'Accept-Encoding, x-user-id, x-district');
+
+    if (p.startsWith('/api/locales') || p.startsWith('/api/campaigns') || p.startsWith('/api/lists')) {
+      res.setHeader('Cache-Control', 'public, max-age=60');
+    } else if (p.startsWith('/api/stats/command') || p.startsWith('/api/diad/coverage') || p.startsWith('/api/summary')) {
+      res.setHeader('Cache-Control', 'public, max-age=15');
+    } else if (p.startsWith('/api/me') || p.startsWith('/api/stream/events') || p.startsWith('/api/ping') || p.startsWith('/api/ready')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    }
+  } else {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  }
+  next();
+});
+
+// Custom MD5 ETag Middleware for GET requests
+app.use((req, res, next) => {
+  if (req.method !== 'GET') {
+    return next();
+  }
+
+  const originalSend = res.send;
+  res.send = function (body) {
+    if (body && (typeof body === 'string' || Buffer.isBuffer(body))) {
+      const hash = crypto.createHash('md5').update(body).digest('hex');
+      const etag = `W/"${hash}"`;
+      res.setHeader('ETag', etag);
+
+      if (req.headers['if-none-match'] === etag) {
+        res.status(304).end();
+        return res;
+      }
+    }
+    return originalSend.apply(this, arguments as any);
+  };
   next();
 });
 
@@ -2759,7 +2803,7 @@ app.get('/api/health', (req, res) => {
   }
 });
 
-app.get('/api/stats/summary', (req, res) => {
+app.get('/api/stats/summary', async (req, res) => {
   try {
     const secU = getSecurityFilter(req, 'u');
     const secC = getSecurityFilter(req, 'c');
@@ -2804,15 +2848,14 @@ app.get('/api/stats/summary', (req, res) => {
     const listsCount = db.prepare(`SELECT COUNT(*) as count FROM lists l WHERE 1=1 ${secL.sql}${campFilterL}`).get(...paramsL) as any;
     
     const cacheKey = JSON.stringify({ sql: secE.sql + campFilterE, params: paramsE });
-    const cachedE = electorsCountCache.get(cacheKey);
+    const cachedE = await cacheService.get<number>(`electors:count:${cacheKey}`);
     let electorsCountVal = 0;
-    const now = Date.now();
-    if (cachedE && (now - cachedE.ts < ELECTORS_COUNT_TTL)) {
-      electorsCountVal = cachedE.count;
+    if (cachedE !== null) {
+      electorsCountVal = cachedE;
     } else {
       const res = db.prepare(`SELECT COUNT(*) as count FROM electors e WHERE 1=1 ${secE.sql}${campFilterE}`).get(...paramsE) as any;
       electorsCountVal = res?.count || 0;
-      electorsCountCache.set(cacheKey, { count: electorsCountVal, ts: now });
+      await cacheService.set(`electors:count:${cacheKey}`, electorsCountVal, 300); // 5 minutes TTL
     }
     
     // Dynamic optimization: Skip heavy join on electors table if no district/elector filtering is active
@@ -3782,7 +3825,7 @@ app.get('/api/districts/global', (req, res) => {
   }
 });
 
-app.get('/api/stats/command', (req, res) => {
+app.get('/api/stats/command', async (req, res) => {
   const list_id = getListId(req);
   const local_id = (req.query.localId as string) || '';
   const role = getRole(req);
@@ -3793,7 +3836,7 @@ app.get('/api/stats/command', (req, res) => {
   const secLoc = getSecurityFilter(req, 'loc');
 
   const cacheKey = `${requesterId || 'global'}_${list_id || ''}_${local_id || ''}`;
-  const cached = commandStatsCache.get(cacheKey);
+  const cached = await commandStatsCache.get(cacheKey);
   if (cached) {
     return res.json(cached);
   }
@@ -3880,24 +3923,24 @@ app.get('/api/stats/command', (req, res) => {
     // 1. Cached Total Electors
     const cacheKeyTotal = JSON.stringify({ sql: secElectors.sql, params: secElectors.params, localFilterSql, localFilterParams });
     let totalEl = 0;
-    const cachedTotal = totalElectorsCache.get(cacheKeyTotal);
-    if (cachedTotal && (now - cachedTotal.ts < ELECTORS_COUNT_TTL)) {
-      totalEl = cachedTotal.count;
+    const cachedTotal = await cacheService.get<number>(`electors:total:${cacheKeyTotal}`);
+    if (cachedTotal !== null) {
+      totalEl = cachedTotal;
     } else {
       const res = db.prepare(`
         SELECT COUNT(*) as count FROM electors e
         WHERE 1=1 ${localFilterSql} ${secElectors.sql}
       `).get(...electorParams) as any;
       totalEl = res?.count || 0;
-      totalElectorsCache.set(cacheKeyTotal, { count: totalEl, ts: now });
+      await cacheService.set(`electors:total:${cacheKeyTotal}`, totalEl, 300);
     }
 
     // 2. Cached Elector Counts per Location
     const cacheKeyByLocal = JSON.stringify({ sql: secElectors.sql, params: secElectors.params });
     let electorCountsMap = new Map<string, number>();
-    const cachedByLocal = electorCountsByLocalCache.get(cacheKeyByLocal);
-    if (cachedByLocal && (now - cachedByLocal.ts < ELECTORS_COUNT_TTL)) {
-      electorCountsMap = cachedByLocal.data;
+    const cachedByLocal = await cacheService.get<Record<string, number>>(`electors:local:${cacheKeyByLocal}`);
+    if (cachedByLocal !== null) {
+      electorCountsMap = new Map(Object.entries(cachedByLocal));
     } else {
       const rows = db.prepare(`
         SELECT local_votacion, COUNT(*) as total
@@ -3910,7 +3953,7 @@ app.get('/api/stats/command', (req, res) => {
         if (r.local_votacion) newMap.set(r.local_votacion.toUpperCase().trim(), r.total);
       });
       electorCountsMap = newMap;
-      electorCountsByLocalCache.set(cacheKeyByLocal, { data: newMap, ts: now });
+      await cacheService.set(`electors:local:${cacheKeyByLocal}`, Object.fromEntries(newMap), 300);
     }
 
     // 3. Live Capture Counts per Location (Highly indexed, lightning fast)
@@ -3980,7 +4023,7 @@ app.get('/api/stats/command', (req, res) => {
       })),
     };
 
-    commandStatsCache.set(cacheKey, responseData);
+    await commandStatsCache.set(cacheKey, responseData);
     res.json(responseData);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -4175,14 +4218,14 @@ app.get('/api/structure/coordinators/:id/electors', (req, res) => {
   }
 });
 
-app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
+app.get('/api/structure/padrinos/:id/full-report', async (req, res) => {
   const { id } = req.params;
   let maxElectors = parseInt(req.query.maxElectors as string);
   if (isNaN(maxElectors) || maxElectors <= 0) {
       maxElectors = 2000;
   }
   const cacheKey = `${id}_${maxElectors}`;
-  const cached = fullReportCache.get(cacheKey);
+  const cached = await fullReportCache.get(cacheKey);
   if (cached) {
     return res.json(cached);
   }
@@ -4248,7 +4291,7 @@ app.get('/api/structure/padrinos/:id/full-report', (req, res) => {
       coordinators: fullHierarchy,
       timestamp: new Date().toISOString()
     };
-    fullReportCache.set(cacheKey, responseData);
+    await fullReportCache.set(cacheKey, responseData);
     res.json(responseData);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -4459,7 +4502,7 @@ app.get('/api/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUB
 });
 
 // GET /api/my-team/reports — structured data for A4 premium reports
-app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), (req, res) => {
+app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), async (req, res) => {
   const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
 
@@ -4470,7 +4513,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
   const reportType = (req.query.report_type as string) || 'all';
 
   const cacheKey = `${requesterId}_${selectedDistrict || ''}_${selectedList || ''}_${selectedPadrino || ''}_${selectedCoordinator || ''}_${reportType}`;
-  const cached = myTeamReportsCache.get(cacheKey);
+  const cached = await myTeamReportsCache.get(cacheKey);
   if (cached) {
     return res.json(cached);
   }
@@ -4875,7 +4918,7 @@ app.get('/api/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRI
       locales
     };
     
-    myTeamReportsCache.set(cacheKey, responseData);
+    await myTeamReportsCache.set(cacheKey, responseData);
     res.json(responseData);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -5867,13 +5910,13 @@ app.get('/api/admin/disputes/global', (req, res) => {
 
 // --- DIA D (Election Day) HUB ENDPOINTS ---
 
-app.get('/api/diad/coverage', (req, res) => {
+app.get('/api/diad/coverage', async (req, res) => {
   const list_id = getListId(req);
   const role = getRole(req);
   const user_id = req.headers['x-user-id'];
 
   const cacheKey = `${user_id || 'global'}_${list_id || ''}`;
-  const cached = diadCoverageCache.get(cacheKey);
+  const cached = await diadCoverageCache.get(cacheKey);
   if (cached) {
     return res.json(cached);
   }
@@ -5965,7 +6008,7 @@ app.get('/api/diad/coverage', (req, res) => {
       mesas
     };
 
-    diadCoverageCache.set(cacheKey, responseData);
+    await diadCoverageCache.set(cacheKey, responseData);
     res.json(responseData);
   } catch (err: any) {
     console.error('[DIAD COVERAGE ERROR]', err);

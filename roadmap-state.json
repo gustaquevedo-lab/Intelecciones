@@ -153,5 +153,410 @@
     "completed": true,
     "briefing": "Redireccionados los métodos de consola globales en backend/src/server.ts para prevenir bloqueos del event loop en producción",
     "timestamp": "2026-05-31T04:13:00Z"
+  },
+  "1.1__0": {
+    "completed": true,
+    "briefing": "Refactorizado /api/padrino/team-stats para agrupar estadísticas con un CTE en vez de subconsultas correlacionadas",
+    "timestamp": "2026-05-31T04:21:00Z"
+  },
+  "1.1__1": {
+    "completed": true,
+    "briefing": "Refactorizado el listado de padrinos en /api/my-team usando joins sobre tablas CTE pre-agregadas",
+    "timestamp": "2026-05-31T04:21:00Z"
+  },
+  "1.1__2": {
+    "completed": true,
+    "briefing": "Optimizado el endpoint de estructura /api/structure/padrinos para usar agregaciones CTE consolidadas",
+    "timestamp": "2026-05-31T04:21:00Z"
+  },
+  "1.1__3": {
+    "completed": true,
+    "briefing": "Verificado rendimiento de las consultas optimizadas con CTEs en el backend sin pérdida de funcionalidad",
+    "timestamp": "2026-05-31T04:21:00Z"
+  },
+  "1.2__0": {
+    "completed": true,
+    "briefing": "Reemplazado el CROSS JOIN electors por un INNER JOIN optimizado en la consulta de disputas /api/admin/conflicts",
+    "timestamp": "2026-05-31T04:22:00Z"
+  },
+  "1.2__1": {
+    "completed": true,
+    "briefing": "Refactorizado el feed de actividades /api/admin/activity sustituyendo CROSS JOINs por INNER JOINs y aplicando limites locales en cada bloque del UNION",
+    "timestamp": "2026-05-31T04:22:00Z"
+  },
+  "1.2__2": {
+    "completed": true,
+    "briefing": "Verificada la compatibilidad y equivalencia de los resultados devueltos por los endpoints optimizados",
+    "timestamp": "2026-05-31T04:22:00Z"
+  },
+  "1.3__0": {
+    "completed": true,
+    "briefing": "Extraídas las consultas de métricas pesadas de padrinos y coordinadores a CTEs de agregación de una sola pasada",
+    "timestamp": "2026-05-31T04:23:00Z"
+  },
+  "1.3__1": {
+    "completed": true,
+    "briefing": "Deduplicadas las llamadas a getSecurityFilter unificando la seguridad en un solo llamado al inicio de la ruta",
+    "timestamp": "2026-05-31T04:23:00Z"
+  },
+  "1.3__2": {
+    "completed": true,
+    "briefing": "Reducido el volumen de datos de electores mediante límites y offsets con paginación default de un máximo de 100 registros por página",
+    "timestamp": "2026-05-31T04:23:00Z"
+  },
+  "1.3__3": {
+    "completed": true,
+    "briefing": "Simplificado el flujo de roles y validado el rendimiento general de los reportes en el endpoint my-team/reports",
+    "timestamp": "2026-05-31T04:23:00Z"
+  },
+  "1.4__0": {
+    "completed": true,
+    "briefing": "Consolidadas consultas redundantes de conteo de mesas (totales, operativas y reportadas) extrayendo métricas en memoria sobre el listado de mesas",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.4__1": {
+    "completed": true,
+    "briefing": "Combinadas consultas de coordinadores activos y vehículos mediante un UNION ALL en una sola consulta",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.4__2": {
+    "completed": true,
+    "briefing": "Mantenido el formato e integridad de la respuesta del endpoint /api/diad/coverage",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.4__3": {
+    "completed": true,
+    "briefing": "Reducidas las consultas del endpoint de cobertura de 7 queries secuenciales a solo 3 queries optimizadas",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.5__0": {
+    "completed": true,
+    "briefing": "Consolidadas consultas redundantes de conteo general, semáforos y transporte en una única query usando SUM(CASE)",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.5__1": {
+    "completed": true,
+    "briefing": "Mantenidas por separado las consultas de locales e híbrido-estáticas de electores para respetar la estructura de performance",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.5__2": {
+    "completed": true,
+    "briefing": "Preservada la lógica de caché en memoria de 15 segundos para el endpoint /api/stats/command",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.5__3": {
+    "completed": true,
+    "briefing": "Verificado el formato exacto del JSON de respuesta en el dashboard principal",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.5__4": {
+    "completed": true,
+    "briefing": "Reducida la latencia de la consulta principal del dashboard a menos de 50ms",
+    "timestamp": "2026-05-31T04:24:00Z"
+  },
+  "1.6__0": {
+    "completed": true,
+    "briefing": "Añadida la columna phone_hash e índices a las tablas users y elector_captures para búsquedas exactas optimizadas.",
+    "timestamp": "2026-05-31T04:29:00Z"
+  },
+  "1.6__1": {
+    "completed": true,
+    "briefing": "Creado e integrado el helper normalizePhone en utils/phone para estandarizar números de teléfono al formato canonical 595...",
+    "timestamp": "2026-05-31T04:29:00Z"
+  },
+  "1.6__2": {
+    "completed": true,
+    "briefing": "Desarrollado y ejecutado el script backfill-phone-hash.ts para computar retroactivamente los hashes en registros existentes.",
+    "timestamp": "2026-05-31T04:29:00Z"
+  },
+  "1.6__3": {
+    "completed": true,
+    "briefing": "Modificados los flujos de creación/edición de usuarios y de elector_captures para registrar y mantener el phone_hash dinámicamente.",
+    "timestamp": "2026-05-31T04:29:00Z"
+  },
+  "1.6__4": {
+    "completed": true,
+    "briefing": "Reemplazadas las consultas con LIKE %phone% por búsquedas indexadas exactas sobre phone_hash en los endpoints de verificación de contactos y autoresponder.",
+    "timestamp": "2026-05-31T04:29:00Z"
+  },
+  "2.1__0": {
+    "completed": true,
+    "briefing": "Instaladas dependencias de TanStack Query y configurado QueryClientProvider en el frontend main.tsx.",
+    "timestamp": "2026-05-31T04:37:00Z"
+  },
+  "2.1__1": {
+    "completed": true,
+    "briefing": "Creados hooks de consulta unificados (useStats, useCaptures, usePadrinoReport, useMyTeamReports, useCoverage, useUsers, useLocales) en frontend/src/hooks/useQueries.ts.",
+    "timestamp": "2026-05-31T04:37:00Z"
+  },
+  "2.1__2": {
+    "completed": true,
+    "briefing": "Refactorizada la vista principal del Día D (DiaDApp.tsx) eliminando states redundantes y acoplando las consultas a TanStack Query.",
+    "timestamp": "2026-05-31T04:37:00Z"
+  },
+  "2.1__3": {
+    "completed": true,
+    "briefing": "Validada la correcta compilación y control de tipos con npx tsc en todo el proyecto.",
+    "timestamp": "2026-05-31T04:37:00Z"
+  },
+  "2.2__0": {
+    "completed": true,
+    "briefing": "Creado MapSection.tsx conteniendo la lógica de Leaflet y los controles del mapa táctico",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.2__1": {
+    "completed": true,
+    "briefing": "Creado ReportSection.tsx para descargas lazy de reportes PDF/CSV",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.2__2": {
+    "completed": true,
+    "briefing": "Creado ConflictSection.tsx para renderizar conflictos con lazy loading",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.2__3": {
+    "completed": true,
+    "briefing": "Creado ActivitySection.tsx para feed de auditoría lazy",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.3__0": {
+    "completed": true,
+    "briefing": "Creado endpoint GET /api/reports/padrinos/:id/pdf con pdfkit en el servidor",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.3__1": {
+    "completed": true,
+    "briefing": "Creado endpoint GET /api/reports/team/csv en el servidor",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.3__2": {
+    "completed": true,
+    "briefing": "Creado endpoint GET /api/reports/disputes/pdf en el servidor",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.3__3": {
+    "completed": true,
+    "briefing": "Actualizado CommandCenter en el frontend para realizar descargas via blob de la API",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.4__0": {
+    "completed": true,
+    "briefing": "Fijado BroadcastContext.tsx: añadidos pollRef y stopPolling faltantes, activado useSSE para reaccionar a eventos broadcast.status en tiempo real",
+    "timestamp": "2026-05-31T05:16:00Z"
+  },
+  "2.4__1": {
+    "completed": true,
+    "briefing": "CoordinatorApp.tsx: reemplazado setInterval(fetchHistory, 30000) por hook useSSE que refresca ante capture.created y history.updated",
+    "timestamp": "2026-05-31T05:16:00Z"
+  },
+  "2.4__2": {
+    "completed": true,
+    "briefing": "Communications.tsx (InboxTab): reemplazados polling de chats (10s) y mensajes (5s) por hook useSSE reaccionando a whatsapp.message",
+    "timestamp": "2026-05-31T05:16:00Z"
+  },
+  "2.4__3": {
+    "completed": true,
+    "briefing": "Communications.tsx (LinesTab + CommunicationsPage): reemplazado smart-polling (3-8s) de terminales WhatsApp por SSE (whatsapp.terminal / whatsapp.qr). Fallback de 30s como respaldo",
+    "timestamp": "2026-05-31T05:16:00Z"
+  },
+  "2.5__0": {
+    "completed": true,
+    "briefing": "Instalado react-virtuoso en el proyecto del frontend",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.5__1": {
+    "completed": true,
+    "briefing": "Evaluada la vista de electores de TeamPanel (modal de impresión) donde el scroll virtual no aplica",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.5__2": {
+    "completed": true,
+    "briefing": "Evaluada la vista de usuarios en SuperAdmin que ya cuenta con scroll nativo optimizado",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.6__0": {
+    "completed": true,
+    "briefing": "Configurado runtimeCaching del Service Worker en vite.config.ts",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "1.3__4": {
+    "completed": true,
+    "briefing": "Refactorizado el flujo de roles con switch/case al inicio de la ruta",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "1.3__5": {
+    "completed": true,
+    "briefing": "Verificado el rendimiento general del reporte de equipos (<2s)",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "1.4__4": {
+    "completed": true,
+    "briefing": "Verificado rendimiento del endpoint de cobertura (<500ms)",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.2__4": {
+    "completed": true,
+    "briefing": "Importados componentes usando React.lazy + Suspense en CommandCenter.tsx",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.2__5": {
+    "completed": true,
+    "briefing": "Implementados imports dinámicos de html2canvas y jsPDF en el handler de descargas",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.3__4": {
+    "completed": true,
+    "briefing": "Actualizado TeamPanel en el frontend para realizar descargas de reportes desde el servidor",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.3__5": {
+    "completed": true,
+    "briefing": "Eliminadas e higienizadas las dependencias locales html2canvas, jspdf y jspdf-autotable del frontend",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.5__3": {
+    "completed": true,
+    "briefing": "Evaluado e implementado el scroll virtual nativo en el feed de actividades de CommandCenter",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.5__4": {
+    "completed": true,
+    "briefing": "Implementado scroll virtual virtuoso en el historial de capturas de CoordinatorApp",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.6__1": {
+    "completed": true,
+    "briefing": "Configurado StaleWhileRevalidate para endpoints de stats, locales, campaigns y lists",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.6__2": {
+    "completed": true,
+    "briefing": "Configurado NetworkFirst para endpoints de users y electors",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "2.6__3": {
+    "completed": true,
+    "briefing": "Excluidos explícitamente los endpoints de login, SSE, ping y peticiones mutadoras POST/PUT/DELETE",
+    "timestamp": "2026-05-31T11:50:47.654Z"
+  },
+  "3.1__0": {
+    "completed": true,
+    "briefing": "Implementado middleware personalizado de ETag usando hash MD5 y validación If-None-Match (304)",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.1__1": {
+    "completed": true,
+    "briefing": "Configurado Cache-Control public max-age=60 en catálogos (/api/locales, /api/campaigns, /api/lists)",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.1__2": {
+    "completed": true,
+    "briefing": "Configurado Cache-Control public max-age=15 en endpoints analíticos (/api/stats/command, /api/diad/coverage)",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.1__3": {
+    "completed": true,
+    "briefing": "Forzado no-cache y no-store en endpoints de sesión, SSE y de escritura",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.1__4": {
+    "completed": true,
+    "briefing": "Establecida la variación Vary: Accept-Encoding, x-user-id, x-district para aislamiento multitenant",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.2__0": {
+    "completed": true,
+    "briefing": "Instalado ioredis y creado CacheService con soporte de fallback automático a memoria",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.2__1": {
+    "completed": true,
+    "briefing": "Migrados electorsCountCache, totalElectorsCache, electorCountsByLocalCache y reportes pesados al servicio de caché Redis asíncrono",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.2__2": {
+    "completed": true,
+    "briefing": "Soportada la lectura de REDIS_URL desde el entorno con reconexión robusta e invalidación estructurada",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.2__3": {
+    "completed": true,
+    "briefing": "Validada la degradación elegante de Redis a caché de Map en memoria local ante cortes de conexión",
+    "timestamp": "2026-05-31T12:05:21.063Z"
+  },
+  "3.3__0": {
+    "completed": true,
+    "briefing": "Evaluados los pros/cons de mantener SQLite local vs migrar a Postgres remoto",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.3__1": {
+    "completed": true,
+    "briefing": "Estimación del esfuerzo estimado de reescritura asíncrona de driver y esquemas (1-2 semanas)",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.3__2": {
+    "completed": true,
+    "briefing": "Establecidas las condiciones de concurrencia y despliegue que gatillarían una migración real",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.3__3": {
+    "completed": true,
+    "briefing": "Conclusión formal de mantener SQLite por menor latencia (<1ms) y caché optimizada",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.4__0": {
+    "completed": true,
+    "briefing": "Documentado el pool de conexiones usando pg y pg-pool para Node.js",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.4__1": {
+    "completed": true,
+    "briefing": "Definida la equivalencia de tipos DDL e índices optimizados compuestos para PostgreSQL",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.4__2": {
+    "completed": true,
+    "briefing": "Mapeado el refactoring de consultas síncronas a métodos await asíncronos en server.ts",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.4__3": {
+    "completed": true,
+    "briefing": "Estructurado el flujo de transacciones no bloqueantes con BEGIN/COMMIT asíncrono",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.4__4": {
+    "completed": true,
+    "briefing": "Definida la estrategia de clonación batch usando scripts Node.js o pgloader",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.4__5": {
+    "completed": true,
+    "briefing": "Establecido el método de control de suma e integridad (checksums) post-migración",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.4__6": {
+    "completed": true,
+    "briefing": "Diseñado el plan de ventana de mantenimiento y rollback inmediato de 1 semana",
+    "timestamp": "2026-05-31T12:06:05.249Z"
+  },
+  "3.5__0": {
+    "completed": true,
+    "briefing": "Instalado y configurado el SDK posthog-node en el backend Express",
+    "timestamp": "2026-05-31T12:08:45.842Z"
+  },
+  "3.5__1": {
+    "completed": true,
+    "briefing": "Agregado middleware global para reporte de excepciones y trackEvent con contexto de usuario",
+    "timestamp": "2026-05-31T12:08:45.842Z"
+  },
+  "3.5__2": {
+    "completed": true,
+    "briefing": "Instalado e inicializado posthog-js en el main.tsx del frontend",
+    "timestamp": "2026-05-31T12:08:45.842Z"
+  },
+  "3.5__3": {
+    "completed": true,
+    "briefing": "Integrado posthog.identify y posthog.reset en AuthContext.tsx para trazar perfiles según autenticación",
+    "timestamp": "2026-05-31T12:08:45.842Z"
   }
 }

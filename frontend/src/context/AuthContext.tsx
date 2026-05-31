@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import { debug } from '../utils/debug';
+import posthog from 'posthog-js';
 
 interface User {
     id: number;
@@ -106,13 +107,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (isInitialMount.current) {
             isInitialMount.current = false;
-            return; // Don't clear auth_user on first render — user starts null before hydration
+            return;
         }
         try {
             if (user) {
                 localStorage.setItem('auth_user', JSON.stringify(user));
+                posthog.identify(String(user.id), {
+                    username: user.username,
+                    nombre: user.nombre,
+                    role: user.role,
+                    distrito: user.distrito || ''
+                });
             } else {
                 localStorage.removeItem('auth_user');
+                posthog.reset();
             }
         } catch(e) {}
     }, [user]);

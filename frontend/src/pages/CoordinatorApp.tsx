@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, User,
@@ -17,6 +17,8 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import api, { getImageUrl } from '../services/api';
 import { savePadronOffline, searchElectorOffline, getOfflineStats } from '../services/offlineDb';
+import { useSSE } from '../hooks/useSSE';
+import { Virtuoso } from 'react-virtuoso';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
@@ -914,11 +916,17 @@ const CoordinatorApp = () => {
     }
   };
 
+  // Initial load
   useEffect(() => {
     fetchHistory();
-    const interval = setInterval(fetchHistory, 30000);
-    return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // SSE: refresh history whenever a capture is created or history is updated
+  useSSE(useCallback((event) => {
+    if (event.type === 'capture.created' || event.type === 'history.updated') {
+      fetchHistory();
+    }
+  }, [])); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab === 'coordinators') {
@@ -1771,29 +1779,36 @@ const CoordinatorApp = () => {
                 </p>
               </div>
             ) : (
-              history.map((cap) => (
-                <motion.div key={cap.ci || cap.elector_ci || cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : cap.traffic_light === 'RED' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : cap.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)', border: '1px solid currentColor' }}>
-                    <User size={20} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
-                      {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
-                    </div>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.ci || cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion || cap.local}</p>
-                    {isReadOnly && cap.traffic_light && (
-                      <p style={{ fontSize: '0.65rem', color: 'var(--yellow)', marginTop: '0.2rem' }}>
-                        Captado por: {cap.coordinator_name || 'Otro coordinador'} {cap.padrino_name ? `• Padrino: ${cap.padrino_name}` : ''}
-                      </p>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {!isReadOnly && <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>}
-                    <button onClick={() => handleDeleteCapture(cap.id, cap.ci || cap.elector_ci)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                  </div>
-                </motion.div>
-              ))
+              <Virtuoso
+                style={{ height: Math.min(history.length * 100, 480) }}
+                totalCount={history.length}
+                itemContent={(index) => {
+                  const cap = history[index];
+                  return (
+                    <motion.div key={cap.ci || cap.elector_ci || cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : cap.traffic_light === 'RED' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : cap.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)', border: '1px solid currentColor' }}>
+                        <User size={20} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
+                          {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
+                        </div>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.ci || cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion || cap.local}</p>
+                        {isReadOnly && cap.traffic_light && (
+                          <p style={{ fontSize: '0.65rem', color: 'var(--yellow)', marginTop: '0.2rem' }}>
+                            Captado por: {cap.coordinator_name || 'Otro coordinador'} {cap.padrino_name ? `• Padrino: ${cap.padrino_name}` : ''}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {!isReadOnly && <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>}
+                        <button onClick={() => handleDeleteCapture(cap.id, cap.ci || cap.elector_ci)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                      </div>
+                    </motion.div>
+                  );
+                }}
+              />
             )}
           </div>
         ) : activeTab === 'support' ? (

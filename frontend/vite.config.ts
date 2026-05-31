@@ -10,17 +10,87 @@ export default defineConfig({
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Exclude SSE and auth endpoints from service worker interception
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/.*\/api\/ping$/,
-            handler: 'NetworkOnly'
-          },
+          // ── Static uploads / media: CacheFirst (aggressive, long TTL) ──────
           {
             urlPattern: /\/uploads\//,
             handler: 'CacheFirst',
             options: {
               cacheName: 'uploads-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 86400 }
+              expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 }
+            }
+          },
+
+          // ── Never cache: SSE stream, login, ping, write ops ───────────────
+          {
+            urlPattern: /\/api\/(stream|ping|auth\/login)/,
+            handler: 'NetworkOnly'
+          },
+
+          // ── Semi-static data: StaleWhileRevalidate (instant + background refresh) ─
+          // Locales de votación, campañas, listas — cambian muy poco
+          {
+            urlPattern: /\/api\/(locales|campaigns|lists|admin\/lists)/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-data-cache',
+              expiration: { maxEntries: 50, maxAgeSeconds: 10 * 60 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+
+          // ── Stats & KPI data: StaleWhileRevalidate with short TTL ─────────
+          {
+            urlPattern: /\/api\/stats\//,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'stats-cache',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+
+          // ── Mutable user/elector data: NetworkFirst (fresh when online) ───
+          {
+            urlPattern: /\/api\/(users|electors|coordinator|captures|admin\/conflicts|admin\/requests|structure)/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'mutable-data-cache',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 100, maxAgeSeconds: 5 * 60 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+
+          // ── Reports (PDF/CSV) – always fresh from server ──────────────────
+          {
+            urlPattern: /\/api\/reports\//,
+            handler: 'NetworkOnly'
+          },
+
+          // ── WhatsApp endpoints: NetworkFirst (real-time comms) ────────────
+          {
+            urlPattern: /\/api\/whatsapp\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'whatsapp-cache',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 50, maxAgeSeconds: 2 * 60 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+
+          // ── Roadmap state: NetworkFirst ───────────────────────────────────
+          {
+            urlPattern: /\/api\/roadmap-state/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'roadmap-cache',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 5, maxAgeSeconds: 30 },
+              cacheableResponse: { statuses: [0, 200] }
             }
           }
         ]

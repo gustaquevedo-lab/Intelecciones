@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import api from '../services/api';
+import { useSSE } from '../hooks/useSSE';
 
 export interface BroadcastState {
   logId: number;
@@ -28,15 +29,18 @@ const BroadcastContext = createContext<BroadcastContextValue>({
 });
 
 const LS_KEY = 'waBroadcastLogId';
-const POLL_MS = 3000;
+const POLL_MS = 4000;
 
 export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [broadcast, setBroadcastRaw] = useState<BroadcastState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stopPolling = () => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-  };
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
 
   const fetchLog = useCallback(async (id: number): Promise<BroadcastState | null> => {
     try {
@@ -68,7 +72,6 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setBroadcastRaw(state);
           return;
         } else if (state && (state.status === 'COMPLETED' || state.status === 'CANCELLED')) {
-          // Show final state briefly — don't lose it
           setBroadcastRaw(state);
           return;
         }
@@ -90,7 +93,26 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Polling while RUNNING or PAUSED
+  // SSE: React to real-time broadcast.status events (eliminates need for polling)
+  useSSE(useCallback((event) => {
+    if (event.type === 'broadcast.status' && event.data) {
+      const d = event.data;
+      setBroadcastRaw(prev => {
+        if (!prev) return null;
+        // Only update if it's for the same log
+        if (d.logId && d.logId !== prev.logId) return prev;
+        return {
+          ...prev,
+          sent: d.sent ?? prev.sent,
+          failed: d.failed ?? prev.failed,
+          total: d.total ?? prev.total,
+          status: d.status ?? prev.status,
+        };
+      });
+    }
+  }, []));
+
+  // Fallback polling while RUNNING or PAUSED (in case SSE is not connected)
   useEffect(() => {
     stopPolling();
     if (broadcast && (broadcast.status === 'RUNNING' || broadcast.status === 'PAUSED')) {
@@ -104,7 +126,7 @@ export const BroadcastProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }, POLL_MS);
     }
     return stopPolling;
-  }, [broadcast?.logId, broadcast?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [broadcast?.logId, broadcast?.status, fetchLog, stopPolling]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pause = useCallback(async () => {
     if (!broadcast) return;

@@ -10,6 +10,7 @@ import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import api, { getImageUrl } from '../services/api';
+import { useCoverage, useLocales, useDiadResults, useDiadActas, useDiadMembers, useLogisticsClusters } from '../hooks/useQueries';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import * as L from 'leaflet';
@@ -139,25 +140,28 @@ const DiaDApp: React.FC = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
 
-  // Data
-  const [coverage, setCoverage] = useState({
+  // Data queries (TanStack Query)
+  const { data: coverageData, refetch: refetchCoverage } = useCoverage(activeDistrict);
+  const { data: locationsData, refetch: refetchLocations } = useLocales(activeDistrict);
+  const { data: fleetLocationsData, refetch: refetchFleet } = useLogisticsClusters(activeDistrict);
+  const { data: resultadosData, refetch: refetchResults } = useDiadResults(activeDistrict);
+  const { data: actasData, refetch: refetchActas } = useDiadActas(activeDistrict);
+  const { data: membersListData, refetch: refetchMembers } = useDiadMembers(activeDistrict);
+
+  const coverage = coverageData || {
     total_mesas: 0, 
     mesas_operativas: 0, op_porcentaje: 0,
     mesas_reportadas: 0, mesas_pendientes: 0,
     votos_procesados: 0, porcentaje: 0,
     total_coordinadores: 0, total_vehiculos: 0,
-    mesas: [] as { id: number; numero: number; local: string; lat: number; lng: number; reportada: boolean; operativa: boolean }[]
-  });
-  const [locations, setLocations] = useState<any[]>([]);
-  const [fleetLocations, setFleetLocations] = useState<any[]>([]);
-  const [resultados, setResultados] = useState<{
-    id: number; list_number: string; candidate_alias: string; type: string;
-    votos: number; porcentaje: number;
-  }[]>([]);
-  const [actas, setActas] = useState<{
-    id: number; mesa_numero: number; local: string; submitted_by: string;
-    votos_total: number; foto_url: string | null; submitted_at: string;
-  }[]>([]);
+    mesas: []
+  };
+  const locations = locationsData || [];
+  const fleetLocations = fleetLocationsData || [];
+  const resultados = resultadosData || [];
+  const actas = actasData || [];
+  const membersList = membersListData || [];
+
   const [bancasConcejal, setBancasConcejal] = useState(15);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedMesa, setSelectedMesa] = useState<{local: string, numero: number} | null>(null);
@@ -171,7 +175,6 @@ const DiaDApp: React.FC = () => {
   const [globalRegMesa, setGlobalRegMesa] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [globalRegRole, setGlobalRegRole] = useState('VOCAL');
-  const [membersList, setMembersList] = useState<any[]>([]);
   const [memberFilter, setMemberFilter] = useState('');
   const [selectedMesaForSwap, setSelectedMesaForSwap] = useState<{ local: string; numero: number } | null>(null);
   const [showListModal, setShowListModal] = useState(false);
@@ -329,23 +332,19 @@ const DiaDApp: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const covRes = await api.get('/diad/coverage').catch(() => ({ data: null }));
-      const resRes = await api.get('/diad/results').catch(() => ({ data: null }));
-      const actasRes = await api.get('/diad/actas').catch(() => ({ data: null }));
-      const locRes = await api.get('/voting-locations').catch(() => ({ data: [] }));
-      const fleetRes = await api.get('/logistics/clusters').catch(() => ({ data: [] }));
-      const memRes = await api.get('/diad/members').catch(() => ({ data: [] }));
-      if (covRes.data) setCoverage(covRes.data);
-      if (resRes.data) setResultados(resRes.data);
-      if (actasRes.data) setActas(actasRes.data);
-      if (locRes.data) setLocations(locRes.data);
-      if (fleetRes.data) setFleetLocations(fleetRes.data);
-      if (memRes.data) setMembersList(memRes.data);
+      await Promise.all([
+        refetchCoverage(),
+        refetchResults(),
+        refetchActas(),
+        refetchLocations(),
+        refetchFleet(),
+        refetchMembers()
+      ]);
       setLastRefresh(new Date());
     } catch (err) {
       console.error('DiaDApp fetch error:', err);
     }
-  }, []);
+  }, [refetchCoverage, refetchResults, refetchActas, refetchLocations, refetchFleet, refetchMembers]);
 
   useEffect(() => {
     const isElectionDay = true; // Relaxed for testing or pre-election day monitoring

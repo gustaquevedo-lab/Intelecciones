@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -122,78 +122,271 @@
   <div class="content" id="content"></div>
 </div>
 <script>
-const STORAGE_KEY = 'intelecciones_roadmap';
-const STATE_FILENAME = 'roadmap-state.json';
+// ══════════════════════════════════════════════════════════════════════════════
+// Persistence Engine v3 — Intelecciones Roadmap
+// Priority: 1) Backend API  2) IndexedDB FileHandle (auto-reopen)  3) localStorage
+// The user only needs to select the file ONCE. The handle is stored in IndexedDB
+// and recovered automatically on every subsequent visit.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const STORAGE_KEY   = 'intelecciones_roadmap';
+const IDB_NAME      = 'roadmap_db';
+const IDB_STORE     = 'handles';
+const IDB_KEY       = 'fileHandle';
+
 const API_CANDIDATES = (() => {
-  const loc = window.location;
   const urls = [];
-  if (loc.protocol !== "file:") urls.push(loc.origin + "/api");
-  if (loc.port !== "4900") urls.push("http://localhost:4900/api");
+  if (location.protocol !== 'file:') urls.push(location.origin + '/api');
+  urls.push('http://localhost:5000/api');
+  urls.push('http://localhost:4900/api');
   return urls;
 })();
-let _stateCache = null, _saveDebounce = null, _apiBase = null, _fileHandle = null, _persistMode = "local";
+
+let _stateCache = null, _saveDebounce = null, _apiBase = null;
+let _fileHandle = null, _persistMode = 'local', _refreshTimer = null;
+
+// ── IndexedDB ──────────────────────────────────────────────────────────────────
+function _idb(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onerror = e => reject(e.target.error);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      const tx = db.transaction(IDB_STORE, mode);
+      const store = tx.objectStore(IDB_STORE);
+      fn(store, resolve, reject);
+    };
+  });
+}
+const idbGet = key => _idb('readonly',  (s,res,rej) => { const r=s.get(key); r.onsuccess=e=>res(e.target.result); r.onerror=e=>rej(e.target.error); });
+const idbSet = (key,val) => _idb('readwrite',(s,res,rej)=>{ s.put(val,key); s.transaction.oncomplete=res; s.transaction.onerror=e=>rej(e.target.error); });
+const idbDel = key => _idb('readwrite',(s,res,rej)=>{ s.delete(key); s.transaction.oncomplete=res; s.transaction.onerror=e=>rej(e.target.error); });
+
+// ── File helpers ───────────────────────────────────────────────────────────────
+async function readHandle(h)  { const f = await h.getFile(); return JSON.parse(await f.text()); }
+async function writeHandle(h, state) { const w = await h.createWritable(); await w.write(JSON.stringify(state, null, 2)); await w.close(); }
+
+// ── Auto-refresh every 30s ─────────────────────────────────────────────────────
+function startAutoRefresh() {
+  if (_refreshTimer) clearInterval(_refreshTimer);
+  _refreshTimer = setInterval(async () => {
+    try {
+      if (_fileHandle) { _stateCache = await readHandle(_fileHandle); render(); }
+      else if (_apiBase) {
+        const r = await fetch(_apiBase + '/roadmap-state', { signal: AbortSignal.timeout(2000) });
+        if (r.ok) { _stateCache = await r.json(); render(); }
+      }
+    } catch {}
+  }, 30000);
+}
+
+// ── Init (called once on page load) ───────────────────────────────────────────
 async function initState() {
+  // 1. Try backend API
   for (const base of API_CANDIDATES) {
     try {
-      const res = await fetch(base + "/roadmap-state", { signal: AbortSignal.timeout(2000) });
-      if (res.ok) { _stateCache = await res.json(); _apiBase = base; _persistMode = "server"; localStorage.setItem(STORAGE_KEY, JSON.stringify(_stateCache)); updateConnectionStatus(); return; }
+      const r = await fetch(base + '/roadmap-state', { signal: AbortSignal.timeout(2000) });
+      if (r.ok) {
+        _stateCache = await r.json();
+        _apiBase = base; _persistMode = 'server';
+        startAutoRefresh(); updateConnStatus(); return;
+      }
     } catch {}
   }
-  try { const raw = localStorage.getItem(STORAGE_KEY); _stateCache = raw ? JSON.parse(raw) : {}; } catch { _stateCache = {}; }
-  _persistMode = "local"; updateConnectionStatus();
+
+  // 2. Try saved FileHandle from IndexedDB
+  if ('showOpenFilePicker' in window) {
+    try {
+      const h = await idbGet(IDB_KEY);
+      if (h) {
+        let perm = await h.queryPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') perm = await h.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          _fileHandle = h;
+          _stateCache = await readHandle(_fileHandle);
+          _persistMode = 'file';
+          startAutoRefresh(); updateConnStatus(); addReloadBtn(); return;
+        }
+        await idbDel(IDB_KEY).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('[Roadmap] IDB recovery failed:', e.message);
+      await idbDel(IDB_KEY).catch(() => {});
+    }
+    // Show one-time banner
+    showPickBanner();
+  }
+
+  // 3. Fallback: localStorage (may be stale)
+  try { _stateCache = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { _stateCache = {}; }
+  _persistMode = 'local'; updateConnStatus();
 }
+
+// ── One-time file picker ───────────────────────────────────────────────────────
+async function pickFile() {
+  try {
+    const [h] = await window.showOpenFilePicker({
+      id: 'roadmap-json',
+      types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+    });
+    await idbSet(IDB_KEY, h);
+    _fileHandle = h;
+    _stateCache = await readHandle(h);
+    _persistMode = 'file';
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(_stateCache));
+    hideBanner(); startAutoRefresh(); updateConnStatus(); addReloadBtn(); render();
+  } catch (e) { if (e.name !== 'AbortError') alert('Error: ' + e.message); }
+}
+async function connectToFile() { await pickFile(); }
+async function loadFromFile()  { await pickFile(); }
+
+// ── Banner ─────────────────────────────────────────────────────────────────────
+function showPickBanner() {
+  if (document.getElementById('pick-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'pick-banner';
+  b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#091e38;border-top:2px solid #2E84F0;padding:12px 24px;display:flex;align-items:center;gap:16px;font-size:14px;';
+  b.innerHTML =
+    '<span style="color:#A8B4C8;flex:1">⚡ Vinculá <strong style="color:#fff">roadmap-state.json</strong> una sola vez — el navegador lo recordará automáticamente.</span>' +
+    '<button onclick="pickFile()" style="padding:8px 20px;background:#2E84F0;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">📁 Vincular archivo</button>' +
+    '<button onclick="hideBanner()" style="padding:8px 12px;background:rgba(255,255,255,0.07);color:#A8B4C8;border:1px solid #1a3352;border-radius:8px;cursor:pointer">✕</button>';
+  document.body.appendChild(b);
+}
+function hideBanner() { const b = document.getElementById('pick-banner'); if (b) b.remove(); }
+
+// ── Reload button (shown when file is linked) ──────────────────────────────────
+function addReloadBtn() {
+  if (document.getElementById('reload-btn')) return;
+  const cs = document.getElementById('conn-status');
+  if (!cs) return;
+  const btn = document.createElement('button');
+  btn.id = 'reload-btn'; btn.className = 'export-btn';
+  btn.textContent = '🔄 Recargar';
+  btn.onclick = reloadFromSource;
+  cs.parentElement.insertBefore(btn, cs.nextSibling);
+}
+async function reloadFromSource() {
+  try {
+    if (_fileHandle) { _stateCache = await readHandle(_fileHandle); }
+    else if (_apiBase) { const r = await fetch(_apiBase + '/roadmap-state', { signal: AbortSignal.timeout(3000) }); if (r.ok) _stateCache = await r.json(); }
+    render(); updateConnStatus();
+  } catch (e) { alert('Error al recargar: ' + e.message); }
+}
+
+// ── Connection status badge ────────────────────────────────────────────────────
+function updateConnStatus() {
+  const el = document.getElementById('conn-status'); if (!el) return;
+  const cfg = {
+    server: { text: '● Servidor — auto-sync activo', color: '#22C47E' },
+    file:   { text: '● Archivo vinculado — auto-sync activo', color: '#22C47E' },
+    local:  { text: '○ localStorage (vinculá el archivo para sincronizar)', color: '#D97706' }
+  }[_persistMode] || { text: '○ Sin conexión', color: '#D97706' };
+  el.innerHTML = `<span style="color:${cfg.color}">${cfg.text}</span>`;
+}
+
+// ── State load / save / persist ────────────────────────────────────────────────
 function loadState() { return _stateCache || {}; }
+
 function saveState(state) {
-  state._lastSaved = new Date().toISOString(); _stateCache = state;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); updateLastSaved(state._lastSaved);
-  if (_saveDebounce) clearTimeout(_saveDebounce); _saveDebounce = setTimeout(() => persistState(state), 300);
+  state._lastSaved = new Date().toISOString();
+  _stateCache = state;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateLastSaved(state._lastSaved);
+  clearTimeout(_saveDebounce);
+  _saveDebounce = setTimeout(() => persistState(state), 400);
 }
+
 async function persistState(state) {
-  const json = JSON.stringify(state, null, 2);
-  if (_apiBase) { try { const r = await fetch(_apiBase + "/roadmap-state", { method: "PUT", headers: {"Content-Type":"application/json"}, body: json, signal: AbortSignal.timeout(5000) }); if (r.ok) { _persistMode = "server"; updateConnectionStatus(); return; } } catch {} _apiBase = null; }
-  if (_fileHandle) { try { const w = await _fileHandle.createWritable(); await w.write(json); await w.close(); _persistMode = "file"; updateConnectionStatus(); return; } catch { _fileHandle = null; } }
-  _persistMode = "local"; updateConnectionStatus();
+  if (_apiBase) {
+    try {
+      const r = await fetch(_apiBase + '/roadmap-state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state, null, 2), signal: AbortSignal.timeout(5000) });
+      if (r.ok) { _persistMode = 'server'; updateConnStatus(); return; }
+    } catch {} _apiBase = null;
+  }
+  if (_fileHandle) {
+    try { await writeHandle(_fileHandle, state); _persistMode = 'file'; updateConnStatus(); return; }
+    catch { _fileHandle = null; await idbDel(IDB_KEY).catch(() => {}); }
+  }
+  _persistMode = 'local'; updateConnStatus();
 }
-async function connectToFile() {
-  if (!("showSaveFilePicker" in window)) { alert("Usá Chrome/Edge o iniciá un servidor local."); return; }
-  try { _fileHandle = await window.showSaveFilePicker({ suggestedName: STATE_FILENAME, types: [{ description: "JSON", accept: {"application/json":[".json"]} }] }); const s = loadState(); const w = await _fileHandle.createWritable(); await w.write(JSON.stringify(s, null, 2)); await w.close(); _persistMode = "file"; updateConnectionStatus(); } catch(e) { if(e.name!=="AbortError") alert(e.message); }
+
+// ── Task helpers ───────────────────────────────────────────────────────────────
+function getTaskKey(g, t) { return g + '__' + t; }
+function isCompleted(s, g, t) { const k = getTaskKey(g,t); return !!(s[k] && s[k].completed); }
+function getBriefing(s, g, t)  { const k = getTaskKey(g,t); return s[k] ? s[k].briefing : null; }
+function getTimestamp(s, g, t) { const k = getTaskKey(g,t); return s[k] ? s[k].timestamp : null; }
+
+function toggleTask(g, t, b) {
+  const s = loadState(), k = getTaskKey(g, t);
+  if (!s[k]) s[k] = {};
+  if (s[k].completed) { s[k].completed = false; s[k].briefing = null; s[k].timestamp = null; }
+  else { s[k].completed = true; s[k].briefing = b; s[k].timestamp = new Date().toISOString(); }
+  saveState(s); render();
 }
-async function loadFromFile() {
-  if (!("showOpenFilePicker" in window)) { alert("Usá Chrome/Edge."); return; }
-  try { const [h] = await window.showOpenFilePicker({ types: [{ description: "JSON", accept: {"application/json":[".json"]} }] }); _fileHandle = h; const f = await h.getFile(); const t = await f.text(); _stateCache = JSON.parse(t); localStorage.setItem(STORAGE_KEY, JSON.stringify(_stateCache)); _persistMode = "file"; updateConnectionStatus(); render(); } catch(e) { if(e.name!=="AbortError") alert(e.message); }
+
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function getPhaseStats(p, s) {
+  let t = 0, d = 0;
+  p.groups.forEach(g => g.tasks.forEach((_, i) => { t++; if (isCompleted(s, g.id, i)) d++; }));
+  return { total: t, done: d, pct: t ? Math.round(d / t * 100) : 0 };
 }
-function updateConnectionStatus() {
-  const el = document.getElementById("conn-status"); if (!el) return;
-  const modes = { server: {text:"Servidor",color:"var(--green)",icon:"●"}, file: {text:"Archivo local",color:"var(--green)",icon:"●"}, local: {text:"localStorage",color:"var(--risk-medium)",icon:"○"} };
-  const m = modes[_persistMode]; el.innerHTML = '<span style="color:'+m.color+'">'+m.icon+"</span> "+m.text; el.style.color = m.color;
+
+function updateStats(s) {
+  let t = 0, d = 0;
+  ROADMAP.forEach(p => { const st = getPhaseStats(p, s); t += st.total; d += st.done; });
+  document.getElementById('stat-done').textContent    = d;
+  document.getElementById('stat-pending').textContent = t - d;
+  document.getElementById('stat-total').textContent   = t;
+  document.getElementById('global-progress').style.width = (t ? d / t * 100 : 0) + '%';
 }
-function getTaskKey(g,t){return g+"__"+t}
-function isCompleted(state,g,t){const k=getTaskKey(g,t);return state[k]&&state[k].completed||false}
-function getBriefing(state,g,t){const k=getTaskKey(g,t);return state[k]?state[k].briefing:null}
-function getTimestamp(state,g,t){const k=getTaskKey(g,t);return state[k]?state[k].timestamp:null}
-function toggleTask(g,t,b) {
-  const s=loadState(),k=getTaskKey(g,t);if(!s[k])s[k]={};
-  if(s[k].completed){s[k].completed=false;s[k].briefing=null;s[k].timestamp=null}
-  else{s[k].completed=true;s[k].briefing=b;s[k].timestamp=new Date().toISOString()}
-  saveState(s);render();
+
+function updateLastSaved(ts) {
+  const el = document.getElementById('last-saved');
+  if (el && ts) { const d = new Date(ts); el.textContent = 'Guardado: ' + d.toLocaleDateString('es-PY') + ' ' + d.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }); }
 }
-function escapeHtml(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
-function getPhaseStats(p,s){let t=0,d=0;p.groups.forEach(g=>{g.tasks.forEach((_,ti)=>{t++;if(isCompleted(s,g.id,ti))d++})});return{total:t,done:d,pct:t?Math.round(d/t*100):0}}
-function updateStats(s){let t=0,d=0;ROADMAP.forEach(p=>{const st=getPhaseStats(p,s);t+=st.total;d+=st.done});document.getElementById("stat-done").textContent=d;document.getElementById("stat-pending").textContent=t-d;document.getElementById("stat-total").textContent=t;document.getElementById("global-progress").style.width=(t?d/t*100:0)+"%"}
-function updateLastSaved(ts){const el=document.getElementById("last-saved");if(ts){const d=new Date(ts);el.textContent="Guardado: "+d.toLocaleDateString("es-PY")+" "+d.toLocaleTimeString("es-PY",{hour:"2-digit",minute:"2-digit"})}}
-function scrollToPhase(id){document.getElementById(id).scrollIntoView({behavior:"smooth"});document.querySelectorAll(".nav-phase").forEach(n=>n.classList.remove("active"));event.currentTarget.classList.add("active")}
-function toggleGroup(id){document.getElementById("group-"+id).classList.toggle("expanded")}
-function togglePrompt(e,id){e.stopPropagation();document.getElementById("prompt-"+id).classList.toggle("visible")}
-function copyPrompt(e,id){
-  e.stopPropagation();const g=ROADMAP.flatMap(p=>p.groups).find(g=>g.id===id);
-  navigator.clipboard.writeText(g.prompt).then(()=>{const btn=e.target;btn.textContent="✓ Copiado";btn.classList.add("copied");setTimeout(()=>{btn.textContent="Copiar";btn.classList.remove("copied")},2000)});
+
+function scrollToPhase(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.nav-phase').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
 }
-function handleTaskClick(g,t){const s=loadState();if(isCompleted(s,g,t)){toggleTask(g,t)}else{const el=document.getElementById("task-"+g+"-"+t);el.classList.add("completing");document.getElementById("briefing-"+g+"-"+t).focus()}}
-function saveBriefing(g,t){const ta=document.getElementById("briefing-"+g+"-"+t);const b=ta.value.trim()||"Completado";toggleTask(g,t,b)}
-function cancelBriefing(g,t){document.getElementById("task-"+g+"-"+t).classList.remove("completing")}
-function exportData(){const s=loadState();const b=new Blob([JSON.stringify(s,null,2)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="intelecciones-roadmap-"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u)}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){try{const d=JSON.parse(ev.target.result);_stateCache=d;saveState(d);render();alert("Importado correctamente")}catch{alert("JSON inválido")}};r.readAsText(f)}
+function toggleGroup(id)         { document.getElementById('group-' + id).classList.toggle('expanded'); }
+function togglePrompt(e, id)     { e.stopPropagation(); document.getElementById('prompt-' + id).classList.toggle('visible'); }
+function copyPrompt(e, id) {
+  e.stopPropagation();
+  const g = ROADMAP.flatMap(p => p.groups).find(g => g.id === id);
+  navigator.clipboard.writeText(g.prompt).then(() => {
+    const btn = e.target; btn.textContent = '✓ Copiado'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+function handleTaskClick(g, t) {
+  const s = loadState();
+  if (isCompleted(s, g, t)) { toggleTask(g, t); }
+  else {
+    const el = document.getElementById('task-' + g + '-' + t);
+    el.classList.add('completing');
+    document.getElementById('briefing-' + g + '-' + t).focus();
+  }
+}
+function saveBriefing(g, t)   { const ta = document.getElementById('briefing-' + g + '-' + t); toggleTask(g, t, ta.value.trim() || 'Completado'); }
+function cancelBriefing(g, t) { document.getElementById('task-' + g + '-' + t).classList.remove('completing'); }
+
+function exportData() {
+  const b = new Blob([JSON.stringify(loadState(), null, 2)], { type: 'application/json' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(b), download: 'intelecciones-roadmap-' + new Date().toISOString().slice(0, 10) + '.json' });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function importData(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => { try { const d = JSON.parse(ev.target.result); _stateCache = d; saveState(d); render(); alert('Importado correctamente'); } catch { alert('JSON inválido'); } };
+  r.readAsText(f);
+}
 </script>
+
 <script src="roadmap-data.js"></script>
 <script>
 function renderSidebar(state) {

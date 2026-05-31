@@ -3,8 +3,6 @@ import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, Al
 import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface TeamUser {
   id: number;
@@ -1012,90 +1010,21 @@ const TeamPanel = () => {
     }
   }, [activeTab, loadReportsData]);
 
-  // Pure JavaScript CSV Exporter
-  const exportToCSV = () => {
-    if (!reportData) return;
-
-    let headers: string[] = [];
-    let rows: any[][] = [];
-    let filename = `reporte_${reportType}_intelecciones.csv`;
-
-    if (reportType === 'padrinos') {
-      headers = ["Nombre", "Cédula", "Teléfono", "Coordinadores", "Total Capturas", "Verdes (Seguros)", "Amarillos", "Rojos", "Morados", "Necesita Transporte"];
-      rows = filteredPadrinos.map(p => [
-        p.nombre,
-        p.ci || p.username,
-        p.telefono || "",
-        p.coordinator_count || 0,
-        p.total_captures || 0,
-        p.green || 0,
-        p.yellow || 0,
-        p.red || 0,
-        p.purple || 0,
-        p.needs_transport || 0
-      ]);
-    } else if (reportType === 'coordinators') {
-      headers = ["Nombre", "Cédula", "Teléfono", "Padrino Asignado", "Total Capturas", "Verdes (Seguros)", "Amarillos", "Rojos", "Morados", "Necesita Transporte"];
-      rows = filteredCoordinators.map(c => [
-        c.nombre,
-        c.ci || c.username,
-        c.telefono || "",
-        c.parent_name || "Sin Padrino",
-        c.total_captures || 0,
-        c.green || 0,
-        c.yellow || 0,
-        c.red || 0,
-        c.purple || 0,
-        c.needs_transport || 0
-      ]);
-    } else if (reportType === 'electors') {
-      headers = ["Nombre", "Apellido", "Cédula", "Teléfono", "Local de Votación", "Mesa", "Orden", "Semáforo", "Necesita Transporte", "Coordinador", "Padrino"];
-      rows = filteredElectors.map(e => [
-        e.nombre,
-        e.apellido,
-        e.elector_ci,
-        e.elector_telefono || "",
-        e.local_votacion,
-        e.mesa,
-        e.orden,
-        e.traffic_light,
-        e.needs_transport ? "SI" : "NO",
-        e.coordinator_name || "",
-        e.padrino_name || ""
-      ]);
-    } else if (reportType === 'locales') {
-      headers = ["Local de Votación", "Total Electores Captados", "Verdes (Seguros)", "Amarillos", "Rojos", "Morados", "Necesita Transporte"];
-      rows = filteredLocales.map(l => [
-        l.local_votacion,
-        l.total_captures,
-        l.green,
-        l.yellow,
-        l.red,
-        l.purple,
-        l.needs_transport
-      ]);
+  // Server-side CSV Exporter
+  const exportToCSV = async () => {
+    try {
+      const res = await api.get(`/reports/team/csv?reportType=${reportType}`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `reporte_${reportType}_intelecciones.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      console.error("Error exporting team CSV:", err);
+      alert("Error al exportar CSV: " + (err?.message || "Error desconocido"));
     }
-
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(";"),
-      ...rows.map(row => row.map(val => {
-        let stringVal = val === null || val === undefined ? "" : String(val);
-        // Replace semicolons to avoid messing up column structure
-        return `"${stringVal.replace(/"/g, '""')}"`;
-      }).join(";"))
-    ].join("\n");
-
-    // Create file blob and download
-    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handlePrint = () => {
@@ -1107,6 +1036,9 @@ const TeamPanel = () => {
     setGeneratingPDF(true);
 
     try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
       const A4_W_MM = 210;
       const A4_H_MM = 297;
       
