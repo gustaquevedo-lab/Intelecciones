@@ -176,10 +176,11 @@ class WhatsAppManager {
       auth: state,
       logger: baileysLogger,
       printQRInTerminal: false,
-      browser: Browsers.macOS('Desktop'),
-      generateHighQualityLinkPreview: false,
+      browser: Browsers.windows('Desktop'),
+      generateHighQualityLinkPreview: true,
       syncFullHistory: false,
       connectTimeoutMs: 60000,
+      markOnlineOnConnect: true,
     });
 
     const terminal = this.terminals.get(terminalId)!;
@@ -364,10 +365,14 @@ class WhatsAppManager {
     const jid = toJid(number);
     const phoneNumber = jid.split('@')[0];
 
+    // Simulate realistic typing based on message length
+    const typingMs = Math.min(Math.max((message.length / 3.3) * 1000 + 1500 + Math.random() * 2500, 3000), 12000);
     try {
       await sock.sendPresenceUpdate('composing', jid);
-      await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
+      await new Promise(r => setTimeout(r, typingMs));
       await sock.sendPresenceUpdate('paused', jid);
+      // Small pause after "finishing typing" before sending
+      await new Promise(r => setTimeout(r, 300 + Math.random() * 700));
     } catch {}
 
     const result = await sock.sendMessage(jid, { text: message });
@@ -390,10 +395,12 @@ class WhatsAppManager {
     const jid = toJid(number);
     const phoneNumber = jid.split('@')[0];
 
+    // Simulate recording time (voice notes take 5-15 seconds typically)
     try {
       await sock.sendPresenceUpdate('recording', jid);
-      await new Promise(r => setTimeout(r, 3000 + Math.random() * 4000));
+      await new Promise(r => setTimeout(r, 5000 + Math.random() * 10000));
       await sock.sendPresenceUpdate('paused', jid);
+      await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
     } catch {}
 
     const { buffer, mimetype } = await getMediaBuffer(mediaUrl);
@@ -474,10 +481,14 @@ class WhatsAppManager {
     const jid = toJid(number);
     const phoneNumber = jid.split('@')[0];
 
+    // Simulate: user selects media, writes caption
+    const captionLen = (caption || '').length;
+    const typingMs = captionLen > 0 ? Math.min((captionLen / 3.3) * 1000 + 2000, 10000) : 2000 + Math.random() * 3000;
     try {
       await sock.sendPresenceUpdate('composing', jid);
-      await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
+      await new Promise(r => setTimeout(r, typingMs));
       await sock.sendPresenceUpdate('paused', jid);
+      await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
     } catch {}
 
     const { buffer, mimetype, filename } = await getMediaBuffer(mediaUrl);
@@ -502,6 +513,10 @@ class WhatsAppManager {
     `).run(terminalId, jid, caption || 'Archivo', mediaUrl, terminal?.campaign_id || null, phoneNumber);
 
     return result;
+  }
+
+  getTerminalIds(): string[] {
+    return Array.from(this.terminals.keys());
   }
 
   startMaintenance() {

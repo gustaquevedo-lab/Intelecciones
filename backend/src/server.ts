@@ -5375,8 +5375,11 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
     );
     const logId = logResult.lastInsertRowid;
 
-    // 2. Start background process
+    // 2. Start background process with rate-limiting
     const runBroadcast = async () => {
+      const { canSendMore, getSmartDelay, incrementDailyCount, isGoodSendingHour } = require('./whatsappRateLimiter');
+      const { isOptedOut } = require('./whatsappAutoresponder');
+
       let successCount = 0;
       let failCount = 0;
       let sentInSession = 0;
@@ -5384,28 +5387,12 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
       for (let i = 0; i < targets.length; i++) {
         // Check current status in DB
         const log = db.prepare('SELECT status FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
-        if (!log) {
-          console.log(`[WHATSAPP] Broadcast ${logId} log not found. Terminating.`);
-          break;
-        }
-        
-        if (log.status === 'CANCELLED') {
-          console.log(`[WHATSAPP] Broadcast ${logId} was CANCELLED.`);
-          break;
-        }
+        if (!log) break;
+        if (log.status === 'CANCELLED') break;
 
         if (log.status === 'PAUSED') {
-          await new Promise(r => setTimeout(r, 1000));
-          i--; // Retry same index
-          continue;
-        }
-
-        const target = targets[i];
-        if (!target.telefono) {
-          failCount++;
-          // Log skipped (no phone)
-          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Sin número de teléfono')`)
-            .run(logId, target.telefono || '', target.nombre || '');
+          await new Promise(r => setTimeout(r, 2000));
+          i--;
           continue;
         }
 
@@ -5416,8 +5403,42 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           currentTerminalId = activeTerminals[terminalIndex].id;
         }
 
-        // Check if number is in opt-out list
-        const { isOptedOut } = require('./whatsappAutoresponder');
+        // RATE LIMIT CHECK — respect warmup tiers
+        const rateCheck = canSendMore(currentTerminalId);
+        if (!rateCheck.allowed) {
+          console.log(`[BROADCAST ${logId}] Rate limit hit for ${currentTerminalId}: ${rateCheck.reason}`);
+          // If rotating, try next terminal; otherwise stop
+          if (rotateTerminals && activeTerminals.length > 1) {
+            // Remove this terminal from rotation for today
+            const idx = activeTerminals.findIndex((t: any) => t.id === currentTerminalId);
+            if (idx !== -1) activeTerminals.splice(idx, 1);
+            if (activeTerminals.length === 0) {
+              console.log(`[BROADCAST ${logId}] All terminals hit daily limit. Stopping.`);
+              break;
+            }
+            i--; // Retry with next terminal
+            continue;
+          }
+          break;
+        }
+
+        // Time-of-day check: pause during off-hours
+        if (!isGoodSendingHour()) {
+          console.log(`[BROADCAST ${logId}] Off-hours (before 7am or after 9pm). Pausing 30min.`);
+          await new Promise(r => setTimeout(r, 1800000));
+          i--;
+          continue;
+        }
+
+        const target = targets[i];
+        if (!target.telefono) {
+          failCount++;
+          db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Sin número de teléfono')`)
+            .run(logId, target.telefono || '', target.nombre || '');
+          continue;
+        }
+
+        // Check opt-out list
         if (isOptedOut(target.telefono)) {
           failCount++;
           db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'Usuario solicitó exclusión (Opt-out)')`)
@@ -5427,29 +5448,15 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           continue;
         }
 
-        // Validate number existence on WhatsApp using the selected terminal
-        try {
-          const exists = await whatsappService.checkNumberExists(currentTerminalId, target.telefono);
-          if (!exists) {
-            failCount++;
-            db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', 'El número no tiene WhatsApp registrado')`)
-              .run(logId, target.telefono, target.nombre || '');
-            db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
-              .run(successCount, failCount, logId);
-            continue;
-          }
-        } catch (err: any) {
-          console.warn(`[BROADCAST] No se pudo verificar la existencia de WhatsApp para ${target.telefono}:`, err.message);
-        }
+        // NOTE: We NO LONGER call checkNumberExists() before sending.
+        // Reason: onWhatsApp() in batch is a massive bot signal that Meta detects.
+        // If the number doesn't exist, sendMessage will fail and we handle it gracefully.
 
         try {
-          // Personalize message content
           let personalizedContent = message || '';
           if (template_id) {
             const template = db.prepare('SELECT content FROM whatsapp_templates WHERE id = ?').get(template_id) as any;
-            if (template && template.content) {
-              personalizedContent = template.content;
-            }
+            if (template?.content) personalizedContent = template.content;
           }
 
           personalizedContent = personalizedContent
@@ -5463,7 +5470,6 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
             personalizedContent = addSubtleVariation(personalizedContent);
           }
 
-          // Send message
           if (media_type === 'VOICE' && media_url) {
             await whatsappService.sendVoice(currentTerminalId, target.telefono, media_url);
           } else if (media_url) {
@@ -5473,42 +5479,38 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
           }
           successCount++;
           sentInSession++;
-          // ✅ Log per-recipient success
+          incrementDailyCount(currentTerminalId);
           db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status) VALUES (?, ?, ?, 'SENT')`)
             .run(logId, target.telefono, target.nombre || '');
         } catch (err: any) {
-          console.error(`Broadcast ${logId} failed for ${target.telefono} on terminal ${currentTerminalId}:`, err);
           failCount++;
-          // ❌ Log per-recipient failure
           db.prepare(`INSERT INTO whatsapp_broadcast_recipients (log_id, telefono, nombre, status, error_msg) VALUES (?, ?, ?, 'FAILED', ?)`)
             .run(logId, target.telefono, target.nombre || '', err?.message || 'Error desconocido');
+
+          // If we get a 403/ban signal, STOP immediately
+          const errMsg = (err?.message || '').toLowerCase();
+          if (errMsg.includes('banned') || errMsg.includes('blocked') || errMsg.includes('restrict') || errMsg.includes('403')) {
+            console.error(`[BROADCAST ${logId}] BAN SIGNAL DETECTED. Stopping immediately.`);
+            db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ?, status = ? WHERE id = ?')
+              .run(successCount, failCount, 'STOPPED_BAN_RISK', logId);
+            return;
+          }
         }
 
-        // Update progress in DB on each iteration
         db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ? WHERE id = ?')
           .run(successCount, failCount, logId);
 
-        // If it's the last message, skip delay
-        if (i === targets.length - 1) {
-          break;
-        }
+        // Skip delay after last message
+        if (i === targets.length - 1) break;
 
-        // Dynamic delay
-        const currentDelaySec = minDelay + Math.random() * (maxDelay - minDelay);
-        await new Promise(r => setTimeout(r, currentDelaySec * 1000));
-
-        // Human break every 15 messages (20-40 seconds pause)
-        if (sentInSession > 0 && sentInSession % 15 === 0) {
-          const breakSec = 20 + Math.random() * 20;
-          console.log(`[WHATSAPP] Broadcast ${logId}: Human break for ${breakSec.toFixed(1)}s.`);
-          await new Promise(r => setTimeout(r, breakSec * 1000));
-        }
+        // Smart delay based on warmup tier (NOT the user-provided minDelay/maxDelay)
+        const delayMs = getSmartDelay(currentTerminalId, sentInSession);
+        await new Promise(r => setTimeout(r, delayMs));
       }
 
-      // Finish broadcast status
+      // Finish
       const finalLog = db.prepare('SELECT status FROM whatsapp_broadcast_logs WHERE id = ?').get(logId) as any;
       const finalStatus = (finalLog && (finalLog.status === 'CANCELLED' || finalLog.status === 'PAUSED')) ? finalLog.status : 'COMPLETED';
-      
       db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ?, status = ? WHERE id = ?')
         .run(successCount, failCount, finalStatus, logId);
     };
@@ -5516,6 +5518,17 @@ app.post('/api/whatsapp/broadcast', async (req, res) => {
     runBroadcast();
 
     res.json({ success: true, log_id: logId, target_count: targets.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/whatsapp/warmup-status', (req, res) => {
+  const { getTerminalWarmupStatus } = require('./whatsappRateLimiter');
+  try {
+    const terminalIds = whatsappService.getTerminalIds();
+    const statuses = terminalIds.map((id: string) => getTerminalWarmupStatus(id));
+    res.json(statuses);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -5789,21 +5802,10 @@ function parseSpintax(text: string): string {
   });
 }
 
-// Generate subtle variations to bypass WhatsApp duplicate detection
+// Resolve spintax and add natural variation (NO zero-width chars \u2014 Meta detects those)
 function addSubtleVariation(text: string): string {
   if (!text) return text;
-  
-  // 1. Resolve spintax
-  let resolved = parseSpintax(text);
-
-  // 2. Add subtle variation: a random zero-width character to guarantee distinct message hash/string
-  const zeroWidthChars = ['\u200B', '\u200C', '\u200D', '\uFEFF'];
-  const randomChar = zeroWidthChars[Math.floor(Math.random() * zeroWidthChars.length)];
-  
-  // 3. Randomly inject subtle changes (zero-width character attachment)
-  resolved = resolved + randomChar;
-
-  return resolved;
+  return parseSpintax(text);
 }
 
 app.post('/api/whatsapp/direct-message', async (req, res) => {
