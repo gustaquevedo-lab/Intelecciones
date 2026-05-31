@@ -25,6 +25,13 @@ const formatWhatsApp = (phone: string) => {
   return `595${normalized}`;
 };
 
+const TRAFFIC_COLORS: Record<string, string> = {
+  GREEN: '#10B981',
+  YELLOW: '#F59E0B',
+  RED: '#EF4444',
+  PURPLE: '#8B5CF6'
+};
+
 // Lazy load MapSection
 const MapSection = lazy(() => import('./command-center/MapSection'));
 
