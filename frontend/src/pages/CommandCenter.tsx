@@ -732,7 +732,10 @@ const CommandCenter = () => {
     };
   }, []);
 
-  const loadData = async () => {
+  // Track whether we've done the initial heavy load
+  const initialLoadDone = useState(false);
+
+  const loadData = async (isPolling = false) => {
     if (!authUser) return;
     try {
       const params = new URLSearchParams();
@@ -742,19 +745,7 @@ const CommandCenter = () => {
 
       const queryStr = params.toString();
 
-      // 1. CRITICAL & LIGHT: Fetch core stats and locations first
-      // These are essential for the dashboard shell
-      api.get(`/stats/command?${queryStr}`).then(res => {
-        if (res.data && typeof res.data === 'object' && !Array.isArray(res.data) && !res.data.error) {
-          setCommandStats(res.data);
-        }
-      }).catch(() => { });
-      
-      api.get(`/voting-locations?${queryStr}`).then(res => {
-        if (Array.isArray(res.data)) setLocales(res.data);
-      }).catch(() => { });
-
-      // Helper for independent state updates
+      // Helper for independent state updates — preserves existing data on error
       const fetchToState = async (url: string, setter: (data: any) => void) => {
         try {
           const res = await api.get(url);
@@ -762,39 +753,42 @@ const CommandCenter = () => {
             setter(res.data);
           } else if (res.data && Array.isArray(res.data.data)) {
             setter(res.data.data);
-          } else {
-            console.warn(`Ignored invalid data from ${url} (not an array)`);
           }
         } catch (err) {
-          console.warn(`Fetch failed for ${url}:`, err);
+          // Silently ignore — keep existing state instead of blanking it
         }
       };
 
-      // 2. TACTICAL DATA: Always fetch captures (for the map) — fetch ALL for map pins
-      // perPage=5000 ensures all captures with lat/lng show on the map, not just the first 50
-      fetchToState(`/captures?${queryStr}&perPage=5000`, setCaptures);
+      // ── ALWAYS (every poll): lightweight stats ──
+      api.get(`/stats/command?${queryStr}`).then(res => {
+        if (res.data && typeof res.data === 'object' && !Array.isArray(res.data) && !res.data.error) {
+          setCommandStats(res.data);
+        }
+      }).catch(() => { });
 
-      // 3. TAB-SPECIFIC PRIORITY: Only fetch heavy detail data if the tab is active
-      // 'hierarchy' replaces old 'structure'
-      if (activeTab === 'hierarchy' || activeTab === 'team' || !isMobile) {
+      // ── ALWAYS: conflicts (small payload, critical for disputes tab) ──
+      fetchToState(`/admin/conflicts?${queryStr}`, setConflicts);
+      fetchToState(`/admin/conflicts/history?${queryStr}`, setConflictsHistory);
+
+      // ── INITIAL LOAD ONLY: heavy data that rarely changes ──
+      if (!isPolling) {
+        api.get(`/voting-locations?${queryStr}`).then(res => {
+          if (Array.isArray(res.data)) setLocales(res.data);
+        }).catch(() => { });
+
+        // Captures: fetch ALL for map pins — only on initial load or filter change
+        fetchToState(`/captures?${queryStr}&perPage=5000`, setCaptures);
+
         fetchToState(`/users?${queryStr}`, (data) => setCoordinators(data.filter((u: any) => u.role === 'COORDINADOR')));
         fetchToState(`/structure/padrinos?${queryStr}`, setStructureData);
-      }
-
-      if (activeTab === 'requests' || activeTab === 'disputes' || !isMobile) {
-        fetchToState(`/admin/conflicts?${queryStr}`, setConflicts);
-        fetchToState(`/admin/conflicts/history?${queryStr}`, setConflictsHistory);
         fetchToState(`/admin/requests?${queryStr}`, setRequests);
         fetchToState(`/admin/activity?${queryStr}`, setActivities);
-      }
-
-      if (showVehicles || !isMobile) {
         fetchToState(`/vehicles?${queryStr}`, setVehicles);
-      }
 
-      // Special global check for SuperAdmin
-      if (authUser?.role === 'SUPERUSUARIO' && activeListId === null && (activeTab === 'alerts' || !isMobile)) {
-        api.get('/admin/disputes/global').catch(() => { });
+        // Special global check for SuperAdmin
+        if (authUser?.role === 'SUPERUSUARIO' && activeListId === null) {
+          api.get('/admin/disputes/global').catch(() => { });
+        }
       }
 
     } catch (err) {
@@ -803,8 +797,8 @@ const CommandCenter = () => {
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 15000);
+    loadData(false); // full load
+    const interval = setInterval(() => loadData(true), 60000); // light poll every 60s
     return () => clearInterval(interval);
   }, [activeListId, activeDistrict, selectedLocal, activeTab, authUser]);
 
