@@ -14,6 +14,7 @@ export default function logisticsRoutes() {
       const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
       const district = getDistrict(req);
 
+      const statsParams = [...filterParams, ...(district ? [district, district] : [])];
       const stats = db.prepare(`
         SELECT
           COUNT(*) as total_requests,
@@ -22,16 +23,17 @@ export default function logisticsRoutes() {
         FROM elector_captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
         WHERE ec.needs_transport = 1 ${filterSql} ${district ? "AND (UPPER(COALESCE(e.ciudad, '')) = UPPER(?) OR UPPER(COALESCE(e.distrito, '')) = UPPER(?))" : ''}
-      `).get(...filterParams, ...(district ? [district, district] : [])) as any;
+      `).get(statsParams) as any;
 
+      const fleetParams = [...filterParams, ...(district ? [district, district] : [])];
       const fleet = db.prepare(`
         SELECT
           COUNT(*) as total_vehicles,
           SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) as available
         FROM vehicles WHERE 1=1
         ${list_id && !isNaN(list_id) ? ' AND assigned_list_id = ?' : ''}
-        ${district ? ' AND (UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?))' : ''}
-      `).get(...filterParams, ...(district ? [district, district] : [])) as any;
+        ${district ? ' AND (UPPER(COALESCE(distrito, \'\')) = UPPER(?) OR UPPER(COALESCE(ciudad, \'\')) = UPPER(?))' : ''}
+      `).get(fleetParams) as any;
 
       res.json({ ...stats, ...fleet });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
