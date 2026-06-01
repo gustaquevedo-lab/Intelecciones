@@ -248,7 +248,6 @@ const TabLocales = (props: any) => {
           </MapContainer>
         </div>
       </div>
-    </>
   );
 };
 

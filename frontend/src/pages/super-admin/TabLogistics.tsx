@@ -192,7 +192,6 @@ const TabLogistics = (props: any) => {
       throw apiCriticalError;
     }
     
-    </>
   );
 };
 

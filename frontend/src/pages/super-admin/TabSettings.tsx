@@ -258,7 +258,6 @@ const TabSettings = (props: any) => {
       if (activeTab === 'padrones') loadPadronStats();
     }, [activeTab]);
     
-    </>
   );
 };
 

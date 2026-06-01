@@ -388,7 +388,6 @@ const TabOverview = (props: any) => {
           />
         </div>
       </div>
-    </>
   );
 };
 

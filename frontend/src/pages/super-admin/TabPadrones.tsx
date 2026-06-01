@@ -214,7 +214,6 @@ const TabPadrones = (props: any) => {
           </div>
         </section>
       </div>
-    </>
   );
 };
 

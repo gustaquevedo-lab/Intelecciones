@@ -229,7 +229,6 @@ const TabAudit = (props: any) => {
           />
         )}
       </div>
-    </>
   );
 };
 
