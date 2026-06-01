@@ -223,42 +223,6 @@ const TabSettings = (props: any) => {
         </div>
       </div>
     );
-    
-    const handleImportPadron = async (file: File) => {
-      if (!importCity) {
-        alert('Por favor, ingresa el nombre de la ciudad para este padrón.');
-        return;
-      }
-    
-      setImportingPadron(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('ciudad', importCity);
-    
-      try {
-        const res = await api.post('/admin/import-padron', formData);
-        alert(`¡Éxito! Se han importado ${res.data.count} electores para ${importCity}.`);
-        setImportCity('');
-        loadPadronStats();
-      } catch (err: any) {
-        alert(err.response?.data?.error || 'Error al importar padrón');
-      } finally {
-        setImportingPadron(false);
-      }
-    };
-    
-    const loadPadronStats = async () => {
-      try {
-        const res = await api.get('/admin/electors/stats');
-        setPadronStats(res.data);
-      } catch (err) { console.error(err); }
-    };
-    
-    useEffect(() => {
-      if (activeTab === 'padrones') loadPadronStats();
-    }, [activeTab]);
-    
-  );
 };
 
 export default TabSettings;
