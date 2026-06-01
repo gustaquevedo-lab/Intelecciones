@@ -554,12 +554,12 @@ app.get('/api/offline/padron', (req, res) => {
       return res.json([]);
     }
 
-    // Apply limits: 10000 without district, default 5000 with district
-    let limit = activeDistrito ? 5000 : 10000;
+    // No artificial cap when filtering by district — download full district padron
+    let limit = activeDistrito ? 200000 : 10000;
     if (req.query.limit) {
       const parsedLimit = parseInt(req.query.limit as string);
-      if (!isNaN(parsedLimit)) {
-        limit = Math.min(parsedLimit, activeDistrito ? 5000 : 10000);
+      if (!isNaN(parsedLimit) && parsedLimit > 0) {
+        limit = parsedLimit;
       }
     }
     
