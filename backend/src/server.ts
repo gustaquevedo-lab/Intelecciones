@@ -37,6 +37,7 @@ import usersRoutes from './routes/users';
 import teamRoutes from './routes/team';
 import capturesRoutes, { conflictsRoutes, coordinatorsRoutes } from './routes/captures';
 import statsRoutes from './routes/stats';
+import logisticsRoutes, { vehiclesRoutes } from './routes/logistics';
 import logger from './utils/logger';
 import { normalizePhone } from './utils/phone';
 import { dbQueryAsync, dbGetAsync } from './db-async';
@@ -1758,279 +1759,21 @@ app.get('/api/activities', (req, res) => {
 // Vehicles route is defined later in the file
 
 
-app.get('/api/logistics/stats', (req, res) => {
-  const list_id = getListId(req);
-  try {
-    const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
-    const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
-    const district = getDistrict(req);
 
-    const stats = db.prepare(`
-      SELECT
-        COUNT(*) as total_requests,
-        SUM(CASE WHEN ec.assigned_vehicle_id IS NOT NULL THEN 1 ELSE 0 END) as assigned,
-        SUM(CASE WHEN COALESCE(e.is_priority, 0) = 1 THEN 1 ELSE 0 END) as priority
-      FROM elector_captures ec
-      LEFT JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 ${filterSql} ${district ? 'AND (UPPER(COALESCE(e.ciudad, \'\')) = UPPER(?) OR UPPER(COALESCE(e.distrito, \'\')) = UPPER(?))' : ''}
-    `).get(...filterParams, ...(district ? [district, district] : [])) as any;
 
-    const fleet = db.prepare(`
-      SELECT
-        COUNT(*) as total_vehicles,
-        SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END) as available
-      FROM vehicles
-      WHERE 1=1
-      ${list_id && !isNaN(list_id) ? ' AND assigned_list_id = ?' : ''}
-      ${district ? ' AND (UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?))' : ''}
-    `).get(...filterParams, ...(district ? [district, district] : [])) as any;
-
-    res.json({ ...stats, ...fleet });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/logistics/clusters', (req, res) => {
-  const list_id = getListId(req);
-  const filterSql = list_id && !isNaN(list_id) ? 'AND ec.list_id = ?' : '';
-  const filterParams = list_id && !isNaN(list_id) ? [list_id] : [];
-  try {
-    const clusters = db.prepare(`
-      SELECT
-        COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio') as barrio,
-        COUNT(ec.id) as count,
-        AVG(ec.lat) as lat,
-        AVG(ec.lng) as lng
-      FROM elector_captures ec
-      LEFT JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
-      GROUP BY COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio')
-    `).all(...filterParams);
-    res.json(clusters);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.put('/api/vehicles/:id/status', (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  try {
-    db.prepare('UPDATE vehicles SET status = ? WHERE id = ?').run(status, id);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // Real-time Vehicle Location reporting from Driver Mobile App
-app.post('/api/vehicles/:id/location', (req, res) => {
-  const { id } = req.params;
-  const { lat, lng } = req.body;
-  try {
-    db.prepare('UPDATE vehicles SET lat = ?, lng = ?, last_update = CURRENT_TIMESTAMP WHERE id = ?').run(lat, lng, id);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // Driver Mobile Login (Operational convenience via Plate or Driver CI)
-app.post('/api/vehicles/login', (req, res) => {
-  const { plate, driver_ci } = req.body;
-  try {
-    let vehicle = null;
-    if (plate) {
-      vehicle = db.prepare(`
-        SELECT v.*, u.nombre as coordinator_name, u.telefono as coordinator_phone, u.photo_url as coordinator_photo
-        FROM vehicles v
-        LEFT JOIN users u ON v.assigned_user_id = u.id
-        WHERE UPPER(REPLACE(v.plate, '-', '')) = UPPER(REPLACE(?, '-', ''))
-      `).get(plate) as any;
-    } else if (driver_ci) {
-      vehicle = db.prepare(`
-        SELECT v.*, u.nombre as coordinator_name, u.telefono as coordinator_phone, u.photo_url as coordinator_photo
-        FROM vehicles v
-        LEFT JOIN users u ON v.assigned_user_id = u.id
-        WHERE REPLACE(v.driver_ci, '.', '') = REPLACE(?, '.', '')
-      `).get(driver_ci) as any;
-    }
-
-    if (!vehicle) {
-      return res.status(404).json({ error: 'Vehículo o chofer no registrado en el sistema' });
-    }
-
-    res.json(vehicle);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get all passengers (electors) assigned to a specific vehicle
-app.get('/api/vehicles/:id/passengers', (req, res) => {
-  const { id } = req.params;
-  try {
-    const passengers = db.prepare(`
-      SELECT ec.id as capture_id, ec.transport_status, ec.telefono as contact_phone,
-             COALESCE(e.ci, ec.elector_ci) as ci, 
-             COALESCE(e.nombre, 'ELECTOR') as nombre, 
-             COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
-             COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
-             COALESCE(e.mesa, 0) as mesa, 
-             COALESCE(e.orden, 0) as orden, 
-             COALESCE(e.barrio, 'REGISTRO DE CAMPO') as barrio,
-             ec.lat, ec.lng, COALESCE(e.is_priority, 0) as is_priority
-      FROM elector_captures ec
-      LEFT JOIN electors e ON ec.elector_ci = e.ci
-      WHERE ec.assigned_vehicle_id = ?
-      ORDER BY COALESCE(e.is_priority, 0) DESC, ec.timestamp ASC
-    `).all(id);
-    res.json((passengers as any[]).map(sanitizeElectorData));
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Update individual elector transport status (e.g. mark picked up or completed)
-app.put('/api/logistics/passenger/:capture_id/status', (req, res) => {
-  const { capture_id } = req.params;
-  const { status } = req.body;
-  try {
-    db.prepare("UPDATE elector_captures SET transport_status = ? WHERE id = ?").run(status, capture_id);
-    logAction(1, 'UPDATE_PASSENGER_TRANSPORT', 'CAPTURE', capture_id, `Updated passenger ${capture_id} transport status to ${status}`);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/logistics/pending', (req, res) => {
-  const sec = getSecurityFilter(req, 'ec');
-  try {
-    const pending = db.prepare(`
-      SELECT ec.*, 
-        COALESCE(e.nombre, 'ELECTOR') as nombre, 
-        COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
-        COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
-        COALESCE(NULLIF(e.barrio, ''), 'REGISTRO DE CAMPO') as barrio,
-        COALESCE(e.is_priority, 0) as is_priority,
-        u.nombre as coordinator_name
-      FROM elector_captures ec
-      LEFT JOIN electors e ON ec.elector_ci = e.ci
-      LEFT JOIN users u ON ec.coordinator_id = u.id
-      WHERE ec.needs_transport = 1 
-        AND ec.assigned_vehicle_id IS NULL 
-        AND ec.transport_status != 'COMPLETED'
-        ${sec.sql}
-      ORDER BY COALESCE(e.is_priority, 0) DESC, ec.timestamp ASC
-    `).all(...sec.params);
-    res.json(pending);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/logistics/assign', (req, res) => {
-  const { capture_id, vehicle_id } = req.body;
-  try {
-    db.transaction(() => {
-      db.prepare('UPDATE elector_captures SET assigned_vehicle_id = ? WHERE id = ?').run(vehicle_id, capture_id);
-      db.prepare('UPDATE vehicles SET status = "IN_TRANSIT" WHERE id = ?').run(vehicle_id);
-    })();
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 
 
 
-const canModifyUser = (requesterId: string | number | undefined, requesterRole: string, targetUserId: string | number): boolean => {
-  const reqRole = requesterRole.toUpperCase().trim();
-  if (reqRole === 'SUPERUSUARIO' || reqRole === 'SUPER_ADMIN') {
-    return true;
-  }
-  if (!requesterId) return false;
 
-  const reqId = Number(requesterId);
-  const targetId = Number(targetUserId);
 
-  if (reqId === targetId) return true;
 
-  try {
-    const target = db.prepare('SELECT role, parent_id, assigned_campaign_id FROM users WHERE id = ?').get(targetId) as any;
-    if (!target) return false;
 
-    // First, campaign isolation check: target must be in the same campaign (unless requester is superuser, handled above)
-    const requesterInfo = getCachedUserInfo(String(reqId));
-    if (target.assigned_campaign_id && requesterInfo?.campaign_id && target.assigned_campaign_id !== requesterInfo.campaign_id) {
-      return false;
-    }
 
-    // 1. Direct parent sovereignty: if the requester is the direct parent of target, they can edit.
-    if (target.parent_id === reqId) return true;
-
-    // 2. Sovereignty for upper management over any users within their isolated campaign/list scope.
-    // The previous block ensures they only see/modify users within their campaign_id constraint.
-    if (reqRole === 'SUBJEFE' || reqRole === 'JEFE_CAMPANA' || reqRole === 'CANDIDATO') {
-      if (target.role !== 'SUPERUSUARIO' && target.role !== 'JEFE_CAMPANA' && target.role !== 'CANDIDATO') {
-        return true;
-      }
-    }
-
-    return false;
-  } catch (err) {
-    console.error('Error in canModifyUser check:', err);
-    return false;
-  }
-};
-
-const isAllowedParent = (requesterId: string | number, requesterRole: string, parentId: string | number | null, createdRole: string): boolean => {
-  const reqRole = requesterRole.toUpperCase().trim();
-  if (reqRole === 'SUPERUSUARIO' || reqRole === 'SUPER_ADMIN') {
-    return true;
-  }
-  
-  const reqId = Number(requesterId);
-  const pId = parentId ? Number(parentId) : null;
-  
-  // 1. If requester is PADRINO:
-  if (reqRole === 'PADRINO') {
-    return pId === reqId;
-  }
-
-  // 2. If requester is SUBJEFE:
-  if (reqRole === 'SUBJEFE') {
-    if (createdRole === 'PADRINO') {
-      return pId === reqId;
-    }
-    if (createdRole === 'COORDINADOR' || createdRole === 'MIEMBRO_DE_MESA') {
-      if (pId === reqId) return true;
-      if (pId) {
-        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(pId) as any;
-        return parent && parent.role === 'PADRINO' && parent.parent_id === reqId;
-      }
-    }
-  }
-
-  // 3. If requester is JEFE_CAMPANA:
-  if (reqRole === 'JEFE_CAMPANA' || reqRole === 'CANDIDATO') {
-    if (createdRole === 'SUBJEFE' || createdRole === 'PADRINO') {
-      return pId === reqId;
-    }
-    if (createdRole === 'COORDINADOR' || createdRole === 'MIEMBRO_DE_MESA') {
-      if (pId === reqId) return true;
-      if (pId) {
-        const parent = db.prepare('SELECT role, parent_id FROM users WHERE id = ?').get(pId) as any;
-        return parent && parent.role === 'PADRINO' && parent.parent_id === reqId;
-      }
-    }
-  }
-
-  return false;
-};
 
 
 app.get('/api/lists', (req, res) => {
@@ -2143,73 +1886,10 @@ app.post('/api/settings', (req, res) => {
   }
 });
 
-// Vehicles Management
-app.get('/api/vehicles', (req, res) => {
-  try {
-    const vehicles = db.prepare(`
-      SELECT v.*, u.nombre as coordinator_name, u.photo_url as coordinator_photo, u.telefono as coordinator_phone, u.distrito as coordinator_distrito, l.list_number,
-             (SELECT COUNT(*) FROM elector_captures WHERE assigned_vehicle_id = v.id AND transport_status != 'COMPLETED') as current_passengers,
-             (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
-              FROM elector_captures ec
-              LEFT JOIN electors e ON ec.elector_ci = e.ci
-              WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'IN_TRANSIT') as passengers_in_transit,
-             (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
-              FROM elector_captures ec
-              LEFT JOIN electors e ON ec.elector_ci = e.ci
-              WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'PENDING') as passengers_pending
-      FROM vehicles v
-      LEFT JOIN users u ON v.assigned_user_id = u.id
-      LEFT JOIN lists l ON u.assigned_list_id = l.id
-    `).all();
-    res.json(vehicles);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-app.post('/api/vehicles', (req, res) => {
-  const { description, driver_name, driver_phone, assigned_user_id, driver_ci, capacity, status, type, plate } = req.body;
-  try {
-    const result = db.prepare(`
-      INSERT INTO vehicles (description, driver_name, driver_phone, assigned_user_id, driver_ci, capacity, status, type, plate)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(description, driver_name, driver_phone, assigned_user_id || null, driver_ci, capacity || 4, status || 'AVAILABLE', type, plate);
-    res.json({ id: Number(result.lastInsertRowid) });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-app.delete('/api/vehicles/:id', (req, res) => {
-  try {
-    db.prepare('DELETE FROM vehicles WHERE id = ?').run(req.params.id);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-app.post('/api/logistics/assign', (req, res) => {
-  const { capture_id, vehicle_id } = req.body;
-  try {
-    db.prepare("UPDATE elector_captures SET assigned_vehicle_id = ?, transport_status = 'PENDING' WHERE id = ?").run(vehicle_id, capture_id);
-    logAction(1, 'ASSIGN_TRANSPORT', 'CAPTURE', capture_id, `Assigned vehicle ${vehicle_id} to capture ${capture_id}`);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-app.post('/api/logistics/complete-trip', (req, res) => {
-  const { vehicle_id } = req.body;
-  try {
-    db.prepare("UPDATE elector_captures SET transport_status = 'COMPLETED' WHERE assigned_vehicle_id = ? AND transport_status = 'IN_TRANSIT'").run(vehicle_id);
-    logAction(1, 'COMPLETE_TRIP', 'VEHICLE', vehicle_id, `Marked trip completed for vehicle ${vehicle_id}`);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 
 // Strategic Command Center Endpoints
@@ -2737,6 +2417,8 @@ app.post('/api/admin/system/wipe-captures', (req, res) => {
 app.use('/api/users', usersRoutes());
 app.use('/api', teamRoutes(upload));
 app.use('/api', statsRoutes());
+app.use('/api/logistics', logisticsRoutes());
+app.use('/api/vehicles', vehiclesRoutes());
 app.use('/api/captures', capturesRoutes());
 app.use('/api/coordinators', coordinatorsRoutes());
 app.use('/api/admin/conflicts', conflictsRoutes());
