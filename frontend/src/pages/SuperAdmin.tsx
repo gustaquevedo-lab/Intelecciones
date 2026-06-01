@@ -1127,6 +1127,7 @@ Status: ${error.response?.status || 'N/A'}
     listPhotoUrl, setListPhotoUrl,
     candidatePreview, setCandidatePreview,
     listSearchTerm, setListSearchTerm,
+    listCityFilter,
     listTypeFilter, setListTypeFilter,
     takenOptions,
     localeSearchTerm, setLocaleSearchTerm,

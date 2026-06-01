@@ -65,6 +65,7 @@ const TabLists = (props: any) => {
     listPhotoUrl, setListPhotoUrl,
     candidatePreview, setCandidatePreview,
     listSearchTerm, setListSearchTerm,
+    listCityFilter,
     listTypeFilter, setListTypeFilter,
     takenOptions,
     localeSearchTerm, setLocaleSearchTerm,
