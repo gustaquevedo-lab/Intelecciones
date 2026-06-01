@@ -348,7 +348,9 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
       setComposerMsg('');
       loadMessages(selectedChat);
       loadChats();
-    } catch {}
+    } catch {
+      alert('Error al enviar el mensaje. Verifica que la terminal esté conectada.');
+    }
     setSending(false);
   };
 
@@ -624,8 +626,7 @@ const RecipientSelector: React.FC<RecipientSelectorProps> = ({ selected, onToggl
         }
         const r = await api.get(url);
         setFilteredElectors(r.data);
-      } catch (err) {
-        console.error('Error fetching electors:', err);
+      } catch {
       } finally {
         setElectorsLoading(false);
       }
@@ -1465,7 +1466,6 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
     for (let bIdx = 0; bIdx < batches.length; bIdx++) {
       const batch = batches[bIdx];
       const batchLabel = batches.length > 1 ? ` (lote ${bIdx + 1}/${batches.length})` : '';
-      console.log(`[BROADCAST] Enviando lote ${bIdx + 1}/${batches.length} — ${batch.length} destinatarios`);
 
       try {
         const res = await api.post('/whatsapp/broadcast', {
@@ -1493,7 +1493,6 @@ const BroadcastTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
       } catch (err: any) {
         batchErrors++;
         const errMsg = err?.response?.data?.error || err?.message || 'Error desconocido';
-        console.error(`[BROADCAST] Error en lote ${bIdx + 1}:`, errMsg);
         // Don't abort — log the failure and continue with next batch
         totalFail += batch.length;
         setBroadcastCtx(broadcastLog ? {
@@ -2135,7 +2134,9 @@ const TemplatesTab: React.FC = () => {
       setForm({ name: '', content: '', media_url: '', media_type: 'TEXT', lat: -25.2637, lng: -57.5759, contact_name: '', contact_phone: '' });
       setShowForm(false);
       load();
-    } catch {}
+    } catch {
+      alert('Error al guardar la plantilla.');
+    }
     setSaving(false);
   };
 
@@ -2409,7 +2410,9 @@ const LinesTab: React.FC = () => {
     try {
       await api.post('/whatsapp/disconnect', { terminalId: id });
       setTerminals(prev => prev.map(t => t.id === id ? { ...t, status: 'DISCONNECTED', qr: null } : t));
-    } catch {}
+    } catch {
+      setErrors(prev => ({ ...prev, [id]: 'Error al desconectar la terminal' }));
+    }
     setTimeout(loadTerminals, 1000);
   };
 
@@ -2420,7 +2423,9 @@ const LinesTab: React.FC = () => {
       await api.post('/whatsapp/terminals', { id: newId.trim(), name: newName.trim() });
       setNewId(''); setNewName('');
       loadTerminals();
-    } catch {}
+    } catch {
+      alert('Error al agregar la terminal. Verifica que el ID no esté duplicado.');
+    }
     setAdding(false);
   };
 

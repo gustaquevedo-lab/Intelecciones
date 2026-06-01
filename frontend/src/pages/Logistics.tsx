@@ -62,7 +62,6 @@ const Logistics: React.FC = () => {
       setVehicles(vehiclesRes.data);
       setPendingElectors(pendingRes.data);
     } catch (err) {
-      console.error('Error fetching logistics data:', err);
     } finally {
       setLoading(false);
     }
@@ -101,7 +100,6 @@ const Logistics: React.FC = () => {
       
       await fetchData();
     } catch (err) {
-      console.error(err);
       alert('Error al registrar el chofer.');
     } finally {
       setSavingDriver(false);
@@ -118,7 +116,6 @@ const Logistics: React.FC = () => {
       setAssigningElector(null);
       await fetchData();
     } catch (err) {
-      console.error(err);
       alert('Error al asignar el móvil.');
     }
   };
@@ -129,7 +126,6 @@ const Logistics: React.FC = () => {
       await fetchData();
       alert('¡Viajes completados con éxito para este móvil!');
     } catch (err) {
-      console.error(err);
       alert('Error al completar el viaje.');
     }
   };

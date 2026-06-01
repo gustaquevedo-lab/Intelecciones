@@ -180,7 +180,6 @@ const Login = () => {
       else if (onboardingUser.role === 'MIEMBRO_DE_MESA') navigate('/veedor');
       else navigate('/coordinador');
     } catch (err: any) {
-      console.error('Password Update Error:', err.response?.data || err.message);
       setError(`Error al actualizar contraseña: ${err.response?.data?.error || err.message}`);
     } finally {
       setIsLoading(false);

@@ -150,31 +150,28 @@ export const warmup = async () => {
     });
 };
 
-// Start warmup with proper visibility detection
-if (typeof window !== 'undefined') {
-  // Only warmup when tab is visible
-  const startWarmupCycle = () => {
-    if (warmupIntervalId) clearInterval(warmupIntervalId);
-    
-    warmupIntervalId = setInterval(() => {
-      if (document.visibilityState === 'visible' && !document.hidden) {
-        warmup();
-      }
-    }, 90000); // 90s interval - reduced for battery
-  };
+// Start warmup with proper visibility detection (guarded: only runs once)
+let _warmupInitialized = false;
+if (typeof window !== 'undefined' && !_warmupInitialized) {
+  _warmupInitialized = true;
   
-  startWarmupCycle();
+  warmupIntervalId = setInterval(() => {
+    if (document.visibilityState === 'visible' && !document.hidden) {
+      warmup();
+    }
+  }, 90000);
   
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      warmup(); // Immediate warmup when tab becomes visible
+      warmup();
     }
   });
 }
 
 // API cache for reducing redundant requests
 const apiCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 second cache
+const CACHE_TTL = 5000;
+const CACHE_MAX = 50;
 
 export const cachedApiGet = async <T>(url: string, forceRefresh = false): Promise<T> => {
   const cached = apiCache.get(url);
@@ -184,6 +181,10 @@ export const cachedApiGet = async <T>(url: string, forceRefresh = false): Promis
   }
   
   const response = await api.get<T>(url);
+  if (apiCache.size >= CACHE_MAX) {
+    const oldest = apiCache.keys().next().value;
+    if (oldest) apiCache.delete(oldest);
+  }
   apiCache.set(url, { data: response.data, timestamp: Date.now() });
   return response.data;
 };

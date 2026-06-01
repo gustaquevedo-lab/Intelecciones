@@ -124,7 +124,6 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
       setVotedOrders(voted);
       setElectors(Array.from({ length: res.data.info.total }, (_, i) => i + 1));
     } catch (err) {
-      console.error('Error loading table data:', err);
     } finally {
       setLoading(false);
     }
@@ -150,7 +149,6 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
       const { safePost } = await import('../services/syncService');
       await safePost('MARK_VOTE', '/veedor/mark-vote', { order });
     } catch (err) {
-      console.error('Error marking vote:', err);
     }
   };
 
@@ -416,7 +414,6 @@ const ActaFinalTab = () => {
         votos: 0
       })));
     } catch (err) {
-      console.error('Error loading acta data:', err);
       setError('No se pudieron cargar los datos del acta.');
     } finally {
       setLoading(false);
@@ -710,7 +707,6 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
       setMesas(schoolMesas);
       setMembers(memRes.data);
     } catch (err) {
-      console.error('Error loading apoderado data:', err);
     } finally {
       setLoading(false);
     }
@@ -734,7 +730,6 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
       setSelectedMesa(null);
       await loadData();
     } catch (err) {
-      console.error('Error assigning member:', err);
       alert('Error al asignar mesario.');
     } finally {
       setActionLoading(false);
@@ -752,7 +747,6 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
       });
       await loadData();
     } catch (err) {
-      console.error('Error liberating member:', err);
       alert('Error al liberar mesario.');
     } finally {
       setActionLoading(false);

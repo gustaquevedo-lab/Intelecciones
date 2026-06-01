@@ -195,7 +195,10 @@ export const apiFetch = (url: string, options: any = {}) => {
         'x-district': activeDistrict === 'null' ? '' : (activeDistrict || '')
     };
 
-    return fetch(url, { ...options, headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options.timeout || 30000);
+
+    return fetch(url, { ...options, headers, signal: options.signal || controller.signal }).finally(() => clearTimeout(timeout));
 };
 
 // Permission helpers for consistent role checking

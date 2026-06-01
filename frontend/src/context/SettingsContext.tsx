@@ -23,7 +23,6 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log('Rendering SettingsProvider');
   const [settings, setSettings] = useState<Settings>({
     election_date: '2026-06-07T07:00:00',
     election_end_time: '17:00',
@@ -45,7 +44,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         document.title = res.data.app_name;
       }
     } catch (err) {
-      console.error("Error fetching settings:", err);
     } finally {
       setLoading(false);
     }
@@ -66,7 +64,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await api.post('/settings', newSettings);
       setSettings(prev => ({ ...prev, ...newSettings }));
     } catch (err) {
-      console.error("Error updating settings:", err);
       throw err;
     }
   };

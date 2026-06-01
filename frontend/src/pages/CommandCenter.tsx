@@ -423,7 +423,6 @@ const CommandCenter = () => {
       link.click();
       window.URL.revokeObjectURL(link.href);
     } catch (err: any) {
-      console.error("Error generating report:", err);
       alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
     } finally {
       setIsGeneratingReport(false);
@@ -699,7 +698,6 @@ const CommandCenter = () => {
         .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
       doc.save(`reporte-disputas-${cleanDistrict}.pdf`);
     } catch (err: any) {
-      console.error('Error generating disputes PDF:', err);
       alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
     } finally {
       setIsGeneratingDisputesPDF(false);
@@ -780,8 +778,7 @@ const CommandCenter = () => {
         }
       }
 
-    } catch (err) {
-      console.error("Critical error in loadData:", err);
+    } catch {
     }
   };
 
@@ -796,13 +793,13 @@ const CommandCenter = () => {
       api.get(`/structure/padrinos/${selectedPadrino.id}/coordinators`).then(res => {
         setSubStructureData(res.data.coordinators || []);
         setPadrinoCaptures(res.data.padrino_captures || null);
-      });
+      }).catch(() => {});
     }
   }, [selectedPadrino]);
 
   useEffect(() => {
     if (selectedCoordDetails) {
-      api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data));
+      api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data)).catch(() => {});
     }
   }, [selectedCoordDetails]);
 
@@ -813,7 +810,7 @@ const CommandCenter = () => {
         resolved_by_id: authUser?.id
       });
       loadData();
-    } catch (err) { console.error(err); }
+    } catch { alert('Error al resolver la solicitud.'); }
   };
 
   const handleDecide = async (winnerCaptureId: number) => {
@@ -824,7 +821,7 @@ const CommandCenter = () => {
       });
       setShowResolveModal(null);
       loadData();
-    } catch (err) { console.error(err); }
+    } catch { alert('Error al resolver el conflicto.'); }
   };
 
   const handleConsent = async (conflictId: number) => {
@@ -832,7 +829,7 @@ const CommandCenter = () => {
       await api.post('/admin/conflicts/consent', { conflict_id: conflictId });
       setShowResolveModal(null);
       loadData();
-    } catch (err) { console.error(err); }
+    } catch { alert('Error al consentir el conflicto.'); }
   };
 
   const handleWipeCoordinatorCaptures = async (coordinatorId: number) => {
@@ -853,11 +850,10 @@ const CommandCenter = () => {
         api.get(`/structure/padrinos/${selectedPadrino.id}/coordinators`).then(res => {
           setSubStructureData(res.data.coordinators || []);
           setPadrinoCaptures(res.data.padrino_captures || null);
-        });
+        }).catch(() => {});
       }
       loadData();
     } catch (err: any) {
-      console.error('Error wiping coordinator captures:', err);
       alert('Error al eliminar las capturas: ' + (err.response?.data?.error || err.message));
     }
   };
@@ -869,17 +865,16 @@ const CommandCenter = () => {
       await api.delete(`/captures/${captureId}`);
       alert('La captura fue eliminada correctamente.');
       if (selectedCoordDetails) {
-        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data));
+        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data)).catch(() => {});
       }
       if (selectedPadrino) {
         api.get(`/structure/padrinos/${selectedPadrino.id}/coordinators`).then(res => {
           setSubStructureData(res.data.coordinators || []);
           setPadrinoCaptures(res.data.padrino_captures || null);
-        });
+        }).catch(() => {});
       }
       loadData();
     } catch (err: any) {
-      console.error('Error deleting capture:', err);
       alert('Error al eliminar la captura: ' + (err.response?.data?.error || err.message));
     }
   };
@@ -900,11 +895,10 @@ const CommandCenter = () => {
       alert('Elector actualizado correctamente.');
       setEditingCapture(null);
       if (selectedCoordDetails) {
-        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data));
+        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data)).catch(() => {});
       }
       loadData();
     } catch (err: any) {
-      console.error('Error updating capture:', err);
       alert('Error al actualizar la captura: ' + (err.response?.data?.error || err.message));
     }
   };

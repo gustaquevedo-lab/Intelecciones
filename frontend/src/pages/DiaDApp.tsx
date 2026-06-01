@@ -215,8 +215,7 @@ const DiaDApp: React.FC = () => {
         setGlobalRegData(null);
       }
     } catch (err) { 
-      console.error(err);
-      alert('Error al consultar el padrón');
+      alert('Error al consultar el padrón: ' + (err.response?.data?.error || err.message));
     } finally {
       setIsVerifying(false);
     }
@@ -244,8 +243,7 @@ const DiaDApp: React.FC = () => {
       fetchData();
       alert('Miembro asignado correctamente');
     } catch (err) {
-      console.error(err);
-      alert('Error al realizar la asignación');
+      alert('Error al realizar la asignación: ' + (err.response?.data?.error || err.message));
     } finally {
       setAssigningLoading(false);
     }
@@ -272,7 +270,7 @@ const DiaDApp: React.FC = () => {
       setCandidatePreview(null);
       setIsCandidateVerified(false);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { alert('Error al registrar lista: ' + (err.response?.data?.error || err.message)); }
   };
 
   useEffect(() => {
@@ -326,7 +324,7 @@ const DiaDApp: React.FC = () => {
       if (type === 'list') {
         setCandidatePreview(prev => ({ ...(prev || {}), photo_url: res.data.photo_url }));
       }
-    } catch (err) { console.error('Error uploading cropped image:', err); }
+    } catch (err) { alert('Error al subir foto: ' + (err.response?.data?.error || err.message)); }
   };
 
   const fetchUsers = async () => {
@@ -334,7 +332,7 @@ const DiaDApp: React.FC = () => {
       const res = await api.get('/users');
       // Only users that can be members
       setUsersToAssign(res.data.filter((u: any) => ['COORDINADOR', 'VEEDOR', 'MIEMBRO_MESA'].includes(u.role)));
-    } catch (err) { console.error(err); }
+    } catch (err) { /* empty state handles this */ }
   };
 
   const fetchData = useCallback(async () => {
@@ -349,7 +347,7 @@ const DiaDApp: React.FC = () => {
       ]);
       setLastRefresh(new Date());
     } catch (err) {
-      console.error('DiaDApp fetch error:', err);
+      /* background fetch - empty state handles this */
     }
   }, [refetchCoverage, refetchResults, refetchActas, refetchLocations, refetchFleet, refetchMembers]);
 
@@ -1212,7 +1210,7 @@ const DiaDApp: React.FC = () => {
                                             try {
                                               await api.post('/diad/members/assign', { user_id: assignedMember.id, local: null, mesa: null });
                                               fetchData();
-                                            } catch (e) { console.error(e); }
+                                            } catch (e) { alert('Error al liberar miembro: ' + (e.response?.data?.error || e.message)); }
                                           }}
                                           style={{
                                             padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.15)',
@@ -1385,7 +1383,7 @@ const DiaDApp: React.FC = () => {
                                     });
                                     setSelectedMesaForSwap(null);
                                     fetchData();
-                                  } catch (e) { console.error(e); }
+                                  } catch (e) { alert('Error al asignar suplente: ' + (e.response?.data?.error || e.message)); }
                                   finally { setAssigningLoading(false); }
                                 }}
                                 style={{
@@ -1901,7 +1899,7 @@ const DiaDApp: React.FC = () => {
                             });
                             setShowAssignModal(false);
                             fetchData();
-                          } catch (err) { console.error(err); }
+                          } catch (err) { alert('Error al asignar miembro: ' + (err.response?.data?.error || err.message)); }
                           finally { setAssigningLoading(false); }
                         }}
                         disabled={assigningLoading}

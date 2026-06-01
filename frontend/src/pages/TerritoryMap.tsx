@@ -35,7 +35,7 @@ const TerritoryMap: React.FC = () => {
             .then(data => {
                 setElectors(data.filter((e: any) => e.lat && e.lng));
             })
-            .catch(err => console.error(err));
+            .catch(err => {});
     }, []);
 
     const filteredElectors = electors.filter(e => {

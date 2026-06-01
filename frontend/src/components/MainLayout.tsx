@@ -49,7 +49,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
 
   useEffect(() => {
     if (user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'PADRINO' || user?.role === 'SUBJEFE') {
-      api.get('/lists').then(res => setLists(res.data)).catch(err => console.error(err));
+      api.get('/lists').then(res => setLists(res.data)).catch(() => {});
     }
   }, [user]);
 
@@ -70,7 +70,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, title, userName, user
   const [districts, setDistricts] = useState<string[]>([]);
   
   useEffect(() => {
-    api.get('/districts/global').then(res => setDistricts(res.data)).catch(err => console.error(err));
+    api.get('/districts/global').then(res => setDistricts(res.data)).catch(() => {});
   }, []);
 
   return (
@@ -372,8 +372,8 @@ const HeaderConnectionStatus = () => {
       const { getPendingActions } = await import('../services/offlineDb');
       const actions = await getPendingActions();
       setPendingCount(actions.length);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // pending count stays at 0
     }
   };
 
@@ -422,8 +422,7 @@ const HeaderConnectionStatus = () => {
       } else {
         window.alert(`Conexion Fallida:\n\nNo se pudo establecer conexion estable con el servidor. Tus ${res.failedCount} registros pendientes siguen totalmente a salvo en la memoria local del telefono.`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       window.alert("Ocurrio un error inesperado al sincronizar los registros de campo.");
     } finally {
       setIsSyncing(false);

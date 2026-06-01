@@ -34,7 +34,6 @@ const Campaigns: React.FC = () => {
                 setTenants(data);
             }
         } catch (err) {
-            console.error(err);
         }
     };
 
@@ -49,7 +48,7 @@ const Campaigns: React.FC = () => {
                 fetchTenants();
             }
         } catch (err) {
-            console.error(err);
+            alert('Error al cambiar estado de la campaña.');
         }
     };
 
@@ -95,7 +94,7 @@ const Campaigns: React.FC = () => {
                 alert('CI no encontrado en el padrón.');
             }
         } catch (err) {
-            console.error(err);
+            alert('Error al verificar el C.I.');
         } finally {
             setVerifying(false);
         }
@@ -119,7 +118,7 @@ const Campaigns: React.FC = () => {
                 fetchTenants(); // Recargar lista
             }
         } catch (err) {
-            console.error(err);
+            alert('Error al crear la campaña.');
         }
     };
 

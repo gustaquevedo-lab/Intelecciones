@@ -190,17 +190,15 @@ export const safePost = async (type: string, url: string, data: any) => {
   return { data: { offline: true, message: 'Sin conexión, guardado localmente' } };
 };
 
-// Auto-sync when coming back online
-if (typeof window !== 'undefined') {
+// Auto-sync when coming back online (guarded: only runs once)
+let _syncInitialized = false;
+if (typeof window !== 'undefined' && !_syncInitialized) {
+  _syncInitialized = true;
   let wasOffline = !navigator.onLine;
   
   window.addEventListener('online', () => {
-    debug.log('[SYNC] Conexión detectada. Sincronizando...');
-    
-    // Only trigger sync if we were actually offline (avoid unnecessary syncs on page load)
     if (wasOffline) {
       wasOffline = false;
-      // Small delay to ensure connection is stable
       setTimeout(() => {
         syncPendingActions().catch(debug.error);
       }, 2000);
@@ -208,21 +206,18 @@ if (typeof window !== 'undefined') {
   });
   
   window.addEventListener('offline', () => {
-    debug.log('[SYNC] Sin conexión, guardando localmente...');
     wasOffline = true;
   });
   
-  // Periodic sync attempt (less aggressive than before)
   setInterval(() => {
     if (navigator.onLine) {
       getPendingActionsCount().then(count => {
         if (count > 0) {
-          debug.log(`[SYNC] ${count} acciones pendientes, sincronizando...`);
           syncPendingActions().catch(debug.error);
         }
       }).catch(() => {});
     }
-  }, 30000); // Reduced from 30s to avoid excessive load
+  }, 30000);
 }
 
 // Manual trigger for force sync (useful for UI buttons)

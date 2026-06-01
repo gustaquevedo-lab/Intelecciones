@@ -69,6 +69,9 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Faltan campos obligatorios: Usuario, Contraseña, Rol y Nombre son requeridos.' });
   }
 
+  if (username.toString().trim().length < 3) return res.status(400).json({ error: 'El usuario debe tener al menos 3 caracteres' });
+  if (password.toString().trim().length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+
   // ── Authorization: who can create whom ──────────────────────────────────
   const ALLOWED_ROLES_TO_CREATE: Record<string, string[]> = {
     SUPERUSUARIO: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE','COORDINADOR','MIEMBRO_DE_MESA','CANDIDATO'],
@@ -418,6 +421,8 @@ router.delete('/:id', (req, res) => {
 router.post('/change-p', (req, res) => {
   const { user_id, new_password } = req.body;
   console.log(`[AUTH] Updating password for user ID: ${user_id}`);
+  if (!user_id || isNaN(Number(user_id))) return res.status(400).json({ error: 'user_id debe ser un número' });
+  if (!new_password || new_password.toString().trim().length < 6) return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
   try {
     db.prepare('UPDATE users SET password = ?, needs_password_change = 0 WHERE id = ?').run(new_password, user_id);
     logAction(user_id, 'UPDATE_PASSWORD', 'USER', user_id, 'User updated their password');

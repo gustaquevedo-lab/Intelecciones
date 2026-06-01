@@ -266,7 +266,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
           .run(successCount, failCount, finalStatus, logId);
       };
 
-      runBroadcast();
+      runBroadcast().catch(err => console.error('[BROADCAST] runBroadcast error:', err));
       res.json({ success: true, log_id: logId, target_count: targets.length });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -470,7 +470,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
         db.prepare('UPDATE whatsapp_broadcast_logs SET success_count = ?, fail_count = ?, status = ? WHERE id = ?').run(successCount, failCount, finalStatus, newLogId);
       };
 
-      runRetry();
+      runRetry().catch(err => console.error('[BROADCAST] runRetry error:', err));
       res.json({ success: true, log_id: newLogId, target_count: failedRows.length });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });

@@ -108,6 +108,7 @@ export default function adminRoutes(upload: multer.Multer) {
   // ── POST /api/campaigns ─────────────────────────────────────────────────────
   router.post('/campaigns', (req, res) => {
     const { name, status, slogan, photo_url, enabled_modules, goal, distrito } = req.body;
+    if (!name || name.toString().trim() === '') return res.status(400).json({ error: 'name es requerido y no puede estar vacío' });
     try {
       const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : (enabled_modules || 'COMMAND_CENTER,REGISTRY');
       const finalDist = distrito ? distrito.toString().toUpperCase().trim() : '';
@@ -234,6 +235,11 @@ export default function adminRoutes(upload: multer.Multer) {
   // ── POST /api/locales ───────────────────────────────────────────────────────
   router.post('/locales', (req, res) => {
     const { cod_local, nombre, lat, lng, icon, direccion, distrito, ciudad } = req.body;
+    if (!cod_local) return res.status(400).json({ error: 'cod_local es requerido' });
+    if (!nombre) return res.status(400).json({ error: 'nombre es requerido' });
+    if (!distrito) return res.status(400).json({ error: 'distrito es requerido' });
+    if (!ciudad) return res.status(400).json({ error: 'ciudad es requerida' });
+    if (!direccion) return res.status(400).json({ error: 'direccion es requerida' });
     try {
       db.prepare(`INSERT INTO voting_locations (cod_local, nombre, lat, lng, icon, direccion, distrito, ciudad) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(cod_local, nombre, lat, lng, icon || 'Landmark', direccion || '', distrito || ciudad || '', ciudad || distrito || '');

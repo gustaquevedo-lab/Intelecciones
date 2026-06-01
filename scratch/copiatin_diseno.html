@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copiatín Electoral Premium - Diseño Real (9x5 cm)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-blue: #002d84;
+      --light-blue: #0056b3;
+      --accent-yellow: #ff9e00;
+      --accent-orange: #f26200;
+      --text-dark: #0f172a;
+      --text-light: #475569;
+      --bg-canvas: #0b0f19;
+      
+      /* Card dimensions in mm/cm */
+      --card-width: 9cm;
+      --card-height: 5cm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: var(--bg-canvas);
+      color: #ffffff;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    header.top-info {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header.top-info h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header.top-info p {
+      color: #94a3b8;
+      font-size: 1rem;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 2.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Panel de Configuración */
+    .config-panel {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(12px);
+      padding: 2rem;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .config-panel h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      margin-bottom: 1.25rem;
+      color: #38bdf8;
+      border-left: 4px solid var(--accent-yellow);
+      padding-left: 0.75rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      font-family: inherit;
+      color: white;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    /* Acciones */
+    .btn {
+      width: 100%;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+    }
+
+    /* PANEL DE VISTA PREVIA */
+    .preview-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    /* CONTENEDOR DEL COPIATIN REAL (9cm x 5cm) */
+    .copiatin-card {
+      width: var(--card-width);
+      height: var(--card-height);
+      background-color: #ffffff;
+      border: 1px dashed #64748b; /* Borde de corte limpio */
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 0.1cm 0.15cm;
+      color: #000000;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    /* Faja superior (1.35cm aprox) */
+    .top-band-new {
+      display: flex;
+      flex-direction: column;
+      height: 1.38cm;
+      border-bottom: 2.2px solid var(--primary-blue);
+      padding-bottom: 2px;
+      margin-bottom: 3.5px;
+      justify-content: space-between;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      height: 1.0cm;
+    }
+
+    .bottom-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      font-size: 8px;
+      line-height: 1;
+      height: 0.38cm;
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 1px;
+    }
+
+    /* 1/4 Superior Izquierdo: Información del Elector (Expandido a 60%) */
+    .elector-main {
+      width: 60%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .elector-header {
+      font-size: 6.5px;
+      font-weight: 900;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      line-height: 1;
+    }
+
+    .elector-name {
+      font-size: 10.5px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-top: 1px;
+    }
+
+    .elector-ci {
+      font-size: 8px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 1px;
+    }
+
+    .elector-ci span {
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .elector-footer-item {
+      display: flex;
+      align-items: center;
+      margin-right: 8px;
+    }
+
+    .elector-footer-item span {
+      font-size: 8.5px;
+      font-weight: 900;
+      color: #000000;
+      margin-left: 2px;
+    }
+
+    .elector-footer-item label {
+      color: #64748b;
+      font-weight: 700;
+      font-size: 7.5px;
+    }
+
+    /* Parte Superior Derecha: Info de Campaña (Reducido a 40%) */
+    .campaign-main {
+      width: 40%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-end;
+      padding-left: 2px;
+      text-align: right;
+    }
+
+    .campaign-logos {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      line-height: 1;
+    }
+
+    .logo-img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+    }
+
+    .campaign-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .campaign-brand .brand-plra {
+      font-family: 'Outfit', sans-serif;
+      font-size: 8px;
+      font-weight: 900;
+      color: var(--primary-blue);
+      letter-spacing: 0.5px;
+    }
+
+    .campaign-brand .brand-mov {
+      font-size: 4px;
+      font-weight: 800;
+      color: var(--accent-orange);
+      text-transform: uppercase;
+    }
+
+    .city-label {
+      font-size: 7.5px;
+      font-weight: 900;
+      color: var(--primary-blue);
+      text-transform: uppercase;
+      margin-top: 0.5px;
+      line-height: 1;
+    }
+
+    .local-info-inline {
+      flex-grow: 1;
+      min-width: 0; /* Permite truncado por elipsis al llegar al borde derecho */
+      margin-left: 12px; /* Inicia justo después de la orden */
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .local-info-inline label {
+      color: #64748b;
+      font-weight: 700;
+      margin-right: 2px;
+      font-size: 7.5px;
+    }
+
+    .local-info-inline span {
+      font-size: 9px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    /* Sección de Candidatos */
+    .candidates-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex-grow: 1;
+    }
+
+    /* Fila de Candidato Estilo Real Premium */
+    .candidate-card {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(90deg, #00266f 0%, #003ba8 100%);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      height: 0.73cm;
+      padding: 1px 3px;
+      color: white;
+      position: relative;
+    }
+
+    /* Énfasis para Intendente y Concejal */
+    .candidate-card.emphasis {
+      background: linear-gradient(90deg, #001b50 0%, #00297a 100%);
+      border: 1px solid #3b82f6;
+    }
+
+    /* Foto del Candidato */
+    .candidate-photo-frame {
+      width: 0.58cm;
+      height: 0.58cm;
+      border-radius: 3px;
+      overflow: hidden;
+      background: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.6);
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+
+    .candidate-photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+    }
+
+    /* Detalles */
+    .candidate-info {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      line-height: 1;
+      min-width: 0;
+    }
+
+    .candidate-role {
+      font-size: 6.5px;
+      font-weight: 800;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      margin-bottom: 0.5px;
+    }
+
+    .candidate-card.emphasis .candidate-role {
+      color: var(--accent-yellow);
+    }
+
+    .candidate-name {
+      font-size: 9.5px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Manito señaladora */
+    .pointing-hand {
+      width: 12px;
+      height: 12px;
+      fill: var(--accent-yellow);
+      margin-right: 2px;
+      flex-shrink: 0;
+      animation: nudge 0.8s infinite alternate;
+    }
+
+    @keyframes nudge {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-2px); }
+    }
+
+    /* Badge de Lista / Opción (Estilo Original Masivo) */
+    .badge-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      color: #002d84;
+      border-radius: 4px;
+      padding: 0 4px;
+      margin-left: auto; /* Empuja al extremo derecho ocupando el espacio */
+      flex-shrink: 0;
+      border: 1.8px solid var(--accent-yellow);
+      height: 0.64cm;
+      width: 2.6cm; /* Ancho amplio para rellenar la fila y verse profesional */
+      font-style: italic;
+    }
+
+    .badge-single {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .badge-single .label-main {
+      font-size: 9px;
+      font-weight: 900;
+      color: var(--primary-blue);
+      letter-spacing: -0.2px;
+    }
+
+    .badge-single .val-huge {
+      font-size: 19px;
+      font-weight: 900;
+      color: var(--primary-blue);
+      line-height: 1;
+    }
+
+    .badge-double {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      width: 100%;
+    }
+
+    .badge-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 0.8;
+    }
+
+    .badge-col .label-sub {
+      font-size: 5px;
+      font-weight: 900;
+      color: var(--primary-blue);
+      letter-spacing: -0.1px;
+    }
+
+    .badge-col .val-large {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--primary-blue);
+      margin-top: 1px;
+    }
+
+    .badge-divider {
+      width: 1.2px;
+      height: 0.5cm;
+      background-color: #cbd5e1;
+      margin: 0 2px;
+    }
+
+    /* Regla virtual de ayuda en pantalla */
+    .help-info {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Estilos de Impresión */
+    @media print {
+      body {
+        background-color: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .copiatin-card {
+        box-shadow: none !important;
+        border: 1px dashed #94a3b8 !important;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="no-print top-info">
+      <h1>Copiatín Electoral Profesional</h1>
+      <p>Alineación Mejorada y Detalles de Alta Precisión (9cm x 5cm)</p>
+    </header>
+
+    <div class="main-grid">
+      <!-- CONFIGURACIÓN -->
+      <div class="config-panel no-print">
+        <h2>Datos Electorales</h2>
+        <div class="form-group">
+          <label for="val-nombre">Nombre Completo</label>
+          <input type="text" id="val-nombre" value="JUAN PABLO ORTIZ CANDIA">
+        </div>
+        <div class="form-group">
+          <label for="val-cedula">Cédula de Identidad</label>
+          <input type="text" id="val-cedula" value="4.567.890">
+        </div>
+        <div class="form-group">
+          <label for="val-local">Local de Votación</label>
+          <input type="text" id="val-local" value="COL. NAC. ALTE. RAÚL P. ALFONSÍN">
+        </div>
+        <div class="grid-2col">
+          <div class="form-group">
+            <label for="val-mesa">Mesa N°</label>
+            <input type="text" id="val-mesa" value="12">
+          </div>
+          <div class="form-group">
+            <label for="val-orden">Orden N°</label>
+            <input type="text" id="val-orden" value="145">
+          </div>
+        </div>
+        
+        <h2>Cabecera</h2>
+        <div class="form-group">
+          <label for="val-ciudad">Ciudad / Distrito</label>
+          <input type="text" id="val-ciudad" value="Pedro Juan Caballero">
+        </div>
+
+        <button class="btn" onclick="window.print()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Imprimir Copiatín
+        </button>
+      </div>
+
+      <!-- VISTA PREVIA -->
+      <div class="preview-area">
+        <!-- TARJETA DE COPIATIN -->
+        <div class="copiatin-card">
+          <!-- BANDA SUPERIOR REESTRUCTURADA -->
+          <div class="top-band-new">
+            <!-- Fila Superior: Nombre Elector & Info Campaña -->
+            <div class="top-row">
+              <div class="elector-main">
+                <div class="elector-header">ELECTOR REGISTRADO</div>
+                <div class="elector-name" id="card-nombre">JUAN PABLO ORTIZ CANDIA</div>
+                <div class="elector-ci">C.I. <span>N°</span> <strong id="card-cedula">4.567.890</strong></div>
+              </div>
+              <div class="campaign-main">
+                <div class="campaign-logos">
+                  <img class="logo-img" src="../frontend/public/favicon.svg" alt="Intelecciones">
+                  <div class="campaign-brand">
+                    <span class="brand-plra">PLRA</span>
+                    <span class="brand-mov">NUEVO LIBERALISMO</span>
+                  </div>
+                </div>
+                <div class="city-label" id="card-ciudad">Pedro Juan Caballero</div>
+              </div>
+            </div>
+
+            <!-- Fila Inferior: Mesa, Orden y Local (A lo largo de toda la tarjeta) -->
+            <div class="bottom-row">
+              <div class="elector-footer-item"><label>MESA:</label> <span id="card-mesa">12</span></div>
+              <div class="elector-footer-item"><label>ORDEN:</label> <span id="card-orden">145</span></div>
+              <div class="local-info-inline">
+                <label>LOCAL:</label> <span id="card-local">COL. NAC. ALTE. RAÚL P. ALFONSÍN</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- LISTA DE CANDIDATOS -->
+          <div class="candidates-list">
+            <!-- 1. Intendente -->
+            <div class="candidate-card emphasis">
+              <div class="candidate-photo-frame">
+                <img src="../frontend/assets/miguel_rojas.png" alt="Arq. Miguel Rojas León">
+              </div>
+              <div class="candidate-info">
+                <span class="candidate-role">INTENDENTE</span>
+                <span class="candidate-name">ARQ. MIGUEL ROJAS LEÓN</span>
+              </div>
+              <div class="badge-container">
+                <div class="badge-single">
+                  <span class="label-main">LISTA</span>
+                  <span class="val-huge">3</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Concejal Municipal -->
+            <div class="candidate-card emphasis">
+              <div class="candidate-photo-frame">
+                <img src="../frontend/assets/lourdes_amarilla.png" alt="Lourdes Amarilla">
+              </div>
+              <div class="candidate-info">
+                <span class="candidate-role">CONCEJAL MUNICIPAL</span>
+                <span class="candidate-name">LOURDES AMARILLA</span>
+              </div>
+              <div class="badge-container">
+                <div class="badge-double">
+                  <div class="badge-col">
+                    <span class="label-sub">LISTA</span>
+                    <span class="val-large">3</span>
+                  </div>
+                  <div class="badge-divider"></div>
+                  <div class="badge-col">
+                    <span class="label-sub">OPCIÓN</span>
+                    <span class="val-large">3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Presidente de Partido -->
+            <div class="candidate-card">
+              <div class="candidate-photo-frame">
+                <img src="../frontend/assets/alcides_riveros.png" alt="Alcides Riveros">
+              </div>
+              <div class="candidate-info">
+                <span class="candidate-role">PRESIDENTE DEL PARTIDO</span>
+                <span class="candidate-name">ALCIDES RIVEROS</span>
+              </div>
+              <div class="badge-container">
+                <div class="badge-single">
+                  <span class="label-main">LISTA</span>
+                  <span class="val-huge">3</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Miembro del Directorio Nacional -->
+            <div class="candidate-card">
+              <div class="candidate-photo-frame">
+                <img src="../frontend/assets/pedro_gonzalez.png" alt="Pedro Gonzalez">
+              </div>
+              <div class="candidate-info">
+                <span class="candidate-role">MIEMBRO DIRECTORIO NAC.</span>
+                <span class="candidate-name">PEDRO GONZALEZ</span>
+              </div>
+              <div class="badge-container">
+                <div class="badge-double">
+                  <div class="badge-col">
+                    <span class="label-sub">LISTA</span>
+                    <span class="val-large">3</span>
+                  </div>
+                  <div class="badge-divider"></div>
+                  <div class="badge-col">
+                    <span class="label-sub">OPCIÓN</span>
+                    <span class="val-large">13</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="help-info no-print">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>Diseño optimizado: elector ocupa 60% horizontal de la banda, manitos apuntando a las listas y reordenamiento de la cabecera en el 40% restante.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sincronizar campos de texto con el copiatín
+    const fieldMap = [
+      { inputId: 'val-nombre', cardId: 'card-nombre' },
+      { inputId: 'val-cedula', cardId: 'card-cedula' },
+      { inputId: 'val-local', cardId: 'card-local' },
+      { inputId: 'val-mesa', cardId: 'card-mesa' },
+      { inputId: 'val-orden', cardId: 'card-orden' },
+      { inputId: 'val-ciudad', cardId: 'card-ciudad' }
+    ];
+
+    fieldMap.forEach(({ inputId, cardId }) => {
+      const inputEl = document.getElementById(inputId);
+      const cardEl = document.getElementById(cardId);
+      if (inputEl && cardEl) {
+        inputEl.addEventListener('input', (e) => {
+          if (inputId === 'val-ciudad') {
+            cardEl.textContent = e.target.value;
+          } else {
+            cardEl.textContent = e.target.value.toUpperCase();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

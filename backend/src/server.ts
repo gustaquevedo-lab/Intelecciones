@@ -1676,6 +1676,25 @@ app.use('/api/whatsapp', whatsappRoutes(storage));
 app.use('/api/diad', diadRoutes(upload));
 app.use('/api/veedor', veedorRoutes());
 
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    error: err.message || 'Error interno del servidor',
+    ...(process.env.NODE_ENV === 'development' ? { stack: err.stack } : {})
+  });
+});
+
+process.on('unhandledRejection', (reason: any) => {
+  console.error('[FATAL] Unhandled Rejection:', reason instanceof Error ? reason.message : reason);
+  if (reason?.stack) console.error(reason.stack);
+});
+
+process.on('uncaughtException', (err: Error) => {
+  console.error('[FATAL] Uncaught Exception:', err.message);
+  console.error(err.stack);
+  setTimeout(() => process.exit(1), 1000);
+});
+
 if (process.env.NODE_ENV !== 'test') {
   app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);

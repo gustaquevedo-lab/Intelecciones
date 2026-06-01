@@ -43,8 +43,7 @@ export const useSSE = (onEvent: (event: { type: string; data: any }) => void) =>
       };
 
       eventSource.onopen = () => {
-        console.log('[SSE] Connection opened');
-        delay = 1000; // Reset delay
+        delay = 1000;
       };
     };
 

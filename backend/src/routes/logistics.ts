@@ -88,6 +88,8 @@ export default function logisticsRoutes() {
   // ── POST /api/logistics/assign ──────────────────────────────────────────────
   router.post('/assign', (req, res) => {
     const { capture_id, vehicle_id } = req.body;
+    if (capture_id === undefined || capture_id === null || isNaN(Number(capture_id))) return res.status(400).json({ error: 'capture_id debe ser un número' });
+    if (vehicle_id === undefined || vehicle_id === null || isNaN(Number(vehicle_id))) return res.status(400).json({ error: 'vehicle_id debe ser un número' });
     try {
       db.prepare("UPDATE elector_captures SET assigned_vehicle_id = ?, transport_status = 'PENDING' WHERE id = ?").run(vehicle_id, capture_id);
       logAction(1, 'ASSIGN_TRANSPORT', 'CAPTURE', capture_id, `Assigned vehicle ${vehicle_id} to capture ${capture_id}`);
@@ -146,6 +148,10 @@ export function vehiclesRoutes() {
   // ── POST /api/vehicles ──────────────────────────────────────────────────────
   router.post('/', (req, res) => {
     const { description, driver_name, driver_phone, assigned_user_id, driver_ci, capacity, status, type, plate } = req.body;
+    if (!plate) return res.status(400).json({ error: 'plate es requerido' });
+    if (!driver_name) return res.status(400).json({ error: 'driver_name es requerido' });
+    if (!driver_phone) return res.status(400).json({ error: 'driver_phone es requerido' });
+    if (capacity === undefined || capacity === null || isNaN(Number(capacity))) return res.status(400).json({ error: 'capacity debe ser un número' });
     try {
       const result = db.prepare(`
         INSERT INTO vehicles (description, driver_name, driver_phone, assigned_user_id, driver_ci, capacity, status, type, plate)

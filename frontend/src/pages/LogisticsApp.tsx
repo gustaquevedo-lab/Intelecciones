@@ -56,7 +56,6 @@ const LogisticsApp: React.FC = () => {
       setClusters(c.data);
       setLocales(l.data);
     } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -67,14 +66,14 @@ const LogisticsApp: React.FC = () => {
     try {
       await api.post('/logistics/complete-trip', { vehicle_id: vehicleId });
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { alert('Error al completar el viaje.'); }
   };
 
   const handleAssignVehicle = async (capture_id: number, vehicle_id: string) => {
     try {
       await api.post('/logistics/assign', { capture_id, vehicle_id });
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { alert('Error al asignar vehículo.'); }
   };
 
   useEffect(() => {
@@ -119,7 +118,7 @@ const LogisticsApp: React.FC = () => {
       setShowModal(null);
       resetForm();
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { alert('Error al registrar el móvil.'); }
   };
 
   const resetForm = () => {
@@ -137,7 +136,7 @@ const LogisticsApp: React.FC = () => {
   const handleUpdateLocalGeo = async (cod: string, lat: number, lng: number) => {
     try {
       await api.post(`/voting-locations/${cod}/geo`, { lat, lng });
-    } catch (err) { console.error(err); }
+    } catch (err) { alert('Error al actualizar ubicación.'); }
   };
 
   const isMobile = window.innerWidth < 1024;

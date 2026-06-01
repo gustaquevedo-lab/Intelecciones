@@ -7,30 +7,30 @@ import { useAuth, apiFetch } from '../context/AuthContext';
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [electors, setElectors] = React.useState<any[]>([]);
-  const [stats, setStats] = React.useState<any[]>([]);
-  const [results, setResults] = React.useState<any>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [viewMode, setViewMode] = React.useState<'planning' | 'live'>('planning');
+  const [loading, setLoading] = useState(true);
+  const [electors, setElectors] = useState<any[]>([]);
+  const [stats, setStats] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
 
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
     const fetchData = async () => {
       try {
-        const electorsData = await apiFetch('http://localhost:5000/api/electors/search').then(res => res.json());
-        const statsData = await apiFetch('http://localhost:5000/api/stats/neighborhoods').then(res => res.json());
-        const resultsData = await apiFetch('http://localhost:5000/api/stats/results').then(res => res.json());
+        const electorsData = await apiFetch(`${apiBase}/api/electors/search`, { timeout: 15000 }).then(res => res.json());
+        const statsData = await apiFetch(`${apiBase}/api/stats/neighborhoods`, { timeout: 15000 }).then(res => res.json());
+        const resultsData = await apiFetch(`${apiBase}/api/stats/results`, { timeout: 15000 }).then(res => res.json());
         
         setElectors(electorsData);
         setStats(statsData);
         setResults(resultsData);
         setLoading(false);
-      } catch (err) {
-        console.error(err);
+      } catch {
         setLoading(false);
       }
     };

@@ -248,7 +248,6 @@ const CoordinatorApp = () => {
       alert(`Padrón descargado con éxito: ${count} electores disponibles offline.`);
       setIsStatsLoading(false);
     } catch (err: any) {
-      console.error('Download error:', err);
       setIsStatsLoading(false);
       alert('Error al descargar el padrón. Verifique su conexión.');
     } finally {
@@ -277,8 +276,7 @@ const CoordinatorApp = () => {
             localStorage.setItem('declined_padron_version', res.data.last_updated.toString());
           }
         }
-      } catch (e) {
-        console.log('Error checking padron version', e);
+      } catch {
       }
     };
     
@@ -383,7 +381,6 @@ const CoordinatorApp = () => {
       await api.get(`/users?parent_id=${user.id}`);
       // If we need to filter further, we do it here
     } catch {
-      console.error("Error fetching my coordinators");
     }
   };
 
@@ -393,7 +390,6 @@ const CoordinatorApp = () => {
       const res = await api.get(`/padrino/team-stats?padrino_id=${user.id}`);
       setTeamStats(res.data);
     } catch (err) {
-      console.error("Error fetching my padrino stats", err);
     }
   };
 
@@ -405,7 +401,6 @@ const CoordinatorApp = () => {
       setCoordCaptures(res.data);
       setShowDetailModal(true);
     } catch (err) {
-      console.error("Error fetching detail", err);
     } finally {
       setIsLoading(false);
     }
@@ -481,7 +476,6 @@ const CoordinatorApp = () => {
       const res = await api.get(`/users?parent_id=${user.id}`);
       setMyPadrinos(res.data.filter((u: any) => u.parent_id === user.id && u.role === 'PADRINO'));
     } catch (err) {
-      console.error("Error fetching my padrinos", err);
     }
   };
 
@@ -564,7 +558,6 @@ const CoordinatorApp = () => {
       localStorage.setItem(key, JSON.stringify(list));
       setHistory(list);
     } catch (err) {
-      console.error("Error saving search history", err);
     }
   };
 
@@ -574,7 +567,6 @@ const CoordinatorApp = () => {
       const res = await api.get('/admin/conflicts');
       setDisputes(res.data || []);
     } catch (err) {
-      console.error("Error fetching disputes", err);
     } finally {
       setIsDisputesLoading(false);
     }
@@ -600,7 +592,6 @@ const CoordinatorApp = () => {
         : res.data.filter((r: any) => r.coordinator_id === user.id);
       setRequests(filtered);
     } catch (err) {
-      console.error("Error fetching requests", err);
     }
   };
 
@@ -753,7 +744,6 @@ const CoordinatorApp = () => {
         setPhotoVerso(res.data.photo_url);
       }
     } catch (e: any) {
-      console.error(e);
       setError('Error al subir la foto de la cédula. Intente de nuevo.');
     } finally {
       if (type === 'FRENTE') setIsUploadingFrente(false);
@@ -838,7 +828,6 @@ const CoordinatorApp = () => {
         setPhotoVerso(null);
       }, 2000);
     } catch (err) {
-      console.error(err);
       setError('Error al registrar elector personalizado.');
     } finally {
       setIsLoading(false);
@@ -885,7 +874,6 @@ const CoordinatorApp = () => {
         setCi(''); setElector(null); setSuccessMsg(''); setLocation(null); setNeedsTransport(false); setTelefono('');
       }, 2000);
     } catch (err: any) {
-      console.error("Error saving capture", err);
       setError('Error al procesar la captura.');
     } finally {
       setIsLoading(false);
@@ -963,7 +951,6 @@ const CoordinatorApp = () => {
         });
         setColorCounts(stats);
       } catch (err) {
-        console.error("Error fetching local query history", err);
       }
       setIsStatsLoading(false);
       return;
@@ -1000,7 +987,6 @@ const CoordinatorApp = () => {
       }
       setIsStatsLoading(false);
     } catch (err) {
-      console.error("Error fetching history", err);
       setIsStatsLoading(false);
     }
   };
@@ -1030,7 +1016,6 @@ const CoordinatorApp = () => {
           setHistory(list);
         }
       } catch (err) {
-        console.error("Error deleting local query history item", err);
       }
       return;
     }
@@ -1066,7 +1051,7 @@ const CoordinatorApp = () => {
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Datos Electorales', text: text });
-      } catch (err) { console.log('Share error:', err); }
+      } catch {}
     } else {
       navigator.clipboard.writeText(text);
       alert('Datos copiados al portapapeles');

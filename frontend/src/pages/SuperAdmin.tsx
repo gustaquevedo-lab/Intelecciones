@@ -408,7 +408,9 @@ Status: ${error.response?.status || 'N/A'}
       } else if (type === 'campaign') {
         setNewCampaignPhotoUrl(photoUrl);
       }
-    } catch (err) { console.error('Error uploading cropped image:', err); }
+    } catch (err: any) {
+      alert('Error al subir la imagen: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -436,7 +438,9 @@ Status: ${error.response?.status || 'N/A'}
         'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
       ]);
       fetchData(true);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al crear la campaña: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleUpdateCampaign = async (e: React.FormEvent) => {
@@ -466,7 +470,9 @@ Status: ${error.response?.status || 'N/A'}
         'DIAD', 'DD_COUNTDOWN', 'DD_VEEDORES', 'DD_ACTAS', 'DD_RESULTS'
       ]);
       fetchData(true);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al actualizar la campaña: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleDeleteCampaign = async (id: number) => {
@@ -474,7 +480,9 @@ Status: ${error.response?.status || 'N/A'}
     try {
       await api.delete(`/campaigns/${id}`);
       fetchData(true);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al eliminar la campaña: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleCreateList = async (e: React.FormEvent) => {
@@ -494,7 +502,9 @@ Status: ${error.response?.status || 'N/A'}
       });
       setShowModal(null);
       fetchData(true);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al crear la lista: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleUpdateList = async (e: React.FormEvent) => {
@@ -521,7 +531,6 @@ Status: ${error.response?.status || 'N/A'}
         alert("Error al actualizar: " + (res.data.error || "Desconocido"));
       }
     } catch (err: any) {
-      console.error("Update failed:", err);
       alert("Error de conexión al actualizar la lista.");
     }
   };
@@ -531,7 +540,9 @@ Status: ${error.response?.status || 'N/A'}
     try {
       await api.delete(`/lists/${id}`);
       fetchData(true);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al eliminar la lista: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -569,7 +580,6 @@ Status: ${error.response?.status || 'N/A'}
       setNewUserTelefono('');
       fetchData(true);
     } catch (err: any) {
-      console.error(err);
       alert('Error: ' + (err.response?.data?.error || 'No se pudo crear el usuario.'));
     }
   };
@@ -598,7 +608,6 @@ Status: ${error.response?.status || 'N/A'}
       setNewUserTelefono('');
       fetchData();
     } catch (err) {
-      console.error(err);
       alert('Error al actualizar usuario.');
     }
   };
@@ -623,7 +632,6 @@ Status: ${error.response?.status || 'N/A'}
       await api.delete(`/users/${id}?action=${action}`);
       fetchData(true);
     } catch (err: any) {
-      console.error(err);
       alert('No se pudo eliminar el usuario: ' + (err.response?.data?.error || 'Error interno del servidor'));
     }
   };
@@ -634,7 +642,9 @@ Status: ${error.response?.status || 'N/A'}
       await api.post(`/admin/users/${id}/reset-password`);
       alert('Reset exitoso. El usuario deberá asignar una nueva clave al entrar.');
       fetchData(true);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al resetear contraseña: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   useEffect(() => {
@@ -755,7 +765,9 @@ Status: ${error.response?.status || 'N/A'}
       setNewVehicleStatus('AVAILABLE');
       setNewVehicleList('');
       fetchData(true);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al crear el vehículo: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleUpdateSettings = async (e: React.FormEvent) => {
@@ -773,7 +785,9 @@ Status: ${error.response?.status || 'N/A'}
       });
       refreshSettings();
       alert('Configuración guardada correctamente.');
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al guardar configuración: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleCreateLocale = async (e: React.FormEvent) => {
@@ -801,7 +815,6 @@ Status: ${error.response?.status || 'N/A'}
       setShowModal(null);
       fetchData();
     } catch (err: any) {
-      console.error('[LOCALE SAVE ERROR]', err);
       const serverError = err.response?.data?.error || err.message;
       setApiError({
         message: 'Error al guardar el local',
@@ -815,7 +828,9 @@ Status: ${error.response?.status || 'N/A'}
     try {
       await api.delete(`/locales/${cod}`);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('Error al eliminar el local de votación: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const fetchAuditData = useCallback(async () => {
@@ -827,14 +842,14 @@ Status: ${error.response?.status || 'N/A'}
         }
       });
       setAuditLogs(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err) { /* data fetch - errors handled by empty state UI */ }
   }, [auditFilterAction]);
 
   const fetchSystemHealth = useCallback(async () => {
     try {
       const res = await api.get('/admin/system/health');
       setSystemStats(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err) { /* polling fetch - expected to fail occasionally */ }
   }, []);
 
   const fetchLoginAttempts = useCallback(async () => {
@@ -843,7 +858,7 @@ Status: ${error.response?.status || 'N/A'}
       const { data } = await api.get('/login-attempts');
       setLoginAttempts(data);
     } catch (err) {
-      console.error('Error fetching login attempts:', err);
+      /* ignore - background fetch */
     } finally {
       setIsLoading(false);
     }
@@ -863,7 +878,7 @@ Status: ${error.response?.status || 'N/A'}
             if (serverWaking) setServerWaking(false);
             return res.data;
           } catch (err: any) {
-            console.error(`Attempt ${attempt} failed for ${url}:`, err);
+            /* retry logging suppressed - expected for cold-start */
             if (attempt <= retries) {
               const isNetworkOrTimeout = !err.response;
               if (isNetworkOrTimeout) setServerWaking(true);
@@ -959,7 +974,6 @@ Status: ${error.response?.status || 'N/A'}
         ));
       }
     } catch (err: any) {
-      console.error("Critical error fetching data", err);
       setApiCriticalError(new Error(
         `API_CRITICAL_ERROR: Ocurrió un error crítico inesperado al procesar los datos de administración.\n` +
         `Detalles: ${err.message || 'Error desconocido'}\n` +
@@ -987,7 +1001,6 @@ Status: ${error.response?.status || 'N/A'}
       setSelectedSyncDistrict(distritos[0]);
       setShowModal('sync-distrito');
     } catch (err) {
-      console.error(err);
       alert('Error al cargar campañas y distritos.');
     } finally {
       setIsLoading(false);
@@ -1007,7 +1020,6 @@ Status: ${error.response?.status || 'N/A'}
       setShowModal(null);
       fetchData();
     } catch (err) {
-      console.error(err);
       alert('Error al sincronizar locales.');
     } finally {
       setIsLoading(false);
@@ -1020,7 +1032,6 @@ Status: ${error.response?.status || 'N/A'}
       await api.put(`/campaigns/${id}`, { status: newStatus });
       fetchData();
     } catch (err) {
-      console.error(err);
       alert('Error al cambiar el estado de la campaña.');
     }
   };

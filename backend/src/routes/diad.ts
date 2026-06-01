@@ -18,20 +18,31 @@ export default function diadRoutes(upload: multer.Multer) {
     if (cached) return res.json(cached);
 
     let districtName = '';
-    let distritoFilter = '';
-    let vlFilter = '';
+    let distritoClause = '';
+    let distritoParams: any[] = [];
+    let vlClause = '';
+    let vlParams: any[] = [];
+    let listClause = '';
+    let listParams: any[] = [];
+
+    if (list_id && !isNaN(list_id)) {
+      listClause = `AND u.assigned_list_id = ?`;
+      listParams = [list_id];
+    }
 
     if (role !== 'SUPERUSUARIO' && user_id) {
       const user = getCachedUserInfo(user_id as string);
       if (user?.distrito) {
         districtName = user.distrito;
-        distritoFilter = `WHERE (UPPER(distrito) = UPPER('${districtName}') OR UPPER(ciudad) = UPPER('${districtName}'))`;
-        vlFilter = `AND (UPPER(vl.distrito) = UPPER('${districtName}') OR UPPER(vl.ciudad) = UPPER('${districtName}'))`;
+        distritoClause = `WHERE (UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?))`;
+        distritoParams = [districtName, districtName];
+        vlClause = `AND (UPPER(vl.distrito) = UPPER(?) OR UPPER(vl.ciudad) = UPPER(?))`;
+        vlParams = [districtName, districtName];
       }
     }
 
     try {
-      const mesasTotal = await dbGetAsync<any>(`SELECT COUNT(DISTINCT local_votacion || '-' || mesa) as total_mesas FROM electors ${distritoFilter}`, []);
+      const mesasTotal = await dbGetAsync<any>(`SELECT COUNT(DISTINCT local_votacion || '-' || mesa) as total_mesas FROM electors ${distritoClause}`, distritoParams);
       const total_mesas = mesasTotal?.total_mesas || 0;
 
       const assignedRow = await dbGetAsync<any>(`
@@ -40,50 +51,50 @@ export default function diadRoutes(upload: multer.Multer) {
         JOIN voting_locations vl ON u.assigned_local = vl.nombre
         WHERE (u.role = 'VEEDOR' OR u.role = 'MIEMBRO_MESA')
         AND u.assigned_local IS NOT NULL AND u.assigned_mesa IS NOT NULL
-        ${vlFilter}
-        ${list_id && !isNaN(list_id) ? `AND u.assigned_list_id = ${list_id}` : ''}
-      `, []);
+        ${vlClause}
+        ${listClause ? `AND u.assigned_list_id = ?` : ''}
+      `, [...vlParams, ...(listClause ? [list_id] : [])]);
       const assigned_mesas = assignedRow?.assigned_mesas || 0;
 
       const reportedRow = await dbGetAsync<any>(`
         SELECT COUNT(DISTINCT r.local_votacion || '-' || r.mesa) as reported_mesas
         FROM results r
         JOIN voting_locations vl ON r.local_votacion = vl.nombre
-        WHERE 1=1 ${vlFilter}
-        ${list_id && !isNaN(list_id) ? `AND r.tenant_id = ${list_id}` : ''}
-      `, []);
+        WHERE 1=1 ${vlClause}
+        ${listClause ? `AND r.tenant_id = ?` : ''}
+      `, [...vlParams, ...(listClause ? [list_id] : [])]);
       const reported_mesas = reportedRow?.reported_mesas || 0;
 
       const votos = await dbGetAsync<any>(`
         SELECT
-          (SELECT COALESCE(SUM(ar.votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id JOIN voting_locations vl ON r2.local_votacion = vl.nombre WHERE 1=1 ${vlFilter} ${list_id && !isNaN(list_id) ? `AND r2.tenant_id = ${list_id}` : ''}) +
-          (SELECT COALESCE(SUM(r3.votos_blancos + r3.votos_nulos), 0) FROM results r3 JOIN voting_locations vl ON r3.local_votacion = vl.nombre WHERE 1=1 ${vlFilter} ${list_id && !isNaN(list_id) ? `AND r3.tenant_id = ${list_id}` : ''}) as total
-      `, []);
+          (SELECT COALESCE(SUM(ar.votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id JOIN voting_locations vl ON r2.local_votacion = vl.nombre WHERE 1=1 ${vlClause} ${listClause ? `AND r2.tenant_id = ?` : ''}) +
+          (SELECT COALESCE(SUM(r3.votos_blancos + r3.votos_nulos), 0) FROM results r3 JOIN voting_locations vl ON r3.local_votacion = vl.nombre WHERE 1=1 ${vlClause} ${listClause ? `AND r3.tenant_id = ?` : ''}) as total
+      `, [...vlParams, ...(listClause ? [list_id, list_id] : [])]);
 
       const mesas = await dbQueryAsync<any>(`
         SELECT
           e.local_votacion as local, e.mesa as numero, vl.lat, vl.lng,
           (CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) as reportada,
           (CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) as operativa
-        FROM (SELECT local_votacion, mesa FROM electors ${distritoFilter} GROUP BY local_votacion, mesa) e
+        FROM (SELECT local_votacion, mesa FROM electors ${distritoClause} GROUP BY local_votacion, mesa) e
         JOIN voting_locations vl ON e.local_votacion = vl.nombre
         LEFT JOIN (SELECT id, local_votacion, mesa FROM results GROUP BY local_votacion, mesa) r ON r.local_votacion = e.local_votacion AND r.mesa = e.mesa
         LEFT JOIN (SELECT id, assigned_local, assigned_mesa FROM users WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') GROUP BY assigned_local, assigned_mesa) u ON u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa
-        WHERE 1=1 ${vlFilter}
-      `, []);
+        WHERE 1=1 ${vlClause}
+      `, vlParams);
 
       const coordRow = await dbGetAsync<any>(`
         SELECT COUNT(*) as total_coordinadores FROM users u
         WHERE role = 'COORDINADOR'
-        ${districtName ? `AND (UPPER(u.distrito) = UPPER('${districtName}'))` : ''}
-        ${list_id && !isNaN(list_id) ? `AND u.assigned_list_id = ${list_id}` : ''}
-      `, []);
+        ${districtName ? `AND (UPPER(u.distrito) = UPPER(?))` : ''}
+        ${listClause ? `AND u.assigned_list_id = ?` : ''}
+      `, [...(districtName ? [districtName] : []), ...(listClause ? [list_id] : [])]);
 
       const vehicRow = await dbGetAsync<any>(`
         SELECT COUNT(*) as total_vehiculos FROM vehicles v
         WHERE 1=1
-        ${list_id && !isNaN(list_id) ? `AND (v.assigned_list_id = ${list_id})` : ''}
-      `, []);
+        ${listClause ? `AND (v.assigned_list_id = ?)` : ''}
+      `, [...(listClause ? [list_id] : [])]);
 
       const responseData = {
         total_mesas,
@@ -114,9 +125,9 @@ export default function diadRoutes(upload: multer.Multer) {
           COALESCE(SUM(ar.votos), 0) as votos
         FROM lists l
         LEFT JOIN acta_results ar ON l.id = ar.lista_id
-        ${list_id && !isNaN(list_id) ? `WHERE l.campaign_id = (SELECT campaign_id FROM lists WHERE id = ${list_id})` : ''}
+        ${list_id && !isNaN(list_id) ? 'WHERE l.campaign_id = (SELECT campaign_id FROM lists WHERE id = ?)' : ''}
         GROUP BY l.id ORDER BY votos DESC
-      `).all() as any[];
+      `).all(...(list_id && !isNaN(list_id) ? [list_id] : [])) as any[];
       const totalVotos = formatted.reduce((acc, curr) => acc + curr.votos, 0);
       formatted.forEach(f => f.porcentaje = totalVotos > 0 ? (f.votos / totalVotos) * 100 : 0);
       res.json(formatted);
@@ -135,6 +146,10 @@ export default function diadRoutes(upload: multer.Multer) {
 
   router.post('/listas', (req, res) => {
     const { list_number, candidate_alias, type, is_adversary } = req.body;
+    if (list_number === undefined || isNaN(Number(list_number))) return res.status(400).json({ error: 'list_number debe ser un número' });
+    if (candidate_alias && typeof candidate_alias !== 'string') return res.status(400).json({ error: 'candidate_alias debe ser un texto' });
+    const allowedTypes = ['INTENDENTE', 'CONCEJAL', 'DIPUTADO', 'SENADOR', 'LISTA_COMPLETA'];
+    if (!type || !allowedTypes.includes(type)) return res.status(400).json({ error: 'type debe ser uno de: ' + allowedTypes.join(', ') });
     try {
       const result = db.prepare(`
         INSERT INTO lists (list_number, candidate_alias, type, is_adversary, campaign_id) VALUES (?, ?, ?, ?, 1)
@@ -146,9 +161,17 @@ export default function diadRoutes(upload: multer.Multer) {
   router.post('/acta', upload.single('foto_acta'), (req, res) => {
     const { mesa_id, votos_blanco, votos_nulos, listas } = req.body;
     const userId = req.headers['x-user-id'];
+    if (!mesa_id) return res.status(400).json({ error: 'mesa_id es requerido' });
+    if (votos_blanco === undefined || votos_blanco === null) return res.status(400).json({ error: 'votos_blanco es requerido' });
+    if (votos_nulos === undefined || votos_nulos === null) return res.status(400).json({ error: 'votos_nulos es requerido' });
+    let parsedListas;
+    try {
+      parsedListas = JSON.parse(listas);
+    } catch {
+      return res.status(400).json({ error: 'Formato inválido de listas' });
+    }
     try {
       const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
-      const parsedListas = JSON.parse(listas);
 
       db.transaction(() => {
         const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
@@ -183,9 +206,9 @@ export default function diadRoutes(upload: multer.Multer) {
           r.foto_acta_url as foto_url, r.timestamp as submitted_at
         FROM results r
         LEFT JOIN users u ON r.veedor_id = u.id
-        ${list_id && !isNaN(list_id) ? `WHERE r.tenant_id = ${list_id}` : ''}
+        ${list_id && !isNaN(list_id) ? 'WHERE r.tenant_id = ?' : ''}
         ORDER BY r.timestamp DESC
-      `).all();
+      `).all(...(list_id && !isNaN(list_id) ? [list_id] : []));
       res.json(actas);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -202,6 +225,10 @@ export default function diadRoutes(upload: multer.Multer) {
 
   router.post('/members/assign', (req, res) => {
     const { ci, local, mesa, user_id, role } = req.body;
+    if (!ci && !user_id) return res.status(400).json({ error: 'ci o user_id es requerido' });
+    if (!local) return res.status(400).json({ error: 'local es requerido' });
+    if (mesa === undefined || mesa === null || isNaN(Number(mesa))) return res.status(400).json({ error: 'mesa debe ser un número' });
+    if (role && !['MIEMBRO_MESA', 'VEEDOR', 'APODERADO'].includes(role)) return res.status(400).json({ error: 'role inválido' });
     const targetRole = role || 'MIEMBRO_MESA';
     try {
       let targetId = user_id;

@@ -15,8 +15,7 @@ if (import.meta.env.VITE_POSTHOG_KEY) {
   });
 }
 
-window.addEventListener('vite:preloadError', (event) => {
-  console.log('Preload error detected, reloading to get latest version...');
+window.addEventListener('vite:preloadError', () => {
   window.location.reload();
 });
 
@@ -31,7 +30,7 @@ const queryClient = new QueryClient({
   },
 });
 
-console.log('Mounting App in root. Version Timestamp:', new Date().toISOString());
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
