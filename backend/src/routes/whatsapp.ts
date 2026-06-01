@@ -562,13 +562,14 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
     const user = getCachedUserInfo(user_id);
     const role = getRole(req);
     try {
-      let sql = `
         SELECT
           m1.contact_number,
           COALESCE((SELECT m2.contact_name FROM whatsapp_messages m2 WHERE m2.contact_number = m1.contact_number AND m2.campaign_id = m1.campaign_id AND m2.contact_name IS NOT NULL LIMIT 1), m1.contact_number) as contact_name,
           m1.body as last_message, m1.timestamp, m1.is_incoming,
           (SELECT COUNT(*) FROM whatsapp_messages WHERE contact_number = m1.contact_number AND campaign_id = m1.campaign_id AND is_incoming = 1) as unread_count,
-          m1.phone_number
+          m1.phone_number,
+          m1.terminal_id,
+          COALESCE((SELECT t.name FROM whatsapp_terminals t WHERE t.id = m1.terminal_id), m1.terminal_id) as terminal_name
         FROM whatsapp_messages m1
         WHERE m1.id IN (SELECT MAX(id) FROM whatsapp_messages WHERE 1=1 ${role !== 'SUPERUSUARIO' && user?.campaign_id ? 'AND campaign_id = ?' : ''} GROUP BY contact_number)
         ORDER BY m1.timestamp DESC
@@ -593,9 +594,20 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
       };
 
       const resolvedChats = chats.map(chat => {
-        const targetPhone = chat.phone_number || chat.contact_number.split('@')[0];
+        const rawPhone = chat.phone_number || chat.contact_number.split('@')[0];
+        const targetPhone = rawPhone.split(':')[0]; // Remove device suffix like :1
         const registeredName = resolveRegisteredName(targetPhone);
-        return { ...chat, contact_name: registeredName || chat.contact_name, phone_number: targetPhone };
+        
+        let displayPhone = targetPhone;
+        if (displayPhone.startsWith('595')) {
+          displayPhone = '0' + displayPhone.slice(3); // convert 595981555666 to 0981555666
+        }
+
+        return { 
+          ...chat, 
+          contact_name: registeredName || displayPhone, 
+          phone_number: targetPhone 
+        };
       });
       res.json(resolvedChats);
     } catch (err: any) { res.status(500).json({ error: err.message }); }

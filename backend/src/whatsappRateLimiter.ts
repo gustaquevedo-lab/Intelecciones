@@ -146,7 +146,11 @@ export function getTypingDelay(messageLength: number): number {
 
 // Time-of-day awareness: reduce sends during off-hours
 export function isGoodSendingHour(): boolean {
-  const hour = new Date().getHours();
+  const hour = parseInt(new Intl.DateTimeFormat('es-PY', {
+    timeZone: 'America/Asuncion',
+    hour: 'numeric',
+    hour12: false
+  }).format(new Date()), 10);
   // Paraguay timezone consideration - avoid early morning and late night
   return hour >= 7 && hour <= 21;
 }

@@ -44,6 +44,9 @@ interface Chat {
   timestamp: string;
   is_incoming: number;
   unread_count?: number;
+  phone_number?: string;
+  terminal_id?: string;
+  terminal_name?: string;
 }
 
 interface Message {
@@ -296,7 +299,7 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [composerMsg, setComposerMsg] = useState('');
   const [searchQ, setSearchQ] = useState('');
-  const [showIntel, setShowIntel] = useState(false);
+  const [showIntel, setShowIntel] = useState(true);
   const [sending, setSending] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -412,7 +415,7 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
           ) : filteredChats.map(chat => (
             <button
               key={chat.contact_number}
-              onClick={() => { setSelectedChat(chat.contact_number); setShowIntel(false); }}
+              onClick={() => { setSelectedChat(chat.contact_number); setShowIntel(true); }}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
                 padding: '0.75rem 1rem', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -440,11 +443,30 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                     {formatTime(chat.timestamp)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.15rem' }}>
-                  {!chat.is_incoming && <CornerDownLeft size={10} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {chat.last_message}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.3rem', marginTop: '0.15rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0, flex: 1 }}>
+                    {!chat.is_incoming && <CornerDownLeft size={10} style={{ color: 'var(--text-3)', flexShrink: 0 }} />}
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {chat.last_message}
+                    </span>
+                  </div>
+                  {chat.terminal_name && (
+                    <span style={{
+                      fontSize: '0.52rem',
+                      fontWeight: 800,
+                      color: 'var(--plra-300)',
+                      background: 'rgba(59,130,246,0.1)',
+                      padding: '1px 5px',
+                      borderRadius: '4px',
+                      flexShrink: 0,
+                      maxWidth: '75px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }} title={`Línea: ${chat.terminal_name}`}>
+                      {chat.terminal_name}
+                    </span>
+                  )}
                 </div>
               </div>
             </button>
@@ -480,7 +502,12 @@ const InboxTab: React.FC<{ terminalId: string }> = ({ terminalId }) => {
                 <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)' }}>
                   {selectedChatData?.contact_name}
                 </div>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{selectedChat}</div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>
+                  {(() => {
+                    const raw = selectedChatData?.phone_number || selectedChat.split('@')[0].split(':')[0];
+                    return raw.startsWith('595') ? '0' + raw.slice(3) : raw;
+                  })()}
+                </div>
               </div>
               <button
                 onClick={() => setShowIntel(!showIntel)}

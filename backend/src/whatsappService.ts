@@ -326,6 +326,7 @@ class WhatsAppManager {
       terminal.lastError = err.message;
       this.clients.delete(terminalId);
       console.error(`[WHATSAPP][${terminalId}] Init error:`, err.message);
+      this.scheduleReconnect(terminalId, 10000);
     }
   }
 
@@ -543,7 +544,7 @@ class WhatsAppManager {
           this.connect(id).catch(() => {});
         }
       }
-    }, 300_000); // every 5 minutes
+    }, 30_000); // every 30 seconds
   }
 
   startWarmupScheduler() {
@@ -572,7 +573,11 @@ class WhatsAppManager {
 
     // Check every 15 minutes
     setInterval(async () => {
-      const hour = new Date().getHours();
+      const hour = parseInt(new Intl.DateTimeFormat('es-PY', {
+        timeZone: 'America/Asuncion',
+        hour: 'numeric',
+        hour12: false
+      }).format(new Date()), 10);
       // Only chat between 8:00 and 21:00
       if (hour < 8 || hour > 21) return;
 
