@@ -248,6 +248,52 @@ const TabCoordinators = (props: any) => {
           )}
       
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+            {user?.role === 'PADRINO' && (!teamSearchQuery || 'mis capturas directas'.includes(teamSearchQuery.toLowerCase()) || (user.nombre || '').toLowerCase().includes(teamSearchQuery.toLowerCase())) && (
+              <motion.div 
+                whileTap={{ scale: 0.98 }}
+                onClick={() => fetchCoordinatorDetail({ ...user, role: 'PADRINO_DIRECT' })}
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(168,85,247,0.08), rgba(168,85,247,0.03))', 
+                  border: '1px solid rgba(168,85,247,0.25)', 
+                  borderRadius: '20px', 
+                  padding: '1.25rem', 
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ width: '50px', height: '50px', borderRadius: '14px', overflow: 'hidden', border: '2px solid #A855F7', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(168,85,247,0.2)' }}>
+                    <span style={{ fontSize: '1.25rem', color: '#A855F7' }}>★</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h5 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'white' }}>Mis Capturas Directas</h5>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>Capturas ingresadas por mí directamente</p>
+                  </div>
+                  <ChevronRight size={18} style={{ color: 'var(--text-3)' }} />
+                </div>
+    
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem' }}>
+                  {[
+                    { count: colorCounts?.green || 0, color: '#22C55E' },
+                    { count: colorCounts?.yellow || 0, color: '#FBBF24' },
+                    { count: colorCounts?.red || 0, color: '#EF4444' },
+                    { count: colorCounts?.purple || 0, color: '#A855F7' },
+                    { count: history.filter((h: any) => h.needs_transport === 1).length, color: 'var(--plra-300)', icon: <Car size={10} /> }
+                  ].map((stat, idx) => (
+                    <div key={idx} style={{ 
+                      background: `${stat.color}15`, 
+                      border: `1px solid ${stat.color}30`, 
+                      borderRadius: '10px', 
+                      padding: '0.4rem 0.2rem', 
+                      textAlign: 'center' 
+                    }}>
+                      {stat.icon ? stat.icon : <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.color, margin: '0 auto 0.25rem', boxShadow: `0 0 8px ${stat.color}50` }} />}
+                      <div style={{ fontSize: '0.8rem', fontWeight: 900, color: stat.color }}>{stat.count || 0}</div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {(user?.role === 'JEFE_CAMPANA' ? myPadrinos : teamStats).filter(c => 
               (c?.nombre?.toLowerCase() || '').includes(teamSearchQuery.toLowerCase()) || 
               (c?.username?.toString() || '').includes(teamSearchQuery)

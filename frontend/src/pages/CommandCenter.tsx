@@ -1317,7 +1317,7 @@ const CommandCenter = () => {
                         <a href={`https://wa.me/${selectedCoordDetails.telefono?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ background: '#22C55E', color: 'white', padding: '0.6rem 1.25rem', borderRadius: '14px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                           <MessageSquare size={18} /> CONTACTAR
                         </a>
-                        {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(authUser?.role || '') && selectedCoordDetails.role !== 'PADRINO_DIRECT' && (
+                        {['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(authUser?.role || '') && (
                           <button
                             onClick={() => handleWipeCoordinatorCaptures(selectedCoordDetails.id)}
                             style={{

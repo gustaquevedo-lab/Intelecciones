@@ -716,8 +716,8 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           extraParams.push(selectedList);
         }
         if (selectedPadrino && selectedPadrino !== 'ALL') {
-          extraFilters += ` AND u.parent_id = ?`;
-          extraParams.push(parseInt(selectedPadrino));
+          extraFilters += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
+          extraParams.push(parseInt(selectedPadrino), parseInt(selectedPadrino));
         }
         if (selectedCoordinator && selectedCoordinator !== 'ALL') {
           extraFilters += ` AND ec.coordinator_id = ?`;
@@ -795,8 +795,8 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           electorParams.push(selectedList);
         }
         if (selectedPadrino && selectedPadrino !== 'ALL') {
-          electorSql += ` AND u.parent_id = ?`;
-          electorParams.push(parseInt(selectedPadrino));
+          electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
+          electorParams.push(parseInt(selectedPadrino), parseInt(selectedPadrino));
         }
         if (selectedCoordinator && selectedCoordinator !== 'ALL') {
           electorSql += ` AND ec.coordinator_id = ?`;

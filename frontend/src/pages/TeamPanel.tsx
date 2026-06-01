@@ -937,7 +937,11 @@ const TeamPanel = () => {
         if (e.elector_district !== selectedDistrictFilter && e.coordinator_district !== selectedDistrictFilter) return false;
       }
       if (selectedListFilter !== 'ALL' && String(e.list_number) !== selectedListFilter) return false;
-      if (selectedPadrinoFilter !== 'ALL' && String(e.padrino_id) !== String(selectedPadrinoFilter)) return false;
+      if (selectedPadrinoFilter !== 'ALL') {
+        const matchesPadrino = String(e.padrino_id) === String(selectedPadrinoFilter) ||
+                              String(e.coordinator_id) === String(selectedPadrinoFilter);
+        if (!matchesPadrino) return false;
+      }
       if (selectedCoordinatorFilter !== 'ALL' && String(e.coordinator_id) !== String(selectedCoordinatorFilter)) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
