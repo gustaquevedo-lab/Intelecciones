@@ -270,9 +270,9 @@ export function coordinatorsRoutes() {
 // ── Conflicts helper (used by decide and consent) ───────────────────────────
 const checkAndFinalizeConflict = (conflict_id: number, resolver_id: number) => {
   const cc = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
-  if (cc.jefe_decision_id && cc.consent_a === 1 && cc.consent_b === 1) {
-    const winnerId = cc.jefe_decision_id;
-    const loserId = (cc.capture_id === winnerId) ? cc.capture_id_b : cc.capture_id;
+  if (cc && cc.jefe_decision_id && cc.consent_a === 1 && cc.consent_b === 1) {
+    const winnerId = Number(cc.jefe_decision_id);
+    const loserId = (Number(cc.capture_id) === winnerId) ? Number(cc.capture_id_b) : Number(cc.capture_id);
     db.prepare('UPDATE elector_captures SET is_disputed = 0 WHERE id = ?').run(winnerId);
     db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE id = ?').run(loserId);
     db.prepare("UPDATE capture_conflicts SET status = 'RESOLVED', resolved_by_jefe_id = ?, winner_capture_id = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -386,7 +386,8 @@ export function conflictsRoutes() {
 
   // ── POST /api/admin/conflicts/decide ───────────────────────────────────────
   router.post('/decide', (req, res) => {
-    const { conflict_id, winner_capture_id } = req.body;
+    const conflict_id = Number(req.body.conflict_id);
+    const winner_capture_id = Number(req.body.winner_capture_id);
     const user_id = parseInt(req.headers['x-user-id'] as string || '0');
     try {
       db.transaction(() => {
@@ -396,14 +397,14 @@ export function conflictsRoutes() {
         db.prepare("UPDATE capture_conflicts SET jefe_decision_id = ?, status = 'WAITING_CONSENT' WHERE id = ?")
           .run(winner_capture_id, conflict_id);
 
-        if (conflict.list_id_a === conflict.list_id_b) {
+        if (Number(conflict.list_id_a) === Number(conflict.list_id_b)) {
           db.prepare('UPDATE capture_conflicts SET consent_a = 1, consent_b = 1 WHERE id = ?').run(conflict_id);
         } else {
           const user = getCachedUserInfo(user_id.toString());
           const lists = [conflict.list_id_a, conflict.list_id_b];
           lists.forEach((lid, idx) => {
             const hasSubjefe = lid ? db.prepare('SELECT 1 FROM users WHERE assigned_list_id = ? AND role = "SUBJEFE" LIMIT 1').get(lid) : null;
-            if (!hasSubjefe || (user && user.assigned_list_id === lid)) {
+            if (!hasSubjefe || (user && Number(user.assigned_list_id) === Number(lid))) {
               const col = (idx === 0) ? 'consent_a' : 'consent_b';
               db.prepare(`UPDATE capture_conflicts SET ${col} = 1 WHERE id = ?`).run(conflict_id);
             }
@@ -419,7 +420,7 @@ export function conflictsRoutes() {
 
   // ── POST /api/admin/conflicts/consent ──────────────────────────────────────
   router.post('/consent', (req, res) => {
-    const { conflict_id } = req.body;
+    const conflict_id = Number(req.body.conflict_id);
     const user_id = req.headers['x-user-id'] as string;
     const user = getCachedUserInfo(user_id);
 
@@ -430,9 +431,9 @@ export function conflictsRoutes() {
         const conflict = db.prepare('SELECT * FROM capture_conflicts WHERE id = ?').get(conflict_id) as any;
         if (!conflict) throw new Error('Conflicto no encontrado');
 
-        if (conflict.list_id_a === user.assigned_list_id) {
+        if (Number(conflict.list_id_a) === Number(user.assigned_list_id)) {
           db.prepare('UPDATE capture_conflicts SET consent_a = 1 WHERE id = ?').run(conflict_id);
-        } else if (conflict.list_id_b === user.assigned_list_id) {
+        } else if (Number(conflict.list_id_b) === Number(user.assigned_list_id)) {
           db.prepare('UPDATE capture_conflicts SET consent_b = 1 WHERE id = ?').run(conflict_id);
         } else {
           throw new Error('No perteneces a ninguna de las listas involucradas.');
