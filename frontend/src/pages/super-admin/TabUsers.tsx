@@ -288,6 +288,7 @@ const TabUsers = (props: any) => {
             data={filteredUsers}
           />
         </div>
+      );
 };
 
 export default TabUsers;

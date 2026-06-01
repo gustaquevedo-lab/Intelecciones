@@ -386,6 +386,7 @@ const TabLists = (props: any) => {
             data={filteredLists}
           />
         </div>
+      );
 };
 
 export default TabLists;
