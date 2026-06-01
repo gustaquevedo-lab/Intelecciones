@@ -1505,6 +1505,7 @@ const TabCoordinators = (props: any) => {
           </motion.div>
         </motion.div>
       )}
+      </AnimatePresence>
     </>
   );
 };
