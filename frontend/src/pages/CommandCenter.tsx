@@ -732,9 +732,6 @@ const CommandCenter = () => {
     };
   }, []);
 
-  // Track whether we've done the initial heavy load
-  const initialLoadDone = useState(false);
-
   const loadData = async (isPolling = false) => {
     if (!authUser) return;
     try {
