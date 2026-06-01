@@ -207,6 +207,7 @@ const TabHistory = (props: any) => {
     handleCapture, handleUpdateCapture, handleDeleteCapture,
     handleCreateCoord, handleCreatePadrino,
     fetchHistory, fetchRequests, fetchDisputes, fetchTeamStats,
+    handleEditHistory,
 
   } = props;
 

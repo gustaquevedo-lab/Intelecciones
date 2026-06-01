@@ -1123,6 +1123,9 @@ const CoordinatorApp = () => {
     handleCapture, handleUpdateCapture, handleDeleteCapture,
     handleCreateCoord: handleCreateCoordinator, handleCreatePadrino,
     fetchHistory, fetchRequests, fetchDisputes, fetchTeamStats,
+    handleSearch, handleConfirm, handleShare,
+    handlePhoneChange, fetchCoordinatorDetail, handleLookupCoordCI, handleLookupPadrinoCI,
+    handleUploadCustomElectorPhoto, handleSaveCustomElector, handleEditHistory,
   };
 
 

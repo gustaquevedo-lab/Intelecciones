@@ -207,6 +207,8 @@ const TabCoordinators = (props: any) => {
     handleCapture, handleUpdateCapture, handleDeleteCapture,
     handleCreateCoord, handleCreatePadrino,
     fetchHistory, fetchRequests, fetchDisputes, fetchTeamStats,
+    handlePhoneChange, fetchCoordinatorDetail, handleLookupCoordCI, handleLookupPadrinoCI,
+    handleUploadCustomElectorPhoto, handleSaveCustomElector, handleEditHistory,
 
   } = props;
 

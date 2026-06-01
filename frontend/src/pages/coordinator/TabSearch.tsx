@@ -207,6 +207,7 @@ const TabSearch = (props: any) => {
     handleCapture, handleUpdateCapture, handleDeleteCapture,
     handleCreateCoord, handleCreatePadrino,
     fetchHistory, fetchRequests, fetchDisputes, fetchTeamStats,
+    handleSearch, handleConfirm, handleShare,
 
   } = props;
 
