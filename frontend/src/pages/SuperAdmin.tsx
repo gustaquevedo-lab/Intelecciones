@@ -1159,6 +1159,8 @@ Status: ${error.response?.status || 'N/A'}
     newVehicleCapacity, setNewVehicleCapacity,
     newVehicleStatus, setNewVehicleStatus,
     newVehicleList, setNewVehicleList,
+    activeDistrict, setActiveDistrict,
+    activeListId, setActiveListId,
     selectedSyncDistrict, setSelectedSyncDistrict,
     selectedCityForLists,
     cities, fileInputRef, cropperData,
