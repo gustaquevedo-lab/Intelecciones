@@ -562,6 +562,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
     const user = getCachedUserInfo(user_id);
     const role = getRole(req);
     try {
+      let sql = `
         SELECT
           m1.contact_number,
           COALESCE((SELECT m2.contact_name FROM whatsapp_messages m2 WHERE m2.contact_number = m1.contact_number AND m2.campaign_id = m1.campaign_id AND m2.contact_name IS NOT NULL LIMIT 1), m1.contact_number) as contact_name,
