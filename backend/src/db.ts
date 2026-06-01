@@ -424,6 +424,8 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("vehicles", "assigned_user_id", "INTEGER");
     addColumnIfNotExists("vehicles", "type", "TEXT");
     addColumnIfNotExists("vehicles", "plate", "TEXT");
+    addColumnIfNotExists("vehicles", "distrito", "TEXT DEFAULT ''");
+    addColumnIfNotExists("vehicles", "ciudad", "TEXT DEFAULT ''");
     addColumnIfNotExists("users", "phone_hash", "TEXT");
     addColumnIfNotExists("elector_captures", "phone_hash", "TEXT");
  
