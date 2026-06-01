@@ -1214,6 +1214,7 @@ const CoordinatorApp = () => {
           {activeTab === 'disputes' && <TabDisputes {...tabProps} />}
           {activeTab === 'coordinators' && (user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') && <TabCoordinators {...tabProps} />}
         </AnimatePresence>
+      </div>
 
       <AnimatePresence>
         {cropperData && (
