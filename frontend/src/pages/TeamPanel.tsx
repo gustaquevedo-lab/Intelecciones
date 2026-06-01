@@ -959,18 +959,31 @@ const TeamPanel = () => {
   }, [reportData, selectedDistrictFilter, searchQuery]);
 
   // Load team data
+  const mountedRef = useRef(true);
+  const loadRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const load = useCallback(async () => {
+    loadRef.current?.abort();
+    const ctrl = new AbortController();
+    loadRef.current = ctrl;
     setLoading(true);
+    setApiCriticalError(null);
     try {
-      const teamRes = await api.get('/my-team');
-      const campaignsRes = await api.get('/campaigns/mine');
+      const teamRes = await api.get('/my-team', { signal: ctrl.signal });
+      const campaignsRes = await api.get('/campaigns/mine', { signal: ctrl.signal });
+      if (!mountedRef.current) return;
       setPadrinos(teamRes.data.padrinos || []);
       setMyCoordinators(teamRes.data.coordinators || []);
       setCampaigns(campaignsRes.data || []);
     } catch (err: any) {
+      if (!mountedRef.current || err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
       setApiCriticalError(err.response?.data?.error || err.message || 'Error de red. Reintenta.');
     }
-    setLoading(false);
+    if (mountedRef.current) setLoading(false);
   }, [activeDistrict]);
 
   useEffect(() => { load(); }, [load]);

@@ -563,9 +563,20 @@ export default function adminRoutes(upload: multer.Multer) {
     try {
       const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.params.id) as any;
       if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-      db.prepare('UPDATE users SET password = ?, needs_password_change = 1 WHERE id = ?').run(user.username, req.params.id);
-      res.json({ success: true, message: `Contraseña reseteada. El usuario debe ingresar con su nombre de usuario (${user.username}) y cambiarla.` });
+      const defaultPassword = user.username?.toString().trim();
+      if (!defaultPassword) {
+        console.error(`[RESET-PASSWORD] User ${req.params.id} has empty username, using fallback`);
+        return res.status(400).json({ error: 'El usuario no tiene un nombre de usuario válido. Asigne un username antes de resetear.' });
+      }
+      const result = db.prepare('UPDATE users SET password = ?, needs_password_change = 1 WHERE id = ?').run(defaultPassword, req.params.id);
+      if (result.changes === 0) {
+        console.error(`[RESET-PASSWORD] UPDATE affected 0 rows for user ${req.params.id}`);
+        return res.status(500).json({ error: 'No se pudo actualizar la contraseña. Verifique que el usuario existe.' });
+      }
+      console.log(`[RESET-PASSWORD] Password reset for user ${user.username} (id: ${req.params.id})`);
+      res.json({ success: true, message: `Contraseña reseteada. El usuario debe ingresar con su nombre de usuario (${defaultPassword}) y cambiarla.` });
     } catch (err: any) {
+      console.error(`[RESET-PASSWORD ERROR]`, err);
       res.status(500).json({ error: err.message });
     }
   });

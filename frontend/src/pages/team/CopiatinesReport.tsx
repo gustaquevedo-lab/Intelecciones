@@ -53,6 +53,45 @@ const resolvePhotoUrl = (url: string | null): string => {
   return getImageUrl(url) || '';
 };
 
+const DEFAULT_CAMPAIGN_LISTS: CampaignList[] = [
+  {
+    id: -1,
+    type: 'INTENDENTE',
+    list_number: '3',
+    option_number: null,
+    candidate_nombre: 'ARQ. MIGUEL ROJAS LEÓN',
+    candidate_alias: 'ARQ. MIGUEL ROJAS LEÓN',
+    photo_url: '/assets/miguel_rojas.png'
+  },
+  {
+    id: -2,
+    type: 'CONCEJAL MUNICIPAL',
+    list_number: '3',
+    option_number: '3',
+    candidate_nombre: 'LOURDES AMARILLA',
+    candidate_alias: 'LOURDES AMARILLA',
+    photo_url: '/assets/lourdes_amarilla.png'
+  },
+  {
+    id: -3,
+    type: 'PRESIDENTE DEL PARTIDO',
+    list_number: '3',
+    option_number: null,
+    candidate_nombre: 'ALCIDES RIVEROS',
+    candidate_alias: 'ALCIDES RIVEROS',
+    photo_url: '/assets/alcides_riveros.png'
+  },
+  {
+    id: -4,
+    type: 'MIEMBRO DIRECTORIO NAC.',
+    list_number: '3',
+    option_number: '13',
+    candidate_nombre: 'PEDRO GONZALEZ',
+    candidate_alias: 'PEDRO GONZALEZ',
+    photo_url: '/assets/pedro_gonzalez.png'
+  }
+];
+
 // ─── CSS exacto del modelo (scratch/copiatin_diseno.html) ─────────────────────
 const CARD_CSS = `
   :root {
@@ -291,7 +330,7 @@ function buildPrintHTML(
     const ciudad = (e.ciudad || '').toUpperCase();
     const local = (e.local_votacion || '—').toUpperCase();
     const campaign = (e.campaign_name || 'CAMPAÑA').toUpperCase();
-    const candidateRows = buildCandidateRows(campaignLists);
+    const candidateRows = buildCandidateRows(campaignLists && campaignLists.length > 0 ? campaignLists : DEFAULT_CAMPAIGN_LISTS);
 
     return `<div class="copiatin-card">
       <div class="top-band-new">
@@ -546,7 +585,7 @@ const CopiatinesReport = () => {
                     </div>
                   </div>
                   <div className="candidates-list">
-                    {data.campaignLists.slice(0, 4).map((list, i) => {
+                    {(data.campaignLists && data.campaignLists.length > 0 ? data.campaignLists : DEFAULT_CAMPAIGN_LISTS).slice(0, 4).map((list, i) => {
                       const isEmphasis = i < 2;
                       const name = (list.candidate_nombre || list.candidate_alias || '—').toUpperCase();
                       const photoUrl = resolvePhotoUrl(list.photo_url) || null;

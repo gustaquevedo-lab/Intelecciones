@@ -853,6 +853,10 @@ app.post('/api/login', loginLimiter, (req, res) => {
 
   const isSuccess = user && (user.password === cleanPassword || normalizedSavedPassword === normalizedInputPassword);
 
+  if (!isSuccess && user) {
+    console.log(`[AUTH] Login FAILED for "${username}" — pw lengths: db=${user.password?.length ?? -1}, input=${cleanPassword.length}, match=${user.password === cleanPassword}, normalizedMatch=${normalizedSavedPassword === normalizedInputPassword}`);
+  }
+
   // LOG LOGIN ATTEMPT
   try {
     db.prepare(`
