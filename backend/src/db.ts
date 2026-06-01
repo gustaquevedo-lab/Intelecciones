@@ -644,6 +644,44 @@ try {
 export const runBootstrapChecks = () => {
   try {
     db.transaction(() => {
+      // ── STEP 0: Remove zombie re-created conflicts ─────────────────────────
+      // When the bootstrap previously ran with a buggy exclusion filter, it re-created
+      // PENDING conflicts for electors whose dispute was already RESOLVED.
+      // A zombie is a PENDING conflict whose capture pair already appears in a RESOLVED row.
+      const zombiesDeleted = db.prepare(`
+        DELETE FROM capture_conflicts
+        WHERE status IN ('PENDING', 'WAITING_CONSENT')
+        AND id IN (
+          SELECT cc_p.id
+          FROM capture_conflicts cc_p
+          JOIN capture_conflicts cc_r
+            ON cc_p.elector_ci = cc_r.elector_ci
+            AND cc_r.status = 'RESOLVED'
+          WHERE cc_p.status IN ('PENDING', 'WAITING_CONSENT')
+            AND (cc_p.capture_id = cc_r.capture_id OR cc_p.capture_id = cc_r.capture_id_b)
+            AND (cc_p.capture_id_b = cc_r.capture_id OR cc_p.capture_id_b = cc_r.capture_id_b)
+        )
+      `).run();
+      if (zombiesDeleted.changes > 0) {
+        console.log(`[BOOTSTRAP] Removed ${zombiesDeleted.changes} zombie re-created conflicts.`);
+      }
+
+      // ── STEP 0b: Restore is_disputed=0 for winners of RESOLVED conflicts ──
+      // The zombie re-creation set is_disputed=1 on the winner; fix that.
+      db.prepare(`
+        UPDATE elector_captures SET is_disputed = 0
+        WHERE id IN (
+          SELECT winner_capture_id FROM capture_conflicts
+          WHERE status = 'RESOLVED' AND winner_capture_id IS NOT NULL
+        )
+        AND id NOT IN (
+          SELECT capture_id   FROM capture_conflicts WHERE status IN ('PENDING','WAITING_CONSENT')
+          UNION
+          SELECT capture_id_b FROM capture_conflicts WHERE status IN ('PENDING','WAITING_CONSENT')
+        )
+      `).run();
+
+      // ── STEP 1: Detect genuinely new untracked duplicates ─────────────────
       db.prepare(`
         INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
         SELECT
