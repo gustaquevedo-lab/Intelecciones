@@ -721,6 +721,143 @@ const TabSearch = (props: any) => {
           </p>
         </motion.div>
       )}
+      {/* ══ CAPTURE MODAL ══ */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            key="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000000,
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              padding: '0 0 env(safe-area-inset-bottom)',
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            }}
+          >
+            <motion.div
+              key="modal-sheet"
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+              style={{
+                width: '100%', maxWidth: '480px',
+                background: 'var(--surface)',
+                borderTopLeftRadius: '2rem', borderTopRightRadius: '2rem',
+                border: '1px solid var(--border-mid)', borderBottom: 'none',
+                boxShadow: '0 -20px 60px rgba(0,0,0,0.7)', overflow: 'hidden',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0 0' }}>
+                <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--border)' }} />
+              </div>
+
+              <div style={{ padding: '1.25rem 3.5rem 1.5rem', textAlign: 'center', position: 'relative' }}>
+                <button
+                  onClick={() => setShowModal(false)}
+                  style={{ position: 'absolute', top: '1rem', right: '1.25rem', width: '32px', height: '32px', borderRadius: '9px', background: 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={16} />
+                </button>
+                <p style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-3)', fontFamily: 'var(--font-display)', marginBottom: '0.4rem' }}>
+                  {editingCapture ? 'Editar Registro' : 'Calificación de Intención'}
+                </p>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.35rem', color: 'var(--text)', letterSpacing: '-0.01em' }}>
+                  {editingCapture ? 'Modificar Datos' : '¿Cuál es la intención de voto?'}
+                </h3>
+                {(elector || editingCapture) && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', padding: '0.3rem 0.85rem', background: 'rgba(0,71,171,0.15)', border: '1px solid var(--border-mid)', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--plra-200)', fontFamily: 'var(--font-display)' }}>
+                    <User size={12} />
+                    {(elector || editingCapture)?.nombre} {(elector || editingCapture)?.apellido}
+                  </div>
+                )}
+              </div>
+
+              {/* Phone input */}
+              <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <label style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--plra-300)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Celular (WhatsApp) <span style={{ color: 'var(--red)' }}>*</span>
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentDigits = telefono.replace(/\D/g, '');
+                        let base = currentDigits;
+                        if (currentDigits.startsWith('595')) base = currentDigits.substring(3);
+                        else if (currentDigits.startsWith('55')) base = currentDigits.substring(2);
+                        if (base.startsWith('0')) base = base.substring(1);
+                        const newPrefix = telefono.startsWith('+55') ? '+595' : '+55';
+                        setTelefono(base ? `${newPrefix} ${base}` : `${newPrefix} `);
+                      }}
+                      style={{ position: 'absolute', left: '0.5rem', background: 'var(--accent-subtle)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--plra-300)', fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.4rem', cursor: 'pointer', zIndex: 10 }}
+                    >
+                      {telefono.startsWith('+55') ? '+55 🇧🇷' : '+595 🇵🇾'}
+                    </button>
+                    <input
+                      type="text" inputMode="tel" placeholder="+595 9xx xxx xxx"
+                      value={telefono}
+                      onChange={(e) => handlePhoneChange(e.target.value, setTelefono)}
+                      className="modern-input-premium-styled"
+                      style={{ paddingLeft: '4.8rem', fontSize: '1rem', fontWeight: 700 }}
+                    />
+                  </div>
+                  <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontStyle: 'italic' }}>Formato automático para envío de mensajes.</p>
+                </div>
+              </div>
+
+              {/* Transport toggle */}
+              <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                <div
+                  onClick={() => setNeedsTransport(!needsTransport)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: needsTransport ? 'var(--accent-subtle)' : 'var(--surface-light)', border: `1px solid ${needsTransport ? 'var(--plra-300)' : 'var(--border)'}`, borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Truck size={18} style={{ color: needsTransport ? 'var(--plra-300)' : 'var(--text-3)' }} />
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)' }}>Necesita Transporte</span>
+                  </div>
+                  <div style={{ width: '36px', height: '18px', borderRadius: '9px', background: needsTransport ? 'var(--plra-300)' : 'rgba(255,255,255,0.1)', position: 'relative' }}>
+                    <motion.div animate={{ x: needsTransport ? 18 : 2 }} style={{ position: 'absolute', top: 2, left: 0, width: '14px', height: '14px', borderRadius: '7px', background: 'white' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Semaphore buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem', padding: '0 1.5rem 2rem' }}>
+                {[
+                  { color: 'GREEN',  bg: 'linear-gradient(160deg,#22C55E 0%,#15803D 100%)', glow: 'rgba(34,197,94,0.5)',  border: 'rgba(34,197,94,0.35)',  count: colorCounts?.green,  label: 'CASA' },
+                  { color: 'YELLOW', bg: 'linear-gradient(160deg,#FBBF24 0%,#D97706 100%)', glow: 'rgba(251,191,36,0.5)', border: 'rgba(251,191,36,0.35)', count: colorCounts?.yellow, label: 'FAMILIARES' },
+                  { color: 'RED',    bg: 'linear-gradient(160deg,#EF4444 0%,#B91C1C 100%)', glow: 'rgba(239,68,68,0.5)',  border: 'rgba(239,68,68,0.35)',  count: colorCounts?.red,    label: 'OTROS' },
+                  { color: 'PURPLE', bg: 'linear-gradient(160deg,#A855F7 0%,#7E22CE 100%)', glow: 'rgba(168,85,247,0.5)', border: 'rgba(168,85,247,0.35)', count: colorCounts?.purple, label: 'VOLUNTARIO' },
+                ].map(({ color, bg, glow, border, count, label }) => (
+                  <motion.button
+                    key={color}
+                    whileHover={{ scale: 1.04, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => editingCapture ? handleUpdateCapture(color) : handleCapture(color as any)}
+                    disabled={isLoading}
+                    style={{ flex: 1, height: '5.5rem', background: bg, border: `1px solid ${border}`, borderRadius: '1rem', cursor: 'pointer', boxShadow: `0 8px 28px ${glow}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
+                  >
+                    {isLoading ? <Spinner size={22} /> : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+                        {color === 'GREEN' ? <ThumbsUp size={24} /> : color === 'YELLOW' ? <Users size={24} /> : color === 'RED' ? <HelpCircle size={24} /> : <AlertCircle size={24} />}
+                        <span style={{ fontSize: '0.5rem', fontWeight: 900 }}>{label}</span>
+                      </div>
+                    )}
+                    {!isLoading && count != null && (
+                      <span style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.3)', color: 'white', borderRadius: '999px', fontSize: '0.6rem', fontWeight: 900, padding: '0.15rem 0.4rem', minWidth: '1rem', textAlign: 'center' }}>{count}</span>
+                    )}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
