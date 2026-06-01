@@ -1207,12 +1207,13 @@ const CoordinatorApp = () => {
           ))}
         </div>
 
-        {activeTab === 'search' && <TabSearch {...tabProps} />}
-        {activeTab === 'history' && <TabHistory {...tabProps} />}
-        {activeTab === 'support' && <TabSupport {...tabProps} />}
-        {activeTab === 'disputes' && <TabDisputes {...tabProps} />}
-        {activeTab === 'coordinators' && (user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') && <TabCoordinators {...tabProps} />}
-      </AnimatePresence>
+        <AnimatePresence mode="wait">
+          {activeTab === 'search' && <TabSearch {...tabProps} />}
+          {activeTab === 'history' && <TabHistory {...tabProps} />}
+          {activeTab === 'support' && <TabSupport {...tabProps} />}
+          {activeTab === 'disputes' && <TabDisputes {...tabProps} />}
+          {activeTab === 'coordinators' && (user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') && <TabCoordinators {...tabProps} />}
+        </AnimatePresence>
 
       <AnimatePresence>
         {cropperData && (
