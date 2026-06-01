@@ -884,22 +884,30 @@ const TeamPanel = () => {
   }, [reportData, campaigns, padrinos, myCoordinators]);
 
   const availablePadrinos = useMemo(() => {
-    const list = reportData?.filterPadrinos || padrinos;
-    return list.filter((p: any) => {
+    const list = reportData?.filterPadrinos || padrinos || [];
+    const uniqueMap = new Map();
+    list.forEach((p: any) => {
+      if (p && p.id) uniqueMap.set(p.id, p);
+    });
+    return Array.from(uniqueMap.values()).filter((p: any) => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
       return true;
-    }).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+    }).sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || ''));
   }, [reportData, padrinos, selectedDistrictFilter, selectedListFilter]);
 
   const availableCoordinators = useMemo(() => {
-    const list = reportData?.filterCoordinators || myCoordinators;
-    return list.filter((c: any) => {
+    const list = reportData?.filterCoordinators || myCoordinators || [];
+    const uniqueMap = new Map();
+    list.forEach((c: any) => {
+      if (c && c.id) uniqueMap.set(c.id, c);
+    });
+    return Array.from(uniqueMap.values()).filter((c: any) => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
       if (selectedPadrinoFilter !== 'ALL' && String(c.parent_id) !== String(selectedPadrinoFilter)) return false;
       return true;
-    }).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+    }).sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || ''));
   }, [reportData, myCoordinators, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter]);
 
   // Filtered datasets for screen render & Excel/CSV export
@@ -1178,44 +1186,44 @@ const TeamPanel = () => {
       const drawHeader = () => {
         // Rounded blue box logo
         doc.setFillColor(30, 58, 110);
-        doc.roundedRect(15, 12, 10, 10, 2, 2, 'F');
+        doc.roundedRect(15, 18, 10, 10, 2, 2, 'F');
         doc.setDrawColor(255, 255, 255);
         doc.setLineWidth(0.6);
-        doc.line(17, 17, 19, 19);
-        doc.line(19, 19, 23, 14);
+        doc.line(17, 23, 19, 25);
+        doc.line(19, 25, 23, 20);
 
         // Branding
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
         doc.setTextColor(30, 58, 110);
-        doc.text('Inte', 27, 17.5);
+        doc.text('Inte', 27, 23.5);
         doc.setTextColor(16, 185, 129);
-        doc.text('lecciones', 36.2, 17.5);
+        doc.text('lecciones', 36.2, 23.5);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(6.8);
         doc.setTextColor(100, 116, 139);
-        doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 27, 21.2);
+        doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 27, 27.2);
 
         // Metadata Right Block
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
         doc.setTextColor(30, 58, 110);
-        doc.text('REPORTE DE CAMPAÑA', 195, 15, { align: 'right' });
+        doc.text('REPORTE DE CAMPAÑA', 195, 21, { align: 'right' });
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(71, 85, 105);
         const districtText = selectedDistrictFilter === 'ALL' ? 'Todos los Distritos' : selectedDistrictFilter;
-        doc.text(`Distrito: ${districtText}`, 195, 19, { align: 'right' });
+        doc.text(`Distrito: ${districtText}`, 195, 25, { align: 'right' });
         const listText = selectedListFilter === 'ALL' ? 'Todas las Listas' : `Lista ${selectedListFilter}`;
-        doc.text(`Lista de Concejales: ${listText}`, 195, 22.5, { align: 'right' });
-        doc.text(`Fecha Imp.: ${new Date().toLocaleString('es-PY')}`, 195, 26, { align: 'right' });
+        doc.text(`Lista de Concejales: ${listText}`, 195, 28.5, { align: 'right' });
+        doc.text(`Fecha Imp.: ${new Date().toLocaleString('es-PY')}`, 195, 32, { align: 'right' });
 
         // Divider
         doc.setDrawColor(30, 58, 110);
         doc.setLineWidth(0.6);
-        doc.line(15, 29, 195, 29);
+        doc.line(15, 35, 195, 35);
       };
 
       drawHeader();
@@ -1223,13 +1231,13 @@ const TeamPanel = () => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(title.toUpperCase(), 15, 36);
+      doc.text(title.toUpperCase(), 15, 42);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(100, 116, 139);
       const splitSubtitle = doc.splitTextToSize(subtitle, 180);
-      doc.text(splitSubtitle, 15, 40);
+      doc.text(splitSubtitle, 15, 46);
 
       // Generate Table Headers and Rows
       let headers: string[] = [];
@@ -1295,10 +1303,10 @@ const TeamPanel = () => {
 
       // Draw the table
       autoTable(doc, {
-        startY: 47,
+        startY: 55,
         head: [headers],
         body: rows,
-        margin: { top: 22, left: 15, right: 15, bottom: 15 },
+        margin: { top: 28, left: 15, right: 15, bottom: 15 },
         styles: {
           fontSize: 7.2,
           cellPadding: 2.5,
@@ -1350,27 +1358,27 @@ const TeamPanel = () => {
           // Header on subsequent pages
           if (data.pageNumber > 1) {
             doc.setFillColor(30, 58, 110);
-            doc.roundedRect(15, 8, 6, 6, 1.2, 1.2, 'F');
+            doc.roundedRect(15, 14, 6, 6, 1.2, 1.2, 'F');
             doc.setDrawColor(255, 255, 255);
             doc.setLineWidth(0.4);
-            doc.line(16.5, 11, 17.5, 12);
-            doc.line(17.5, 12, 19.5, 9.5);
+            doc.line(16.5, 17, 17.5, 18);
+            doc.line(17.5, 18, 19.5, 15.5);
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
             doc.setTextColor(30, 58, 110);
-            doc.text('Inte', 23, 12.5);
+            doc.text('Inte', 23, 18.5);
             doc.setTextColor(16, 185, 129);
-            doc.text('lecciones', 29.5, 12.5);
+            doc.text('lecciones', 29.5, 18.5);
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(6);
             doc.setTextColor(100, 116, 139);
-            doc.text(`REPORTE DE CAMPAÑA — ${title.toUpperCase()}`, 52, 12);
+            doc.text(`REPORTE DE CAMPAÑA — ${title.toUpperCase()}`, 52, 18);
 
             doc.setDrawColor(30, 58, 110);
             doc.setLineWidth(0.3);
-            doc.line(15, 16, 195, 16);
+            doc.line(15, 22, 195, 22);
           }
         }
       });

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Printer, RefreshCw, Eye, EyeOff, Loader, CheckCircle } from 'lucide-react';
+import { Printer, RefreshCw, Eye, EyeOff, Loader, CheckCircle, RotateCcw } from 'lucide-react';
 import api, { getImageUrl } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface CopiatinElector {
   capture_id: number;
@@ -330,7 +331,7 @@ function buildPrintHTML(
     const ciudad = (e.ciudad || '').toUpperCase();
     const local = (e.local_votacion || '—').toUpperCase();
     const campaign = (e.campaign_name || 'CAMPAÑA').toUpperCase();
-    const candidateRows = buildCandidateRows(campaignLists && campaignLists.length > 0 ? campaignLists : DEFAULT_CAMPAIGN_LISTS);
+    const candidateRows = buildCandidateRows(DEFAULT_CAMPAIGN_LISTS);
 
     return `<div class="copiatin-card">
       <div class="top-band-new">
@@ -407,6 +408,9 @@ const labelStyle: React.CSSProperties = {
 };
 
 const CopiatinesReport = () => {
+  const { user } = useAuth();
+  const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
+
   const [data, setData] = useState<CopiatinesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [marking, setMarking] = useState(false);
@@ -451,6 +455,34 @@ const CopiatinesReport = () => {
       } catch {}
       setMarking(false);
     };
+  };
+
+  const handleUnmarkAll = async () => {
+    if (!data) return;
+    const printedIds = data.electors.filter(e => e.copiatin_printed_at).map(e => e.capture_id);
+    if (printedIds.length === 0) return;
+    
+    setLoading(true);
+    try {
+      await api.post('/my-team/copiatines/unmark-printed', { capture_ids: printedIds });
+      await load();
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Error al desmarcar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnmarkOne = async (captureId: number) => {
+    setLoading(true);
+    try {
+      await api.post('/my-team/copiatines/unmark-printed', { capture_ids: [captureId] });
+      await load();
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Error al desmarcar');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const printed = data?.electors.filter(e => e.copiatin_printed_at).length ?? 0;
@@ -516,20 +548,37 @@ const CopiatinesReport = () => {
             </div>
           ))}
         </div>
-        <button
-          onClick={handlePrint}
-          disabled={loading || marking || total === 0}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: (loading || marking || total === 0) ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#002d84,#0056b3)',
-            border: 'none', borderRadius: '12px', color: 'white',
-            padding: '0.75rem 1.5rem', fontSize: '0.88rem', fontWeight: 900,
-            cursor: total === 0 ? 'not-allowed' : 'pointer',
-            boxShadow: total === 0 ? 'none' : '0 6px 20px rgba(0,45,132,0.4)',
-          }}
-        >
-          {marking ? <><Loader size={16} className="spin" /> Marcando...</> : <><Printer size={16} /> Imprimir y Marcar ({total})</>}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {isSuperOrJefe && printed > 0 && (
+            <button
+              onClick={handleUnmarkAll}
+              disabled={loading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', color: '#EF4444',
+                padding: '0.75rem 1.5rem', fontSize: '0.88rem', fontWeight: 900,
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCcw size={16} /> Desmarcar Impresos ({printed})
+            </button>
+          )}
+          <button
+            onClick={handlePrint}
+            disabled={loading || marking || total === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              background: (loading || marking || total === 0) ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#002d84,#0056b3)',
+              border: 'none', borderRadius: '12px', color: 'white',
+              padding: '0.75rem 1.5rem', fontSize: '0.88rem', fontWeight: 900,
+              cursor: total === 0 ? 'not-allowed' : 'pointer',
+              boxShadow: total === 0 ? 'none' : '0 6px 20px rgba(0,45,132,0.4)',
+            }}
+          >
+            {marking ? <><Loader size={16} className="spin" /> Marcando...</> : <><Printer size={16} /> Imprimir y Marcar ({total})</>}
+          </button>
+        </div>
       </div>
 
       {error && <div style={{ padding: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', color: '#EF4444', fontSize: '0.82rem', fontWeight: 700 }}>{error}</div>}
@@ -557,8 +606,28 @@ const CopiatinesReport = () => {
             {data.electors.map(e => {
               const logoUrl = window.location.origin + '/assets/intelecciones-logo.svg';
               return (
-                <div key={e.capture_id} className={`copiatin-card${e.copiatin_printed_at ? ' printed' : ''}`}>
-                  {e.copiatin_printed_at && <div className="printed-badge">✓ IMPRESO</div>}
+                 <div key={e.capture_id} className={`copiatin-card${e.copiatin_printed_at ? ' printed' : ''}`} style={{ position: 'relative' }}>
+                   {e.copiatin_printed_at && (
+                     <div className="printed-badge" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                       ✓ IMPRESO
+                       {isSuperOrJefe && (
+                         <button
+                           title="Desmarcar para volver a imprimir"
+                           onClick={(ev) => {
+                             ev.stopPropagation();
+                             handleUnmarkOne(e.capture_id);
+                           }}
+                           style={{
+                             background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '4px',
+                             color: 'white', cursor: 'pointer', padding: '1px 3px', display: 'inline-flex',
+                             alignItems: 'center', justifyContent: 'center'
+                           }}
+                         >
+                           <RotateCcw size={8} />
+                         </button>
+                       )}
+                     </div>
+                   )}
                   <div className="top-band-new">
                     <div className="top-row">
                       <div className="elector-main">
@@ -585,7 +654,7 @@ const CopiatinesReport = () => {
                     </div>
                   </div>
                   <div className="candidates-list">
-                    {(data.campaignLists && data.campaignLists.length > 0 ? data.campaignLists : DEFAULT_CAMPAIGN_LISTS).slice(0, 4).map((list, i) => {
+                    {DEFAULT_CAMPAIGN_LISTS.map((list, i) => {
                       const isEmphasis = i < 2;
                       const name = (list.candidate_nombre || list.candidate_alias || '—').toUpperCase();
                       const photoUrl = resolvePhotoUrl(list.photo_url) || null;

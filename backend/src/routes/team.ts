@@ -1082,5 +1082,22 @@ router.post('/my-team/copiatines/mark-printed', requireRole('SUPERUSUARIO','JEFE
   }
 });
 
+// POST /my-team/copiatines/unmark-printed — unmark captures as printed
+router.post('/my-team/copiatines/unmark-printed', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE'), (req, res) => {
+  const { capture_ids } = req.body;
+  if (!Array.isArray(capture_ids) || capture_ids.length === 0) {
+    return res.status(400).json({ error: 'capture_ids requerido' });
+  }
+  try {
+    const placeholders = capture_ids.map(() => '?').join(',');
+    db.prepare(
+      `UPDATE elector_captures SET copiatin_printed_at = NULL WHERE id IN (${placeholders})`
+    ).run(...capture_ids);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
   return router;
 }
