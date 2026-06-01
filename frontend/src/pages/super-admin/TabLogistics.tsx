@@ -187,12 +187,6 @@ const TabLogistics = (props: any) => {
         </div>
       </div>
     );
-    
-    if (apiCriticalError) {
-      throw apiCriticalError;
-    }
-    
-  );
 };
 
 export default TabLogistics;
