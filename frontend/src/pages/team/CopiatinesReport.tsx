@@ -231,23 +231,23 @@ const CARD_CSS = `
 
   .candidate-card {
     display: flex; align-items: center;
-    background: linear-gradient(90deg, #00266f 0%, #003ba8 100%);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: #ffffff;
+    border: 1.2px solid var(--primary-blue);
     border-radius: 4px;
     height: 0.73cm;
     padding: 1px 3px;
-    color: white;
+    color: var(--primary-blue);
     position: relative;
   }
   .candidate-card.emphasis {
-    background: linear-gradient(90deg, #001b50 0%, #00297a 100%);
-    border: 1px solid #3b82f6;
+    background: #ffffff;
+    border: 1.5px solid var(--primary-blue);
   }
   .candidate-photo-frame {
     width: 0.58cm; height: 0.58cm;
     border-radius: 3px; overflow: hidden;
-    background: #e2e8f0;
-    border: 1px solid rgba(255,255,255,0.6);
+    background: #f8fafc;
+    border: 1px solid var(--primary-blue);
     margin-right: 4px; flex-shrink: 0;
   }
   .candidate-photo-frame img {
@@ -259,32 +259,31 @@ const CARD_CSS = `
     justify-content: center; line-height: 1; min-width: 0;
   }
   .candidate-role {
-    font-size: 6.5px; font-weight: 800; color: #93c5fd;
+    font-size: 6.5px; font-weight: 900; color: #d97706; /* cargo en amarillo */
     text-transform: uppercase; letter-spacing: 0.2px; margin-bottom: 0.5px;
   }
-  .candidate-card.emphasis .candidate-role { color: var(--accent-yellow); }
+  .candidate-card.emphasis .candidate-role { color: #d97706; }
   .candidate-name {
-    font-size: 9.5px; font-weight: 800;
+    font-size: 9.5px; font-weight: 900; color: var(--primary-blue); /* nombre del candidato en azul */
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
   .badge-container {
     display: flex; align-items: center; justify-content: center;
-    background: #ffffff; color: #002d84;
+    background: #ffffff; color: var(--primary-blue);
     border-radius: 4px; padding: 0 4px;
     margin-left: auto; flex-shrink: 0;
     border: 1.8px solid var(--accent-yellow);
-    height: 0.64cm; width: 2.6cm;
-    font-style: italic;
+    height: 0.64cm; width: 2.8cm;
   }
-  .badge-single { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; }
-  .badge-single .label-main { font-size: 9px; font-weight: 900; color: var(--primary-blue); letter-spacing: -0.2px; }
-  .badge-single .val-huge { font-size: 19px; font-weight: 900; color: var(--primary-blue); line-height: 1; }
-  .badge-double { display: flex; align-items: center; justify-content: space-around; width: 100%; }
-  .badge-col { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 0.8; }
-  .badge-col .label-sub { font-size: 5px; font-weight: 900; color: var(--primary-blue); letter-spacing: -0.1px; }
-  .badge-col .val-large { font-size: 14px; font-weight: 900; color: var(--primary-blue); margin-top: 1px; }
-  .badge-divider { width: 1.2px; height: 0.5cm; background-color: #cbd5e1; margin: 0 2px; }
+  .badge-single { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; }
+  .badge-single .label-main { font-size: 8.5px; font-weight: 900; color: var(--primary-blue); letter-spacing: -0.1px; }
+  .badge-single .val-huge { font-size: 22px; font-weight: 900; color: var(--primary-blue); line-height: 1; }
+  .badge-double { display: flex; align-items: center; justify-content: space-around; width: 100%; gap: 1px; }
+  .badge-row { display: flex; align-items: center; gap: 2px; }
+  .badge-row .label-sub { font-size: 8px; font-weight: 900; color: #64748b; letter-spacing: -0.1px; }
+  .badge-row .val-large { font-size: 16px; font-weight: 900; color: var(--primary-blue); line-height: 1; }
+  .badge-divider { width: 1.2px; height: 0.5cm; background-color: #cbd5e1; }
 `;
 
 function buildPrintHTML(
@@ -296,9 +295,9 @@ function buildPrintHTML(
     const hasOption = list.option_number && list.option_number !== '0';
     if (hasOption) {
       return `<div class="badge-double">
-        <div class="badge-col"><span class="label-sub">LISTA</span><span class="val-large">${list.list_number || '—'}</span></div>
+        <div class="badge-row"><span class="label-sub">L.</span><span class="val-large">${list.list_number || '—'}</span></div>
         <div class="badge-divider"></div>
-        <div class="badge-col"><span class="label-sub">OPCIÓN</span><span class="val-large">${list.option_number}</span></div>
+        <div class="badge-row"><span class="label-sub">OP.</span><span class="val-large">${list.option_number}</span></div>
       </div>`;
     }
     return `<div class="badge-single">
@@ -680,9 +679,9 @@ const CopiatinesReport = () => {
                           <div className="badge-container">
                             {hasOption
                               ? <div className="badge-double">
-                                  <div className="badge-col"><span className="label-sub">LISTA</span><span className="val-large">{list.list_number}</span></div>
+                                  <div className="badge-row"><span className="label-sub">L.</span><span className="val-large">{list.list_number}</span></div>
                                   <div className="badge-divider" />
-                                  <div className="badge-col"><span className="label-sub">OPCIÓN</span><span className="val-large">{list.option_number}</span></div>
+                                  <div className="badge-row"><span className="label-sub">OP.</span><span className="val-large">{list.option_number}</span></div>
                                 </div>
                               : <div className="badge-single">
                                   <span className="label-main">LISTA</span>
