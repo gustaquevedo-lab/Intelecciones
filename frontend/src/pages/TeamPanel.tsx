@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, FileText, Printer, Download, Edit, Trash2, Key } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
+import CopiatinesReport from './team/CopiatinesReport';
 import { useAuth } from '../context/AuthContext';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
@@ -804,7 +805,6 @@ const TeamPanel = () => {
       alert('La captura fue eliminada correctamente.');
       loadReportsData();
     } catch (err: any) {
-      console.error('Error deleting capture:', err);
       alert('Error al eliminar la captura: ' + (err.response?.data?.error || err.message));
     }
   };
@@ -818,7 +818,7 @@ const TeamPanel = () => {
   };
 
   // Reports states
-  const [reportType, setReportType] = useState<'padrinos' | 'coordinators' | 'electors' | 'locales'>('padrinos');
+  const [reportType, setReportType] = useState<'padrinos' | 'coordinators' | 'electors' | 'locales' | 'copiatines'>('padrinos');
   const [reportData, setReportData] = useState<{
     district: string;
     filterPadrinos: any[];
@@ -968,7 +968,6 @@ const TeamPanel = () => {
       setMyCoordinators(teamRes.data.coordinators || []);
       setCampaigns(campaignsRes.data || []);
     } catch (err: any) {
-      console.error('Error fetching team structure:', err);
       setApiCriticalError(err.response?.data?.error || err.message || 'Error de red. Reintenta.');
     }
     setLoading(false);
@@ -1011,8 +1010,6 @@ const TeamPanel = () => {
       const res = await api.get(`/my-team/reports?${queryParams.toString()}`, { timeout: 90000 });
       setReportData(res.data);
     } catch (err: any) {
-      console.error('Error fetching reports data', err);
-      // NON-FATAL: show inline error with retry instead of crashing the whole app
       const msg = err.response?.data?.error || err.message || 'Error desconocido';
       setReportsError(msg.includes('timeout') 
         ? 'El servidor está procesando demasiados datos. Intentá de nuevo en unos segundos, o seleccioná filtros más específicos.'
@@ -1064,7 +1061,6 @@ const TeamPanel = () => {
       document.body.removeChild(link);
       setShowColumnSelector(false);
     } catch (err: any) {
-      console.error("Error exporting team CSV:", err);
       alert("Error al exportar CSV: " + (err?.message || "Error desconocido"));
     }
   };
@@ -1378,7 +1374,6 @@ const TeamPanel = () => {
       const filename = `reporte-${reportType.toLowerCase()}-${cleanDistrict}.pdf`;
       doc.save(filename);
     } catch (err: any) {
-      console.error('Error generating PDF:', err);
       alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
     } finally {
       setGeneratingPDF(false);
@@ -1744,7 +1739,8 @@ const TeamPanel = () => {
                 { id: 'padrinos', label: 'Listado de Padrinos', visible: isSuperOrJefe },
                 { id: 'coordinators', label: 'Listado de Coordinadores', visible: true },
                 { id: 'electors', label: 'Electores Registrados', visible: true },
-                { id: 'locales', label: 'Cobertura de Locales', visible: true }
+                { id: 'locales', label: 'Cobertura de Locales', visible: true },
+                { id: 'copiatines', label: '🗳 Copiatines Electorales', visible: true },
               ].filter(t => t.visible).map(t => (
                 <button
                   key={t.id}
@@ -1768,7 +1764,7 @@ const TeamPanel = () => {
             </div>
 
             {/* Print and Export Buttons */}
-            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+            <div style={{ display: reportType === 'copiatines' ? 'none' : 'flex', gap: '0.6rem', alignItems: 'center' }}>
               {/* Search Bar */}
               <div style={{ position: 'relative', width: '180px' }}>
                 <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
@@ -1910,7 +1906,7 @@ const TeamPanel = () => {
           </div>
 
           {/* Dynamic Filters Bar */}
-          {activeTab === 'reports' && (
+          {activeTab === 'reports' && reportType !== 'copiatines' && (
             <div className="no-print" style={{
               display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem',
               padding: '1.25rem', background: 'var(--surface-hover)', borderRadius: '16px',
@@ -2024,8 +2020,11 @@ const TeamPanel = () => {
             </div>
           )}
 
+          {/* Copiatines Electorales */}
+          {reportType === 'copiatines' && <CopiatinesReport />}
+
           {/* Loading reports state */}
-          {loadingReports && (
+          {reportType !== 'copiatines' && loadingReports && (
             <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-3)' }}>
               <Loader size={32} className="spin" style={{ display: 'block', margin: '0 auto 1rem', color: '#10B981' }} />
               Generando reporte de alta fidelidad...
@@ -2033,7 +2032,7 @@ const TeamPanel = () => {
           )}
 
           {/* Error state with retry */}
-          {!loadingReports && reportsError && (
+          {reportType !== 'copiatines' && !loadingReports && reportsError && (
             <div style={{
               padding: '2rem', textAlign: 'center', background: 'rgba(239,68,68,0.08)',
               border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', margin: '1rem 0'
@@ -2054,7 +2053,7 @@ const TeamPanel = () => {
           )}
 
           {/* Simulated A4 Vertical Paper Sheet on Screen */}
-          {!loadingReports && !reportsError && reportData ? (
+          {reportType !== 'copiatines' && !loadingReports && !reportsError && reportData ? (
             <div style={{ overflowX: 'auto', padding: '0.5rem' }}>
               <div 
                 id="printable-report-area"
@@ -2426,7 +2425,7 @@ const TeamPanel = () => {
 
               </div>
             </div>
-          ) : (
+          ) : reportType !== 'copiatines' ? (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '4rem 2rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)',
@@ -2453,7 +2452,7 @@ const TeamPanel = () => {
                 <FileText size={14} /> Comenzar Compilación
               </button>
             </div>
-          )}
+          ) : null}
 
         </div>
       )}

@@ -428,6 +428,7 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("vehicles", "ciudad", "TEXT DEFAULT ''");
     addColumnIfNotExists("users", "phone_hash", "TEXT");
     addColumnIfNotExists("elector_captures", "phone_hash", "TEXT");
+    addColumnIfNotExists("elector_captures", "copiatin_printed_at", "DATETIME");
  
     // Indexes for better JOIN performance
     db.exec(`

@@ -970,5 +970,117 @@ router.get('/campaigns/mine', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE
     res.status(500).json({ error: err.message });
   }
 });
+// GET /my-team/copiatines — electors for copiatín printing
+router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), async (req, res) => {
+  const requesterId = req.headers['x-user-id'] as string;
+  const role = getRole(req);
+  const onlyUnprinted = req.query.only_unprinted === '1';
+  const padrinoId = req.query.padrino_id as string;
+  const coordinatorId = req.query.coordinator_id as string;
+
+  try {
+    const filter = getSecurityFilter(req, 'u');
+
+    let filterPadrinos: any[] = [];
+    if (role !== 'PADRINO') {
+      filterPadrinos = await dbQueryAsync<any>(
+        `SELECT u.id, u.nombre FROM users u WHERE u.role IN ('PADRINO','SUBJEFE') ${filter.sql} ORDER BY u.nombre`,
+        filter.params
+      );
+    }
+
+    let filterCoordinators: any[] = [];
+    if (role === 'PADRINO') {
+      filterCoordinators = await dbQueryAsync<any>(
+        `SELECT u.id, u.nombre, u.parent_id FROM users u WHERE u.parent_id = ? AND u.role IN ('COORDINADOR','MIEMBRO_DE_MESA') ORDER BY u.nombre`,
+        [requesterId]
+      );
+    } else {
+      filterCoordinators = await dbQueryAsync<any>(
+        `SELECT u.id, u.nombre, u.parent_id FROM users u WHERE u.role IN ('COORDINADOR','MIEMBRO_DE_MESA') ${filter.sql} ORDER BY u.nombre`,
+        filter.params
+      );
+    }
+
+    let electorSql = `
+      SELECT ec.id as capture_id, ec.elector_ci, ec.copiatin_printed_at,
+             COALESCE(e.nombre, 'ELECTOR') as nombre,
+             COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
+             COALESCE(e.local_votacion, '') as local_votacion,
+             COALESCE(e.mesa, 0) as mesa,
+             COALESCE(e.orden, 0) as orden,
+             COALESCE(e.ciudad, e.distrito, '') as ciudad,
+             u.nombre as coordinator_name,
+             u.parent_id as padrino_id,
+             p.nombre as padrino_name,
+             l.list_number, l.option_number, l.candidate_nombre, l.candidate_alias,
+             l.campaign_id, c.name as campaign_name
+      FROM elector_captures ec
+      LEFT JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      LEFT JOIN campaigns c ON l.campaign_id = c.id
+      WHERE 1=1
+    `;
+    let electorParams: any[] = [];
+
+    if (role === 'PADRINO') {
+      electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
+      electorParams.push(requesterId, requesterId);
+    } else {
+      electorSql += ` ${filter.sql}`;
+      electorParams.push(...filter.params);
+    }
+
+    if (padrinoId && padrinoId !== 'ALL') {
+      electorSql += ` AND u.parent_id = ?`;
+      electorParams.push(parseInt(padrinoId));
+    }
+    if (coordinatorId && coordinatorId !== 'ALL') {
+      electorSql += ` AND ec.coordinator_id = ?`;
+      electorParams.push(parseInt(coordinatorId));
+    }
+    if (onlyUnprinted) {
+      electorSql += ` AND ec.copiatin_printed_at IS NULL`;
+    }
+
+    electorSql += ` ORDER BY e.apellido, e.nombre LIMIT 500`;
+
+    const electors = await dbQueryAsync<any>(electorSql, electorParams);
+
+    const requesterInfo = getCachedUserInfo(requesterId);
+    let campaignLists: any[] = [];
+    if (requesterInfo?.campaign_id) {
+      campaignLists = await dbQueryAsync<any>(
+        `SELECT id, type, list_number, option_number, candidate_nombre, candidate_alias, photo_url
+         FROM lists WHERE campaign_id = ? AND COALESCE(is_adversary, 0) = 0 ORDER BY id`,
+        [requesterInfo.campaign_id]
+      );
+    }
+
+    res.json({ electors, campaignLists, filterPadrinos, filterCoordinators });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /my-team/copiatines/mark-printed — mark captures as printed
+router.post('/my-team/copiatines/mark-printed', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), (req, res) => {
+  const { capture_ids } = req.body;
+  if (!Array.isArray(capture_ids) || capture_ids.length === 0) {
+    return res.status(400).json({ error: 'capture_ids requerido' });
+  }
+  try {
+    const placeholders = capture_ids.map(() => '?').join(',');
+    db.prepare(
+      `UPDATE elector_captures SET copiatin_printed_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND copiatin_printed_at IS NULL`
+    ).run(...capture_ids);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
   return router;
 }
