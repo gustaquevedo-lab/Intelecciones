@@ -587,7 +587,7 @@ router.put('/:id', (req, res) => {
 });
 
 
-router.post('/admin/:id/reset-password', (req, res) => {
+router.post('/admin/users/:id/reset-password', (req, res) => {
   const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
   const requesterId   = req.headers['x-user-id'] as string;
 
