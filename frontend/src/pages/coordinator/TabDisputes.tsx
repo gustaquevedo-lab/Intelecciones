@@ -350,7 +350,6 @@ const TabDisputes = (props: any) => {
             })()
           )}
         </motion.div>
-      ) : null}
     </>
   );
 };

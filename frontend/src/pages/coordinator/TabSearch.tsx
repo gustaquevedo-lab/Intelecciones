@@ -212,8 +212,6 @@ const TabSearch = (props: any) => {
 
   return (
     <>
-      {activeTab === 'search' ? (
-        <>
       
       <div style={{
         background: 'rgba(59, 130, 246, 0.05)',
@@ -722,7 +720,6 @@ const TabSearch = (props: any) => {
           </p>
         </motion.div>
       )}
-      </>
     </>
   );
 };
