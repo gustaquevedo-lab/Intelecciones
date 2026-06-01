@@ -3530,7 +3530,17 @@ app.get('/api/admin/conflicts', (req, res) => {
     const params: any[] = [];
 
     const sec = getSecurityFilter(req, 'cc');
-    console.log(`[CONFLICTS DEBUG] role=${req.headers['x-user-role']}, user_id=${req.headers['x-user-id']}, district_q=${req.query.district}, district_h=${req.headers['x-district']}, sec.sql="${sec.sql}", sec.params=${JSON.stringify(sec.params)}`);
+    const debugInfo = {
+      role: req.headers['x-user-role'],
+      user_id: req.headers['x-user-id'],
+      district_q: req.query.district,
+      district_h: req.headers['x-district'],
+      list_id_q: req.query.listId,
+      list_id_h: req.headers['x-list-id'],
+      sec_sql: sec.sql,
+      sec_params: sec.params,
+    };
+    console.log(`[CONFLICTS DEBUG]`, JSON.stringify(debugInfo));
     sql += ` ${sec.sql}`;
     params.push(...sec.params);
 
@@ -3544,11 +3554,14 @@ app.get('/api/admin/conflicts', (req, res) => {
       params.push(list_id, list_id);
     }
 
+    console.log(`[CONFLICTS SQL] ${sql}`);
+    console.log(`[CONFLICTS PARAMS]`, params);
+
     const conflicts = db.prepare(sql).all(...params) as any[];
     console.log(`[DB] Fetched ${conflicts.length} conflicts.`);
-    if (conflicts.length > 0) {
-      console.log(`[DB] Sample Conflict: ID=${conflicts[0].conflict_id}, coord_a=${conflicts[0].coord_a}, coord_b=${conflicts[0].coord_b}, capture_b_id=${conflicts[0].capture_b_id}`);
-    }
+
+    // TEMP: Include debug info in response header so we can diagnose
+    res.setHeader('X-Debug-Conflicts', JSON.stringify({ ...debugInfo, result_count: conflicts.length }));
     res.json(conflicts);
   } catch (err: any) {
     console.error('[CONFLICTS ERROR]', err);
