@@ -433,64 +433,270 @@ const CommandCenter = () => {
   const exportDisputesPDF = async () => {
     setIsGeneratingDisputesPDF(true);
     try {
-      // Wait for React to render the DisputesPremiumReportRenderer
-      await new Promise(r => setTimeout(r, 600));
-
-      const container = document.getElementById('disputes-premium-print-container');
-      if (!container) throw new Error('No se encontró el contenedor de reporte');
-
-      // Wait for images to load
-      const images = container.querySelectorAll('img');
-      await Promise.all(Array.from(images).map(img =>
-        img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
-      ));
-
-      const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
 
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        width: 800,
-        windowWidth: 800,
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      const pxW = canvas.width;
-      const pxH = canvas.height;
-
-      const PDF_W_MM = 210; // A4 width
-      const PDF_MARGIN = 10;
-      const contentW = PDF_W_MM - PDF_MARGIN * 2;
-      const contentH = (pxH * contentW) / pxW;
-      const pageH = 297 - PDF_MARGIN * 2; // A4 usable height
-
+      const A4_W = 210;
+      const A4_H = 297;
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const totalPagesExp = '{total_pages_count_string}';
 
-      if (contentH <= pageH) {
-        doc.addImage(imgData, 'JPEG', PDF_MARGIN, PDF_MARGIN, contentW, contentH);
-      } else {
-        // Multi-page: slice the canvas
-        const totalPages = Math.ceil(contentH / pageH);
-        for (let i = 0; i < totalPages; i++) {
-          if (i > 0) doc.addPage();
-          const srcY = (i * pageH * pxW) / contentW;
-          const srcH = Math.min((pageH * pxW) / contentW, pxH - srcY);
-          const sliceCanvas = document.createElement('canvas');
-          sliceCanvas.width = pxW;
-          sliceCanvas.height = srcH;
-          const ctx = sliceCanvas.getContext('2d')!;
-          ctx.drawImage(canvas, 0, srcY, pxW, srcH, 0, 0, pxW, srcH);
-          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
-          const sliceH_mm = (srcH * contentW) / pxW;
-          doc.addImage(sliceData, 'JPEG', PDF_MARGIN, PDF_MARGIN, contentW, sliceH_mm);
+      const safeDate = (d: any) => {
+        if (!d) return 'N/A';
+        try {
+          const dt = new Date(String(d).replace(' ', 'T'));
+          if (isNaN(dt.getTime())) return String(d);
+          return dt.toLocaleDateString('es-PY') + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch { return String(d); }
+      };
+
+      const searchUpper = disputesReportSearch.toUpperCase();
+      const filterItem = (item: any) => {
+        if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
+        if (disputesReportLocalFilter && item.local_votacion && item.local_votacion !== disputesReportLocalFilter) return false;
+        return true;
+      };
+
+      const showActive = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'ACTIVAS';
+      const showResolved = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'RESUELTAS';
+      const filteredActive = showActive ? conflicts.filter(filterItem) : [];
+      const filteredResolved = showResolved ? conflictsHistory.filter(filterItem) : [];
+
+      // --- Header ---
+      const drawHeader = (isFirst: boolean) => {
+        if (isFirst) {
+          doc.setFillColor(30, 58, 110);
+          doc.roundedRect(15, 12, 10, 10, 2, 2, 'F');
+          doc.setDrawColor(255, 255, 255);
+          doc.setLineWidth(0.6);
+          doc.line(17, 17, 19, 19);
+          doc.line(19, 19, 23, 14);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.setTextColor(30, 58, 110);
+          doc.text('Inte', 27, 17.5);
+          doc.setTextColor(16, 185, 129);
+          doc.text('lecciones', 36.2, 17.5);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6.8);
+          doc.setTextColor(100, 116, 139);
+          doc.text('GESTIÓN ELECTORAL & LOGÍSTICA', 27, 21.2);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(30, 58, 110);
+          doc.text('REPORTE TÁCTICO DE DISPUTAS', 195, 15, { align: 'right' });
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(71, 85, 105);
+          doc.text(`Distrito: ${effectiveDistrict || 'Todos'}`, 195, 19, { align: 'right' });
+          doc.text(`Agrupación: ${disputesReportFilter}`, 195, 22.5, { align: 'right' });
+          doc.text(`Fecha Imp.: ${new Date().toLocaleString('es-PY')}`, 195, 26, { align: 'right' });
+
+          doc.setDrawColor(30, 58, 110);
+          doc.setLineWidth(0.6);
+          doc.line(15, 29, 195, 29);
+        } else {
+          doc.setFillColor(30, 58, 110);
+          doc.roundedRect(15, 8, 6, 6, 1.2, 1.2, 'F');
+          doc.setDrawColor(255, 255, 255);
+          doc.setLineWidth(0.4);
+          doc.line(16.5, 11, 17.5, 12);
+          doc.line(17.5, 12, 19.5, 9.5);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(30, 58, 110);
+          doc.text('Inte', 23, 12.5);
+          doc.setTextColor(16, 185, 129);
+          doc.text('lecciones', 29.5, 12.5);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6);
+          doc.setTextColor(100, 116, 139);
+          doc.text('REPORTE TÁCTICO DE DISPUTAS', 52, 12);
+
+          doc.setDrawColor(30, 58, 110);
+          doc.setLineWidth(0.3);
+          doc.line(15, 16, 195, 16);
         }
+      };
+
+      drawHeader(true);
+
+      // --- Summary boxes ---
+      let y = 34;
+      doc.setFillColor(254, 242, 242);
+      doc.roundedRect(15, y, 85, 14, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(239, 68, 68);
+      doc.text('DISPUTAS ACTIVAS', 19, y + 5);
+      doc.setFontSize(14);
+      doc.setTextColor(220, 38, 38);
+      doc.text(String(filteredActive.length), 19, y + 12);
+
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(110, y, 85, 14, 2, 2, 'F');
+      doc.setFontSize(6.5);
+      doc.setTextColor(16, 185, 129);
+      doc.text('DISPUTAS RESUELTAS', 114, y + 5);
+      doc.setFontSize(14);
+      doc.setTextColor(5, 150, 105);
+      doc.text(String(filteredResolved.length), 114, y + 12);
+
+      y += 17;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(100, 116, 139);
+      const filterLine = `Estado: ${disputesReportStatusFilter}${disputesReportSearch ? ` | Búsqueda: "${disputesReportSearch}"` : ''}${disputesReportLocalFilter ? ` | Local: ${disputesReportLocalFilter}` : ''}`;
+      doc.text(filterLine, 15, y);
+      y += 5;
+
+      // --- Active disputes table ---
+      if (filteredActive.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(220, 38, 38);
+        doc.text(`DISPUTAS ACTIVAS (${filteredActive.length})`, 15, y);
+        y += 2;
+
+        const activeHeaders = ['Elector / CI', 'Local / Mesa', 'Capturador A', 'Semáforo A', 'Capturador B', 'Semáforo B', 'Fecha'];
+        const activeRows = filteredActive.map((c: any) => [
+          `${c.elector_nombre} ${c.elector_apellido}\nCI: ${c.elector_ci}`,
+          `${c.local_votacion || 'N/A'}\nMesa ${c.mesa || '?'}`,
+          c.coord_a || 'Desconocido',
+          c.tl_a || 'S/D',
+          c.coord_b || 'Desconocido',
+          c.tl_b || 'S/D',
+          safeDate(c.time_a),
+        ]);
+
+        autoTable(doc, {
+          startY: y,
+          head: [activeHeaders],
+          body: activeRows,
+          margin: { top: 22, left: 15, right: 15, bottom: 15 },
+          styles: {
+            fontSize: 6.8,
+            cellPadding: 2.2,
+            font: 'helvetica',
+            textColor: [51, 65, 85],
+            lineColor: [226, 232, 240],
+            lineWidth: 0.1,
+          },
+          headStyles: {
+            fillColor: [254, 226, 226],
+            textColor: [153, 27, 27],
+            fontStyle: 'bold',
+            lineWidth: 0.2,
+            lineColor: [252, 165, 165],
+          },
+          alternateRowStyles: { fillColor: [255, 251, 251] },
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 38 },
+            1: { cellWidth: 28 },
+            2: { fontStyle: 'bold', textColor: [30, 58, 110] },
+            3: { halign: 'center', cellWidth: 16 },
+            4: { fontStyle: 'bold', textColor: [30, 58, 110] },
+            5: { halign: 'center', cellWidth: 16 },
+            6: { halign: 'center', cellWidth: 22 },
+          },
+          didDrawCell: (data: any) => {
+            if (data.section === 'body' && (data.column.index === 3 || data.column.index === 5)) {
+              const tl = data.cell.raw;
+              const colorMap: Record<string, [number, number, number]> = {
+                GREEN: [22, 163, 74], YELLOW: [217, 119, 6], RED: [220, 38, 38], PURPLE: [124, 58, 237],
+              };
+              const rgb = colorMap[tl] || [156, 163, 175];
+              data.cell.text = [];
+              const x = data.cell.x + data.cell.width / 2;
+              const cy = data.cell.y + data.cell.height / 2;
+              doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+              doc.circle(x, cy, 1.8, 'F');
+            }
+          },
+          didDrawPage: (data: any) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(5.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial de uso interno`, 15, A4_H - 6);
+            doc.setFontSize(6.2);
+            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 6, { align: 'right' });
+            if (data.pageNumber > 1) drawHeader(false);
+          }
+        });
+
+        y = (doc as any).lastAutoTable.finalY + 8;
       }
 
-      doc.save(`reporte-disputas-${(effectiveDistrict || 'global').toLowerCase()}.pdf`);
+      // --- Resolved disputes table ---
+      if (filteredResolved.length > 0) {
+        if (y > A4_H - 40) { doc.addPage(); y = 22; drawHeader(false); }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(5, 150, 105);
+        doc.text(`DISPUTAS RESUELTAS (${filteredResolved.length})`, 15, y);
+        y += 2;
+
+        const resolvedHeaders = ['Elector / CI', 'Local / Mesa', 'Adjudicado a', 'Fecha Resolución'];
+        const resolvedRows = filteredResolved.map((h: any) => [
+          `${h.elector_nombre} ${h.elector_apellido}\nCI: ${h.elector_ci}`,
+          `${h.local_votacion || 'N/A'}\nMesa ${h.mesa || '?'}`,
+          h.winner_name || 'N/A',
+          safeDate(h.resolved_at),
+        ]);
+
+        autoTable(doc, {
+          startY: y,
+          head: [resolvedHeaders],
+          body: resolvedRows,
+          margin: { top: 22, left: 15, right: 15, bottom: 15 },
+          styles: {
+            fontSize: 6.8,
+            cellPadding: 2.2,
+            font: 'helvetica',
+            textColor: [51, 65, 85],
+            lineColor: [226, 232, 240],
+            lineWidth: 0.1,
+          },
+          headStyles: {
+            fillColor: [220, 252, 231],
+            textColor: [6, 95, 70],
+            fontStyle: 'bold',
+            lineWidth: 0.2,
+            lineColor: [167, 243, 208],
+          },
+          alternateRowStyles: { fillColor: [245, 253, 248] },
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 50 },
+            1: { cellWidth: 35 },
+            2: { fontStyle: 'bold', textColor: [30, 58, 110], halign: 'center' },
+            3: { halign: 'center' },
+          },
+          didDrawPage: (data: any) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(5.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`© ${new Date().getFullYear()} Intelecciones — Documento confidencial de uso interno`, 15, A4_H - 6);
+            doc.setFontSize(6.2);
+            doc.text(`Página ${data.pageNumber} de ${totalPagesExp}`, A4_W - 15, A4_H - 6, { align: 'right' });
+            if (data.pageNumber > 1) drawHeader(false);
+          }
+        });
+      }
+
+      if (typeof doc.putTotalPages === 'function') {
+        doc.putTotalPages(totalPagesExp);
+      }
+
+      const cleanDistrict = (effectiveDistrict || 'global')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      doc.save(`reporte-disputas-${cleanDistrict}.pdf`);
     } catch (err: any) {
       console.error('Error generating disputes PDF:', err);
       alert('Error al generar PDF: ' + (err?.message || 'Error desconocido'));
@@ -499,221 +705,6 @@ const CommandCenter = () => {
     }
   };
 
-  const DisputesPremiumReportRenderer = () => {
-    if (!isGeneratingDisputesPDF) return null;
-
-    const safeDate = (d: any) => {
-      if (!d) return 'N/A';
-      try {
-        const dt = new Date(String(d).replace(' ', 'T'));
-        if (isNaN(dt.getTime())) return String(d);
-        return dt.toLocaleDateString('es-PY') + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } catch { return String(d); }
-    };
-
-    const renderAvatar = (url: string | null, fallbackInitial: string) => {
-      if (url && !url.includes('pravatar.cc') && !url.includes('ui-avatars.com')) {
-        return <img src={getImageUrl(url)} crossOrigin="anonymous" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }} />;
-      }
-      return <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: '2px solid #cbd5e1' }}>{(fallbackInitial || 'A')[0].toUpperCase()}</div>;
-    };
-
-    const searchUpper = disputesReportSearch.toUpperCase();
-    const filterItem = (item: any) => {
-      if (searchUpper && !((`${item.elector_nombre} ${item.elector_apellido}`).toUpperCase().includes(searchUpper) || String(item.elector_ci).includes(searchUpper))) return false;
-      if (disputesReportLocalFilter && item.local_votacion && item.local_votacion !== disputesReportLocalFilter) return false;
-      return true;
-    };
-
-    const showActive = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'ACTIVAS';
-    const showResolved = disputesReportStatusFilter === 'TODAS' || disputesReportStatusFilter === 'RESUELTAS';
-    const filteredActive = showActive ? conflicts.filter(filterItem) : [];
-    const filteredResolved = showResolved ? conflictsHistory.filter(filterItem) : [];
-
-    const groupItems = (items: any[], isHistory: boolean) => {
-      const groups: Record<string, any[]> = {};
-      if (disputesReportFilter === 'LISTA') {
-        items.forEach((c: any) => {
-          const la = c.list_a || c.list_id_a || '?';
-          const lb = c.list_b || c.list_id_b || la;
-          const key = isHistory ? `Lista ${la}` : `Lista ${la} vs Lista ${lb}`;
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
-        });
-      } else if (disputesReportFilter === 'DISTRITO') {
-        items.forEach((c: any) => {
-          const key = effectiveDistrict || 'Distrito General';
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
-        });
-      } else if (disputesReportFilter === 'PADRINO') {
-        items.forEach((c: any) => {
-          const pa = c.padrino_a || c.padrino_name || 'Desconocido';
-          const pb = c.padrino_b || pa;
-          const key = isHistory ? `Padrino ${pa}` : `Padrino ${pa} vs Padrino ${pb}`;
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
-        });
-      } else {
-        if (items.length > 0) groups['General'] = items;
-      }
-      return groups;
-    };
-
-    const activeGroups = groupItems(filteredActive, false);
-    const resolvedGroups = groupItems(filteredResolved, true);
-
-    return (
-      <>
-      {/* Full-screen overlay covers the print container so user sees a clean loading screen */}
-      <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-        <div style={{ color: '#fff', fontFamily: 'Inter, sans-serif', textAlign: 'center' }}>
-          <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>GENERANDO PDF...</p>
-        </div>
-      </div>
-      {/* Print container: fully rendered, in-viewport, behind overlay so html2canvas can capture it */}
-      <div style={{ position: 'fixed', top: '0', left: '0', width: '800px', zIndex: 9999, pointerEvents: 'none' }}>
-        <div id="disputes-premium-print-container" style={{ width: '800px', background: '#fff', color: '#000', padding: '40px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-          
-          <header style={{ borderBottom: '4px solid #0047AB', paddingBottom: '20px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '28px', color: '#0047AB', fontWeight: 900, letterSpacing: '-0.03em' }}>REPORTE TÁCTICO DE DISPUTAS</h1>
-              <p style={{ margin: '8px 0 0', fontSize: '14px', fontWeight: 700, color: '#334155', textTransform: 'uppercase' }}>
-                DISTRITO: {effectiveDistrict || 'Todos'} <span style={{ color: '#cbd5e1', margin: '0 8px' }}>|</span> AGRUPACIÓN: {disputesReportFilter}
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0047AB' }}>INTELEX v2.4</p>
-              <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b', fontWeight: 600 }}>{new Date().toLocaleString('es-PY')}</p>
-            </div>
-          </header>
-
-          <section style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
-              <div style={{ background: '#fef2f2', padding: '18px', borderRadius: '12px', border: '1px solid #fecaca', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                <p style={{ margin: 0, fontSize: '12px', color: '#ef4444', fontWeight: 800, letterSpacing: '0.05em' }}>DISPUTAS ACTIVAS</p>
-                <p style={{ margin: '4px 0 0', fontSize: '32px', fontWeight: 900, color: '#dc2626' }}>{filteredActive.length}</p>
-              </div>
-              <div style={{ background: '#f0fdf4', padding: '18px', borderRadius: '12px', border: '1px solid #bbf7d0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                <p style={{ margin: 0, fontSize: '12px', color: '#10b981', fontWeight: 800, letterSpacing: '0.05em' }}>DISPUTAS RESUELTAS</p>
-                <p style={{ margin: '4px 0 0', fontSize: '32px', fontWeight: 900, color: '#059669' }}>{filteredResolved.length}</p>
-              </div>
-            </div>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '30px', fontWeight: 600 }}>
-              Filtro Estado: {disputesReportStatusFilter} {disputesReportSearch ? `| Búsqueda: "${disputesReportSearch}"` : ''} {disputesReportLocalFilter ? `| Local: ${disputesReportLocalFilter}` : ''}
-            </p>
-
-            {Object.entries(activeGroups).map(([groupName, items]) => (
-              <div key={groupName} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#dc2626', borderBottom: '2px solid #fecaca', paddingBottom: '8px' }}>
-                  {groupName} — ACTIVAS ({items.length})
-                </h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  {items.map((c: any) => (
-                    <div key={c.conflict_id || c.elector_ci} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc', padding: '16px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)' }}>
-                      
-                      <div style={{ marginBottom: '12px', borderBottom: '1px dashed #cbd5e1', paddingBottom: '12px' }}>
-                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{c.elector_nombre} {c.elector_apellido}</h4>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                          <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: 600 }}>C.I: {c.elector_ci}</p>
-                          <p style={{ margin: 0, fontSize: '11px', color: '#0047AB', fontWeight: 700, background: '#e0e7ff', padding: '2px 8px', borderRadius: '4px' }}>
-                            {c.local_votacion || 'N/A'} (Mesa {c.mesa || '0'})
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '15px', alignItems: 'center' }}>
-                        {/* Lado A */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                           {renderAvatar(c.photo_a, c.coord_a)}
-                           <div>
-                             <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_a || 'Desconocido'}</p>
-                             <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
-                               <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: TRAFFIC_COLORS[c.tl_a as keyof typeof TRAFFIC_COLORS] || '#94a3b8' }}></span>
-                               <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{c.tl_a || 'S/D'}</span>
-                               {c.transport_a ? <span style={{ background: '#dbeafe', color: '#2563eb', fontSize: '9px', fontWeight: 800, padding: '1px 4px', borderRadius: '4px' }}>TRANSP.</span> : null}
-                             </div>
-                             <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{safeDate(c.time_a)}</p>
-                           </div>
-                        </div>
-                        
-                        {/* VS */}
-                        <div style={{ fontSize: '12px', fontWeight: 900, color: '#dc2626', background: '#fee2e2', padding: '6px 10px', borderRadius: '8px', border: '1px solid #fca5a5' }}>VS</div>
-                        
-                        {/* Lado B */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: 'row-reverse', textAlign: 'right' }}>
-                           {renderAvatar(c.photo_b, c.coord_b)}
-                           <div>
-                             <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#334155' }}>{c.coord_b || 'Desconocido'}</p>
-                             <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
-                               {c.transport_b ? <span style={{ background: '#dbeafe', color: '#2563eb', fontSize: '9px', fontWeight: 800, padding: '1px 4px', borderRadius: '4px' }}>TRANSP.</span> : null}
-                               <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{c.tl_b || 'S/D'}</span>
-                               <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: TRAFFIC_COLORS[c.tl_b as keyof typeof TRAFFIC_COLORS] || '#94a3b8' }}></span>
-                             </div>
-                             <p style={{ margin: '4px 0 0', fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>{safeDate(c.time_b)}</p>
-                           </div>
-                        </div>
-                      </div>
-                      
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {Object.entries(resolvedGroups).map(([groupName, items]) => (
-              <div key={groupName} style={{ marginBottom: '40px', breakInside: 'avoid' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '15px', color: '#059669', borderBottom: '2px solid #a7f3d0', paddingBottom: '8px' }}>
-                  {groupName} — RESUELTAS ({items.length})
-                </h3>
-                
-                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                  <thead>
-                    <tr style={{ background: '#059669', color: 'white' }}>
-                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 800 }}>ELECTOR Y CÉDULA</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 800 }}>LOCAL DE VOTACIÓN</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 800 }}>ADJUDICADO A</th>
-                      <th style={{ padding: '12px', textAlign: 'center', fontWeight: 800 }}>FECHA RESOLUCIÓN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((h: any, i: number) => (
-                      <tr key={h.conflict_id || h.elector_ci} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
-                          <p style={{ margin: 0, fontWeight: 800, color: '#0f172a', fontSize: '12px' }}>{h.elector_nombre} {h.elector_apellido}</p>
-                          <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#64748b' }}>C.I: {h.elector_ci}</p>
-                        </td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', color: '#334155', fontWeight: 600 }}>{h.local_votacion || 'N/A'} <br/><span style={{ color: '#94a3b8' }}>(M. {h.mesa || '?'})</span></td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'inline-block', background: '#e0e7ff', color: '#0047AB', padding: '4px 10px', borderRadius: '20px', fontWeight: 800 }}>
-                            {h.winner_name || 'N/A'}
-                          </div>
-                        </td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{safeDate(h.resolved_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-            
-            {filteredActive.length === 0 && filteredResolved.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                <p style={{ color: '#64748b', margin: 0, fontWeight: 800, fontSize: '14px' }}>No se encontraron disputas con los filtros seleccionados.</p>
-              </div>
-            )}
-          </section>
-
-          <footer style={{ marginTop: '50px', paddingTop: '20px', borderTop: '2px dashed #cbd5e1', textAlign: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
-            Este documento es de carácter confidencial y estratégico para el operativo electoral de Intelecciones.
-          </footer>
-        </div>
-      </div>
-      </>
-    );
-  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -2104,7 +2095,6 @@ const CommandCenter = () => {
           )}
         </AnimatePresence>
 
-        <DisputesPremiumReportRenderer />
         <style>
           {`
             @media print {

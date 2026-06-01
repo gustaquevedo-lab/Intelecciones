@@ -305,31 +305,6 @@ app.get('/api/ready', (_req, res) => {
   res.json({ ready: serverReady });
 });
 
-// TEMP: Test conflicts query directly (no auth filter)
-app.get('/api/diagnostics/conflicts-test', (_req, res) => {
-  try {
-    const sample = db.prepare(`
-      SELECT cc.id as conflict_id, cc.status, cc.elector_ci, e.nombre, e.apellido, e.distrito,
-             ua.nombre as coord_a, ub.nombre as coord_b
-      FROM capture_conflicts cc
-      CROSS JOIN electors e ON cc.elector_ci = e.ci
-      LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
-      LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
-      LEFT JOIN users ua ON ca.coordinator_id = ua.id
-      LEFT JOIN users ub ON cb.coordinator_id = ub.id
-      WHERE cc.status != 'RESOLVED' AND e.distrito = 'PEDRO JUAN CABALLERO'
-      LIMIT 5
-    `).all();
-    const total = db.prepare(`
-      SELECT COUNT(*) as c FROM capture_conflicts cc
-      CROSS JOIN electors e ON cc.elector_ci = e.ci
-      WHERE cc.status != 'RESOLVED' AND e.distrito = 'PEDRO JUAN CABALLERO'
-    `).get() as any;
-    res.json({ total: total.c, sample });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // 🔍 Database diagnostic endpoint (no auth required) — shows data counts per district
 app.get('/api/diagnostics/data-health', (_req, res) => {
@@ -397,34 +372,17 @@ app.get('/api/diagnostics/data-health', (_req, res) => {
       GROUP BY local_votacion ORDER BY electors DESC
     `).all();
 
-    // Conflict table diagnostics
     const conflictCounts = db.prepare(`
       SELECT status, COUNT(*) as c FROM capture_conflicts GROUP BY status
     `).all();
     const conflictTotal = db.prepare('SELECT COUNT(*) as c FROM capture_conflicts').get() as any;
-    // Debug: check how many pending conflicts survive the CROSS JOIN with electors
-    const pendingWithElector = db.prepare(`
-      SELECT COUNT(*) as c FROM capture_conflicts cc
-      CROSS JOIN electors e ON cc.elector_ci = e.ci
-      WHERE cc.status != 'RESOLVED'
-    `).get() as any;
-    const pendingPJC = db.prepare(`
-      SELECT COUNT(*) as c FROM capture_conflicts cc
-      CROSS JOIN electors e ON cc.elector_ci = e.ci
-      WHERE cc.status != 'RESOLVED' AND e.distrito = 'PEDRO JUAN CABALLERO'
-    `).get() as any;
-    const pendingOrphan = db.prepare(`
-      SELECT COUNT(*) as c FROM capture_conflicts cc
-      WHERE cc.status != 'RESOLVED'
-      AND cc.elector_ci NOT IN (SELECT ci FROM electors)
-    `).get() as any;
 
     res.json({
       voting_locations: { total: totalLocations.c, with_geo: locationsWithGeo.c },
       captures: { total: totalCaptures.c, with_geo: capturesWithGeo.c },
       electors: { total: totalElectors.c },
       users: { total: totalUsers.c },
-      conflicts: { total: conflictTotal.c, by_status: conflictCounts, pending_with_elector: pendingWithElector.c, pending_pjc: pendingPJC.c, pending_orphan: pendingOrphan.c },
+      conflicts: { total: conflictTotal.c, by_status: conflictCounts },
       locations_by_district: locationsByDistrict,
       captures_by_district: capturesByDistrict,
       pjc_detail: {
@@ -3530,17 +3488,6 @@ app.get('/api/admin/conflicts', (req, res) => {
     const params: any[] = [];
 
     const sec = getSecurityFilter(req, 'cc');
-    const debugInfo = {
-      role: req.headers['x-user-role'],
-      user_id: req.headers['x-user-id'],
-      district_q: req.query.district,
-      district_h: req.headers['x-district'],
-      list_id_q: req.query.listId,
-      list_id_h: req.headers['x-list-id'],
-      sec_sql: sec.sql,
-      sec_params: sec.params,
-    };
-    console.log(`[CONFLICTS DEBUG]`, JSON.stringify(debugInfo));
     sql += ` ${sec.sql}`;
     params.push(...sec.params);
 
@@ -3554,14 +3501,7 @@ app.get('/api/admin/conflicts', (req, res) => {
       params.push(list_id, list_id);
     }
 
-    console.log(`[CONFLICTS SQL] ${sql}`);
-    console.log(`[CONFLICTS PARAMS]`, params);
-
     const conflicts = db.prepare(sql).all(...params) as any[];
-    console.log(`[DB] Fetched ${conflicts.length} conflicts.`);
-
-    // TEMP: Include debug info in response header so we can diagnose
-    res.setHeader('X-Debug-Conflicts', JSON.stringify({ ...debugInfo, result_count: conflicts.length }));
     res.json(conflicts);
   } catch (err: any) {
     console.error('[CONFLICTS ERROR]', err);
