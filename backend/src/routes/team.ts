@@ -115,7 +115,7 @@ router.get('/structure/padrinos', (req, res) => {
   }
 });
 
-router.get('/structure/padrinos/:id/coordinators', (req, res) => {
+router.get('/structure/padrinos/:id/coordinators', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO'), (req, res) => {
   const { id } = req.params;
   try {
     const coordinators = db.prepare(`
@@ -169,7 +169,7 @@ router.get('/structure/padrinos/:id/coordinators', (req, res) => {
   }
 });
 
-router.get('/structure/coordinators/:id/electors', (req, res) => {
+router.get('/structure/coordinators/:id/electors', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO'), (req, res) => {
   const { id } = req.params;
   try {
     const electors = db.prepare(`
@@ -193,7 +193,7 @@ router.get('/structure/coordinators/:id/electors', (req, res) => {
   }
 });
 
-router.get('/structure/padrinos/:id/full-report', async (req, res) => {
+router.get('/structure/padrinos/:id/full-report', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO'), async (req, res) => {
   const { id } = req.params;
   let maxElectors = parseInt(req.query.maxElectors as string);
   if (isNaN(maxElectors) || maxElectors <= 0) {
@@ -273,7 +273,7 @@ router.get('/structure/padrinos/:id/full-report', async (req, res) => {
   }
 });
 
-router.get('/coordinator/:id/captures', (req, res) => {
+router.get('/coordinator/:id/captures', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR'), (req, res) => {
   const { id } = req.params;
   try {
     const captures = db.prepare(`

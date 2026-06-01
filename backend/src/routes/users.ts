@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db';
 import { getCachedUserInfo, getRole, getSecurityFilter, getListId, clearUserCache, sanitizeElectorData } from './helpers';
-import { trackEvent, invalidateAllReportsCaches, logAction } from '../server';
+import { trackEvent, invalidateAllReportsCaches, logAction, adminLimiter } from '../server';
 import { normalizePhone } from '../utils/phone';
 
 const canModifyUser = (requesterId: string | number | undefined, requesterRole: string, targetUserId: string | number): boolean => {
@@ -58,7 +58,7 @@ const isAllowedParent = (requesterId: string | number, requesterRole: string, pa
 
 export default function usersRoutes() {
   const router = Router();
-router.post('/', (req, res) => {
+router.post('/', adminLimiter, (req, res) => {
   const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
   const requesterId   = req.headers['x-user-id'] as string;
 

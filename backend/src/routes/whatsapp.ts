@@ -7,6 +7,7 @@ import {
   getCachedUserInfo, getRole, getSecurityFilter, getListId,
   sanitizeElectorData, addSubtleVariation
 } from './helpers';
+import { broadcastLimiter } from '../server';
 
 export default function whatsappRoutes(storage: multer.StorageEngine) {
   const router = Router();
@@ -141,7 +142,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  router.post('/broadcast', async (req, res) => {
+  router.post('/broadcast', broadcastLimiter, async (req, res) => {
     const {
       template_id, targets, message, media_url, media_type,
       minDelay = 2, maxDelay = 5, useSpintax = true, terminalId: reqTerminalId
@@ -522,7 +523,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  router.post('/direct-message', async (req, res) => {
+  router.post('/direct-message', broadcastLimiter, async (req, res) => {
     const { number, message, media_url, media_type, lat, lng, terminalId: reqTerminalId, use_spintax } = req.body;
     const terminalId = reqTerminalId || 'default';
     try {

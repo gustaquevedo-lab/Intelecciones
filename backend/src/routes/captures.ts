@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db';
 import {
-  getCachedUserInfo, getRole, getSecurityFilter, getListId
+  getCachedUserInfo, getRole, getSecurityFilter, getListId, requireRole
 } from './helpers';
 import {
   captureLimiter, clearElectorsCache, invalidateAllReportsCaches,
@@ -246,7 +246,7 @@ export function coordinatorsRoutes() {
   });
 
   // GET /api/coordinators/:id/history
-  router.get('/:id/history', (req, res) => {
+  router.get('/:id/history', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR'), (req, res) => {
     try {
       const history = db.prepare(`
         SELECT c.*,

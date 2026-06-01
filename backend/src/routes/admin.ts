@@ -8,7 +8,7 @@ import {
   getCachedUserInfo, sanitizeElectorData
 } from './helpers';
 import {
-  clearElectorsCache, invalidateAllReportsCaches, logAction
+  clearElectorsCache, invalidateAllReportsCaches, logAction, adminLimiter
 } from '../server';
 import { normalizePhone } from '../utils/phone';
 
@@ -286,7 +286,7 @@ export default function adminRoutes(upload: multer.Multer) {
   });
 
   // ── POST /api/settings ──────────────────────────────────────────────────────
-  router.post('/settings', (req, res) => {
+  router.post('/settings', adminLimiter, (req, res) => {
     const settings = req.body;
     try {
       const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
@@ -307,11 +307,12 @@ export default function adminRoutes(upload: multer.Multer) {
     const role = getRole(req);
     try {
       let cityFilter = '';
+      let cityParams: any[] = [];
       if (role !== 'SUPERUSUARIO' && user_id) {
         const user = db.prepare(`SELECT c.distrito FROM users u JOIN lists l ON u.assigned_list_id = l.id JOIN campaigns c ON l.campaign_id = c.id WHERE u.id = ?`).get(user_id) as any;
         if (user?.distrito) {
-          const safeDistrito = user.distrito.replace(/'/g, "''");
-          cityFilter = `AND (e.distrito = '${safeDistrito}' OR e.ciudad = '${safeDistrito}')`;
+          cityFilter = 'AND (e.distrito = ? OR e.ciudad = ?)';
+          cityParams = [user.distrito, user.distrito];
         }
       }
 
@@ -326,7 +327,7 @@ export default function adminRoutes(upload: multer.Multer) {
           LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
           LEFT JOIN users u ON ec.coordinator_id = u.id
           WHERE e.ci = ? ${cityFilter} LIMIT 100
-        `).all(queryStr);
+        `).all(queryStr, ...cityParams);
       } else {
         const parts = queryStr.split(/\s+/).filter(Boolean);
         if (parts.length >= 2) {
@@ -337,7 +338,7 @@ export default function adminRoutes(upload: multer.Multer) {
             LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
             LEFT JOIN users u ON ec.coordinator_id = u.id
             WHERE ((e.nombre LIKE ? AND e.apellido LIKE ?) OR (e.nombre LIKE ? AND e.apellido LIKE ?)) ${cityFilter} LIMIT 100
-          `).all(p1, p2, p2, p1);
+          `).all(p1, p2, p2, p1, ...cityParams);
         } else {
           const term = `%${queryStr}%`;
           electors = db.prepare(`
@@ -346,7 +347,7 @@ export default function adminRoutes(upload: multer.Multer) {
             LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
             LEFT JOIN users u ON ec.coordinator_id = u.id
             WHERE (e.nombre LIKE ? OR e.apellido LIKE ? OR e.ci LIKE ?) ${cityFilter} LIMIT 100
-          `).all(term, term, term);
+          `).all(term, term, term, ...cityParams);
         }
       }
       res.json((electors as any[]).map(sanitizeElectorData));
@@ -511,7 +512,7 @@ export default function adminRoutes(upload: multer.Multer) {
   });
 
   // ── POST /api/admin/system/wipe-captures ───────────────────────────────────
-  router.post('/admin/system/wipe-captures', (req, res) => {
+  router.post('/admin/system/wipe-captures', adminLimiter, (req, res) => {
     const { key, distrito } = req.body;
     const masterKeyFromDb = db.prepare("SELECT value FROM settings WHERE key = 'master_key'").get() as any;
     if (key !== masterKeyFromDb?.value) return res.status(401).json({ error: 'Llave Maestra inválida' });

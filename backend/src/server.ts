@@ -136,6 +136,22 @@ export const uploadLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Demasiadas operaciones administrativas (30/min).' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const broadcastLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Demasiadas transmisiones (5/min).' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Aplicar rate limiter general a todas las rutas de API
 app.use('/api', apiLimiter);
 
@@ -770,7 +786,7 @@ app.post('/api/command/push-message', requireRole('SUPERUSUARIO', 'COORDINADOR',
   }
 });
 
-app.get('/api/debug/db-info', (req, res) => {
+app.get('/api/debug/db-info', requireRole('SUPERUSUARIO'), (req, res) => {
   const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
   const dbPath = path.join(dbDir, 'intellecciones.db');
   const seedPath = path.join(process.cwd(), 'intellecciones.db');
@@ -927,6 +943,7 @@ app.get('/api/electors/:ci', (req, res) => {
   const role = getRole(req);
 
   let distritoFilter = '';
+  let distritoParams: any[] = [];
   if (!['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO'].includes(role) && user_id) {
     const user = db.prepare(`
       SELECT c.distrito 
@@ -936,8 +953,8 @@ app.get('/api/electors/:ci', (req, res) => {
       WHERE u.id = ?
     `).get(user_id) as any;
     if (user?.distrito) {
-      const safeDistrito = user.distrito.replace(/'/g, "''");
-      distritoFilter = `AND (e.distrito = '${safeDistrito}' OR e.ciudad = '${safeDistrito}')`;
+      distritoFilter = 'AND (e.distrito = ? OR e.ciudad = ?)';
+      distritoParams = [user.distrito, user.distrito];
     }
   }
   
@@ -953,7 +970,7 @@ app.get('/api/electors/:ci', (req, res) => {
     LEFT JOIN users u ON c.coordinator_id = u.id
     LEFT JOIN users p ON u.parent_id = p.id
     WHERE e.ci = ? ${distritoFilter}
-  `).get(effectiveListId, effectiveListId, ci);
+  `).get(effectiveListId, effectiveListId, ci, ...distritoParams);
   
   if (elector) {
     res.json(elector);
@@ -983,8 +1000,8 @@ app.post('/api/escrutinio', (req, res) => {
   }
 });
 
-app.get('/api/admin/verify-candidate/:ci', (req, res) => {
-  let { ci } = req.params;
+app.get('/api/admin/verify-candidate/:ci', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO'), (req, res) => {
+  const ci = req.params.ci as string;
   const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
 
   try {
@@ -1008,8 +1025,8 @@ app.get('/api/admin/verify-candidate/:ci', (req, res) => {
 });
 
 // User verification/lookup
-app.get('/api/admin/verify-user/:ci', (req, res) => {
-  let { ci } = req.params;
+app.get('/api/admin/verify-user/:ci', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR'), (req, res) => {
+  const ci = req.params.ci as string;
   const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
 
   try {
@@ -1214,7 +1231,7 @@ app.get('/api/activities', (req, res) => {
 
 
 
-app.get('/api/debug', (req, res) => {
+app.get('/api/debug', requireRole('SUPERUSUARIO'), (req, res) => {
   try {
     const electorsSchema = db.prepare('PRAGMA table_info(electors)').all();
     const campaignsSchema = db.prepare('PRAGMA table_info(campaigns)').all();

@@ -249,10 +249,10 @@ export const applyTenantFilter = (query: string, req: express.Request, params: a
 
   const hasWhere = query.toUpperCase().includes('WHERE');
   const filteredQuery = hasWhere
-    ? query.replace(/WHERE/i, `WHERE list_id = ${listId} AND `)
-    : query + ` WHERE list_id = ${listId}`;
+    ? query.replace(/WHERE/i, 'WHERE list_id = ? AND ')
+    : query + ' WHERE list_id = ?';
 
-  return { filteredQuery, filteredParams: params };
+  return { filteredQuery, filteredParams: [...params, listId] };
 };
 
 export function sanitizeElectorData(elector: any): any {

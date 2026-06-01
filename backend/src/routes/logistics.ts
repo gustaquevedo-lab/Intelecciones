@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db from '../db';
-import { getListId, getDistrict, getSecurityFilter, sanitizeElectorData } from './helpers';
+import { getListId, getDistrict, getSecurityFilter, sanitizeElectorData, requireRole } from './helpers';
 import { logAction } from '../server';
 
 export default function logisticsRoutes() {
@@ -211,7 +211,7 @@ export function vehiclesRoutes() {
   });
 
   // ── GET /api/vehicles/:id/passengers ────────────────────────────────────────
-  router.get('/:id/passengers', (req, res) => {
+  router.get('/:id/passengers', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR'), (req, res) => {
     try {
       const passengers = db.prepare(`
         SELECT ec.id as capture_id, ec.transport_status, ec.telefono as contact_phone,
