@@ -101,7 +101,7 @@ const CARD_CSS = `
     --accent-yellow: #ff9e00;
     --accent-orange: #f26200;
   }
-  @page { size: A4 portrait; margin: 1cm 0 0 0; }
+  @page { size: A4 portrait; margin: 3cm 0 0 0; }
   * { box-sizing: border-box; margin: 0; padding: 0;
       -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { font-family: 'Montserrat', sans-serif; background: white; }
