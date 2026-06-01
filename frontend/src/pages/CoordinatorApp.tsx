@@ -941,6 +941,8 @@ const CoordinatorApp = () => {
     }
   }, [activeTab, user]);
 
+  const fetchTeamStats = async () => {};
+
   const fetchHistory = async () => {
     if (!user) return;
     setIsStatsLoading(true);
@@ -1119,7 +1121,7 @@ const CoordinatorApp = () => {
     offlineCount, isDownloading, downloadProgress,
     handleDownloadPadron,
     handleCapture, handleUpdateCapture, handleDeleteCapture,
-    handleCreateCoord, handleCreatePadrino,
+    handleCreateCoord: handleCreateCoordinator, handleCreatePadrino,
     fetchHistory, fetchRequests, fetchDisputes, fetchTeamStats,
   };
 

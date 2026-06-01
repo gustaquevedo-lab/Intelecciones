@@ -1076,7 +1076,7 @@ const TabCoordinators = (props: any) => {
               overflow: 'hidden'
             }}
           >
-            <form onSubmit={handleCreateCoordinator}>
+            <form onSubmit={handleCreateCoord}>
               <div style={{ 
                 padding: '1.5rem 1.75rem', 
                 borderBottom: '1px solid var(--border)', 
