@@ -549,5 +549,20 @@ export default function adminRoutes(upload: multer.Multer) {
     }
   });
 
+  router.post('/admin/users/:id/reset-password', (req, res) => {
+    const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+    if (requesterRole !== 'SUPERUSUARIO' && requesterRole !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'No tienes permisos para resetear contraseñas.' });
+    }
+    try {
+      const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.params.id) as any;
+      if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+      db.prepare('UPDATE users SET password = ?, needs_password_change = 1 WHERE id = ?').run(user.username, req.params.id);
+      res.json({ success: true, message: `Contraseña reseteada. El usuario debe ingresar con su nombre de usuario (${user.username}) y cambiarla.` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }
