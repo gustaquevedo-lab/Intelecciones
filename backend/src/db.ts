@@ -46,6 +46,20 @@ const setDbVersion = (v: number) => {
 
 const dbVersion = getDbVersion();
 
+// Always-safe: add missing columns idempotently on every startup
+const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
+  try {
+    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as any[];
+    if (!columns.some((c: any) => c.name === columnName)) {
+      db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`).run();
+      console.log(`MIGRATION: Added column [${columnName}] to table [${tableName}]`);
+    }
+  } catch (e: any) { console.error(`MIGRATION ERROR adding ${columnName} to ${tableName}: ${e.message}`); }
+};
+
+// Columns added OUTSIDE the version-gated block run on every startup (safe, idempotent)
+addColumnIfNotExists("elector_captures", "copiatin_printed_at", "DATETIME");
+
 // Only run heavy schema checks if version changed
 if (dbVersion < currentSchemaVersion) {
     console.log(`MIGRATION: Database version [${dbVersion}] detected. Updating to [${currentSchemaVersion}]...`);
@@ -347,15 +361,7 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
     `);
 
-    const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
-      try {
-        const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as any[];
-        if (!columns.some(c => c.name === columnName)) {
-          db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`).run();
-          console.log(`MIGRATION: Added column [${columnName}] to table [${tableName}]`);
-        }
-      } catch (e: any) { console.error(`MIGRATION ERROR adding ${columnName} to ${tableName}: ${e.message}`); }
-    };
+    // addColumnIfNotExists is defined above (module-level) so it's available here too
 
     addColumnIfNotExists("campaigns", "goal", "INTEGER DEFAULT 1000");
     addColumnIfNotExists("campaigns", "distrito", "TEXT");
@@ -428,7 +434,7 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("vehicles", "ciudad", "TEXT DEFAULT ''");
     addColumnIfNotExists("users", "phone_hash", "TEXT");
     addColumnIfNotExists("elector_captures", "phone_hash", "TEXT");
-    addColumnIfNotExists("elector_captures", "copiatin_printed_at", "DATETIME");
+    // copiatin_printed_at is added at startup (outside this block) — see module-level addColumnIfNotExists calls
  
     // Indexes for better JOIN performance
     db.exec(`
@@ -658,7 +664,6 @@ export const runBootstrapChecks = () => {
             )
             AND elector_ci NOT IN (
               SELECT elector_ci FROM capture_conflicts
-              WHERE status = 'PENDING' OR status = 'WAITING_CONSENT'
             )
           GROUP BY elector_ci
         ) dups
