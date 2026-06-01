@@ -114,7 +114,6 @@ const TabLists = (props: any) => {
     fetchAuditData,
   } = props;
 
-  return (
     // 1. Group lists by city for the overview
       const listsByCity = (Array.isArray(lists) ? lists : []).reduce((acc: Record<string, any[]>, list) => {
         const city = list.ciudad || 'GENERAL';
@@ -387,7 +386,6 @@ const TabLists = (props: any) => {
             data={filteredLists}
           />
         </div>
-  );
 };
 
 export default TabLists;

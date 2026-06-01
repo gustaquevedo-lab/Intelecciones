@@ -114,7 +114,6 @@ const TabUsers = (props: any) => {
     fetchAuditData,
   } = props;
 
-  return (
     const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
         const matchesSearch = !userSearchTerm ||
           u.username?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
@@ -289,7 +288,6 @@ const TabUsers = (props: any) => {
             data={filteredUsers}
           />
         </div>
-  );
 };
 
 export default TabUsers;

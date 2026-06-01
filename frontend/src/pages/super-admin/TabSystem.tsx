@@ -115,7 +115,6 @@ const TabSystem = (props: any) => {
   } = props;
 
   return (
-    (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
