@@ -1229,7 +1229,7 @@ const DiaDApp: React.FC = () => {
                                         style={{
                                           width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--green)',
                                           background: isSelectedForSwap ? 'var(--green)' : 'rgba(34,197,94,0.1)',
-                                          color: isSelectedForSwap ? 'white' : '#4ADE80', fontSize: '#4ADE80',
+                                          color: isSelectedForSwap ? 'white' : '#4ADE80',
                                           fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer',
                                           animation: !isConstituida && !isSelectedForSwap ? 'pulseBorder 2s infinite' : 'none'
                                         }}
