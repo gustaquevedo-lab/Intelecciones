@@ -101,7 +101,7 @@ const CARD_CSS = `
     --accent-yellow: #ff9e00;
     --accent-orange: #f26200;
   }
-  @page { size: A4 portrait; margin: 0; }
+  @page { size: A4 portrait; margin: 1cm 0 0 0; }
   * { box-sizing: border-box; margin: 0; padding: 0;
       -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { font-family: 'Montserrat', sans-serif; background: white; }
@@ -378,7 +378,13 @@ function buildPrintHTML(
 <body>
   <div class="print-grid">${cards}</div>
   <script>
-    document.fonts.ready.then(function() { window.print(); });
+    window.addEventListener('load', function() {
+      document.fonts.ready.then(function() {
+        setTimeout(function() {
+          window.print();
+        }, 800);
+      });
+    });
   </script>
 </body>
 </html>`;
