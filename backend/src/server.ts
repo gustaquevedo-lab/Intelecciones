@@ -109,10 +109,11 @@ export const loginLimiter = rateLimit({
 
 export const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
-  message: { error: 'Límite de peticiones excedido (100/min).' },
+  max: 600,
+  message: { error: 'Límite de peticiones excedido.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path.includes('/stream/'),
 });
 
 export const captureLimiter = rateLimit({

@@ -18,18 +18,10 @@ axiosRetry(api, {
   retries: 3,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: (error) => {
-    // Only retry on timeout (ECONNABORTED), network error, or 5xx. NO on 4xx nor 429.
+    // Only retry on network errors and timeouts — NOT on 5xx (persistent backend errors)
     const isNetworkError = !error.response;
     const isTimeout = error.code === 'ECONNABORTED';
-    const is5xx = error.response && error.response.status >= 500;
-    
-    if (isNetworkError || isTimeout || is5xx) {
-      if (import.meta.env.DEV) {
-        console.log(`[API Retry] Retrying request to ${error.config?.url} due to:`, error.message || error.code);
-      }
-      return true;
-    }
-    return false;
+    return isNetworkError || isTimeout;
   }
 });
 
