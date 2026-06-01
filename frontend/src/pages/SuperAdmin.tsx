@@ -1206,17 +1206,17 @@ Status: ${error.response?.status || 'N/A'}
                 <SkeletonTable rows={8} columns={5} />
               ) : (
                 <>
-                  {activeTab === 'overview' && renderOverview()}
-                  {activeTab === 'campaigns' && renderCampaigns()}
-                  {activeTab === 'lists' && renderLists()}
-                  {activeTab === 'users' && renderUsers()}
-                  {activeTab === 'logistics' && renderLogistics()}
-                  {activeTab === 'system' && renderSystem()}
-                  {activeTab === 'audit' && renderAudit()}
-                  {activeTab === 'locales' && renderLocales()}
-                  {activeTab === 'padrones' && renderPadrones()}
+                  {activeTab === 'overview' && <TabOverview {...tabProps} />}
+                  {activeTab === 'campaigns' && <TabCampaigns {...tabProps} />}
+                  {activeTab === 'lists' && <TabLists {...tabProps} />}
+                  {activeTab === 'users' && <TabUsers {...tabProps} />}
+                  {activeTab === 'logistics' && <TabLogistics {...tabProps} />}
+                  {activeTab === 'system' && <TabSystem {...tabProps} />}
+                  {activeTab === 'audit' && <TabAudit {...tabProps} />}
+                  {activeTab === 'locales' && <TabLocales {...tabProps} />}
+                  {activeTab === 'padrones' && <TabPadrones {...tabProps} />}
                   {activeTab === 'whatsapp' && <Navigate to="/comunicaciones" />}
-                  {activeTab === 'settings' && renderSettings()}
+                  {activeTab === 'settings' && <TabSettings {...tabProps} />}
                 </>
               )}
             </motion.div>
