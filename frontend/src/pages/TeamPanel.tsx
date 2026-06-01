@@ -759,11 +759,7 @@ const PadrinoRow = ({
 const TeamPanel = () => {
   const { user, activeDistrict } = useAuth();
   const [activeTab, setActiveTab] = useState<'structure' | 'reports'>('structure');
-  const [apiCriticalError, setApiCriticalError] = useState<Error | null>(null);
-  
-  if (apiCriticalError) {
-    throw apiCriticalError;
-  }
+  const [apiCriticalError, setApiCriticalError] = useState<string | null>(null);
   
   // Regular Team states
   const [padrinos, setPadrinos] = useState<TeamUser[]>([]);
@@ -973,11 +969,7 @@ const TeamPanel = () => {
       setCampaigns(campaignsRes.data || []);
     } catch (err: any) {
       console.error('Error fetching team structure:', err);
-      setApiCriticalError(new Error(
-        `API_ERROR: No se pudo recuperar la estructura de tu equipo.\n` +
-        `Servidor: ${err.response?.data?.error || err.message || 'Error de sincronización con la base de datos'}\n` +
-        `Timestamp: ${new Date().toISOString()}`
-      ));
+      setApiCriticalError(err.response?.data?.error || err.message || 'Error de red. Reintenta.');
     }
     setLoading(false);
   }, [activeDistrict]);
@@ -1397,6 +1389,13 @@ const TeamPanel = () => {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', flexDirection: 'column', gap: '1rem' }}>
       <Loader size={28} style={{ color: 'var(--plra-300)', animation: 'spin 1s linear infinite' }} />
       <span style={{ color: 'var(--text-3)', fontSize: '0.85rem', fontWeight: 700 }}>Cargando equipo...</span>
+    </div>
+  );
+
+  if (apiCriticalError) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', flexDirection: 'column', gap: '1rem' }}>
+      <span style={{ color: 'var(--red)', fontSize: '0.85rem', fontWeight: 700 }}>Error: {apiCriticalError}</span>
+      <button onClick={() => { setApiCriticalError(null); load(); }} style={{ padding: '0.5rem 1.25rem', background: 'var(--plra-400)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}>Reintentar</button>
     </div>
   );
 
