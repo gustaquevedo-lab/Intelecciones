@@ -43,6 +43,16 @@ const formatCI = (ci: string) => {
   return c;
 };
 
+// Resuelve URLs de fotos: rutas /assets/ van al frontend, el resto al backend (uploads)
+const resolvePhotoUrl = (url: string | null): string => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/assets/') || url.startsWith('/favicon')) {
+    return window.location.origin + url;
+  }
+  return getImageUrl(url) || '';
+};
+
 // ─── CSS exacto del modelo (scratch/copiatin_diseno.html) ─────────────────────
 const CARD_CSS = `
   :root {
@@ -239,9 +249,9 @@ const CARD_CSS = `
 
 function buildPrintHTML(
   electors: CopiatinElector[],
-  campaignLists: CampaignList[],
-  logoUrl: string
+  campaignLists: CampaignList[]
 ): string {
+  const logoUrl = window.location.origin + '/assets/intelecciones-logo.svg';
   const buildBadge = (list: CampaignList) => {
     const hasOption = list.option_number && list.option_number !== '0';
     if (hasOption) {
@@ -260,7 +270,7 @@ function buildPrintHTML(
   const buildCandidateRows = (lists: CampaignList[]) => lists.slice(0, 4).map((list, i) => {
     const isEmphasis = i < 2;
     const name = (list.candidate_nombre || list.candidate_alias || '—').toUpperCase();
-    const photoUrl = list.photo_url ? (getImageUrl(list.photo_url) || '') : '';
+    const photoUrl = resolvePhotoUrl(list.photo_url);
     const photoHtml = photoUrl
       ? `<div class="candidate-photo-frame"><img src="${photoUrl}" alt="${name}"></div>`
       : `<div class="candidate-photo-frame" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.4);">?</div>`;
@@ -388,8 +398,7 @@ const CopiatinesReport = () => {
   const handlePrint = () => {
     if (!data || data.electors.length === 0) return;
     const ids = data.electors.map(e => e.capture_id);
-    const logoUrl = window.location.origin + '/favicon.svg';
-    const html = buildPrintHTML(data.electors, data.campaignLists, logoUrl);
+    const html = buildPrintHTML(data.electors, data.campaignLists);
     const pw = window.open('', '_blank', 'width=900,height=700');
     if (!pw) return;
     pw.document.write(html);
@@ -507,7 +516,7 @@ const CopiatinesReport = () => {
         <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
           <div className="sc-grid">
             {data.electors.map(e => {
-              const logoUrl = window.location.origin + '/favicon.svg';
+              const logoUrl = window.location.origin + '/assets/intelecciones-logo.svg';
               return (
                 <div key={e.capture_id} className={`copiatin-card${e.copiatin_printed_at ? ' printed' : ''}`}>
                   {e.copiatin_printed_at && <div className="printed-badge">✓ IMPRESO</div>}
@@ -540,7 +549,7 @@ const CopiatinesReport = () => {
                     {data.campaignLists.slice(0, 4).map((list, i) => {
                       const isEmphasis = i < 2;
                       const name = (list.candidate_nombre || list.candidate_alias || '—').toUpperCase();
-                      const photoUrl = list.photo_url ? getImageUrl(list.photo_url) : null;
+                      const photoUrl = resolvePhotoUrl(list.photo_url) || null;
                       const hasOption = list.option_number && list.option_number !== '0';
                       return (
                         <div key={list.id} className={`candidate-card${isEmphasis ? ' emphasis' : ''}`}>
