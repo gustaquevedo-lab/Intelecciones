@@ -177,6 +177,7 @@ const CoordinatorApp = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [telefono, setTelefono] = useState('');
+  const [trafficLight, setTrafficLight] = useState('');
   const [colorCounts, setColorCounts] = useState<any>(null);
   const [locationStats, setLocationStats] = useState<any[]>([]);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
