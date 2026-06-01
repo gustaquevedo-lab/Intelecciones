@@ -115,7 +115,6 @@ const TabAudit = (props: any) => {
   } = props;
 
   return (
-    (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Auditoría de Sistema</h2>
@@ -230,7 +229,6 @@ const TabAudit = (props: any) => {
           />
         )}
       </div>
-  );
 };
 
 export default TabAudit;

@@ -115,7 +115,6 @@ const TabLocales = (props: any) => {
   } = props;
 
   return (
-    (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Locales de Votación</h2>
@@ -249,7 +248,6 @@ const TabLocales = (props: any) => {
           </MapContainer>
         </div>
       </div>
-  );
 };
 
 export default TabLocales;

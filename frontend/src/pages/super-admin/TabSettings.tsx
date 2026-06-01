@@ -115,7 +115,6 @@ const TabSettings = (props: any) => {
   } = props;
 
   return (
-    (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1000px' }}>
     
         <section>
@@ -259,7 +258,6 @@ const TabSettings = (props: any) => {
       if (activeTab === 'padrones') loadPadronStats();
     }, [activeTab]);
     
-  );
 };
 
 export default TabSettings;

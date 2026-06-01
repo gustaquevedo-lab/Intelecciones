@@ -115,7 +115,6 @@ const TabPadrones = (props: any) => {
   } = props;
 
   return (
-    (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1000px' }}>
         <section>
           <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--plra-300)', letterSpacing: '0.1em', marginBottom: '1.5rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -215,7 +214,6 @@ const TabPadrones = (props: any) => {
           </div>
         </section>
       </div>
-  );
 };
 
 export default TabPadrones;

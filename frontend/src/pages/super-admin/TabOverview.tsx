@@ -115,7 +115,6 @@ const TabOverview = (props: any) => {
   } = props;
 
   return (
-    (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {serverWaking && (
           <div style={{
@@ -389,7 +388,6 @@ const TabOverview = (props: any) => {
           />
         </div>
       </div>
-  );
 };
 
 export default TabOverview;
