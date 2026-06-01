@@ -153,7 +153,7 @@ const NumberBadge = ({ label, value }: { label: string; value: React.ReactNode }
 const TabSearch = (props: any) => {
   const {
     // Auth + settings
-    user, settings, activeDistrict, isReadOnly,
+    user, loading, settings, activeDistrict, isReadOnly,
     // Core search
     ci, setCi, elector, setElector, isLoading, error, setError,
     successMsg, setSuccessMsg, location, setLocation,

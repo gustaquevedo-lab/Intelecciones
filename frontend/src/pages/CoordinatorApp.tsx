@@ -1076,7 +1076,7 @@ const CoordinatorApp = () => {
 
   // tabProps: all state and handlers passed to sub-components
   const tabProps: any = {
-    user, settings, activeDistrict, isReadOnly,
+    user, loading, settings, activeDistrict, isReadOnly,
     ci, setCi, elector, setElector, isLoading, error, setError,
     successMsg, setSuccessMsg, location, setLocation,
     needsTransport, setNeedsTransport, activeTab, setActiveTab,
