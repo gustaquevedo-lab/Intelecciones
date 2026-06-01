@@ -14,6 +14,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import api, { getImageUrl } from '../services/api';
+import { CIUDADES_PARAGUAY } from '../constants/cities';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';

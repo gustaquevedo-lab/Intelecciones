@@ -19,6 +19,7 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 import { useAuth, apiFetch } from '../context/AuthContext';
+import { CIUDADES_PARAGUAY } from '../constants/cities';
 
 const TerritoryMap: React.FC = () => {
 const TerritoryMap: React.FC = () => {
@@ -237,17 +238,6 @@ const MapHandler = ({ activeDistrict, electors }: { activeDistrict?: string, ele
     useEffect(() => {
       if (activeDistrict && activeDistrict !== lastDistrict) {
         const city = activeDistrict.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
-          'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
-          'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
-          'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
-          'ENCARNACION': { lat: -27.3308, lng: -55.8667, zoom: 14 },
-          'CONCEPCION': { lat: -23.4055, lng: -57.4340, zoom: 14 },
-          'CAPITAN BADO': { lat: -23.2652, lng: -55.5323, zoom: 14 },
-          'BELLA VISTA NORTE': { lat: -22.1287, lng: -56.5204, zoom: 14 },
-          'ZANJA PYTA': { lat: -22.6186, lng: -55.6795, zoom: 14 },
-          'KARAPAI': { lat: -23.4194, lng: -55.8458, zoom: 14 }
-        };
         if (CIUDADES_PARAGUAY[city]) {
           map.flyTo([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng], CIUDADES_PARAGUAY[city].zoom, { duration: 2 });
           setLastDistrict(activeDistrict);

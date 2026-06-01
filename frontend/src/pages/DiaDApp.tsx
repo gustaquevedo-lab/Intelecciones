@@ -17,6 +17,7 @@ import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { Skeleton, SkeletonTable } from '../components/Skeleton';
+import { CIUDADES_PARAGUAY } from '../constants/cities';
 
 // ─── D'Hondt Algorithm ──────────────────────────────────────────────────────
 const MapHandler = ({ activeDistrict, locales }: { activeDistrict?: string, locales?: any[] }) => {

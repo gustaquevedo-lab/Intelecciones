@@ -48,6 +48,7 @@ import 'leaflet/dist/leaflet.css';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api, { getImageUrl } from '../services/api';
+import { CIUDADES_PARAGUAY } from '../constants/cities';
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
