@@ -131,7 +131,7 @@ const CARD_CSS = `
   .top-band-new {
     display: flex;
     flex-direction: column;
-    height: 1.38cm;
+    height: 1.45cm;
     border-bottom: 2.2px solid var(--primary-blue);
     padding-bottom: 2px;
     margin-bottom: 3.5px;
@@ -141,7 +141,8 @@ const CARD_CSS = `
     display: flex;
     justify-content: space-between;
     width: 100%;
-    height: 1.0cm;
+    height: auto;
+    min-height: 1.05cm;
   }
   .bottom-row {
     display: flex;
@@ -220,7 +221,7 @@ const CARD_CSS = `
   }
   .local-info-inline {
     flex-grow: 1; min-width: 0;
-    margin-left: 12px;
+    margin-left: 2px;
     display: flex; align-items: center;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
