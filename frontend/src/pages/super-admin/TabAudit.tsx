@@ -229,6 +229,8 @@ const TabAudit = (props: any) => {
           />
         )}
       </div>
+    </>
+  );
 };
 
 export default TabAudit;

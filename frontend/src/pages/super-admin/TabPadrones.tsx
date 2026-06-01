@@ -214,6 +214,8 @@ const TabPadrones = (props: any) => {
           </div>
         </section>
       </div>
+    </>
+  );
 };
 
 export default TabPadrones;

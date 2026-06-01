@@ -205,6 +205,8 @@ const TabCampaigns = (props: any) => {
           data={Array.isArray(campaigns) ? campaigns : []}
         />
       </div>
+    </>
+  );
 };
 
 export default TabCampaigns;
