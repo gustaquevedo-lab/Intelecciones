@@ -2499,6 +2499,27 @@ const LinesTab: React.FC = () => {
               </div>
             )}
 
+            {/* Warmup toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0.75rem 0', padding: '0.4rem 0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-2)', fontWeight: 600 }}>Calentamiento automático:</span>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={terminal.warmup_enabled === 1}
+                  onChange={async (e) => {
+                    const checked = e.target.checked;
+                    try {
+                      await api.post(`/whatsapp/terminals/${terminal.id}/warmup`, { enabled: checked });
+                      loadTerminals();
+                    } catch {
+                      alert('Error al actualizar el estado de calentamiento');
+                    }
+                  }}
+                  style={{ accentColor: '#25d366', width: '14px', height: '14px', cursor: 'pointer' }}
+                />
+              </label>
+            </div>
+
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {terminal.status !== 'CONNECTED' ? (
                 <button

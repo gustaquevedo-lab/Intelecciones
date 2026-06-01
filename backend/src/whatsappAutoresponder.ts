@@ -126,6 +126,58 @@ export async function processIncomingMessage(
   
   if (!text) return false;
 
+  // Check if sender is another connected terminal with warmup enabled
+  try {
+    const isWarmupPartner = db.prepare('SELECT 1 FROM whatsapp_terminals WHERE phone_number = ? AND warmup_enabled = 1').get(phone);
+    if (isWarmupPartner) {
+      if (Math.random() < 0.15) {
+        console.log(`[AUTORESPONDER][WARMUP] Stopping warm-up conversation with ${phone} randomly to mimic human behavior`);
+        return true;
+      }
+
+      const WARMUP_REPLIES = [
+        '¡Genial! Gracias por avisar.',
+        'Entendido, quedamos así.',
+        'Dale, perfecto.',
+        'Buenísimo, seguimos al habla.',
+        '¡Excelente! Un abrazo.',
+        'Dale, nos vemos más tarde.',
+        'Listo, cualquier novedad aviso.',
+        '¡Qué bueno! Éxitos hoy.',
+        'Sí, totalmente de acuerdo.',
+        'Dale, te aviso apenas tenga novedades.',
+        'Buen día, todo bien por suerte.',
+        '¡Hola! Avanzando a full.',
+        'Excelente, fuerza equipo.',
+        'Gracias por la actualización.'
+      ];
+
+      const reply = WARMUP_REPLIES[Math.floor(Math.random() * WARMUP_REPLIES.length)];
+      const delayMs = 5000 + Math.random() * 7000;
+      console.log(`[AUTORESPONDER][WARMUP] Warm-up message from ${phone}. Scheduling reply in ${(delayMs/1000).toFixed(1)}s`);
+      
+      setTimeout(async () => {
+        try {
+          await sock.sendPresenceUpdate('composing', fromJid);
+          await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
+          await sock.sendPresenceUpdate('paused', fromJid);
+          
+          await sock.sendMessage(fromJid, { text: reply });
+          db.prepare(`
+            INSERT INTO whatsapp_messages (terminal_id, contact_number, body, type, is_incoming, campaign_id, phone_number)
+            VALUES (?, ?, ?, 'chat', 0, null, ?)
+          `).run(terminalId, fromJid, reply, phone);
+        } catch (e: any) {
+          console.error(`[AUTORESPONDER][WARMUP] Failed sending reply to warmup partner ${phone}:`, e.message);
+        }
+      }, delayMs);
+
+      return true;
+    }
+  } catch (err: any) {
+    console.error('[AUTORESPONDER][WARMUP] Error checking warmup partner:', err.message);
+  }
+
   // 1. Keyword check for Opt-out / Baja
   const optOutKeywords = ['baja', 'no enviar', 'no me escriban', 'no molestar', 'remover', 'salir', 'stop', 'no quiero recibir'];
   if (optOutKeywords.some(keyword => text.includes(keyword))) {

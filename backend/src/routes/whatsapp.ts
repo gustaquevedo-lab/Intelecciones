@@ -65,6 +65,22 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
     res.json({ success: true });
   });
 
+  router.post('/terminals/:id/warmup', (req, res) => {
+    const { id } = req.params;
+    const { enabled } = req.body;
+    try {
+      db.prepare('UPDATE whatsapp_terminals SET warmup_enabled = ? WHERE id = ?').run(enabled ? 1 : 0, id);
+      // Update in-memory cache if it exists
+      const status = whatsappService.getStatus(id);
+      if (status) {
+        status.warmup_enabled = enabled ? 1 : 0;
+      }
+      res.json({ success: true, warmup_enabled: enabled ? 1 : 0 });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.get('/templates', (req, res) => {
     const user_id = req.headers['x-user-id'] as string;
     const user = getCachedUserInfo(user_id);

@@ -94,6 +94,8 @@ interface TerminalInfo {
   qr: string | null;
   lastError: string | null;
   campaign_id?: number | null;
+  phone_number?: string | null;
+  warmup_enabled?: number;
 }
 
 class WhatsAppManager {
@@ -116,6 +118,8 @@ class WhatsAppManager {
           qr: null,
           lastError: null,
           campaign_id: row.campaign_id,
+          phone_number: row.phone_number || null,
+          warmup_enabled: row.warmup_enabled || 0,
         });
       });
       if (!this.terminals.has('default')) {
@@ -128,7 +132,7 @@ class WhatsAppManager {
 
   async addTerminal(id: string, name: string, campaignId?: number | null) {
     db.prepare('INSERT OR IGNORE INTO whatsapp_terminals (id, name, campaign_id) VALUES (?, ?, ?)').run(id, name, campaignId || null);
-    this.terminals.set(id, { id, name, status: 'DISCONNECTED', qr: null, lastError: null, campaign_id: campaignId || null });
+    this.terminals.set(id, { id, name, status: 'DISCONNECTED', qr: null, lastError: null, campaign_id: campaignId || null, phone_number: null, warmup_enabled: 0 });
   }
 
   async getTerminals(campaignId?: number | null) {
@@ -203,6 +207,18 @@ class WhatsAppManager {
         t.status = 'CONNECTED';
         t.qr = null;
         t.lastError = null;
+        
+        try {
+          const rawId = sock.user?.id || '';
+          const ownNumber = rawId.split(':')[0] || rawId.split('@')[0];
+          if (ownNumber) {
+            db.prepare('UPDATE whatsapp_terminals SET phone_number = ? WHERE id = ?').run(ownNumber, terminalId);
+            t.phone_number = ownNumber;
+            console.log(`[WHATSAPP][${terminalId}] Connected with number: ${ownNumber}`);
+          }
+        } catch (err: any) {
+          console.error(`[WHATSAPP][${terminalId}] Error saving own number:`, err.message);
+        }
       }
 
       if (connection === 'close') {
@@ -529,7 +545,63 @@ class WhatsAppManager {
       }
     }, 300_000); // every 5 minutes
   }
+
+  startWarmupScheduler() {
+    const WARMUP_PHRASES = [
+      'Hola, ¿cómo estás?',
+      'Todo bien por acá, ¿y vos?',
+      '¡Buen día! ¿Qué tal la jornada?',
+      '¿Tenés los números de mesa a mano?',
+      'Sí, ya los pasaron al grupo.',
+      'Excelente, gracias por confirmar.',
+      '¿Alguien tiene novedades del local de votación?',
+      'Todo tranquilo por el momento.',
+      '¿Vamos a hacer reunión de coordinación hoy?',
+      'Creo que sí, más tarde definimos la hora.',
+      'Dale, quedo atento.',
+      '¿Me avisás cuando esté listo el reporte?',
+      'Claro, en un ratito te lo paso.',
+      'Perfecto, nos vemos luego.',
+      '¡Buenas tardes! ¿Cómo va todo?',
+      'Avanzando con los registros de electores.',
+      '¡Qué bueno! Seguimos sumando.',
+      'Cualquier cosa me pegás un grito.',
+      'Listo, te aviso cualquier duda.',
+      '¡Fuerza equipo!'
+    ];
+
+    // Check every 15 minutes
+    setInterval(async () => {
+      const hour = new Date().getHours();
+      // Only chat between 8:00 and 21:00
+      if (hour < 8 || hour > 21) return;
+
+      try {
+        const connectedWarmup = Array.from(this.terminals.values()).filter(
+          t => t.status === 'CONNECTED' && t.warmup_enabled === 1 && t.phone_number
+        );
+
+        if (connectedWarmup.length < 2) return;
+
+        // Pick random sender
+        const sender = connectedWarmup[Math.floor(Math.random() * connectedWarmup.length)];
+        // Pick receiver different from sender
+        let receiver = connectedWarmup[Math.floor(Math.random() * connectedWarmup.length)];
+        while (receiver.id === sender.id) {
+          receiver = connectedWarmup[Math.floor(Math.random() * connectedWarmup.length)];
+        }
+
+        const msg = WARMUP_PHRASES[Math.floor(Math.random() * WARMUP_PHRASES.length)];
+        console.log(`[WHATSAPP][WARMUP] Sending automated warm-up message from ${sender.id} to ${receiver.id} (${receiver.phone_number})`);
+        
+        await this.sendMessage(sender.id, receiver.phone_number!, msg);
+      } catch (err: any) {
+        console.error('[WHATSAPP][WARMUP] Error in warm-up scheduler:', err.message);
+      }
+    }, 15 * 60 * 1000);
+  }
 }
 
 export const whatsappService = new WhatsAppManager();
 whatsappService.startMaintenance();
+whatsappService.startWarmupScheduler();

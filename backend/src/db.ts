@@ -59,6 +59,9 @@ const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: 
 
 // Columns added OUTSIDE the version-gated block run on every startup (safe, idempotent)
 addColumnIfNotExists("elector_captures", "copiatin_printed_at", "DATETIME");
+addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
+addColumnIfNotExists("whatsapp_terminals", "phone_number", "TEXT");
+addColumnIfNotExists("whatsapp_terminals", "warmup_enabled", "INTEGER DEFAULT 0");
 
 // Only run heavy schema checks if version changed
 if (dbVersion < currentSchemaVersion) {
