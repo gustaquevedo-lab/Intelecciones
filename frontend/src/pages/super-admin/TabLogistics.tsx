@@ -98,6 +98,8 @@ const TabLogistics = (props: any) => {
     newVehicleStatus, setNewVehicleStatus,
     newVehicleList, setNewVehicleList,
     selectedSyncDistrict, setSelectedSyncDistrict,
+    activeDistrict, setActiveDistrict,
+    activeListId, setActiveListId,
     selectedCityForLists,
     cities, fileInputRef, cropperData,
     fetchData,
