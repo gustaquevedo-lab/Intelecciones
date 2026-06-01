@@ -77,6 +77,35 @@ const createCustomIcon = (color: string, iconName: string = 'MapPin', needsTrans
   });
 };
 
+const FAST_ICONS: Record<string, L.Icon> = {};
+
+const getFastPinIcon = (colorHex: string, needsTransport: boolean) => {
+  const key = `${colorHex}-${needsTransport}`;
+  if (FAST_ICONS[key]) return FAST_ICONS[key];
+  
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="34" viewBox="0 0 24 34">
+      <path d="M12 2C6.48 2 2 6.48 2 12c0 7.5 10 20 10 20s10-12.5 10-20c0-5.52-4.48-10-10-10z" fill="${colorHex}" stroke="#ffffff" stroke-width="1.5"/>
+      <circle cx="12" cy="12" r="4.5" fill="#ffffff" opacity="0.8"/>
+      ${needsTransport ? '<circle cx="19" cy="5" r="4.5" fill="#3B82F6" stroke="#ffffff" stroke-width="1.5"/>' : ''}
+    </svg>
+  `;
+  
+  const encodedSvg = encodeURIComponent(svg.trim());
+  const dataUri = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+  
+  const icon = L.icon({
+    iconUrl: dataUri,
+    iconSize: [22, 31],
+    iconAnchor: [11, 31],
+    popupAnchor: [0, -29],
+  });
+  
+  FAST_ICONS[key] = icon;
+  return icon;
+};
+
+
 const MapHandler = ({ district, locales }: { district: string | undefined, locales?: any[] }) => {
   const map = useMap();
   const [lastDistrict, setLastDistrict] = useState<string | null>(null);
@@ -209,24 +238,57 @@ const LogisticsMap: React.FC<LogisticsMapProps> = ({
             const angle = idx * 137.5;
             const lat = parseFloat(req.lat) + (Math.cos(angle * (Math.PI / 180)) * jitter);
             const lng = parseFloat(req.lng) + (Math.sin(angle * (Math.PI / 180)) * jitter);
+            const colorHex = resolveColor(TRAFFIC_COLORS[req.traffic_light] || 'var(--blue)');
 
             return (
                 <Marker 
                 key={`req-${req.id}`} 
                 position={[lat, lng]}
-                icon={createCustomIcon(TRAFFIC_COLORS[req.traffic_light] || 'var(--blue)', 'MapPin', true, 'sm')}
+                icon={getFastPinIcon(colorHex, true)}
                 >
                 <Popup>
-                    <div style={{ padding: '0.2rem', minWidth: '180px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: TRAFFIC_COLORS[req.traffic_light] || 'var(--blue)' }} />
-                        <p style={{ fontWeight: 800, margin: 0 }}>{req.nombre} {req.apellido}</p>
-                    </div>
-                    <p style={{ margin: '0.25rem 0', fontSize: '0.8rem' }}>Destino: <span style={{ fontWeight: 700 }}>{req.local_votacion}</span></p>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-3)' }}>Barrio: {req.barrio}</p>
-                    <div style={{ marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
+                    <div style={{ padding: '0.4rem', minWidth: '220px', fontFamily: 'Outfit, sans-serif' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: colorHex }} />
+                        <p style={{ fontWeight: 800, margin: 0, fontSize: '0.85rem' }}>{req.nombre} {req.apellido}</p>
+                      </div>
+                      <p style={{ margin: '0.25rem 0', fontSize: '0.75rem' }}><strong>C.I.:</strong> {req.elector_ci || 'No disponible'}</p>
+                      <p style={{ margin: '0.25rem 0', fontSize: '0.75rem' }}><strong>Destino:</strong> {req.local_votacion}</p>
+                      <p style={{ margin: '0.25rem 0', fontSize: '0.75rem' }}><strong>Barrio:</strong> {req.barrio}</p>
+                      {req.telefono && (
+                        <p style={{ margin: '0.25rem 0', fontSize: '0.75rem' }}>
+                          <strong>Teléfono:</strong> {req.telefono}
+                        </p>
+                      )}
+                      <div style={{ marginTop: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                         <p style={{ margin: 0, fontSize: '0.65rem', color: 'var(--text-3)' }}>Captado por: <strong>{req.coordinator_name || 'Desconocido'}</strong></p>
-                    </div>
+                        {req.telefono && (
+                          <a 
+                            href={`https://wa.me/${req.telefono.replace(/\+/g, '').replace(/\s+/g, '')}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.4rem',
+                              background: '#25D366',
+                              color: 'white',
+                              textDecoration: 'none',
+                              padding: '0.35rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              textAlign: 'center',
+                              transition: 'opacity 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                            onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+                          >
+                            WhatsApp Elector
+                          </a>
+                        )}
+                      </div>
                     </div>
                 </Popup>
                 </Marker>

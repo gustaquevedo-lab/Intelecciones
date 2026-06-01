@@ -1021,7 +1021,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       LEFT JOIN users p ON u.parent_id = p.id
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
-      WHERE 1=1
+      WHERE 1=1 AND COALESCE(ec.traffic_light, '') != 'PURPLE'
     `;
     let electorParams: any[] = [];
 
