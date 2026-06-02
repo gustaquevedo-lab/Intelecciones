@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 const Login = React.lazy(() => import('./pages/Login'));
 const CoordinatorApp = React.lazy(() => import('./pages/CoordinatorApp'));
@@ -9,6 +9,7 @@ const LogisticsApp = React.lazy(() => import('./pages/LogisticsApp'));
 const Communications = React.lazy(() => import('./pages/Communications'));
 const DiaDApp = React.lazy(() => import('./pages/DiaDApp'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const Attendance = React.lazy(() => import('./pages/Attendance'));
 const Logout = () => {
   const { logout } = useAuth();
   React.useEffect(() => { logout(); }, [logout]);
@@ -64,6 +65,7 @@ const AppRoutes = () => {
       <Route path="/logistica" element={<LogisticsApp />} />
       <Route path="/comunicaciones" element={<Communications />} />
       <Route path="/diad" element={<DiaDApp />} />
+      <Route path="/asistencia" element={<Attendance />} />
       <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>
   );

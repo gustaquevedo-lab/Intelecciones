@@ -43,6 +43,7 @@ import capturesRoutes, { conflictsRoutes, coordinatorsRoutes } from './routes/ca
 import statsRoutes from './routes/stats';
 import logisticsRoutes, { vehiclesRoutes } from './routes/logistics';
 import adminRoutes from './routes/admin';
+import attendanceRoutes from './routes/attendance';
 import logger from './utils/logger';
 import { normalizePhone } from './utils/phone';
 import { dbQueryAsync, dbGetAsync } from './db-async';
@@ -1370,6 +1371,7 @@ app.use('/api/admin/conflicts', conflictsRoutes());
 app.use('/api/whatsapp', whatsappRoutes(storage));
 app.use('/api/diad', diadRoutes(upload));
 app.use('/api/veedor', veedorRoutes());
+app.use('/api/attendance', attendanceRoutes());
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = err.status || err.statusCode || 500;

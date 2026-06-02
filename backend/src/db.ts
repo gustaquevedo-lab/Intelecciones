@@ -32,7 +32,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 24; // Update this to trigger migrations
+const currentSchemaVersion = 25; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -62,6 +62,7 @@ addColumnIfNotExists("elector_captures", "copiatin_printed_at", "DATETIME");
 addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
 addColumnIfNotExists("whatsapp_terminals", "phone_number", "TEXT");
 addColumnIfNotExists("whatsapp_terminals", "warmup_enabled", "INTEGER DEFAULT 0");
+addColumnIfNotExists("attendance", "photo_url", "TEXT");
 
 // Only run heavy schema checks if version changed
 if (dbVersion < currentSchemaVersion) {
@@ -331,6 +332,21 @@ if (dbVersion < currentSchemaVersion) {
         details TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ci TEXT UNIQUE NOT NULL,
+        nombre TEXT NOT NULL,
+        apellido TEXT,
+        distrito TEXT NOT NULL,
+        cargo TEXT NOT NULL,
+        telefono TEXT NOT NULL,
+        photo_url TEXT,
+        registered_by INTEGER,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(registered_by) REFERENCES users(id)
+      );
+
       CREATE INDEX IF NOT EXISTS idx_users_list ON users(assigned_list_id);
       CREATE INDEX IF NOT EXISTS idx_users_campaign ON users(assigned_campaign_id);
       CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id);
@@ -362,6 +378,9 @@ if (dbVersion < currentSchemaVersion) {
 
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_attendance_ci ON attendance(ci);
+      CREATE INDEX IF NOT EXISTS idx_attendance_distrito ON attendance(distrito);
     `);
 
     // addColumnIfNotExists is defined above (module-level) so it's available here too
