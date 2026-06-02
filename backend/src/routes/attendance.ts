@@ -106,7 +106,7 @@ export default function attendanceRoutes() {
     }
   });
 
-  // Bulk create users for system use (enhanced with custom user attributes)
+  // Bulk create users for system use (enhanced with custom user attributes and dynamic role mapping)
   router.post('/assign-massively', requireRole('SUPERUSUARIO'), (req, res) => {
     const { cis, role: targetRole, list_id, parent_id, distrito } = req.body;
     const superUserId = req.headers['x-user-id'] as string;
@@ -139,11 +139,17 @@ export default function attendanceRoutes() {
 
           // Lookup details in electors and/or attendance
           const elector = db.prepare('SELECT nombre, apellido, local_votacion, mesa, distrito FROM electors WHERE ci = ?').get(cleanCI) as any;
-          const attendanceRec = db.prepare('SELECT nombre, apellido, distrito, telefono, photo_url FROM attendance WHERE ci = ?').get(cleanCI) as any;
+          const attendanceRec = db.prepare('SELECT nombre, apellido, distrito, cargo, telefono, photo_url FROM attendance WHERE ci = ?').get(cleanCI) as any;
 
           if (!elector && !attendanceRec) {
             results.errors.push(`C.I. ${cleanCI} no encontrado en electores ni asistencia.`);
             continue;
+          }
+
+          // Map dynamic role if set to ASISTENTE_DEFAULT, else fallback to selected role
+          let finalRole = targetRole;
+          if (targetRole === 'ASISTENTE_DEFAULT' && attendanceRec?.cargo) {
+            finalRole = attendanceRec.cargo; // APODERADO or MIEMBRO_DE_MESA
           }
 
           const nombre = elector ? `${elector.nombre} ${elector.apellido || ''}`.trim() : attendanceRec.nombre;
@@ -160,7 +166,7 @@ export default function attendanceRoutes() {
           `).run(
             cleanCI,      // username
             cleanCI,      // password
-            targetRole,   // system role
+            finalRole,    // system role
             nombre,
             cleanCI,
             finalDistrito,

@@ -35,7 +35,7 @@ const BulkImportAssistantsModal: React.FC<BulkImportAssistantsModalProps> = ({
   
   // Selection and mapping states
   const [selectedCis, setSelectedCis] = useState<string[]>([]);
-  const [targetRole, setTargetRole] = useState<'COORDINADOR' | 'PADRINO' | 'SUBJEFE' | 'JEFE_CAMPANA'>('COORDINADOR');
+  const [targetRole, setTargetRole] = useState<'ASISTENTE_DEFAULT' | 'COORDINADOR' | 'PADRINO' | 'SUBJEFE' | 'JEFE_CAMPANA'>('ASISTENTE_DEFAULT');
   const [assignedListId, setAssignedListId] = useState<string>('');
   const [parentId, setParentId] = useState<string>('');
   const [assignedDistrito, setAssignedDistrito] = useState<string>('');
@@ -266,6 +266,7 @@ const BulkImportAssistantsModal: React.FC<BulkImportAssistantsModalProps> = ({
               value={targetRole}
               onChange={e => setTargetRole(e.target.value as any)}
             >
+              <option value="ASISTENTE_DEFAULT">(Recomendado) Usar Cargo de Asistencia (Apoderado / Miembro de Mesa)</option>
               <option value="COORDINADOR">Coordinador de Campo</option>
               <option value="PADRINO">Padrino</option>
               <option value="SUBJEFE">Sub-Jefe (Líder de Lista)</option>
