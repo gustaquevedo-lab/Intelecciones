@@ -106,9 +106,9 @@ export default function attendanceRoutes() {
     }
   });
 
-  // Bulk create users for system use
+  // Bulk create users for system use (enhanced with custom user attributes)
   router.post('/assign-massively', requireRole('SUPERUSUARIO'), (req, res) => {
-    const { cis, role: targetRole } = req.body;
+    const { cis, role: targetRole, list_id, parent_id, distrito } = req.body;
     const superUserId = req.headers['x-user-id'] as string;
 
     if (!cis || !Array.isArray(cis) || cis.length === 0) {
@@ -147,7 +147,7 @@ export default function attendanceRoutes() {
           }
 
           const nombre = elector ? `${elector.nombre} ${elector.apellido || ''}`.trim() : attendanceRec.nombre;
-          const distrito = elector ? elector.distrito : attendanceRec.distrito;
+          const finalDistrito = distrito || (elector ? elector.distrito : attendanceRec.distrito);
           const local = elector ? elector.local_votacion : null;
           const mesa = elector ? elector.mesa : null;
           const telefono = attendanceRec ? attendanceRec.telefono : null;
@@ -155,20 +155,21 @@ export default function attendanceRoutes() {
 
           // Create the user
           db.prepare(`
-            INSERT INTO users (username, password, role, nombre, ci, distrito, assigned_local, assigned_mesa, needs_password_change, telefono, photo_url, parent_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+            INSERT INTO users (username, password, role, nombre, ci, distrito, assigned_local, assigned_mesa, needs_password_change, telefono, photo_url, parent_id, assigned_list_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
           `).run(
             cleanCI,      // username
             cleanCI,      // password
             targetRole,   // system role
             nombre,
             cleanCI,
-            distrito,
+            finalDistrito,
             local,
             mesa,
             telefono,
             photoUrl,
-            superUserId || null
+            parent_id || superUserId || null,
+            list_id || null
           );
 
           results.created++;

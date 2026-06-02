@@ -126,23 +126,25 @@ const Attendance: React.FC = () => {
     // Keep only numbers and '+' sign
     let digits = val.replace(/[^\d+]/g, '');
     
-    // If it starts with +595, allow modifying only the suffix
-    if (digits.startsWith('+595')) {
-      return digits;
-    }
-    
-    // If it starts with 595 without plus, turn it to +595
-    if (digits.startsWith('595')) {
-      return '+' + digits;
+    // Normalize to digits only to analyze zero prefixing
+    let plain = digits.replace(/\+/g, '');
+
+    // Check if it starts with 595
+    if (plain.startsWith('595')) {
+      let suffix = plain.substring(3);
+      if (suffix.startsWith('0')) {
+        suffix = suffix.substring(1);
+      }
+      return '+595' + suffix;
     }
 
-    // Obviate starting 0
-    if (digits.startsWith('0')) {
-      digits = digits.substring(1);
+    // Check if it starts with 0
+    if (plain.startsWith('0')) {
+      plain = plain.substring(1);
     }
 
     // Prefix with +595
-    return '+595' + digits.replace(/\+/g, '');
+    return '+595' + plain;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -528,32 +530,72 @@ const Attendance: React.FC = () => {
       </header>
 
       {/* Main Container */}
-      <main style={{ maxWidth: '1000px', margin: '2rem auto', padding: '0 1rem' }}>
+      <main style={{ maxWidth: '1100px', margin: '2rem auto', padding: '0 1.5rem' }}>
         
         {/* Title */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '3rem',
+          position: 'relative',
+          padding: '2.5rem 1.5rem',
+          background: 'radial-gradient(circle at center, rgba(30, 58, 138, 0.4) 0%, rgba(15, 23, 42, 0.1) 80%)',
+          borderRadius: '30px',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)'
+        }}>
+          <span style={{
+            background: 'linear-gradient(90deg, #3B82F6 0%, #10B981 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontSize: '0.85rem',
+            fontWeight: 800,
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            display: 'block',
+            marginBottom: '0.75rem'
+          }}>
+            Operativo Presencial
+          </span>
           <h1 style={{ 
             fontFamily: 'var(--font-display, "Space Grotesk", sans-serif)', 
-            fontSize: '2rem', 
-            fontWeight: 800, 
-            letterSpacing: '-0.02em', 
-            margin: '0 0 0.5rem' 
+            fontSize: '3rem', 
+            fontWeight: 900, 
+            letterSpacing: '-0.03em', 
+            margin: '0 0 0.5rem',
+            lineHeight: 1.1,
+            background: 'linear-gradient(135deg, #ffffff 30%, #a5f3fc 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
           }}>
-            <span style={{ color: 'var(--plra-400)' }}>Reunión General</span>
+            Reunión General
           </h1>
-          <p style={{ color: 'var(--text-3)', fontSize: '0.95rem' }}>
-            Preparativos Día D.
-          </p>
+          <h2 style={{
+            fontFamily: 'var(--font-display, "Space Grotesk", sans-serif)', 
+            fontSize: '1.75rem', 
+            fontWeight: 700,
+            margin: '0.5rem 0 1rem',
+            color: 'var(--plra-300)'
+          }}>
+            Preparativos Día D — Miembros de Mesa
+          </h2>
+          <div style={{
+            width: '80px',
+            height: '4px',
+            background: 'linear-gradient(90deg, #3B82F6, #10B981)',
+            borderRadius: '2px',
+            margin: '1.25rem auto 0'
+          }} />
         </div>
 
         {/* Tab Switcher */}
         <div style={{
           display: 'flex',
-          background: 'rgba(15, 23, 42, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          borderRadius: '14px',
-          padding: '0.3rem',
-          marginBottom: '2rem'
+          background: 'rgba(15, 23, 42, 0.5)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '16px',
+          padding: '0.35rem',
+          marginBottom: '2.5rem',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)'
         }}>
           <button 
             onClick={() => setActiveTab('register')}

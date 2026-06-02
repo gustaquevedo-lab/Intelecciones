@@ -129,38 +129,45 @@ const TabUsers = (props: any) => {
     
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>Usuarios y Accesos</h2>
-            <button className="action-btn-primary" onClick={() => {
-              setEditingUser(null);
-              setNewUserCI('');
-              setNewUserRealName('');
-              setNewUserName('');
-              setNewUserPass('');
-              setNewUserRole('COORDINADOR');
-              setNewUserList('');
-              setNewUserCampaign('');
-              setNewUserParent('');
-              setNewUserTelefono('');
-              setNewUserDistrito('');
-              setUserProfilePreview(null);
-              setIsUserVerified(false);
-              setShowModal('user');
-            }}>
-              <UserPlus size={18} /> Crear Usuario
-            </button>
-            <button className="action-btn-primary" style={{ background: 'var(--green)' }} onClick={async () => {
-              if (!confirm('¿Resetear TODOS los flags de cambio de contraseña?')) return;
-              try {
-                const res = await api.post('/admin/reset-password-flags', {});
-                alert(`Flags reseteados: ${res.data.updated} usuarios`);
-                fetchData();
-              } catch {
-                alert('Error al resetear flags');
-              }
-            }}>
-              Resetear Flags
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button className="action-btn-primary" onClick={() => {
+                setEditingUser(null);
+                setNewUserCI('');
+                setNewUserRealName('');
+                setNewUserName('');
+                setNewUserPass('');
+                setNewUserRole('COORDINADOR');
+                setNewUserList('');
+                setNewUserCampaign('');
+                setNewUserParent('');
+                setNewUserTelefono('');
+                setNewUserDistrito('');
+                setUserProfilePreview(null);
+                setIsUserVerified(false);
+                setShowModal('user');
+              }}>
+                <UserPlus size={18} /> Crear Usuario
+              </button>
+              <button className="action-btn-primary" style={{ background: 'var(--plra-600)' }} onClick={() => {
+                setShowModal('bulk-import-assistants');
+              }}>
+                <UsersIcon size={18} /> Importar Asistentes
+              </button>
+              <button className="action-btn-primary" style={{ background: 'var(--green)' }} onClick={async () => {
+                if (!confirm('¿Resetear TODOS los flags de cambio de contraseña?')) return;
+                try {
+                  const res = await api.post('/admin/reset-password-flags', {});
+                  alert(`Flags reseteados: ${res.data.updated} usuarios`);
+                  fetchData();
+                } catch {
+                  alert('Error al resetear flags');
+                }
+              }}>
+                Resetear Flags
+              </button>
+            </div>
           </div>
     
           {/* FILTERS BAR */}

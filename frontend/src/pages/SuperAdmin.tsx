@@ -59,6 +59,7 @@ import TabPadrones from './super-admin/TabPadrones';
 import TabSystem from './super-admin/TabSystem';
 import TabUsers from './super-admin/TabUsers';
 import TabLogistics from './super-admin/TabLogistics';
+import BulkImportAssistantsModal from './super-admin/BulkImportAssistantsModal';
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -2104,6 +2105,19 @@ Status: ${error.response?.status || 'N/A'}
                     </button>
                   </div>
                 </div>
+              )}
+
+              {showModal === 'bulk-import-assistants' && (
+                <BulkImportAssistantsModal
+                  lists={lists}
+                  users={users}
+                  campaigns={campaigns}
+                  onClose={() => setShowModal(null)}
+                  onSuccess={() => {
+                    setShowModal(null);
+                    fetchData(true);
+                  }}
+                />
               )}
             </motion.div>
           </div>
