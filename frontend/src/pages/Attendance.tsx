@@ -46,8 +46,13 @@ const Attendance: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorRegister, setErrorRegister] = useState('');
 
+  // Editing Assistant
+  const [editingAssistant, setEditingAssistant] = useState<Assistant | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
   // Refs for camera upload
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // List & Bulk Actions
   const [assistants, setAssistants] = useState<Assistant[]>([]);
@@ -109,6 +114,15 @@ const Attendance: React.FC = () => {
     setShowModal(true);
   };
 
+  const handleOpenEdit = (assistant: Assistant) => {
+    setErrorRegister('');
+    setEditingAssistant(assistant);
+    setCargo(assistant.cargo as any);
+    setTelefono(assistant.telefono);
+    setPhotoUrl(assistant.photo_url || '');
+    setShowEditModal(true);
+  };
+
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -163,6 +177,53 @@ const Attendance: React.FC = () => {
       setErrorRegister(err.response?.data?.error || 'Error al registrar la asistencia.');
     } finally {
       setLoadingRegister(false);
+    }
+  };
+
+  const handleUpdateAssistant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAssistant) return;
+    if (!telefono.trim()) {
+      setErrorRegister('El teléfono es obligatorio.');
+      return;
+    }
+
+    setLoadingRegister(true);
+    setErrorRegister('');
+
+    try {
+      await api.put(`/attendance/${editingAssistant.id}`, {
+        cargo,
+        telefono,
+        photo_url: photoUrl
+      });
+
+      setSuccessMsg(`¡Asistente ${editingAssistant.nombre} actualizado con éxito!`);
+      setEditingAssistant(null);
+      setShowEditModal(false);
+      fetchAssistants();
+
+      // Auto-hide success after 5 seconds
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err: any) {
+      setErrorRegister(err.response?.data?.error || 'Error al actualizar los datos.');
+    } finally {
+      setLoadingRegister(false);
+    }
+  };
+
+  const handleDeleteAssistant = async (id: number, nombre: string) => {
+    if (!window.confirm(`¿Está seguro de que desea eliminar el registro de presencia de ${nombre}?`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/attendance/${id}`);
+      setSuccessMsg(`Asistente eliminado con éxito del historial.`);
+      fetchAssistants();
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Error al eliminar el registro.');
     }
   };
 
@@ -490,7 +551,7 @@ const Attendance: React.FC = () => {
                       boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyStyle: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
                       <div>
                         <span style={{
                           background: 'rgba(34, 197, 94, 0.1)',
@@ -511,7 +572,7 @@ const Attendance: React.FC = () => {
                           Cédula de Identidad: <strong style={{ color: 'white' }}>{parseInt(elector.ci).toLocaleString('es-PY')}</strong>
                         </p>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
+                      <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', margin: 0 }}>Distrito</p>
                         <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--green)', margin: 0 }}>{elector.distrito}</p>
                       </div>
@@ -570,6 +631,21 @@ const Attendance: React.FC = () => {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.2 }}
             >
+              {successMsg && (
+                <div style={{
+                  background: 'rgba(34, 196, 126, 0.15)',
+                  border: '1px solid rgba(34, 196, 126, 0.3)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  marginBottom: '1.5rem',
+                  color: '#86EFAC',
+                  fontWeight: 600,
+                  fontSize: '0.9rem'
+                }}>
+                  {successMsg}
+                </div>
+              )}
+
               {/* Search list and filters */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <input
@@ -675,7 +751,7 @@ const Attendance: React.FC = () => {
                     No se encontraron asistentes registrados.
                   </div>
                 ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255,255,255,0.02)' }}>
                         {user?.role === 'SUPERUSUARIO' && (
@@ -695,6 +771,7 @@ const Attendance: React.FC = () => {
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Distrito</th>
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Cargo</th>
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Hora</th>
+                        <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)', textAlign: 'center' }}>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -752,6 +829,40 @@ const Attendance: React.FC = () => {
                           </td>
                           <td style={{ padding: '1rem', fontSize: '0.8rem', color: 'var(--text-3)' }}>
                             {new Date(assistant.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td style={{ padding: '1rem', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => handleOpenEdit(assistant)}
+                                style={{
+                                  background: 'rgba(255,255,255,0.05)',
+                                  border: '1px solid rgba(255,255,255,0.1)',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '6px',
+                                  color: '#60A5FA',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 650,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAssistant(assistant.id, `${assistant.nombre} ${assistant.apellido || ''}`)}
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '6px',
+                                  color: '#FCA5A5',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 650,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -833,7 +944,7 @@ const Attendance: React.FC = () => {
                         width: '90px', height: '90px', borderRadius: '50%',
                         background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.2)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', hover: { border: '2px dashed var(--green)' }, transition: 'all 0.2s'
+                        cursor: 'pointer', transition: 'all 0.2s'
                       }}
                     >
                       {uploadingPhoto ? (
@@ -984,6 +1095,236 @@ const Attendance: React.FC = () => {
                   }}
                 >
                   {loadingRegister ? 'Registrando...' : 'Confirmar Presencia'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingAssistant && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              background: 'rgba(30, 41, 59, 0.95)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '460px',
+              padding: '2rem',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              position: 'relative'
+            }}
+          >
+            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', fontWeight: 800 }}>Editar Asistente</h3>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              Modifica los datos de registro de <strong>{editingAssistant.nombre} {editingAssistant.apellido}</strong>.
+            </p>
+
+            <form onSubmit={handleUpdateAssistant}>
+              {/* Photo Capture Section */}
+              <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left' }}>
+                  Foto del Asistente
+                </span>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                  {photoUrl ? (
+                    <div style={{ position: 'relative', width: '90px', height: '90px' }}>
+                      <img 
+                        src={getImageUrl(photoUrl) || ''} 
+                        alt="Previsualización" 
+                        style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--green)' }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setPhotoUrl('')}
+                        style={{
+                          position: 'absolute', top: 0, right: 0,
+                          width: '24px', height: '24px', borderRadius: '50%',
+                          background: '#EF4444', border: 'none', color: 'white',
+                          fontWeight: 'bold', fontSize: '12px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => editFileInputRef.current?.click()}
+                      style={{
+                        width: '90px', height: '90px', borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.2)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', transition: 'all 0.2s'
+                      }}
+                    >
+                      {uploadingPhoto ? (
+                        <div className="spinner" style={{ width: '20px', height: '20px' }} />
+                      ) : (
+                        <>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                          </svg>
+                          <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    ref={editFileInputRef}
+                    onChange={handlePhotoCapture}
+                    style={{ display: 'none' }}
+                  />
+                  
+                  {!photoUrl && (
+                    <button 
+                      type="button" 
+                      onClick={() => editFileInputRef.current?.click()}
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        padding: '0.4rem 1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        color: 'white',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Tomar con Cámara Frontal
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Cargo pills */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>Rol / Cargo asignado</span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCargo('MIEMBRO_DE_MESA')}
+                    style={{
+                      flex: 1,
+                      background: cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)'}`,
+                      padding: '0.6rem',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Miembro de Mesa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCargo('APODERADO')}
+                    style={{
+                      flex: 1,
+                      background: cargo === 'APODERADO' ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${cargo === 'APODERADO' ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)'}`,
+                      padding: '0.6rem',
+                      borderRadius: '10px',
+                      color: 'white',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Apoderado
+                  </button>
+                </div>
+              </div>
+
+              {/* Phone number */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>
+                  Teléfono (Formato WhatsApp)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="Ej: 0981123456"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '10px',
+                    padding: '0.7rem 1rem',
+                    color: 'white',
+                    fontSize: '1rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {errorRegister && (
+                <p style={{ color: '#FCA5A5', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+                  ⚠ {errorRegister}
+                </p>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingAssistant(null);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '0.7rem 1.5rem',
+                    borderRadius: '10px',
+                    color: 'var(--text-3)',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingRegister || uploadingPhoto}
+                  style={{
+                    background: 'var(--green)',
+                    border: 'none',
+                    padding: '0.7rem 1.5rem',
+                    borderRadius: '10px',
+                    color: 'var(--plra-950)',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    transition: 'opacity 0.2s'
+                  }}
+                >
+                  {loadingRegister ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </form>

@@ -179,5 +179,45 @@ export default function attendanceRoutes() {
     }
   });
 
+  // Edit attendance record
+  router.put('/:id', (req, res) => {
+    const { id } = req.params;
+    const { cargo, telefono, photo_url } = req.body;
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!cargo || !telefono) {
+      return res.status(400).json({ error: 'Cargo y teléfono son obligatorios.' });
+    }
+
+    const cleanPhone = normalizePhone(telefono);
+
+    try {
+      db.prepare(`
+        UPDATE attendance 
+        SET cargo = ?, telefono = ?, photo_url = COALESCE(?, photo_url)
+        WHERE id = ?
+      `).run(cargo, cleanPhone, photo_url || null, id);
+
+      logAction(userId ? Number(userId) : null, 'UPDATE_ATTENDANCE', 'ATTENDANCE', id, `Updated attendance record ID ${id} with cargo ${cargo} and phone ${cleanPhone}`);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete attendance record
+  router.delete('/:id', (req, res) => {
+    const { id } = req.params;
+    const userId = req.headers['x-user-id'] as string;
+
+    try {
+      db.prepare('DELETE FROM attendance WHERE id = ?').run(id);
+      logAction(userId ? Number(userId) : null, 'DELETE_ATTENDANCE', 'ATTENDANCE', id, `Deleted attendance record ID ${id}`);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }

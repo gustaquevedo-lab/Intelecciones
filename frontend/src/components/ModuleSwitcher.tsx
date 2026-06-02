@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap } from 'lucide-react';
+import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { usePrefetchOnHover } from '../hooks/usePrefetch';
@@ -12,6 +12,7 @@ const MODULES = [
   { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA','SUBJEFE'], moduleKey: 'DAY_D' },
   { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMUNICATIONS' },
   { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
+  { id: 'asistencia',     label: 'Asistencia',  short: 'Asist',  path: '/asistencia',    icon: CheckCircle,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE','COORDINADOR'], moduleKey: 'REGISTRY' },
   { id: 'admin',          label: 'Admin',       short: 'Admin',  path: '/admin',          icon: Shield,       roles: ['SUPERUSUARIO'],                                           moduleKey: 'SUPER_ADMIN' },
 ];
 
@@ -28,6 +29,7 @@ export const ModuleSwitcher: React.FC = () => {
     user.role === 'JEFE_CAMPANA' ||
     user.role === 'PADRINO' ||
     user.role === 'SUBJEFE' ||
+    user.role === 'COORDINADOR' ||
     user.role === 'MIEMBRO_DE_MESA';
   if (!canSeeAny) return null;
 
