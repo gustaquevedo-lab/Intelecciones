@@ -4,6 +4,7 @@ import { Logo } from '../components/Logo';
 import { PLRABackground } from '../components/PLRABackground';
 import api, { getImageUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 interface ElectorDetails {
   ci: string;
@@ -83,6 +84,9 @@ const Attendance: React.FC = () => {
 
   // Validation feedback state
   const [validationTried, setValidationTried] = useState(false);
+
+  // Image Cropper State
+  const [cropperImage, setCropperImage] = useState<string | null>(null);
 
   // Editing Assistant
   const [editingAssistant, setEditingAssistant] = useState<Assistant | null>(null);
@@ -233,14 +237,25 @@ const Attendance: React.FC = () => {
     setValidationTried(false);
   };
 
-  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      setCropperImage(reader.result as string);
+      e.target.value = ''; // Reset input to allow selecting the same file
+    };
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropperImage(null);
     setUploadingPhoto(true);
     setErrorRegister('');
+
     const formData = new FormData();
-    formData.append('photo', file);
+    formData.append('photo', croppedBlob, 'assistant_photo.jpg');
 
     try {
       const { data } = await api.post('/upload-photo', formData, {
@@ -248,7 +263,7 @@ const Attendance: React.FC = () => {
       });
       setPhotoUrl(data.photo_url);
     } catch (err: any) {
-      setErrorRegister('Error al subir la foto del asistente.');
+      setErrorRegister('Error al subir la foto recortada.');
     } finally {
       setUploadingPhoto(false);
     }
@@ -530,16 +545,16 @@ const Attendance: React.FC = () => {
       </header>
 
       {/* Main Container */}
-      <main style={{ maxWidth: '1100px', margin: '2rem auto', padding: '0 1.5rem' }}>
+      <main style={{ maxWidth: '1100px', margin: '2rem auto', padding: '0 1rem' }}>
         
         {/* Title */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '3rem',
+          marginBottom: '2rem',
           position: 'relative',
-          padding: '2.5rem 1.5rem',
+          padding: window.innerWidth < 768 ? '1.5rem 1rem' : '2.5rem 1.5rem',
           background: 'radial-gradient(circle at center, rgba(30, 58, 138, 0.4) 0%, rgba(15, 23, 42, 0.1) 80%)',
-          borderRadius: '30px',
+          borderRadius: '24px',
           border: '1px solid rgba(255, 255, 255, 0.05)',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)'
         }}>
@@ -547,22 +562,22 @@ const Attendance: React.FC = () => {
             background: 'linear-gradient(90deg, #3B82F6 0%, #10B981 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            fontSize: '0.85rem',
+            fontSize: window.innerWidth < 768 ? '0.7rem' : '0.85rem',
             fontWeight: 800,
             letterSpacing: '0.2em',
             textTransform: 'uppercase',
             display: 'block',
-            marginBottom: '0.75rem'
+            marginBottom: '0.5rem'
           }}>
             Operativo Presencial
           </span>
           <h1 style={{ 
             fontFamily: 'var(--font-display, "Space Grotesk", sans-serif)', 
-            fontSize: '3rem', 
+            fontSize: window.innerWidth < 768 ? '1.8rem' : '3rem', 
             fontWeight: 900, 
             letterSpacing: '-0.03em', 
-            margin: '0 0 0.5rem',
-            lineHeight: 1.1,
+            margin: '0 0 0.25rem',
+            lineHeight: 1.2,
             background: 'linear-gradient(135deg, #ffffff 30%, #a5f3fc 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
@@ -571,19 +586,19 @@ const Attendance: React.FC = () => {
           </h1>
           <h2 style={{
             fontFamily: 'var(--font-display, "Space Grotesk", sans-serif)', 
-            fontSize: '1.75rem', 
+            fontSize: window.innerWidth < 768 ? '1.1rem' : '1.75rem', 
             fontWeight: 700,
-            margin: '0.5rem 0 1rem',
+            margin: '0.25rem 0 0.75rem',
             color: 'var(--plra-300)'
           }}>
             Preparativos Día D — Miembros de Mesa
           </h2>
           <div style={{
-            width: '80px',
-            height: '4px',
+            width: '60px',
+            height: '3px',
             background: 'linear-gradient(90deg, #3B82F6, #10B981)',
             borderRadius: '2px',
-            margin: '1.25rem auto 0'
+            margin: '1rem auto 0'
           }} />
         </div>
 
@@ -1626,6 +1641,16 @@ const Attendance: React.FC = () => {
           </button>
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {cropperImage && (
+          <ImageCropperModal
+            image={cropperImage}
+            onCropComplete={handleCropComplete}
+            onCancel={() => setCropperImage(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
