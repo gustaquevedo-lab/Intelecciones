@@ -12,7 +12,7 @@ const MODULES = [
   { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA','SUBJEFE'], moduleKey: 'DAY_D' },
   { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMUNICATIONS' },
   { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
-  { id: 'asistencia',     label: 'Asistencia',  short: 'Asist',  path: '/asistencia',    icon: CheckCircle,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE','COORDINADOR'], moduleKey: 'REGISTRY' },
+  { id: 'asistencia',     label: 'Reunión General',  short: 'Reunión',  path: '/asistencia',    icon: CheckCircle,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'], moduleKey: 'REGISTRY' },
   { id: 'admin',          label: 'Admin',       short: 'Admin',  path: '/admin',          icon: Shield,       roles: ['SUPERUSUARIO'],                                           moduleKey: 'SUPER_ADMIN' },
 ];
 

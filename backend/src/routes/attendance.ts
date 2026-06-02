@@ -7,6 +7,9 @@ import { normalizePhone } from '../utils/phone';
 export default function attendanceRoutes() {
   const router = Router();
 
+  // Enforce access control: only SUPERUSUARIO, JEFE_CAMPANA, and PADRINO can access this module
+  router.use(requireRole('SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'));
+
   // Search elector by CI filtered by registerer's district
   router.get('/search/:ci', (req, res) => {
     const userId = req.headers['x-user-id'] as string;
@@ -214,6 +217,18 @@ export default function attendanceRoutes() {
       db.prepare('DELETE FROM attendance WHERE id = ?').run(id);
       logAction(userId ? Number(userId) : null, 'DELETE_ATTENDANCE', 'ATTENDANCE', id, `Deleted attendance record ID ${id}`);
       res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Wipe all attendance records (restricted to SUPERUSUARIO)
+  router.post('/wipe', requireRole('SUPERUSUARIO'), (req, res) => {
+    const userId = req.headers['x-user-id'] as string;
+    try {
+      db.prepare('DELETE FROM attendance').run();
+      logAction(userId ? Number(userId) : null, 'WIPE_ATTENDANCE', 'ATTENDANCE', null, 'Wiped all attendance data');
+      res.json({ success: true, message: 'Todos los datos de asistencia han sido eliminados.' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

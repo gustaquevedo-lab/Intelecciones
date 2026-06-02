@@ -30,6 +30,41 @@ interface Assistant {
 
 const Attendance: React.FC = () => {
   const { user } = useAuth();
+
+  if (!user || !['SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO'].includes(user.role)) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--plra-900)',
+        color: 'white',
+        fontFamily: 'sans-serif',
+        textAlign: 'center',
+        padding: '2rem'
+      }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FCA5A5', marginBottom: '1rem' }}>Acceso Restringido</h2>
+        <p style={{ fontSize: '1rem', opacity: 0.8, maxWidth: '500px', lineHeight: 1.5 }}>
+          Solo Superusuario, Jefe de Campaña y Padrinos acceden a este módulo.
+        </p>
+        <a href="/" style={{
+          marginTop: '1.5rem',
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          padding: '0.6rem 1.2rem',
+          borderRadius: '10px',
+          color: 'white',
+          textDecoration: 'none',
+          fontWeight: 700
+        }}>
+          Volver al Inicio
+        </a>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<'register' | 'list'>('register');
   const [ciSearch, setCiSearch] = useState('');
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -45,6 +80,9 @@ const Attendance: React.FC = () => {
   const [loadingRegister, setLoadingRegister] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorRegister, setErrorRegister] = useState('');
+
+  // Validation feedback state
+  const [validationTried, setValidationTried] = useState(false);
 
   // Editing Assistant
   const [editingAssistant, setEditingAssistant] = useState<Assistant | null>(null);
@@ -83,6 +121,34 @@ const Attendance: React.FC = () => {
     }
   };
 
+  // Live formatter for phone inputs
+  const formatPhone = (val: string): string => {
+    // Keep only numbers and '+' sign
+    let digits = val.replace(/[^\d+]/g, '');
+    
+    // If it starts with +595, allow modifying only the suffix
+    if (digits.startsWith('+595')) {
+      return digits;
+    }
+    
+    // If it starts with 595 without plus, turn it to +595
+    if (digits.startsWith('595')) {
+      return '+' + digits;
+    }
+
+    // Obviate starting 0
+    if (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+
+    // Prefix with +595
+    return '+595' + digits.replace(/\+/g, '');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTelefono(formatPhone(e.target.value));
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ciSearch.trim()) return;
@@ -98,6 +164,7 @@ const Attendance: React.FC = () => {
       setElector(data);
       setTelefono('');
       setPhotoUrl('');
+      setValidationTried(false);
     } catch (err: any) {
       setSearchError(err.response?.data?.error || 'Cédula no encontrada en el padrón de su distrito.');
     } finally {
@@ -109,8 +176,9 @@ const Attendance: React.FC = () => {
     if (!elector) return;
     setErrorRegister('');
     setCargo('MIEMBRO_DE_MESA');
-    setTelefono('');
+    setTelefono('+595');
     setPhotoUrl('');
+    setValidationTried(false);
     setShowModal(true);
   };
 
@@ -120,7 +188,47 @@ const Attendance: React.FC = () => {
     setCargo(assistant.cargo as any);
     setTelefono(assistant.telefono);
     setPhotoUrl(assistant.photo_url || '');
+    setValidationTried(false);
     setShowEditModal(true);
+  };
+
+  // Close warning helpers
+  const getMissingFields = () => {
+    const missing = [];
+    if (!photoUrl) missing.push('Foto');
+    const digitsOnly = telefono.replace(/\D/g, '');
+    // Minimum digits for a phone suffix after 595 (should be at least 6 digits, e.g. 595981123456)
+    if (!telefono.trim() || telefono === '+595' || digitsOnly.length <= 5) {
+      missing.push('Teléfono');
+    }
+    return missing;
+  };
+
+  const handleCloseRegisterModal = () => {
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      setValidationTried(true);
+      const confirmClose = window.confirm(
+        `Atención: Para guardar la asistencia es obligatorio completar todos los campos.\n\nDatos faltantes: ${missing.join(', ')}.\n\n¿Está seguro de que desea cerrar y descartar los cambios?`
+      );
+      if (!confirmClose) return;
+    }
+    setShowModal(false);
+    setValidationTried(false);
+  };
+
+  const handleCloseEditModal = () => {
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      setValidationTried(true);
+      const confirmClose = window.confirm(
+        `Atención: Para guardar los cambios es obligatorio completar todos los campos.\n\nDatos faltantes: ${missing.join(', ')}.\n\n¿Está seguro de que desea cerrar y descartar los cambios?`
+      );
+      if (!confirmClose) return;
+    }
+    setShowEditModal(false);
+    setEditingAssistant(null);
+    setValidationTried(false);
   };
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,8 +255,11 @@ const Attendance: React.FC = () => {
   const handleRegisterAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!elector) return;
-    if (!telefono.trim()) {
-      setErrorRegister('El teléfono es obligatorio.');
+    setValidationTried(true);
+
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      setErrorRegister(`Todos los campos son obligatorios. Falta completar: ${missing.join(', ')}.`);
       return;
     }
 
@@ -170,6 +281,7 @@ const Attendance: React.FC = () => {
       setElector(null);
       setCiSearch('');
       setShowModal(false);
+      setValidationTried(false);
       
       // Auto-hide success after 5 seconds
       setTimeout(() => setSuccessMsg(''), 5000);
@@ -183,8 +295,11 @@ const Attendance: React.FC = () => {
   const handleUpdateAssistant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAssistant) return;
-    if (!telefono.trim()) {
-      setErrorRegister('El teléfono es obligatorio.');
+    setValidationTried(true);
+
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      setErrorRegister(`Todos los campos son obligatorios. Falta completar: ${missing.join(', ')}.`);
       return;
     }
 
@@ -201,6 +316,7 @@ const Attendance: React.FC = () => {
       setSuccessMsg(`¡Asistente ${editingAssistant.nombre} actualizado con éxito!`);
       setEditingAssistant(null);
       setShowEditModal(false);
+      setValidationTried(false);
       fetchAssistants();
 
       // Auto-hide success after 5 seconds
@@ -224,6 +340,27 @@ const Attendance: React.FC = () => {
       setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error al eliminar el registro.');
+    }
+  };
+
+  const handleWipeData = async () => {
+    const confirmWipe = window.confirm(
+      '⚠️ ATENCIÓN MÁXIMA ⚠️\n\n¿Está absolutamente seguro de que desea borrar TODOS los registros de asistencia registrados?\nEsta acción no se puede deshacer.'
+    );
+    if (!confirmWipe) return;
+
+    const doubleConfirm = window.confirm(
+      '¿Confirmar eliminación masiva? Se borrarán de forma definitiva todas las presencias de todas las listas.'
+    );
+    if (!doubleConfirm) return;
+
+    try {
+      const { data } = await api.post('/attendance/wipe');
+      setSuccessMsg(data.message || 'Todos los datos de asistencia han sido eliminados.');
+      fetchAssistants();
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Error al realizar el vaciado de datos.');
     }
   };
 
@@ -402,10 +539,10 @@ const Attendance: React.FC = () => {
             letterSpacing: '-0.02em', 
             margin: '0 0 0.5rem' 
           }}>
-            <span style={{ color: 'var(--plra-400)' }}>Asistencia</span> Día D
+            <span style={{ color: 'var(--plra-400)' }}>Reunión General</span>
           </h1>
           <p style={{ color: 'var(--text-3)', fontSize: '0.95rem' }}>
-            Registro de miembros de mesa y apoderados designados.
+            Preparativos Día D.
           </p>
         </div>
 
@@ -690,6 +827,34 @@ const Attendance: React.FC = () => {
                   </svg>
                   Reporte Premium
                 </button>
+
+                {user?.role === 'SUPERUSUARIO' && (
+                  <button
+                    onClick={handleWipeData}
+                    style={{
+                      background: 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '0.65rem 1.25rem',
+                      color: 'white',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Limpiar Asistencia (Wipe)
+                  </button>
+                )}
               </div>
 
               {bulkResult && (
@@ -910,15 +1075,15 @@ const Attendance: React.FC = () => {
             <form onSubmit={handleRegisterAttendance}>
               {/* Photo Capture Section */}
               <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left' }}>
-                  Foto del Asistente
+                <span style={{ fontSize: '0.8rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left', fontWeight: validationTried && !photoUrl ? 750 : 'normal' }}>
+                  Foto del Asistente * {validationTried && !photoUrl && '(Requerido)'}
                 </span>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                   {photoUrl ? (
                     <div style={{ position: 'relative', width: '90px', height: '90px' }}>
                       <img 
-                        src={getImageUrl(photoUrl) || ''} 
+                         src={getImageUrl(photoUrl) || ''} 
                         alt="Previsualización" 
                         style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--green)' }}
                       />
@@ -942,20 +1107,22 @@ const Attendance: React.FC = () => {
                       onClick={() => fileInputRef.current?.click()}
                       style={{
                         width: '90px', height: '90px', borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.2)',
+                        background: 'rgba(255,255,255,0.05)', 
+                        border: validationTried && !photoUrl ? '2px dashed #EF4444' : '2px dashed rgba(255,255,255,0.2)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', transition: 'all 0.2s'
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        boxShadow: validationTried && !photoUrl ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none'
                       }}
                     >
                       {uploadingPhoto ? (
                         <div className="spinner" style={{ width: '20px', height: '20px' }} />
                       ) : (
                         <>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.6)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                             <circle cx="12" cy="13" r="4"></circle>
                           </svg>
-                          <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
+                          <span style={{ fontSize: '0.62rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
                         </>
                       )}
                     </div>
@@ -976,11 +1143,11 @@ const Attendance: React.FC = () => {
                       onClick={() => fileInputRef.current?.click()}
                       style={{
                         background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        border: validationTried && !photoUrl ? '1px solid #EF4444' : '1px solid rgba(255,255,255,0.1)',
                         padding: '0.4rem 1rem',
                         borderRadius: '8px',
                         fontSize: '0.75rem',
-                        color: 'white',
+                        color: validationTried && !photoUrl ? '#FCA5A5' : 'white',
                         fontWeight: 700,
                         cursor: 'pointer'
                       }}
@@ -993,7 +1160,7 @@ const Attendance: React.FC = () => {
 
               {/* Cargo pills */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>Rol / Cargo asignado</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>Rol / Cargo asignado *</span>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
                     type="button"
@@ -1034,25 +1201,26 @@ const Attendance: React.FC = () => {
 
               {/* Phone number */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>
-                  Teléfono (Formato WhatsApp)
+                <label style={{ fontSize: '0.8rem', color: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', fontWeight: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 750 : 'normal' }}>
+                  Teléfono (Formato WhatsApp) * {validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) && '(Requerido - Formato válido)'}
                 </label>
                 <input
                   type="tel"
                   placeholder="Ej: 0981123456"
                   value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
+                  onChange={handlePhoneChange}
                   required
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
                     background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '1px solid #EF4444' : '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '10px',
                     padding: '0.7rem 1rem',
                     color: 'white',
                     fontSize: '1rem',
-                    outline: 'none'
+                    outline: 'none',
+                    boxShadow: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '0 0 10px rgba(239, 68, 68, 0.2)' : 'none'
                   }}
                 />
               </div>
@@ -1067,7 +1235,7 @@ const Attendance: React.FC = () => {
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={handleCloseRegisterModal}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -1137,8 +1305,8 @@ const Attendance: React.FC = () => {
             <form onSubmit={handleUpdateAssistant}>
               {/* Photo Capture Section */}
               <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left' }}>
-                  Foto del Asistente
+                <span style={{ fontSize: '0.8rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left', fontWeight: validationTried && !photoUrl ? 750 : 'normal' }}>
+                  Foto del Asistente * {validationTried && !photoUrl && '(Requerido)'}
                 </span>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
@@ -1169,20 +1337,22 @@ const Attendance: React.FC = () => {
                       onClick={() => editFileInputRef.current?.click()}
                       style={{
                         width: '90px', height: '90px', borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.05)', border: '2px dashed rgba(255,255,255,0.2)',
+                        background: 'rgba(255,255,255,0.05)', 
+                        border: validationTried && !photoUrl ? '2px dashed #EF4444' : '2px dashed rgba(255,255,255,0.2)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', transition: 'all 0.2s'
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        boxShadow: validationTried && !photoUrl ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none'
                       }}
                     >
                       {uploadingPhoto ? (
                         <div className="spinner" style={{ width: '20px', height: '20px' }} />
                       ) : (
                         <>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.6)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                             <circle cx="12" cy="13" r="4"></circle>
                           </svg>
-                          <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
+                          <span style={{ fontSize: '0.62rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
                         </>
                       )}
                     </div>
@@ -1203,11 +1373,11 @@ const Attendance: React.FC = () => {
                       onClick={() => editFileInputRef.current?.click()}
                       style={{
                         background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        border: validationTried && !photoUrl ? '1px solid #EF4444' : '1px solid rgba(255,255,255,0.1)',
                         padding: '0.4rem 1rem',
                         borderRadius: '8px',
                         fontSize: '0.75rem',
-                        color: 'white',
+                        color: validationTried && !photoUrl ? '#FCA5A5' : 'white',
                         fontWeight: 700,
                         cursor: 'pointer'
                       }}
@@ -1220,7 +1390,7 @@ const Attendance: React.FC = () => {
 
               {/* Cargo pills */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>Rol / Cargo asignado</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>Rol / Cargo asignado *</span>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
                     type="button"
@@ -1261,25 +1431,26 @@ const Attendance: React.FC = () => {
 
               {/* Phone number */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-3)', display: 'block', marginBottom: '0.5rem' }}>
-                  Teléfono (Formato WhatsApp)
+                <label style={{ fontSize: '0.8rem', color: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', fontWeight: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 750 : 'normal' }}>
+                  Teléfono (Formato WhatsApp) * {validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) && '(Requerido - Formato válido)'}
                 </label>
                 <input
                   type="tel"
                   placeholder="Ej: 0981123456"
                   value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
+                  onChange={handlePhoneChange}
                   required
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
                     background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '1px solid #EF4444' : '1px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '10px',
                     padding: '0.7rem 1rem',
                     color: 'white',
                     fontSize: '1rem',
-                    outline: 'none'
+                    outline: 'none',
+                    boxShadow: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '0 0 10px rgba(239, 68, 68, 0.2)' : 'none'
                   }}
                 />
               </div>
@@ -1294,10 +1465,7 @@ const Attendance: React.FC = () => {
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingAssistant(null);
-                  }}
+                  onClick={handleCloseEditModal}
                   style={{
                     background: 'transparent',
                     border: 'none',
