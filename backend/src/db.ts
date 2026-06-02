@@ -20,7 +20,16 @@ console.log("Initializing database at:", dbPath);
 const db = new Database(dbPath);
 
 // ── PERFORMANCE PRAGMAS ───────────────────────────────────────────────────
-db.pragma('journal_mode = WAL');
+try {
+  db.pragma('journal_mode = WAL');
+} catch (err: any) {
+  console.warn("WARNING: SQLite WAL mode failed to initialize, falling back to DELETE mode:", err.message);
+  try {
+    db.pragma('journal_mode = DELETE');
+  } catch (err2) {
+    console.error("Critical: Fallback journal mode failed:", err2);
+  }
+}
 db.pragma('synchronous = NORMAL');
 db.pragma('cache_size = -65536');    // 64 MB cache (balanced for most environments)
 db.pragma('temp_store = MEMORY');

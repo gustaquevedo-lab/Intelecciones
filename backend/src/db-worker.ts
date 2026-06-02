@@ -12,7 +12,16 @@ if (process.env.NODE_ENV !== 'production') {
 const dbPath = path.join(dbDir, 'intellecciones.db');
 
 const db = new Database(dbPath, { readonly: true });
-db.pragma('journal_mode = WAL');
+try {
+  db.pragma('journal_mode = WAL');
+} catch (err: any) {
+  console.warn("WARNING: SQLite WAL mode failed to initialize (readonly worker), falling back to DELETE mode:", err.message);
+  try {
+    db.pragma('journal_mode = DELETE');
+  } catch (err2) {
+    console.error("Critical: Fallback journal mode failed (readonly worker):", err2);
+  }
+}
 db.pragma('cache_size = -32768');
 db.pragma('temp_store = MEMORY');
 db.pragma('mmap_size = 268435456');
