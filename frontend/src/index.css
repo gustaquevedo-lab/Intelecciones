@@ -82,7 +82,7 @@
 }
 
 /* LIGHT MODE — Enhanced with more depth for Premium DNA */
-.light-theme {
+.light-theme, [data-theme="light"] {
   --bg:        #F1F5F9; /* Un gris muy tenue para que el blanco de las tarjetas resalte */
   --surface:   #FFFFFF;
   --surface-2: #E2E8F0;
@@ -97,8 +97,8 @@
   --border-hi:    rgba(0, 71, 171, 0.4);
 
   --text:         #0F172A; /* Azul oscuro casi negro para máxima legibilidad */
-  --text-2:       #334155;
-  --text-3:       #64748B;
+  --text-2:       #1E293B; /* Slate 800 - high contrast */
+  --text-3:       #475569; /* Slate 600 - very readable gray */
 
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.12);
   --shadow-md:  0 4px 12px rgba(0,0,0,0.08);
@@ -109,21 +109,26 @@
   --glass-border: rgba(0, 0, 0, 0.1);
   --input-bg: #FFFFFF;
   --accent-subtle: rgba(0, 71, 171, 0.06);
+
+  /* High contrast status overrides for light mode */
+  --green:  #15803D;
+  --yellow: #B45309;
+  --red:    #B91C1C;
 }
 
 /* Specific component depth fixes */
-.light-theme .premium-card {
+.light-theme .premium-card, [data-theme="light"] .premium-card {
   background: var(--surface);
   border: 1px solid var(--border-mid);
 }
 
-.light-theme .side-nav-dark {
+.light-theme .side-nav-dark, [data-theme="light"] .side-nav-dark {
   background: #020C1E;
   color: white;
 }
 
-.light-theme .profile-photo-big,
-.light-theme .premium-avatar-frame-compact {
+.light-theme .profile-photo-big, [data-theme="light"] .profile-photo-big,
+.light-theme .premium-avatar-frame-compact, [data-theme="light"] .premium-avatar-frame-compact {
   background: var(--surface-light);
   border-color: var(--border-mid);
 }
@@ -1670,3 +1675,234 @@ select option:active {
     transform: translateY(0);
   }
 }
+
+/* ============================================================
+   ATTENDANCE CUSTOM COMPONENT THEMES & RESPONSIVE LAYOUTS
+   ============================================================ */
+
+/* Title & Header Section */
+.attendance-title-container {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  background: radial-gradient(circle at center, rgba(30, 58, 138, 0.4) 0%, rgba(15, 23, 42, 0.1) 80%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.light-theme .attendance-title-container, [data-theme="light"] .attendance-title-container {
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 255, 0.8) 80%);
+  border: 1px solid rgba(0, 71, 171, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 71, 171, 0.05);
+}
+
+.attendance-title-h1 {
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.25rem;
+  line-height: 1.2;
+  background: linear-gradient(135deg, #ffffff 30%, #a5f3fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.light-theme .attendance-title-h1, [data-theme="light"] .attendance-title-h1 {
+  background: linear-gradient(135deg, #0F172A 30%, #0047AB 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.attendance-title-h2 {
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-weight: 700;
+  margin: 0.25rem 0 0.75rem;
+  color: var(--plra-300);
+}
+
+.light-theme .attendance-title-h2, [data-theme="light"] .attendance-title-h2 {
+  color: var(--plra-600);
+}
+
+/* Tab Switcher Layout */
+.attendance-tab-switcher {
+  display: flex;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 0.35rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.light-theme .attendance-tab-switcher, [data-theme="light"] .attendance-tab-switcher {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Cards & Modals */
+.attendance-card {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  color: var(--text);
+}
+
+.light-theme .attendance-card, [data-theme="light"] .attendance-card {
+  background: var(--surface);
+  border: 1px solid var(--border-mid);
+  box-shadow: var(--shadow-md);
+}
+
+.attendance-elector-card {
+  margin-top: 2rem;
+  background: linear-gradient(135deg, rgba(30, 58, 110, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px solid rgba(46, 132, 240, 0.25);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  color: var(--text);
+}
+
+.light-theme .attendance-elector-card, [data-theme="light"] .attendance-elector-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, var(--surface) 100%);
+  border: 1px solid var(--border-mid);
+  box-shadow: var(--shadow-lg);
+}
+
+.attendance-elector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.light-theme .attendance-elector-grid, [data-theme="light"] .attendance-elector-grid {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+}
+
+.attendance-table-container {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  overflow-x: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.light-theme .attendance-table-container, [data-theme="light"] .attendance-table-container {
+  background: var(--surface);
+  border: 1px solid var(--border-mid);
+  box-shadow: var(--shadow-md);
+}
+
+.attendance-modal-content {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 460px;
+  padding: 2rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  position: relative;
+  color: var(--text);
+}
+
+.light-theme .attendance-modal-content, [data-theme="light"] .attendance-modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border-mid);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Badges for roles with high contrast themes */
+.attendance-role-apoderado {
+  background: rgba(239, 68, 68, 0.15);
+  color: #FCA5A5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.light-theme .attendance-role-apoderado, [data-theme="light"] .attendance-role-apoderado {
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.attendance-role-miembro {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93C5FD;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.light-theme .attendance-role-miembro, [data-theme="light"] .attendance-role-miembro {
+  background: rgba(0, 71, 171, 0.08);
+  color: var(--primary);
+  border-color: rgba(0, 71, 171, 0.2);
+}
+
+/* Success Alert & Badge Success */
+.attendance-alert-success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86EFAC;
+}
+
+.light-theme .attendance-alert-success, [data-theme="light"] .attendance-alert-success {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.2);
+  color: #15803D;
+}
+
+.attendance-badge-success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ADE80;
+}
+
+.light-theme .attendance-badge-success, [data-theme="light"] .attendance-badge-success {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.2);
+  color: #15803D;
+}
+
+/* Responsive Search Form */
+.attendance-search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.attendance-search-form button {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .attendance-search-form {
+    flex-direction: row;
+  }
+  .attendance-search-form button {
+    width: auto;
+  }
+}
+

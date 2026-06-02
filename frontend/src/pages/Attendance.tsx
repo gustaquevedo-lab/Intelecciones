@@ -505,14 +505,14 @@ const Attendance: React.FC = () => {
   });
 
   return (
-    <div style={{ minHeight: '100vh', color: 'white', position: 'relative', overflowX: 'hidden', paddingBottom: '4rem' }}>
+    <div style={{ minHeight: '100vh', color: 'var(--text)', position: 'relative', overflowX: 'hidden', paddingBottom: '4rem' }}>
       <PLRABackground />
 
       {/* Header Panel */}
       <header style={{
-        background: 'rgba(15, 23, 42, 0.6)',
+        background: 'var(--glass-bg)',
         backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid var(--border)',
         padding: '1rem 2rem',
         display: 'flex',
         justifyContent: 'space-between',
@@ -523,20 +523,20 @@ const Attendance: React.FC = () => {
         <Logo size="default" />
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>{user?.nombre}</p>
+            <p style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>{user?.nombre}</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Distrito: <span style={{ color: 'var(--green)', fontWeight: 800 }}>{user?.distrito || 'SUPERUSUARIO'}</span>
             </p>
           </div>
           <a href="/" style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--border-mid)',
             padding: '0.5rem 1rem',
             borderRadius: '10px',
             fontSize: '0.8rem',
             fontWeight: 700,
             textDecoration: 'none',
-            color: 'white',
+            color: 'var(--text)',
             transition: 'all 0.2s'
           }}>
             Panel Principal
@@ -548,15 +548,8 @@ const Attendance: React.FC = () => {
       <main style={{ maxWidth: '1100px', margin: '2rem auto', padding: '0 1rem' }}>
         
         {/* Title */}
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '2rem',
-          position: 'relative',
+        <div className="attendance-title-container" style={{
           padding: window.innerWidth < 768 ? '1.5rem 1rem' : '2.5rem 1.5rem',
-          background: 'radial-gradient(circle at center, rgba(30, 58, 138, 0.4) 0%, rgba(15, 23, 42, 0.1) 80%)',
-          borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)'
         }}>
           <span style={{
             background: 'linear-gradient(90deg, #3B82F6 0%, #10B981 100%)',
@@ -571,26 +564,10 @@ const Attendance: React.FC = () => {
           }}>
             Operativo Presencial
           </span>
-          <h1 style={{ 
-            fontFamily: 'var(--font-display, "Space Grotesk", sans-serif)', 
-            fontSize: window.innerWidth < 768 ? '1.8rem' : '3rem', 
-            fontWeight: 900, 
-            letterSpacing: '-0.03em', 
-            margin: '0 0 0.25rem',
-            lineHeight: 1.2,
-            background: 'linear-gradient(135deg, #ffffff 30%, #a5f3fc 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}>
+          <h1 className="attendance-title-h1" style={{ fontSize: window.innerWidth < 768 ? '1.8rem' : '3rem' }}>
             Reunión General
           </h1>
-          <h2 style={{
-            fontFamily: 'var(--font-display, "Space Grotesk", sans-serif)', 
-            fontSize: window.innerWidth < 768 ? '1.1rem' : '1.75rem', 
-            fontWeight: 700,
-            margin: '0.25rem 0 0.75rem',
-            color: 'var(--plra-300)'
-          }}>
+          <h2 className="attendance-title-h2" style={{ fontSize: window.innerWidth < 768 ? '1.1rem' : '1.75rem' }}>
             Preparativos Día D — Miembros de Mesa
           </h2>
           <div style={{
@@ -603,15 +580,7 @@ const Attendance: React.FC = () => {
         </div>
 
         {/* Tab Switcher */}
-        <div style={{
-          display: 'flex',
-          background: 'rgba(15, 23, 42, 0.5)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '16px',
-          padding: '0.35rem',
-          marginBottom: '2.5rem',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)'
-        }}>
+        <div className="attendance-tab-switcher">
           <button 
             onClick={() => setActiveTab('register')}
             style={{
@@ -620,7 +589,7 @@ const Attendance: React.FC = () => {
               border: 'none',
               padding: '0.8rem',
               borderRadius: '10px',
-              color: 'white',
+              color: activeTab === 'register' ? 'white' : 'var(--text-3)',
               fontWeight: 700,
               cursor: 'pointer',
               transition: 'all 0.2s'
@@ -636,7 +605,7 @@ const Attendance: React.FC = () => {
               border: 'none',
               padding: '0.8rem',
               borderRadius: '10px',
-              color: 'white',
+              color: activeTab === 'list' ? 'white' : 'var(--text-3)',
               fontWeight: 700,
               cursor: 'pointer',
               transition: 'all 0.2s'
@@ -656,13 +625,10 @@ const Attendance: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               {successMsg && (
-                <div style={{
-                  background: 'rgba(34, 196, 126, 0.15)',
-                  border: '1px solid rgba(34, 196, 126, 0.3)',
+                <div className="attendance-alert-success" style={{
                   borderRadius: '12px',
                   padding: '1rem',
                   marginBottom: '1.5rem',
-                  color: '#86EFAC',
                   fontWeight: 600,
                   fontSize: '0.9rem',
                   display: 'flex',
@@ -674,16 +640,9 @@ const Attendance: React.FC = () => {
               )}
 
               {/* CI Search Input Form */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.5)',
-                backdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                padding: '2rem',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-              }}>
-                <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700 }}>Buscar por Número de Cédula</h3>
-                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem' }}>
+              <div className="attendance-card">
+                <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>Buscar por Número de Cédula</h3>
+                <form onSubmit={handleSearch} className="attendance-search-form">
                   <input
                     type="text"
                     placeholder="Ej: 4.123.456"
@@ -691,11 +650,11 @@ const Attendance: React.FC = () => {
                     onChange={(e) => setCiSearch(e.target.value)}
                     style={{
                       flex: 1,
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'var(--input-bg)',
+                      border: '1px solid var(--border-mid)',
                       borderRadius: '12px',
                       padding: '0.8rem 1rem',
-                      color: 'white',
+                      color: 'var(--text)',
                       fontSize: '1rem',
                       outline: 'none',
                       transition: 'border 0.2s'
@@ -723,7 +682,7 @@ const Attendance: React.FC = () => {
                 </form>
 
                 {searchError && (
-                  <p style={{ color: '#FCA5A5', fontSize: '0.85rem', marginTop: '1rem', margin: 0 }}>
+                  <p style={{ color: 'var(--red)', fontSize: '0.85rem', marginTop: '1rem', margin: 0 }}>
                     ⚠ {searchError}
                   </p>
                 )}
@@ -736,21 +695,11 @@ const Attendance: React.FC = () => {
                     initial={{ opacity: 0, scale: 0.95, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                    style={{
-                      marginTop: '2rem',
-                      background: 'linear-gradient(135deg, rgba(30, 58, 110, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)',
-                      border: '1px solid rgba(46, 132, 240, 0.25)',
-                      borderRadius: '20px',
-                      padding: '2rem',
-                      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)'
-                    }}
+                    className="attendance-elector-card"
                   >
                     <div style={{ display: 'flex', justifyStyle: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
                       <div>
-                        <span style={{
-                          background: 'rgba(34, 197, 94, 0.1)',
-                          border: '1px solid rgba(34, 197, 94, 0.2)',
-                          color: '#4ADE80',
+                        <span className="attendance-badge-success" style={{
                           padding: '0.35rem 0.75rem',
                           borderRadius: '20px',
                           fontSize: '0.7rem',
@@ -759,11 +708,11 @@ const Attendance: React.FC = () => {
                         }}>
                           CI ENCONTRADO
                         </span>
-                        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0.5rem 0 0.2rem' }}>
+                        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0.5rem 0 0.2rem', color: 'var(--text)' }}>
                           {elector.nombre} {elector.apellido}
                         </h2>
                         <p style={{ color: 'var(--text-3)', margin: 0, fontSize: '0.9rem' }}>
-                          Cédula de Identidad: <strong style={{ color: 'white' }}>{parseInt(elector.ci).toLocaleString('es-PY')}</strong>
+                          Cédula de Identidad: <strong style={{ color: 'var(--text)' }}>{parseInt(elector.ci).toLocaleString('es-PY')}</strong>
                         </p>
                       </div>
                       <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
@@ -772,26 +721,18 @@ const Attendance: React.FC = () => {
                       </div>
                     </div>
 
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: '1rem',
-                      background: 'rgba(0,0,0,0.2)',
-                      padding: '1.25rem',
-                      borderRadius: '12px',
-                      marginBottom: '1.5rem'
-                    }}>
+                    <div className="attendance-elector-grid">
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Local de Votación</span>
-                        <p style={{ margin: '0.2rem 0 0', fontWeight: 700, fontSize: '0.95rem' }}>{elector.local_votacion}</p>
+                        <p style={{ margin: '0.2rem 0 0', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{elector.local_votacion}</p>
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Mesa</span>
-                        <p style={{ margin: '0.2rem 0 0', fontWeight: 700, fontSize: '0.95rem' }}>{elector.mesa}</p>
+                        <p style={{ margin: '0.2rem 0 0', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{elector.mesa}</p>
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Orden</span>
-                        <p style={{ margin: '0.2rem 0 0', fontWeight: 700, fontSize: '0.95rem' }}>{elector.orden}</p>
+                        <p style={{ margin: '0.2rem 0 0', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{elector.orden}</p>
                       </div>
                     </div>
 
@@ -826,13 +767,10 @@ const Attendance: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               {successMsg && (
-                <div style={{
-                  background: 'rgba(34, 196, 126, 0.15)',
-                  border: '1px solid rgba(34, 196, 126, 0.3)',
+                <div className="attendance-alert-success" style={{
                   borderRadius: '12px',
                   padding: '1rem',
                   marginBottom: '1.5rem',
-                  color: '#86EFAC',
                   fontWeight: 600,
                   fontSize: '0.9rem'
                 }}>
@@ -850,11 +788,11 @@ const Attendance: React.FC = () => {
                   style={{
                     flex: 1,
                     minWidth: '250px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border-mid)',
                     borderRadius: '10px',
                     padding: '0.6rem 1rem',
-                    color: 'white',
+                    color: 'var(--text)',
                     outline: 'none'
                   }}
                 />
@@ -928,7 +866,7 @@ const Attendance: React.FC = () => {
                     <li>Usuarios creados: <strong>{bulkResult.created}</strong></li>
                     <li>Usuarios omitidos (ya existían): <strong>{bulkResult.skipped}</strong></li>
                     {bulkResult.errors.length > 0 && (
-                      <li style={{ color: '#FCA5A5', marginTop: '0.3rem' }}>
+                      <li style={{ color: 'var(--red)', marginTop: '0.3rem' }}>
                         Errores: {bulkResult.errors.join(', ')}
                       </li>
                     )}
@@ -952,20 +890,14 @@ const Attendance: React.FC = () => {
               )}
 
               {/* Table Container */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                overflowX: 'auto',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-              }}>
+              <div className="attendance-table-container">
                 {loadingList ? (
                   <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-3)' }}>
                     <div className="spinner" style={{ margin: '0 auto 1rem', width: '30px', height: '30px' }} />
                     Cargando asistentes...
                   </div>
                 ) : listError ? (
-                  <div style={{ padding: '3rem', textAlign: 'center', color: '#FCA5A5' }}>
+                  <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--red)' }}>
                     {listError}
                   </div>
                 ) : filteredAssistants.length === 0 ? (
@@ -975,7 +907,7 @@ const Attendance: React.FC = () => {
                 ) : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255,255,255,0.02)' }}>
+                      <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-light)' }}>
                         {user?.role === 'SUPERUSUARIO' && (
                           <th style={{ padding: '1rem', width: '40px', textAlign: 'center' }}>
                             <input 
@@ -1001,7 +933,7 @@ const Attendance: React.FC = () => {
                         <tr 
                           key={assistant.id}
                           style={{ 
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            borderBottom: '1px solid var(--border)',
                             background: selectedCis.includes(assistant.ci) ? 'rgba(46, 132, 240, 0.08)' : 'transparent',
                             transition: 'background 0.2s'
                           }}
@@ -1025,7 +957,7 @@ const Attendance: React.FC = () => {
                                 height: '36px',
                                 borderRadius: '50%',
                                 objectFit: 'cover',
-                                border: '2px solid rgba(255, 255, 255, 0.1)',
+                                border: '2px solid var(--border)',
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                               }}
                             />
@@ -1034,18 +966,10 @@ const Attendance: React.FC = () => {
                             {assistant.nombre} {assistant.apellido}
                           </td>
                           <td style={{ padding: '1rem', fontFamily: 'monospace' }}>{parseInt(assistant.ci).toLocaleString('es-PY')}</td>
-                          <td style={{ padding: '1rem', color: '#60A5FA' }}>{assistant.telefono}</td>
+                          <td style={{ padding: '1rem', color: 'var(--primary-g)' }}>{assistant.telefono}</td>
                           <td style={{ padding: '1rem' }}>{assistant.distrito}</td>
                           <td style={{ padding: '1rem' }}>
-                            <span style={{
-                              background: assistant.cargo === 'APODERADO' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                              color: assistant.cargo === 'APODERADO' ? '#FCA5A5' : '#93C5FD',
-                              border: `1px solid ${assistant.cargo === 'APODERADO' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
-                              padding: '0.2rem 0.6rem',
-                              borderRadius: '20px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700
-                            }}>
+                            <span className={assistant.cargo === 'APODERADO' ? 'attendance-role-apoderado' : 'attendance-role-miembro'}>
                               {assistant.cargo}
                             </span>
                           </td>
@@ -1057,11 +981,11 @@ const Attendance: React.FC = () => {
                               <button
                                 onClick={() => handleOpenEdit(assistant)}
                                 style={{
-                                  background: 'rgba(255,255,255,0.05)',
-                                  border: '1px solid rgba(255,255,255,0.1)',
+                                  background: 'var(--input-bg)',
+                                  border: '1px solid var(--border-mid)',
                                   padding: '0.35rem 0.65rem',
                                   borderRadius: '6px',
-                                  color: '#60A5FA',
+                                  color: 'var(--primary-g)',
                                   fontSize: '0.75rem',
                                   fontWeight: 650,
                                   cursor: 'pointer'
@@ -1076,7 +1000,7 @@ const Attendance: React.FC = () => {
                                   border: '1px solid rgba(239, 68, 68, 0.2)',
                                   padding: '0.35rem 0.65rem',
                                   borderRadius: '6px',
-                                  color: '#FCA5A5',
+                                  color: '#EF4444',
                                   fontSize: '0.75rem',
                                   fontWeight: 650,
                                   cursor: 'pointer'
@@ -1113,16 +1037,7 @@ const Attendance: React.FC = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            style={{
-              background: 'rgba(30, 41, 59, 0.95)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '20px',
-              width: '100%',
-              maxWidth: '460px',
-              padding: '2rem',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-              position: 'relative'
-            }}
+            className="attendance-modal-content"
           >
             <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', fontWeight: 800 }}>Confirmar Asistencia</h3>
             <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -1132,7 +1047,7 @@ const Attendance: React.FC = () => {
             <form onSubmit={handleRegisterAttendance}>
               {/* Photo Capture Section */}
               <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left', fontWeight: validationTried && !photoUrl ? 750 : 'normal' }}>
+                <span style={{ fontSize: '0.8rem', color: validationTried && !photoUrl ? 'var(--red)' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left', fontWeight: validationTried && !photoUrl ? 750 : 'normal' }}>
                   Foto del Asistente * {validationTried && !photoUrl && '(Requerido)'}
                 </span>
                 
@@ -1164,8 +1079,8 @@ const Attendance: React.FC = () => {
                       onClick={() => fileInputRef.current?.click()}
                       style={{
                         width: '90px', height: '90px', borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.05)', 
-                        border: validationTried && !photoUrl ? '2px dashed #EF4444' : '2px dashed rgba(255,255,255,0.2)',
+                        background: 'var(--input-bg)', 
+                        border: validationTried && !photoUrl ? '2px dashed #EF4444' : '2px dashed var(--border-mid)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer', transition: 'all 0.2s',
                         boxShadow: validationTried && !photoUrl ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none'
@@ -1175,11 +1090,11 @@ const Attendance: React.FC = () => {
                         <div className="spinner" style={{ width: '20px', height: '20px' }} />
                       ) : (
                         <>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.6)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={validationTried && !photoUrl ? '#EF4444' : 'var(--text-3)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                             <circle cx="12" cy="13" r="4"></circle>
                           </svg>
-                          <span style={{ fontSize: '0.62rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
+                          <span style={{ fontSize: '0.62rem', color: validationTried && !photoUrl ? '#EF4444' : 'var(--text-3)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
                         </>
                       )}
                     </div>
@@ -1199,12 +1114,12 @@ const Attendance: React.FC = () => {
                       type="button" 
                       onClick={() => fileInputRef.current?.click()}
                       style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        border: validationTried && !photoUrl ? '1px solid #EF4444' : '1px solid rgba(255,255,255,0.1)',
+                        background: 'var(--input-bg)',
+                        border: validationTried && !photoUrl ? '1px solid #EF4444' : '1px solid var(--border-mid)',
                         padding: '0.4rem 1rem',
                         borderRadius: '8px',
                         fontSize: '0.75rem',
-                        color: validationTried && !photoUrl ? '#FCA5A5' : 'white',
+                        color: validationTried && !photoUrl ? '#EF4444' : 'var(--text)',
                         fontWeight: 700,
                         cursor: 'pointer'
                       }}
@@ -1224,11 +1139,11 @@ const Attendance: React.FC = () => {
                     onClick={() => setCargo('MIEMBRO_DE_MESA')}
                     style={{
                       flex: 1,
-                      background: cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)'}`,
+                      background: cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-500)' : 'var(--input-bg)',
+                      border: `1px solid ${cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-400)' : 'var(--border-mid)'}`,
                       padding: '0.6rem',
                       borderRadius: '10px',
-                      color: 'white',
+                      color: cargo === 'MIEMBRO_DE_MESA' ? 'white' : 'var(--text)',
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.2s'
@@ -1241,11 +1156,11 @@ const Attendance: React.FC = () => {
                     onClick={() => setCargo('APODERADO')}
                     style={{
                       flex: 1,
-                      background: cargo === 'APODERADO' ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${cargo === 'APODERADO' ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)'}`,
+                      background: cargo === 'APODERADO' ? 'var(--plra-500)' : 'var(--input-bg)',
+                      border: `1px solid ${cargo === 'APODERADO' ? 'var(--plra-400)' : 'var(--border-mid)'}`,
                       padding: '0.6rem',
                       borderRadius: '10px',
-                      color: 'white',
+                      color: cargo === 'APODERADO' ? 'white' : 'var(--text)',
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.2s'
@@ -1258,7 +1173,7 @@ const Attendance: React.FC = () => {
 
               {/* Phone number */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ fontSize: '0.8rem', color: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', fontWeight: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 750 : 'normal' }}>
+                <label style={{ fontSize: '0.8rem', color: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 'var(--red)' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', fontWeight: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 750 : 'normal' }}>
                   Teléfono (Formato WhatsApp) * {validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) && '(Requerido - Formato válido)'}
                 </label>
                 <input
@@ -1270,11 +1185,11 @@ const Attendance: React.FC = () => {
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '1px solid #EF4444' : '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--input-bg)',
+                    border: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '1px solid #EF4444' : '1px solid var(--border-mid)',
                     borderRadius: '10px',
                     padding: '0.7rem 1rem',
-                    color: 'white',
+                    color: 'var(--text)',
                     fontSize: '1rem',
                     outline: 'none',
                     boxShadow: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '0 0 10px rgba(239, 68, 68, 0.2)' : 'none'
@@ -1283,7 +1198,7 @@ const Attendance: React.FC = () => {
               </div>
 
               {errorRegister && (
-                <p style={{ color: '#FCA5A5', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--red)', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
                   ⚠ {errorRegister}
                 </p>
               )}
@@ -1343,16 +1258,7 @@ const Attendance: React.FC = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            style={{
-              background: 'rgba(30, 41, 59, 0.95)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '20px',
-              width: '100%',
-              maxWidth: '460px',
-              padding: '2rem',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-              position: 'relative'
-            }}
+            className="attendance-modal-content"
           >
             <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', fontWeight: 800 }}>Editar Asistente</h3>
             <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -1362,7 +1268,7 @@ const Attendance: React.FC = () => {
             <form onSubmit={handleUpdateAssistant}>
               {/* Photo Capture Section */}
               <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left', fontWeight: validationTried && !photoUrl ? 750 : 'normal' }}>
+                <span style={{ fontSize: '0.8rem', color: validationTried && !photoUrl ? 'var(--red)' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left', fontWeight: validationTried && !photoUrl ? 750 : 'normal' }}>
                   Foto del Asistente * {validationTried && !photoUrl && '(Requerido)'}
                 </span>
                 
@@ -1380,7 +1286,7 @@ const Attendance: React.FC = () => {
                         style={{
                           position: 'absolute', top: 0, right: 0,
                           width: '24px', height: '24px', borderRadius: '50%',
-                          background: '#EF4444', border: 'none', color: 'white',
+                          background: 'var(--red)', border: 'none', color: 'white',
                           fontWeight: 'bold', fontSize: '12px', cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
@@ -1394,8 +1300,8 @@ const Attendance: React.FC = () => {
                       onClick={() => editFileInputRef.current?.click()}
                       style={{
                         width: '90px', height: '90px', borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.05)', 
-                        border: validationTried && !photoUrl ? '2px dashed #EF4444' : '2px dashed rgba(255,255,255,0.2)',
+                        background: 'var(--input-bg)', 
+                        border: validationTried && !photoUrl ? '2px dashed var(--red)' : '2px dashed var(--border-mid)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer', transition: 'all 0.2s',
                         boxShadow: validationTried && !photoUrl ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none'
@@ -1405,11 +1311,11 @@ const Attendance: React.FC = () => {
                         <div className="spinner" style={{ width: '20px', height: '20px' }} />
                       ) : (
                         <>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.6)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={validationTried && !photoUrl ? 'var(--red)' : 'var(--text-3)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                             <circle cx="12" cy="13" r="4"></circle>
                           </svg>
-                          <span style={{ fontSize: '0.62rem', color: validationTried && !photoUrl ? '#FCA5A5' : 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
+                          <span style={{ fontSize: '0.62rem', color: validationTried && !photoUrl ? 'var(--red)' : 'var(--text-3)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
                         </>
                       )}
                     </div>
@@ -1429,12 +1335,12 @@ const Attendance: React.FC = () => {
                       type="button" 
                       onClick={() => editFileInputRef.current?.click()}
                       style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        border: validationTried && !photoUrl ? '1px solid #EF4444' : '1px solid rgba(255,255,255,0.1)',
+                        background: 'var(--input-bg)',
+                        border: validationTried && !photoUrl ? '1px solid var(--red)' : '1px solid var(--border-mid)',
                         padding: '0.4rem 1rem',
                         borderRadius: '8px',
                         fontSize: '0.75rem',
-                        color: validationTried && !photoUrl ? '#FCA5A5' : 'white',
+                        color: validationTried && !photoUrl ? 'var(--red)' : 'var(--text)',
                         fontWeight: 700,
                         cursor: 'pointer'
                       }}
@@ -1454,11 +1360,11 @@ const Attendance: React.FC = () => {
                     onClick={() => setCargo('MIEMBRO_DE_MESA')}
                     style={{
                       flex: 1,
-                      background: cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)'}`,
+                      background: cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-500)' : 'var(--input-bg)',
+                      border: `1px solid ${cargo === 'MIEMBRO_DE_MESA' ? 'var(--plra-400)' : 'var(--border-mid)'}`,
                       padding: '0.6rem',
                       borderRadius: '10px',
-                      color: 'white',
+                      color: cargo === 'MIEMBRO_DE_MESA' ? 'white' : 'var(--text)',
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.2s'
@@ -1471,11 +1377,11 @@ const Attendance: React.FC = () => {
                     onClick={() => setCargo('APODERADO')}
                     style={{
                       flex: 1,
-                      background: cargo === 'APODERADO' ? 'var(--plra-500)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${cargo === 'APODERADO' ? 'var(--plra-400)' : 'rgba(255,255,255,0.1)'}`,
+                      background: cargo === 'APODERADO' ? 'var(--plra-500)' : 'var(--input-bg)',
+                      border: `1px solid ${cargo === 'APODERADO' ? 'var(--plra-400)' : 'var(--border-mid)'}`,
                       padding: '0.6rem',
                       borderRadius: '10px',
-                      color: 'white',
+                      color: cargo === 'APODERADO' ? 'white' : 'var(--text)',
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.2s'
@@ -1488,7 +1394,7 @@ const Attendance: React.FC = () => {
 
               {/* Phone number */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ fontSize: '0.8rem', color: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '#FCA5A5' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', fontWeight: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 750 : 'normal' }}>
+                <label style={{ fontSize: '0.8rem', color: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 'var(--red)' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', fontWeight: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? 750 : 'normal' }}>
                   Teléfono (Formato WhatsApp) * {validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) && '(Requerido - Formato válido)'}
                 </label>
                 <input
@@ -1500,11 +1406,11 @@ const Attendance: React.FC = () => {
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '1px solid #EF4444' : '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--input-bg)',
+                    border: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '1px solid var(--red)' : '1px solid var(--border-mid)',
                     borderRadius: '10px',
                     padding: '0.7rem 1rem',
-                    color: 'white',
+                    color: 'var(--text)',
                     fontSize: '1rem',
                     outline: 'none',
                     boxShadow: validationTried && (!telefono.trim() || telefono === '+595' || telefono.replace(/\D/g, '').length <= 5) ? '0 0 10px rgba(239, 68, 68, 0.2)' : 'none'
@@ -1513,7 +1419,7 @@ const Attendance: React.FC = () => {
               </div>
 
               {errorRegister && (
-                <p style={{ color: '#FCA5A5', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--red)', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
                   ⚠ {errorRegister}
                 </p>
               )}
@@ -1568,10 +1474,10 @@ const Attendance: React.FC = () => {
             bottom: '1.5rem',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(15, 23, 42, 0.9)',
+            background: 'var(--glass-bg)',
             backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(46, 132, 240, 0.3)',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+            border: '1px solid var(--border-mid)',
+            boxShadow: 'var(--shadow-lg)',
             padding: '1rem 2rem',
             borderRadius: '20px',
             display: 'flex',
@@ -1579,7 +1485,8 @@ const Attendance: React.FC = () => {
             gap: '1.5rem',
             zIndex: 900,
             maxWidth: '90%',
-            width: 'fit-content'
+            width: 'fit-content',
+            color: 'var(--text)'
           }}
         >
           <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
@@ -1592,19 +1499,19 @@ const Attendance: React.FC = () => {
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value as any)}
               style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border-mid)',
                 borderRadius: '8px',
                 padding: '0.35rem 0.75rem',
-                color: 'white',
+                color: 'var(--text)',
                 outline: 'none',
                 cursor: 'pointer'
               }}
             >
-              <option value="MIEMBRO_DE_MESA" style={{ background: '#1e293b' }}>Miembro de Mesa</option>
-              <option value="APODERADO" style={{ background: '#1e293b' }}>Apoderado</option>
-              <option value="VEEDOR" style={{ background: '#1e293b' }}>Veedor</option>
-              <option value="COORDINADOR" style={{ background: '#1e293b' }}>Coordinador</option>
+              <option value="MIEMBRO_DE_MESA" style={{ background: 'var(--surface)' }}>Miembro de Mesa</option>
+              <option value="APODERADO" style={{ background: 'var(--surface)' }}>Apoderado</option>
+              <option value="VEEDOR" style={{ background: 'var(--surface)' }}>Veedor</option>
+              <option value="COORDINADOR" style={{ background: 'var(--surface)' }}>Coordinador</option>
             </select>
           </div>
 
@@ -1619,7 +1526,7 @@ const Attendance: React.FC = () => {
               color: 'white',
               fontWeight: 800,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(46, 132, 240, 0.3)',
+              boxShadow: '0 4px 12px rgba(4, 120, 87, 0.3)',
               transition: 'opacity 0.2s'
             }}
           >
