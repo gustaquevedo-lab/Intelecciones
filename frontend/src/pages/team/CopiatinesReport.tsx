@@ -422,7 +422,7 @@ const CopiatinesReport = () => {
   const [marking, setMarking] = useState(false);
   const [padrinoFilter, setPadrinoFilter] = useState('ALL');
   const [coordinatorFilter, setCoordinatorFilter] = useState('ALL');
-  const [onlyUnprinted, setOnlyUnprinted] = useState(false);
+  const [printedFilter, setPrintedFilter] = useState<'ALL' | 'PENDING' | 'PRINTED'>('ALL');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -432,7 +432,8 @@ const CopiatinesReport = () => {
       const params = new URLSearchParams();
       if (padrinoFilter !== 'ALL') params.set('padrino_id', padrinoFilter);
       if (coordinatorFilter !== 'ALL') params.set('coordinator_id', coordinatorFilter);
-      if (onlyUnprinted) params.set('only_unprinted', '1');
+      if (printedFilter === 'PENDING') params.set('printed_status', 'pending');
+      else if (printedFilter === 'PRINTED') params.set('printed_status', 'printed');
       const res = await api.get(`/my-team/copiatines?${params.toString()}`);
       setData(res.data);
     } catch (err: any) {
@@ -440,7 +441,7 @@ const CopiatinesReport = () => {
     } finally {
       setLoading(false);
     }
-  }, [padrinoFilter, coordinatorFilter, onlyUnprinted]);
+  }, [padrinoFilter, coordinatorFilter, printedFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -528,13 +529,15 @@ const CopiatinesReport = () => {
         </div>
         <div>
           <label style={labelStyle}>Estado</label>
-          <button
-            onClick={() => setOnlyUnprinted(v => !v)}
-            style={{ ...selStyle, background: onlyUnprinted ? 'rgba(251,191,36,0.12)' : 'var(--input-bg)', border: `1px solid ${onlyUnprinted ? 'rgba(251,191,36,0.4)' : 'var(--border)'}`, color: onlyUnprinted ? '#fbbf24' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+          <select 
+            value={printedFilter} 
+            onChange={e => setPrintedFilter(e.target.value as any)} 
+            style={selStyle}
           >
-            {onlyUnprinted ? <EyeOff size={14} /> : <Eye size={14} />}
-            {onlyUnprinted ? 'Solo pendientes' : 'Todos'}
-          </button>
+            <option value="ALL">Todos</option>
+            <option value="PENDING">Pendientes</option>
+            <option value="PRINTED">Impresos</option>
+          </select>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
           <label style={{ ...labelStyle, opacity: 0 }}>_</label>
@@ -601,7 +604,7 @@ const CopiatinesReport = () => {
         <div style={{ padding: '3rem', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '16px', color: 'var(--text-3)' }}>
           <CheckCircle size={32} style={{ margin: '0 auto 1rem', display: 'block', color: '#10b981' }} />
           <div style={{ fontWeight: 700 }}>
-            {onlyUnprinted ? 'Todos los copiatines ya fueron impresos.' : 'Sin electores con los filtros seleccionados.'}
+            {printedFilter === 'PENDING' ? 'Todos los copiatines ya fueron impresos.' : 'Sin electores con los filtros seleccionados.'}
           </div>
         </div>
       )}

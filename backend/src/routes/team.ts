@@ -975,6 +975,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
   const requesterId = req.headers['x-user-id'] as string;
   const role = getRole(req);
   const onlyUnprinted = req.query.only_unprinted === '1';
+  const printedStatus = req.query.printed_status as string;
   const padrinoId = req.query.padrino_id as string;
   const coordinatorId = req.query.coordinator_id as string;
 
@@ -1041,8 +1042,10 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       electorSql += ` AND ec.coordinator_id = ?`;
       electorParams.push(parseInt(coordinatorId));
     }
-    if (onlyUnprinted) {
+    if (printedStatus === 'pending' || onlyUnprinted) {
       electorSql += ` AND ec.copiatin_printed_at IS NULL`;
+    } else if (printedStatus === 'printed') {
+      electorSql += ` AND ec.copiatin_printed_at IS NOT NULL`;
     }
 
     electorSql += ` ORDER BY e.apellido, e.nombre LIMIT 500`;
