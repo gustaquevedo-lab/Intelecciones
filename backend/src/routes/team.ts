@@ -1050,7 +1050,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       electorSql += ` AND ec.copiatin_printed_at IS NOT NULL`;
     }
 
-    electorSql += ` ORDER BY e.apellido, e.nombre LIMIT 3000`;
+    electorSql += ` ORDER BY e.apellido, e.nombre LIMIT 500`;
 
     const electors = await dbQueryAsync<any>(electorSql, electorParams);
 
