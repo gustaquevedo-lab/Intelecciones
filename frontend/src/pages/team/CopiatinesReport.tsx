@@ -335,58 +335,71 @@ const CARD_CSS = `
     height: 0.85cm;
   }
 
-  /* Compact layout for Concepcion cards to fit 4 candidates + coordinator box */
-  .concepcion-card .coordinator-info-box {
+  /* Compact layout for cards to fit 4 candidates + coordinator box */
+  .compact-card .coordinator-info-box {
     height: 0.50cm;
     padding: 1px 3px;
     margin-bottom: 2px;
     font-size: 7.5px;
   }
-  .concepcion-card .candidate-card {
+  .compact-card .candidate-card {
     height: 0.58cm;
     padding: 1px 2.5px;
     border-width: 1px;
   }
-  .concepcion-card .candidate-photo-frame {
+  .compact-card .candidate-photo-frame {
     width: 0.44cm;
     height: 0.44cm;
     margin-right: 3px;
   }
-  .concepcion-card .candidate-name {
+  .compact-card .candidate-name {
     font-size: 8.5px;
   }
-  .concepcion-card .candidate-role {
+  .compact-card .candidate-role {
     font-size: 5.5px;
     margin-bottom: 0px;
   }
-  .concepcion-card .badge-container {
+  .compact-card .badge-container {
     height: 0.48cm;
     width: 2.2cm;
     border-width: 1.2px;
   }
-  .concepcion-card .badge-single .label-main {
+  .compact-card .badge-single .label-main {
     font-size: 7px;
   }
-  .concepcion-card .badge-single .val-huge {
+  .compact-card .badge-single .val-huge {
     font-size: 15px;
   }
-  .concepcion-card .badge-double .val-large {
+  .compact-card .badge-double .val-large {
     font-size: 11px;
   }
-  .concepcion-card .badge-double .label-sub {
+  .compact-card .badge-double .label-sub {
     font-size: 7px;
   }
-  .concepcion-card .badge-divider {
+  .compact-card .badge-divider {
     height: 0.38cm;
   }
-  .concepcion-card .candidates-list {
+  .compact-card .candidates-list {
     gap: 1.5px;
   }
 `;
 
-const getConcepcionLists = (campaignLists: CampaignList[]): CampaignList[] => {
-  const intendente = campaignLists.find(l => l.type?.toUpperCase() === 'INTENDENTE') || DEFAULT_CAMPAIGN_LISTS[0];
-  const concejal = campaignLists.find(l => l.type?.toUpperCase().includes('CONCEJAL')) || DEFAULT_CAMPAIGN_LISTS[1];
+const getConcepcionLists = (campaignLists: CampaignList[], userListId?: number): CampaignList[] => {
+  const intendente = campaignLists.find(l => l.type?.toUpperCase() === 'INTENDENTE') || {
+    id: -10,
+    type: 'INTENDENTE',
+    list_number: '3',
+    option_number: null,
+    candidate_nombre: 'ALEJANDRO URBIETA',
+    candidate_alias: 'ALEJANDRO URBIETA',
+    photo_url: '/assets/alejandro_urbieta.png'
+  };
+
+  let concejal = userListId ? campaignLists.find(l => l.id === userListId && l.type?.toUpperCase().includes('CONCEJAL')) : null;
+  if (!concejal) {
+    concejal = campaignLists.find(l => l.type?.toUpperCase().includes('CONCEJAL')) || DEFAULT_CAMPAIGN_LISTS[1];
+  }
+
   const presidente = DEFAULT_CAMPAIGN_LISTS.find(l => l.type?.toUpperCase() === 'PRESIDENTE DEL PARTIDO') || DEFAULT_CAMPAIGN_LISTS[2];
   
   const directorioDept: CampaignList = {
@@ -400,6 +413,12 @@ const getConcepcionLists = (campaignLists: CampaignList[]): CampaignList[] => {
   };
   
   return [intendente, concejal, presidente, directorioDept];
+};
+
+const getCerroCoraOrBellaVistaLists = (): CampaignList[] => {
+  const presidente = DEFAULT_CAMPAIGN_LISTS.find(l => l.type?.toUpperCase() === 'PRESIDENTE DEL PARTIDO') || DEFAULT_CAMPAIGN_LISTS[2];
+  const directorioNac = DEFAULT_CAMPAIGN_LISTS.find(l => l.type?.toUpperCase() === 'MIEMBRO DIRECTORIO NAC.') || DEFAULT_CAMPAIGN_LISTS[3];
+  return [presidente, directorioNac];
 };
 
 const getGenericLists = (campaignLists: CampaignList[]): CampaignList[] => {
@@ -418,7 +437,8 @@ const getGenericLists = (campaignLists: CampaignList[]): CampaignList[] => {
 
 function buildPrintHTML(
   electors: CopiatinElector[],
-  campaignLists: CampaignList[]
+  campaignLists: CampaignList[],
+  userListId?: number
 ): string {
   const logoUrl = window.location.origin + '/assets/intelecciones-logo.svg';
   const buildBadge = (list: CampaignList) => {
@@ -457,6 +477,7 @@ function buildPrintHTML(
   const buildCard = (e: CopiatinElector) => {
     const electorIsPJC = e.ciudad?.toUpperCase().includes('PEDRO JUAN CABALLERO') || e.ciudad?.toUpperCase().includes('PJC');
     const electorIsConcepcion = e.ciudad?.toUpperCase().includes('CONCEPCION') || e.ciudad?.toUpperCase().includes('CONCEPCIÓN');
+    const electorIsCerroCoraOrBellaVista = e.ciudad?.toUpperCase().includes('CERRO CORA') || e.ciudad?.toUpperCase().includes('CERRO CORÁ') || e.ciudad?.toUpperCase().includes('BELLA VISTA');
     const fullName = `${e.nombre} ${e.apellido}`.trim().toUpperCase();
     const ci = formatCI(e.elector_ci);
     const ciudad = (e.ciudad || '').toUpperCase();
@@ -465,7 +486,7 @@ function buildPrintHTML(
 
     if (electorIsPJC) {
       const candidateRows = buildCandidateRows(DEFAULT_CAMPAIGN_LISTS);
-      return `<div class="copiatin-card">
+      return `<div class="copiatin-card compact-card">
         <div class="top-band-new">
           <div class="top-row">
             <div class="elector-main">
@@ -491,12 +512,55 @@ function buildPrintHTML(
             </div>
           </div>
         </div>
+        
+        <div class="coordinator-info-box">
+          <label>COORDINADOR ASIGNADO:</label> <strong>${(e.coordinator_name || '—').toUpperCase()}</strong>
+          ${e.padrino_name ? `<span class="padrino-sub">(${e.padrino_name.toUpperCase()})</span>` : ''}
+        </div>
+        
         <div class="candidates-list">${candidateRows}</div>
       </div>`;
+    } else if (electorIsCerroCoraOrBellaVista) {
+      const cerroCoraOrBellaVistaLists = getCerroCoraOrBellaVistaLists();
+      const candidateRows = buildCandidateRows(cerroCoraOrBellaVistaLists);
+      return `<div class="copiatin-card generic-card">
+        <div class="top-band-new">
+          <div class="top-row">
+            <div class="elector-main">
+              <div class="elector-header">ELECTOR REGISTRADO</div>
+              <div class="elector-name">${fullName}</div>
+              <div class="elector-ci">C.I. <span>N°</span> <strong>${ci}</strong></div>
+            </div>
+            <div class="campaign-main">
+              <div class="campaign-logos">
+                ${logoUrl ? `<img class="logo-img" src="${logoUrl}" alt="Logo">` : ''}
+                <div class="campaign-brand">
+                  <span class="brand-plra">${campaign}</span>
+                </div>
+              </div>
+              <div class="city-label">${ciudad}</div>
+            </div>
+          </div>
+          <div class="bottom-row">
+            <div class="elector-footer-item"><label>MESA:</label> <span>${e.mesa || '—'}</span></div>
+            <div class="elector-footer-item"><label>ORDEN:</label> <span>${e.orden || '—'}</span></div>
+            <div class="local-info-inline">
+              <label>LOCAL:</label> <span>${local}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="coordinator-info-box">
+          <label>COORDINADOR ASIGNADO:</label> <strong>${(e.coordinator_name || '—').toUpperCase()}</strong>
+          ${e.padrino_name ? `<span class="padrino-sub">(${e.padrino_name.toUpperCase()})</span>` : ''}
+        </div>
+        
+        <div class="generic-candidates-list">${candidateRows}</div>
+      </div>`;
     } else if (electorIsConcepcion) {
-      const concepcionLists = getConcepcionLists(campaignLists);
+      const concepcionLists = getConcepcionLists(campaignLists, userListId);
       const candidateRows = buildCandidateRows(concepcionLists);
-      return `<div class="copiatin-card concepcion-card">
+      return `<div class="copiatin-card compact-card">
         <div class="top-band-new">
           <div class="top-row">
             <div class="elector-main">
@@ -655,7 +719,7 @@ const CopiatinesReport = () => {
   const handlePrint = () => {
     if (!data || data.electors.length === 0) return;
     const ids = data.electors.map(e => e.capture_id);
-    const html = buildPrintHTML(data.electors, data.campaignLists);
+    const html = buildPrintHTML(data.electors, data.campaignLists, user?.assigned_list_id);
     const pw = window.open('', '_blank', 'width=900,height=700');
     if (!pw) return;
     pw.document.write(html);
@@ -822,15 +886,20 @@ const CopiatinesReport = () => {
               const logoUrl = window.location.origin + '/assets/intelecciones-logo.svg';
               const electorIsPJC = e.ciudad?.toUpperCase().includes('PEDRO JUAN CABALLERO') || e.ciudad?.toUpperCase().includes('PJC');
               const electorIsConcepcion = e.ciudad?.toUpperCase().includes('CONCEPCION') || e.ciudad?.toUpperCase().includes('CONCEPCIÓN');
+              const electorIsCerroCoraOrBellaVista = e.ciudad?.toUpperCase().includes('CERRO CORA') || e.ciudad?.toUpperCase().includes('CERRO CORÁ') || e.ciudad?.toUpperCase().includes('BELLA VISTA');
               
               let candidatesToUse: CampaignList[] = [];
               let cardClass = "copiatin-card";
               
               if (electorIsPJC) {
                 candidatesToUse = DEFAULT_CAMPAIGN_LISTS;
+                cardClass = "copiatin-card compact-card";
+              } else if (electorIsCerroCoraOrBellaVista) {
+                candidatesToUse = getCerroCoraOrBellaVistaLists();
+                cardClass = "copiatin-card generic-card";
               } else if (electorIsConcepcion) {
-                candidatesToUse = getConcepcionLists(data.campaignLists);
-                cardClass = "copiatin-card concepcion-card";
+                candidatesToUse = getConcepcionLists(data.campaignLists, user?.assigned_list_id);
+                cardClass = "copiatin-card compact-card";
               } else {
                 const genericLists = getGenericLists(data.campaignLists);
                 candidatesToUse = genericLists.length > 0 ? genericLists : DEFAULT_CAMPAIGN_LISTS.slice(0, 2);
@@ -886,12 +955,10 @@ const CopiatinesReport = () => {
                     </div>
                   </div>
                   
-                  {!electorIsPJC && (
-                    <div className="coordinator-info-box">
-                      <label>COORDINADOR ASIGNADO:</label> <strong>{(e.coordinator_name || '—').toUpperCase()}</strong>
-                      {e.padrino_name && <span className="padrino-sub">({e.padrino_name.toUpperCase()})</span>}
-                    </div>
-                  )}
+                  <div className="coordinator-info-box">
+                    <label>COORDINADOR ASIGNADO:</label> <strong>{(e.coordinator_name || '—').toUpperCase()}</strong>
+                    {e.padrino_name && <span className="padrino-sub">({e.padrino_name.toUpperCase()})</span>}
+                  </div>
 
                   <div className={electorIsPJC || electorIsConcepcion ? "candidates-list" : "generic-candidates-list"}>
                     {candidatesToUse.map((list, i) => {

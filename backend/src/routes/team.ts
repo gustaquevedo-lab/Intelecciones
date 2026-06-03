@@ -1054,11 +1054,21 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
 
     const requesterInfo = getCachedUserInfo(requesterId);
     let campaignLists: any[] = [];
-    if (requesterInfo?.campaign_id) {
+    
+    // Collect all campaign IDs from the electors being returned
+    const campaignIds = Array.from(new Set(electors.map(e => e.campaign_id).filter(id => id != null))) as number[];
+    
+    // Add the requester's own campaign_id if present
+    if (requesterInfo?.campaign_id && !campaignIds.includes(requesterInfo.campaign_id)) {
+      campaignIds.push(requesterInfo.campaign_id);
+    }
+
+    if (campaignIds.length > 0) {
+      const placeholders = campaignIds.map(() => '?').join(',');
       campaignLists = await dbQueryAsync<any>(
-        `SELECT id, type, list_number, option_number, candidate_nombre, candidate_alias, photo_url
-         FROM lists WHERE campaign_id = ? AND COALESCE(is_adversary, 0) = 0 ORDER BY id`,
-        [requesterInfo.campaign_id]
+        `SELECT id, campaign_id, type, list_number, option_number, candidate_nombre, candidate_alias, photo_url
+         FROM lists WHERE campaign_id IN (${placeholders}) AND COALESCE(is_adversary, 0) = 0 ORDER BY id`,
+        campaignIds
       );
     }
 
