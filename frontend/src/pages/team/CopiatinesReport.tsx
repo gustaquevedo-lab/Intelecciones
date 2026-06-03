@@ -712,6 +712,41 @@ const CopiatinesReport = () => {
   const [searching, setSearching] = useState(false);
   const [basket, setBasket] = useState<CopiatinElector[]>([]);
 
+  // Missing States
+  const [data, setData] = useState<CopiatinesData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [marking, setMarking] = useState(false);
+  const [padrinoFilter, setPadrinoFilter] = useState('ALL');
+  const [coordinatorFilter, setCoordinatorFilter] = useState('ALL');
+  const [printedFilter, setPrintedFilter] = useState<'ALL' | 'PENDING' | 'PRINTED'>('PENDING');
+
+  // Load Copiatines Data
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (printedFilter !== 'ALL') {
+        params.append('printed_status', printedFilter.toLowerCase());
+      }
+      if (padrinoFilter !== 'ALL') {
+        params.append('padrino_id', padrinoFilter);
+      }
+      if (coordinatorFilter !== 'ALL') {
+        params.append('coordinator_id', coordinatorFilter);
+      }
+      const res = await api.get(`/my-team/copiatines?${params.toString()}`);
+      setData(res.data);
+    } catch (err) {
+      console.error('Error al cargar copiatines:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [printedFilter, padrinoFilter, coordinatorFilter]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
   const handleCustomSearch = async () => {
     if (!customSearchQuery.trim()) return;
     setSearching(true);
