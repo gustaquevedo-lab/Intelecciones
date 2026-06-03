@@ -14,6 +14,7 @@ interface CopiatinElector {
   ciudad: string;
   coordinator_name: string;
   padrino_name: string | null;
+  campaign_id: number | null;
   campaign_name: string | null;
   copiatin_printed_at: string | null;
 }
@@ -384,8 +385,17 @@ const CARD_CSS = `
   }
 `;
 
-const getConcepcionLists = (campaignLists: CampaignList[], userListId?: number): CampaignList[] => {
-  const intendente = campaignLists.find(l => l.type?.toUpperCase() === 'INTENDENTE') || {
+const getConcepcionLists = (
+  campaignLists: CampaignList[],
+  electorCampaignId?: number | null,
+  userListId?: number
+): CampaignList[] => {
+  const filteredLists = electorCampaignId
+    ? campaignLists.filter(l => (l as any).campaign_id === electorCampaignId)
+    : campaignLists;
+
+  const intendente = filteredLists.find(l => l.type?.toUpperCase() === 'INTENDENTE') || 
+                     campaignLists.find(l => l.type?.toUpperCase() === 'INTENDENTE') || {
     id: -10,
     type: 'INTENDENTE',
     list_number: '3',
@@ -395,9 +405,18 @@ const getConcepcionLists = (campaignLists: CampaignList[], userListId?: number):
     photo_url: '/assets/alejandro_urbieta.png'
   };
 
-  let concejal = userListId ? campaignLists.find(l => l.id === userListId && l.type?.toUpperCase().includes('CONCEJAL')) : null;
+  let concejal = (userListId && filteredLists.some(l => l.id === userListId))
+    ? filteredLists.find(l => l.id === userListId && l.type?.toUpperCase().includes('CONCEJAL'))
+    : null;
+
   if (!concejal) {
-    concejal = campaignLists.find(l => l.type?.toUpperCase().includes('CONCEJAL')) || DEFAULT_CAMPAIGN_LISTS[1];
+    concejal = filteredLists.find(l => l.type?.toUpperCase().includes('CONCEJAL'));
+  }
+  if (!concejal) {
+    concejal = campaignLists.find(l => l.type?.toUpperCase().includes('CONCEJAL'));
+  }
+  if (!concejal) {
+    concejal = DEFAULT_CAMPAIGN_LISTS[1];
   }
 
   const presidente = DEFAULT_CAMPAIGN_LISTS.find(l => l.type?.toUpperCase() === 'PRESIDENTE DEL PARTIDO') || DEFAULT_CAMPAIGN_LISTS[2];
@@ -558,7 +577,7 @@ function buildPrintHTML(
         <div class="generic-candidates-list">${candidateRows}</div>
       </div>`;
     } else if (electorIsConcepcion) {
-      const concepcionLists = getConcepcionLists(campaignLists, userListId);
+      const concepcionLists = getConcepcionLists(campaignLists, e.campaign_id, userListId);
       const candidateRows = buildCandidateRows(concepcionLists);
       return `<div class="copiatin-card compact-card">
         <div class="top-band-new">
@@ -898,7 +917,7 @@ const CopiatinesReport = () => {
                 candidatesToUse = getCerroCoraOrBellaVistaLists();
                 cardClass = "copiatin-card generic-card";
               } else if (electorIsConcepcion) {
-                candidatesToUse = getConcepcionLists(data.campaignLists, user?.assigned_list_id);
+                candidatesToUse = getConcepcionLists(data.campaignLists, e.campaign_id, user?.assigned_list_id);
                 cardClass = "copiatin-card compact-card";
               } else {
                 const genericLists = getGenericLists(data.campaignLists);

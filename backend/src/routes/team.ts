@@ -1063,13 +1063,27 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       campaignIds.push(requesterInfo.campaign_id);
     }
 
+    const cities = Array.from(new Set(electors.map(e => e.ciudad).filter(c => c && c.trim() !== '')));
+
+    let listsSql = `SELECT id, campaign_id, type, list_number, option_number, candidate_nombre, candidate_alias, photo_url, ciudad FROM lists WHERE COALESCE(is_adversary, 0) = 0`;
+    let listsParams: any[] = [];
+    let conditions: string[] = [];
+
     if (campaignIds.length > 0) {
       const placeholders = campaignIds.map(() => '?').join(',');
-      campaignLists = await dbQueryAsync<any>(
-        `SELECT id, campaign_id, type, list_number, option_number, candidate_nombre, candidate_alias, photo_url
-         FROM lists WHERE campaign_id IN (${placeholders}) AND COALESCE(is_adversary, 0) = 0 ORDER BY id`,
-        campaignIds
-      );
+      conditions.push(`campaign_id IN (${placeholders})`);
+      listsParams.push(...campaignIds);
+    }
+    if (cities.length > 0) {
+      const placeholders = cities.map(() => '?').join(',');
+      conditions.push(`UPPER(ciudad) IN (${placeholders})`);
+      listsParams.push(...cities.map(c => c.toUpperCase()));
+    }
+
+    if (conditions.length > 0) {
+      listsSql += ` AND (${conditions.join(' OR ')})`;
+      listsSql += ` ORDER BY id`;
+      campaignLists = await dbQueryAsync<any>(listsSql, listsParams);
     }
 
     res.json({ electors, campaignLists, filterPadrinos, filterCoordinators });
