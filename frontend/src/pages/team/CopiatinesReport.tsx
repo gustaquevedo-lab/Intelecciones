@@ -815,7 +815,9 @@ const CopiatinesReport = () => {
           </div>
         </div>
       )}
-
+      {!loading && data && data.electors.length > 0 && (
+        <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
+          <div className="sc-grid">
             {data.electors.map(e => {
               const logoUrl = window.location.origin + '/assets/intelecciones-logo.svg';
               const electorIsPJC = e.ciudad?.toUpperCase().includes('PEDRO JUAN CABALLERO') || e.ciudad?.toUpperCase().includes('PJC');
