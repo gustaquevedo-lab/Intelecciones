@@ -190,7 +190,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
 
           let currentTerminalId = terminalId;
           if (rotateTerminals && activeTerminals.length > 0) {
-            currentTerminalId = activeTerminals[sentInSession % activeTerminals.length].id;
+            currentTerminalId = activeTerminals[i % activeTerminals.length].id;
           }
 
           const rateCheck = canSendMore(currentTerminalId);
@@ -425,7 +425,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
           const target = failedRows[i];
           let currentTerminalId = origTerminalId;
           if (rotateTerminals && activeTerminals.length > 0) {
-            currentTerminalId = activeTerminals[sentInSession % activeTerminals.length].id;
+            currentTerminalId = activeTerminals[i % activeTerminals.length].id;
           }
 
           const { isOptedOut } = require('../whatsappAutoresponder');
@@ -649,7 +649,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
         LEFT JOIN electors e ON ec.elector_ci = e.ci
         JOIN users u ON ec.coordinator_id = u.id
         LEFT JOIN users p ON u.parent_id = p.id
-        WHERE ec.telefono IS NOT NULL AND ec.telefono != '' ${sec.sql}
+        WHERE ec.telefono IS NOT NULL AND ec.telefono != '' AND ec.is_disputed = 0 ${sec.sql}
       `;
       const params: any[] = [...sec.params];
       if (coordinatorId) { query += ' AND ec.coordinator_id = ?'; params.push(coordinatorId); }
@@ -701,7 +701,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
         FROM elector_captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
         JOIN users u ON ec.coordinator_id = u.id
-        WHERE u.parent_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != '' ${sec.sql}
+        WHERE u.parent_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != '' AND ec.is_disputed = 0 ${sec.sql}
         ORDER BY u.nombre, COALESCE(e.nombre, 'ELECTOR')
       `).all(padrinoId, ...sec.params);
 
@@ -722,7 +722,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
         FROM elector_captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
         JOIN users u ON ec.coordinator_id = u.id
-        WHERE ec.coordinator_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != '' ${sec.sql}
+        WHERE ec.coordinator_id = ? AND ec.telefono IS NOT NULL AND ec.telefono != '' AND ec.is_disputed = 0 ${sec.sql}
         ORDER BY COALESCE(e.nombre, 'ELECTOR')
       `).all(coordId, ...sec.params);
       res.json((electors as any[]).map(sanitizeElectorData));
@@ -750,7 +750,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
           COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, COALESCE(e.mesa, 0) as mesa, COALESCE(e.orden, 0) as orden
         FROM elector_captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
-        WHERE ec.telefono IS NOT NULL AND ec.telefono != ''
+        WHERE ec.telefono IS NOT NULL AND ec.telefono != '' AND ec.is_disputed = 0
           AND (COALESCE(e.nombre, '') LIKE ? OR COALESCE(e.apellido, '') LIKE ? OR ec.elector_ci LIKE ? ${isPhoneSearch ? 'OR ec.phone_hash = ?' : 'OR ec.telefono LIKE ?'})
         LIMIT 10
       `).all(q, q, q, isPhoneSearch ? normalizePhone(rawQ) : q);

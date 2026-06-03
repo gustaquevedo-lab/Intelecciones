@@ -570,6 +570,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
             SUM(CASE WHEN ec.needs_transport = 1      THEN 1 ELSE 0 END)         AS needs_transport
           FROM elector_captures ec
           LEFT JOIN coord_map cm ON cm.coord_id = ec.coordinator_id
+          WHERE ec.is_disputed = 0
           GROUP BY COALESCE(cm.padrino_id, ec.coordinator_id)
         ),
         coord_count AS (
@@ -612,6 +613,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
                  SUM(CASE WHEN traffic_light = 'PURPLE' THEN 1 ELSE 0 END) AS purple,
                  SUM(CASE WHEN needs_transport = 1 THEN 1 ELSE 0 END) AS needs_transport
           FROM elector_captures
+          WHERE is_disputed = 0
           GROUP BY coordinator_id
         )
         SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status, u.distrito,
@@ -1022,7 +1024,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       LEFT JOIN users p ON u.parent_id = p.id
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
-      WHERE 1=1 AND COALESCE(ec.traffic_light, '') != 'PURPLE'
+      WHERE 1=1 AND COALESCE(ec.traffic_light, '') != 'PURPLE' AND ec.is_disputed = 0
     `;
     let electorParams: any[] = [];
 
