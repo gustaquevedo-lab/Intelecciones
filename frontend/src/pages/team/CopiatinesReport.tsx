@@ -814,6 +814,9 @@ const CopiatinesReport = () => {
           <label style={labelStyle}>Coordinador</label>
           <select value={coordinatorFilter} onChange={e => setCoordinatorFilter(e.target.value)} style={selStyle}>
             <option value="ALL">Todos ({filteredCoordinators.length})</option>
+            {padrinoFilter !== 'ALL' && (
+              <option value={padrinoFilter}>Solo Padrino (Personal)</option>
+            )}
             {filteredCoordinators.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
         </div>
