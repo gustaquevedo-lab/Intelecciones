@@ -789,6 +789,44 @@ const CopiatinesReport = () => {
     };
   };
 
+  const handlePrint = () => {
+    if (!data || data.electors.length === 0) return;
+    const ids = data.electors.map(e => e.capture_id);
+    const html = buildPrintHTML(data.electors, data.campaignLists || [], user?.assigned_list_id);
+    const pw = window.open('', '_blank', 'width=900,height=700');
+    if (!pw) return;
+    pw.document.write(html);
+    pw.document.close();
+    pw.onafterprint = async () => {
+      pw.close();
+      setMarking(true);
+      try {
+        await api.post('/my-team/copiatines/mark-printed', { capture_ids: ids });
+        load();
+      } catch {}
+      setMarking(false);
+    };
+  };
+
+  const handleUnmarkAll = async () => {
+    if (!data || data.electors.length === 0) return;
+    const printedElectors = data.electors.filter(e => e.copiatin_printed_at);
+    if (printedElectors.length === 0) return;
+    const confirmText = `¿Está seguro de que desea desmarcar los ${printedElectors.length} copiatines impresos para que vuelvan a aparecer como pendientes?`;
+    if (!window.confirm(confirmText)) return;
+
+    setLoading(true);
+    try {
+      const ids = printedElectors.map(e => e.capture_id);
+      await api.post('/my-team/copiatines/unmark-printed', { capture_ids: ids });
+      load();
+    } catch (err: any) {
+      alert('Error al desmarcar copiatines: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const printed = data?.electors.filter(e => e.copiatin_printed_at).length ?? 0;
   const total = data?.electors.length ?? 0;
   const unprinted = total - printed;
