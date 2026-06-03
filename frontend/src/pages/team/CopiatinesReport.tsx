@@ -707,38 +707,37 @@ const CopiatinesReport = () => {
   const { user } = useAuth();
   const isSuperOrJefe = user?.role === 'SUPERUSUARIO' || user?.role === 'JEFE_CAMPANA' || user?.role === 'SUBJEFE';
 
-  const [data, setData] = useState<CopiatinesData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [marking, setMarking] = useState(false);
-  const [padrinoFilter, setPadrinoFilter] = useState('ALL');
-  const [coordinatorFilter, setCoordinatorFilter] = useState('ALL');
-  const [printedFilter, setPrintedFilter] = useState<'ALL' | 'PENDING' | 'PRINTED'>('ALL');
-  const [error, setError] = useState<string | null>(null);
+  const [customSearchQuery, setCustomSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<CopiatinElector[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [basket, setBasket] = useState<CopiatinElector[]>([]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const handleCustomSearch = async () => {
+    if (!customSearchQuery.trim()) return;
+    setSearching(true);
     try {
-      const params = new URLSearchParams();
-      if (padrinoFilter !== 'ALL') params.set('padrino_id', padrinoFilter);
-      if (coordinatorFilter !== 'ALL') params.set('coordinator_id', coordinatorFilter);
-      if (printedFilter === 'PENDING') params.set('printed_status', 'pending');
-      else if (printedFilter === 'PRINTED') params.set('printed_status', 'printed');
-      const res = await api.get(`/my-team/copiatines?${params.toString()}`);
-      setData(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al cargar copiatines');
+      const res = await api.get(`/my-team/copiatines?search=${encodeURIComponent(customSearchQuery)}`);
+      setSearchResults(res.data?.electors || []);
+    } catch (err) {
+      console.error('Error en búsqueda de electores para copiatines:', err);
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
-  }, [padrinoFilter, coordinatorFilter, printedFilter]);
+  };
 
-  useEffect(() => { load(); }, [load]);
+  const addToBasket = (elector: CopiatinElector) => {
+    if (basket.some(b => b.capture_id === elector.capture_id)) return;
+    setBasket(prev => [...prev, elector]);
+  };
 
-  const handlePrint = () => {
-    if (!data || data.electors.length === 0) return;
-    const ids = data.electors.map(e => e.capture_id);
-    const html = buildPrintHTML(data.electors, data.campaignLists, user?.assigned_list_id);
+  const removeFromBasket = (captureId: number) => {
+    setBasket(prev => prev.filter(b => b.capture_id !== captureId));
+  };
+
+  const handlePrintBasket = () => {
+    if (basket.length === 0) return;
+    const ids = basket.map(e => e.capture_id);
+    const html = buildPrintHTML(basket, data?.campaignLists || [], user?.assigned_list_id);
     const pw = window.open('', '_blank', 'width=900,height=700');
     if (!pw) return;
     pw.document.write(html);
@@ -748,38 +747,11 @@ const CopiatinesReport = () => {
       setMarking(true);
       try {
         await api.post('/my-team/copiatines/mark-printed', { capture_ids: ids });
+        setBasket([]);
         load();
       } catch {}
       setMarking(false);
     };
-  };
-
-  const handleUnmarkAll = async () => {
-    if (!data) return;
-    const printedIds = data.electors.filter(e => e.copiatin_printed_at).map(e => e.capture_id);
-    if (printedIds.length === 0) return;
-    
-    setLoading(true);
-    try {
-      await api.post('/my-team/copiatines/unmark-printed', { capture_ids: printedIds });
-      await load();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al desmarcar');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUnmarkOne = async (captureId: number) => {
-    setLoading(true);
-    try {
-      await api.post('/my-team/copiatines/unmark-printed', { capture_ids: [captureId] });
-      await load();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Error al desmarcar');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const printed = data?.electors.filter(e => e.copiatin_printed_at).length ?? 0;
@@ -794,6 +766,118 @@ const CopiatinesReport = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Inyectar CSS del modelo para la vista en pantalla */}
       <style>{SCREEN_CARD_STYLE}</style>
+
+      {/* Robust Elector Search & Basket System for Reprints */}
+      <div style={{
+        padding: '1.25rem', background: 'var(--surface-hover)', borderRadius: '16px',
+        border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '1rem'
+      }}>
+        <h4 style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0 }}>
+          🔍 Armador de Página de Impresión Personalizada (Electores con Copiatín Perdido)
+        </h4>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input
+            className="modern-input-premium-styled"
+            placeholder="Buscar elector por nombre, apellido o C.I..."
+            value={customSearchQuery}
+            onChange={e => setCustomSearchQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleCustomSearch()}
+            style={{ flex: 1, fontSize: '0.82rem' }}
+          />
+          <button 
+            onClick={handleCustomSearch}
+            disabled={searching}
+            style={{
+              padding: '0.5rem 1.25rem', borderRadius: '10px', border: 'none',
+              background: 'var(--plra-500)', color: 'white', fontWeight: 800, cursor: 'pointer'
+            }}
+          >
+            {searching ? 'Buscando...' : 'Buscar'}
+          </button>
+        </div>
+
+        {/* Search results select dropdown / list */}
+        {searchResults.length > 0 && (
+          <div style={{
+            background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '10px',
+            maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem'
+          }}>
+            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', margin: 0 }}>
+              Resultados de Búsqueda ({searchResults.length}):
+            </p>
+            {searchResults.map(e => (
+              <div key={e.capture_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', padding: '0.25rem 0' }}>
+                <span style={{ color: 'white', fontWeight: 700 }}>
+                  {e.nombre} {e.apellido} (C.I. {formatCI(e.elector_ci)})
+                </span>
+                <button
+                  onClick={() => addToBasket(e)}
+                  style={{
+                    padding: '2px 8px', borderRadius: '4px', border: 'none',
+                    background: 'var(--green)', color: 'white', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
+                  }}
+                >
+                  + Agregar a la Hoja
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Custom Printing Basket */}
+        <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: 'white' }}>
+              📋 Copiatines en esta Hoja ({basket.length} de 10 recomendados)
+            </span>
+            {basket.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  onClick={() => setBasket([])}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--red)', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Vaciar Hoja
+                </button>
+                <button 
+                  onClick={handlePrintBasket}
+                  style={{
+                    padding: '0.35rem 1rem', borderRadius: '8px', border: 'none',
+                    background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white',
+                    fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer'
+                  }}
+                >
+                  🖨️ Imprimir Hoja Seleccionada
+                </button>
+              </div>
+            )}
+          </div>
+          {basket.length === 0 ? (
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontStyle: 'italic', margin: 0 }}>
+              Busque electores arriba y agréguelos aquí para componer una hoja de impresión combinada y no desperdiciar hojas A4.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {basket.map(e => (
+                <div 
+                  key={e.capture_id}
+                  style={{
+                    padding: '4px 8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                    borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'white'
+                  }}
+                >
+                  <span>{e.nombre} {e.apellido.slice(0, 1)}.</span>
+                  <button 
+                    onClick={() => removeFromBasket(e.capture_id)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--red)', fontWeight: 900, cursor: 'pointer', padding: '0 2px' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Controles */}
       <div style={{

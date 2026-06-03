@@ -10,6 +10,8 @@ const Communications = React.lazy(() => import('./pages/Communications'));
 const DiaDApp = React.lazy(() => import('./pages/DiaDApp'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const Attendance = React.lazy(() => import('./pages/Attendance'));
+const DriverApp = React.lazy(() => import('./pages/DriverApp'));
+const CateringApp = React.lazy(() => import('./pages/CateringApp'));
 const Logout = () => {
   const { logout } = useAuth();
   React.useEffect(() => { logout(); }, [logout]);
@@ -47,6 +49,8 @@ const RootRedirect = () => {
   if (role === 'SUPERUSUARIO') return <Navigate to="/admin" replace />;
   if (role === 'JEFE_CAMPANA' || role === 'CANDIDATO' || role === 'SUBJEFE') return <Navigate to="/comando" replace />;
   if (role === 'MIEMBRO_DE_MESA') return <Navigate to="/veedor" replace />;
+  if (role === 'DRIVER') return <Navigate to="/chofer" replace />;
+  if (role === 'LOGISTICA') return <Navigate to="/catering" replace />;
   return <Navigate to="/coordinador" replace />;
 };
 
@@ -66,6 +70,8 @@ const AppRoutes = () => {
       <Route path="/comunicaciones" element={<Communications />} />
       <Route path="/diad" element={<DiaDApp />} />
       <Route path="/asistencia" element={<Attendance />} />
+      <Route path="/chofer" element={<DriverApp />} />
+      <Route path="/catering" element={<CateringApp />} />
       <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>
   );

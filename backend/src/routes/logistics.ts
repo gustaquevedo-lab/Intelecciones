@@ -172,8 +172,22 @@ export function vehiclesRoutes() {
   // ── PUT /api/vehicles/:id/status ────────────────────────────────────────────
   router.put('/:id/status', (req, res) => {
     const { status } = req.body;
+    const vehicleId = req.params.id;
     try {
-      db.prepare('UPDATE vehicles SET status = ? WHERE id = ?').run(status, req.params.id);
+      db.prepare('UPDATE vehicles SET status = ? WHERE id = ?').run(status, vehicleId);
+      
+      // SSE Broadcast status change
+      try {
+        const { sseClients } = require('../server');
+        const payload = {
+          type: 'VEHICLE_STATUS_UPDATE',
+          data: { id: vehicleId, status }
+        };
+        sseClients.forEach((client: any) => {
+          try { client.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {}
+        });
+      } catch (e) {}
+
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -181,8 +195,22 @@ export function vehiclesRoutes() {
   // ── POST /api/vehicles/:id/location ─────────────────────────────────────────
   router.post('/:id/location', (req, res) => {
     const { lat, lng } = req.body;
+    const vehicleId = req.params.id;
     try {
-      db.prepare('UPDATE vehicles SET lat = ?, lng = ?, last_update = CURRENT_TIMESTAMP WHERE id = ?').run(lat, lng, req.params.id);
+      db.prepare('UPDATE vehicles SET lat = ?, lng = ?, last_update = CURRENT_TIMESTAMP WHERE id = ?').run(lat, lng, vehicleId);
+      
+      // SSE Broadcast location update
+      try {
+        const { sseClients } = require('../server');
+        const payload = {
+          type: 'VEHICLE_LOCATION_UPDATE',
+          data: { id: vehicleId, lat, lng }
+        };
+        sseClients.forEach((client: any) => {
+          try { client.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {}
+        });
+      } catch (e) {}
+
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });

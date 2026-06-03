@@ -159,19 +159,41 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   router.post('/acta', upload.single('foto_acta'), (req, res) => {
-    const { mesa_id, votos_blanco, votos_nulos, listas } = req.body;
+    const { mesa_id, votos_blanco, votos_nulos, listas, foto_acta_base64 } = req.body;
     const userId = req.headers['x-user-id'];
     if (!mesa_id) return res.status(400).json({ error: 'mesa_id es requerido' });
     if (votos_blanco === undefined || votos_blanco === null) return res.status(400).json({ error: 'votos_blanco es requerido' });
     if (votos_nulos === undefined || votos_nulos === null) return res.status(400).json({ error: 'votos_nulos es requerido' });
     let parsedListas;
     try {
-      parsedListas = JSON.parse(listas);
+      parsedListas = typeof listas === 'string' ? JSON.parse(listas) : listas;
     } catch {
       return res.status(400).json({ error: 'Formato inválido de listas' });
     }
     try {
-      const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+      let photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+      // Handle offline base64 image sync
+      if (!photoUrl && foto_acta_base64 && typeof foto_acta_base64 === 'string') {
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const matches = foto_acta_base64.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            const ext = matches[1];
+            const dataBuffer = Buffer.from(matches[2], 'base64');
+            const filename = `offline-acta-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+            const uploadDir = process.env.NODE_ENV === 'production' ? '/app/data/uploads' : path.join(__dirname, '../../uploads');
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(uploadDir, filename), dataBuffer);
+            photoUrl = `/uploads/${filename}`;
+          }
+        } catch (fileErr) {
+          console.error('[OFFLINE_ACTA] Error saving base64 image:', fileErr);
+        }
+      }
 
       db.transaction(() => {
         const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
@@ -250,6 +272,86 @@ export default function diadRoutes(upload: multer.Multer) {
       db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ? WHERE id = ?`).run(local, mesa, targetRole, targetId);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // 🚨 POST /api/diad/sos - Emit SOS alerts in real-time to active SSE clients
+  router.post('/sos', (req, res) => {
+    const { message, latitude, longitude, veedor_id, type } = req.body;
+    try {
+      const { sseClients } = require('../server');
+      const payload = {
+        type: 'SOS_ALERT',
+        data: {
+          id: Date.now(),
+          title: '¡ALERTA SOS!',
+          body: message || 'Se ha reportado una alerta SOS desde un local electoral.',
+          type: type || 'error',
+          latitude: latitude || null,
+          longitude: longitude || null,
+          veedor_id: veedor_id || null,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      };
+
+      // Broadcast to all active clients
+      sseClients.forEach((client: any) => {
+        try {
+          client.write(`data: ${JSON.stringify(payload)}\n\n`);
+        } catch (e) {
+          // Client might be closed
+        }
+      });
+
+      res.json({ success: true, message: 'Alerta SOS transmitida.' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 🚌 POST /api/diad/electors/:id/transport - Update elector transport status
+  router.post('/electors/:id/transport', (req, res) => {
+    const { status } = req.body;
+    const electorId = req.params.id;
+    try {
+      db.prepare("UPDATE elector_captures SET transport_status = ? WHERE id = ?").run(status, electorId);
+      
+      // SSE Broadcast vehicle/passenger status change
+      const { sseClients } = require('../server');
+      const payload = {
+        type: 'VEHICLE_UPDATE',
+        data: { id: electorId, status }
+      };
+      sseClients.forEach((client: any) => {
+        try { client.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {}
+      });
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 🍎 POST /api/diad/catering - Delivery checklists and signatures
+  router.post('/catering', upload.single('photo'), (req, res) => {
+    const { shift, received_by, list_id, local, signature } = req.body;
+    try {
+      const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+      
+      // Save delivery audit or details
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, action, entity, entity_id, details, list_id)
+        VALUES (?, 'CATERING_DELIVERY', 'LOGISTICS', ?, ?, ?)
+      `).run(
+        req.headers['x-user-id'] ? Number(req.headers['x-user-id']) : null,
+        shift || 'DESAYUNO',
+        JSON.stringify({ received_by, local, photoUrl, signature }),
+        list_id ? Number(list_id) : null
+      );
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   return router;

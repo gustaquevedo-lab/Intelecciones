@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MapPin, CheckSquare, Check, Minus, Plus, Camera, Upload, Send, FileText,
-  Users, RefreshCw, X
+  Users, RefreshCw, X, AlertOctagon, HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { Skeleton } from '../components/Skeleton';
 import api from '../services/api';
+import { startSiren, stopSiren } from '../utils/sirenAudio';
 
 interface ListaVotos {
   lista_id: number;
@@ -453,21 +454,50 @@ const ActaFinalTab = () => {
 
     setSubmitting(true);
     setError('');
-    try {
-      const formData = new FormData();
-      formData.append('mesa_id', String(tableInfo.mesa_id ?? ''));
-      formData.append('votos_blanco', String(votosEnBlanco));
-      formData.append('votos_nulos', String(votosNulos));
-      formData.append('total_electores', String(totalElectores));
-      formData.append('listas', JSON.stringify(listas.map(l => ({ lista_id: l.lista_id, votos: l.votos }))));
-      formData.append('foto_acta', photoFile);
+    
+    const listsPayload = listas.map(l => ({ lista_id: l.lista_id, votos: l.votos }));
 
-      await api.post('/diad/acta', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setSubmitted(true);
+    try {
+      if (navigator.onLine) {
+        const formData = new FormData();
+        formData.append('mesa_id', String(tableInfo.mesa_id ?? ''));
+        formData.append('votos_blanco', String(votosEnBlanco));
+        formData.append('votos_nulos', String(votosNulos));
+        formData.append('total_electores', String(totalElectores));
+        formData.append('listas', JSON.stringify(listsPayload));
+        formData.append('foto_acta', photoFile);
+
+        await api.post('/diad/acta', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        setSubmitted(true);
+      } else {
+        throw new Error('OFFLINE_FALLBACK');
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Error al enviar el acta. Intentá de nuevo.');
+      if (!navigator.onLine || err.message === 'OFFLINE_FALLBACK' || !err.response) {
+        // Safe offline mode: convert photo to Base64 and enqueue
+        try {
+          const reader = new FileReader();
+          reader.readAsDataURL(photoFile);
+          reader.onloadend = async () => {
+            const base64Data = reader.result;
+            const { safePost } = await import('../services/syncService');
+            await safePost('SUBMIT_ACTA', '/diad/acta', {
+              mesa_id: tableInfo.mesa_id,
+              votos_blanco: votosEnBlanco,
+              votos_nulos: votosNulos,
+              listas: JSON.stringify(listsPayload),
+              foto_acta_base64: base64Data
+            });
+            setSubmitted(true);
+          };
+        } catch (readErr) {
+          setError('Error al procesar la imagen del acta en modo offline.');
+        }
+      } else {
+        setError(err?.response?.data?.message || 'Error al enviar el acta. Intentá de nuevo.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -756,6 +786,68 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
   const standbyPool = members.filter(m => !m.assigned_local || m.assigned_local === 'SIN ASIGNACIÓN' || m.assigned_local === '---');
   const filteredStandby = standbyPool.filter(m => !searchQuery || m.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || m.ci?.includes(searchQuery));
 
+  const [sosActive, setSosActive] = useState(false);
+  const [sosLoading, setSosLoading] = useState(false);
+
+  // Monitor cross-tab / local storage sync events for SOS trigger
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'local_sos_siren') {
+        if (e.newValue === 'ON') {
+          setSosActive(true);
+          startSiren();
+        } else {
+          setSosActive(false);
+          stopSiren();
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const triggerSOSAlert = async () => {
+    if (sosActive) {
+      setSosActive(false);
+      localStorage.setItem('local_sos_siren', 'OFF');
+      stopSiren();
+      return;
+    }
+
+    setSosLoading(true);
+    try {
+      // Obtain GPS coordinates
+      const coords = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 5000 });
+      }).catch(() => null);
+
+      await api.post('/diad/sos', {
+        message: `¡ALERTA ROJA SOS! Reportada por el Apoderado ${user?.nombre || ''} en el Local: ${user?.assigned_local || 'Desconocido'}.`,
+        latitude: coords?.coords.latitude || null,
+        longitude: coords?.coords.longitude || null,
+        veedor_id: user?.id,
+        type: 'error'
+      });
+
+      setSosActive(true);
+      localStorage.setItem('local_sos_siren', 'ON');
+      startSiren();
+    } catch (e) {
+      // In case of offline, emit locally anyway
+      setSosActive(true);
+      localStorage.setItem('local_sos_siren', 'ON');
+      startSiren();
+      
+      const { safePost } = await import('../services/syncService');
+      await safePost('SOS_ALERT', '/diad/sos', {
+        message: `¡ALERTA ROJA SOS (OFFLINE)! Apoderado ${user?.nombre || ''} - Local: ${user?.assigned_local || 'Desconocido'}.`,
+        veedor_id: user?.id
+      });
+    } finally {
+      setSosLoading(false);
+    }
+  };
+
   const totalMesas = mesas.length;
   const constituidas = mesas.filter(m => {
     const assigned = members.find(mem => mem.assigned_local === user.assigned_local && mem.assigned_mesa === m.numero);
@@ -767,6 +859,63 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
     <MainLayout title="Control de Local" userName={user?.nombre || 'Apoderado'}>
       <div style={{ padding: '1rem', maxWidth: '500px', margin: '0 auto', minHeight: 'calc(100vh - 70px)' }}>
         
+        {/* SOS ALARM SECTION (Wow aesthetics) */}
+        <div className="card-premium-styled" style={{
+          padding: '1.25rem',
+          marginBottom: '1rem',
+          background: sosActive 
+            ? 'linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(185,28,28,0.3) 100%)'
+            : 'linear-gradient(135deg, rgba(30,41,59,0.5) 0%, rgba(15,23,42,0.6) 100%)',
+          border: sosActive ? '2px solid rgba(239,68,68,0.8)' : '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {sosActive && (
+            <motion.div 
+              animate={{ opacity: [0.1, 0.4, 0.1] }}
+              transition={{ repeat: Infinity, duration: 1 }}
+              style={{
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(239,68,68,0.4)', pointerEvents: 'none'
+              }}
+            />
+          )}
+          <AlertOctagon size={48} style={{ color: sosActive ? 'var(--red)' : 'rgba(239,68,68,0.7)', zIndex: 1 }} />
+          <div style={{ zIndex: 1 }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: '0 0 0.25rem' }}>
+              {sosActive ? '¡ALARMA SOS EN REPRODUCCIÓN!' : 'BOTÓN DE ALERTA SOS'}
+            </h3>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-3)', margin: 0 }}>
+              Use este botón ante disturbios, robos de actas, o incidentes graves en el local.
+            </p>
+          </div>
+          <button
+            onClick={triggerSOSAlert}
+            disabled={sosLoading}
+            style={{
+              padding: '0.85rem 1.5rem',
+              borderRadius: '12px',
+              border: 'none',
+              background: sosActive ? 'white' : 'var(--red)',
+              color: sosActive ? 'var(--red)' : 'white',
+              fontSize: '0.85rem',
+              fontWeight: 900,
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(239,68,68,0.4)',
+              zIndex: 1,
+              width: '100%',
+              letterSpacing: '0.05em'
+            }}
+          >
+            {sosLoading ? 'Procesando...' : sosActive ? '🔴 DESACTIVAR ALERTA SIRENA' : '🚨 ACTIVAR ALERTA SOS'}
+          </button>
+        </div>
+
         {/* School Header */}
         <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>

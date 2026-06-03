@@ -1028,6 +1028,14 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
     `;
     let electorParams: any[] = [];
 
+    const searchQuery = req.query.search as string;
+    if (searchQuery && searchQuery.trim() !== '') {
+      const cleanSearch = `%${searchQuery.trim().toUpperCase()}%`;
+      const cleanCI = `%${searchQuery.trim().replace(/\./g, '')}%`;
+      electorSql += ` AND (UPPER(e.nombre) LIKE ? OR UPPER(e.apellido) LIKE ? OR e.ci LIKE ?)`;
+      electorParams.push(cleanSearch, cleanSearch, cleanCI);
+    }
+
     if (role === 'PADRINO') {
       electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
       electorParams.push(requesterId, requesterId);
