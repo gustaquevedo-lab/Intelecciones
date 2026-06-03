@@ -719,10 +719,12 @@ const CopiatinesReport = () => {
   const [padrinoFilter, setPadrinoFilter] = useState('ALL');
   const [coordinatorFilter, setCoordinatorFilter] = useState('ALL');
   const [printedFilter, setPrintedFilter] = useState<'ALL' | 'PENDING' | 'PRINTED'>('PENDING');
+  const [error, setError] = useState<string | null>(null);
 
   // Load Copiatines Data
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       if (printedFilter !== 'ALL') {
@@ -736,8 +738,9 @@ const CopiatinesReport = () => {
       }
       const res = await api.get(`/my-team/copiatines?${params.toString()}`);
       setData(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al cargar copiatines:', err);
+      setError(err.response?.data?.error || err.message || 'Error al cargar copiatines');
     } finally {
       setLoading(false);
     }
