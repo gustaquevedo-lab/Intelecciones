@@ -176,8 +176,8 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
       const isDetailQuery = ['ec', 'u'].includes(tableAlias);
       const isPublicStats = req.path.includes('/stats/command');
 
-      if (role === 'JEFE_CAMPANA' && isDetailQuery && !isPublicStats) {
-        const listCol = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
+      if (role === 'JEFE_CAMPANA' && tableAlias === 'u' && !isPublicStats) {
+        const listCol = 'assigned_list_id';
         sql += ` AND (
             ${tableAlias}.${listCol} IS NULL OR
             ${tableAlias}.role IN ('SUBJEFE') OR
