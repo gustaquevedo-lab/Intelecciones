@@ -154,7 +154,8 @@ export default function capturesRoutes() {
 
       const captures = db.prepare(`
         SELECT
-          ec.*,
+          ec.id, ec.elector_ci, ec.coordinator_id, ec.list_id, ec.campaign_id,
+          ec.lat, ec.lng, ec.traffic_light, ec.needs_transport, ec.telefono, ec.timestamp,
           COALESCE(e.nombre, 'ELECTOR') as nombre,
           COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
           COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
