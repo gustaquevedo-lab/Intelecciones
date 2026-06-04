@@ -1029,6 +1029,50 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
     const elapsed = Date.now() - t0;
     console.log(`[REPORTS] completed in ${elapsed}ms — padrinos=${padrinos.length} coords=${coordinators.length} electors=${electors.length} locales=${locales.length}`);
 
+    // ── 5. Disputes summary (only when a specific coordinator is filtered) ──
+    // Shows all conflicts where this coordinator participated (won or lost)
+    let disputesSummary: any[] = [];
+    if (reportType === 'electors' && selectedCoordinator && selectedCoordinator !== 'ALL') {
+      const coordId = parseInt(selectedCoordinator);
+      disputesSummary = db.prepare(`
+        SELECT
+          cc.id as conflict_id,
+          cc.status as conflict_status,
+          cc.conflict_type,
+          cc.resolved_at,
+          cc.elector_ci,
+          COALESCE(e.nombre, 'ELECTOR') as elector_nombre,
+          COALESCE(e.apellido, 'NO REGISTRADO') as elector_apellido,
+          COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
+          COALESCE(e.mesa, 0) as mesa,
+          COALESCE(e.orden, 0) as orden,
+          -- Capture A
+          ca.id as capture_a_id, ca.coordinator_id as coord_a_id, ca.traffic_light as tl_a, ca.is_disputed as disputed_a,
+          ua.nombre as coord_a_name, la.list_number as list_a,
+          -- Capture B
+          cb.id as capture_b_id, cb.coordinator_id as coord_b_id, cb.traffic_light as tl_b, cb.is_disputed as disputed_b,
+          ub.nombre as coord_b_name, lb.list_number as list_b,
+          -- Winner
+          ec_win.coordinator_id as winner_coord_id,
+          u_win.nombre as winner_coord_name,
+          l_win.list_number as winner_list_number,
+          CASE WHEN ec_win.coordinator_id = ? THEN 1 ELSE 0 END as coord_won
+        FROM capture_conflicts cc
+        LEFT JOIN electors e ON cc.elector_ci = e.ci
+        LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
+        LEFT JOIN users ua ON ca.coordinator_id = ua.id
+        LEFT JOIN lists la ON ca.list_id = la.id
+        LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
+        LEFT JOIN users ub ON cb.coordinator_id = ub.id
+        LEFT JOIN lists lb ON cb.list_id = lb.id
+        LEFT JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
+        LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+        LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
+        WHERE ca.coordinator_id = ? OR cb.coordinator_id = ?
+        ORDER BY cc.id DESC
+      `).all(coordId, coordId, coordId) as any[];
+    }
+
     const responseData = {
       district: districtName,
       filterPadrinos,
@@ -1036,7 +1080,8 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
       padrinos,
       coordinators,
       electors,
-      locales
+      locales,
+      disputesSummary
     };
     
     await myTeamReportsCache.set(cacheKey, responseData);

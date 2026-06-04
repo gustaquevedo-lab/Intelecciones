@@ -831,6 +831,7 @@ const TeamPanel = () => {
     coordinators: any[];
     electors: ElectorRow[];
     locales: LocalRow[];
+    disputesSummary?: any[];
   } | null>(null);
   const [loadingReports, setLoadingReports] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
@@ -2605,13 +2606,80 @@ const TeamPanel = () => {
                   </table>
                 )}
 
-                {reportType === 'electors' && disputedElectors.length > 0 && (
+                {/* Disputes Summary: full history from backend when a coordinator is selected */}
+                {reportType === 'electors' && selectedCoordinatorFilter !== 'ALL' && (reportData?.disputesSummary?.length ?? 0) > 0 && (
+                  <div style={{ marginTop: '30px', pageBreakBefore: 'auto' }}>
+                    <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: '#d97706', borderBottom: '2px solid #d97706', paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      ⚖️ Historial de Disputas del Coordinador
+                    </h3>
+                    <p style={{ fontSize: '0.65rem', color: '#666', marginBottom: '8px', fontStyle: 'italic' }}>
+                      Disputas en las que este coordinador participó como parte involucrada (ganadas y/o perdidas).
+                    </p>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#fffbeb', borderBottom: '2px solid #fbbf24' }}>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#92400e' }}>Elector / CI</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#92400e' }}>Local / Mesa</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#92400e' }}>Contendientes</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#92400e' }}>Estado</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#92400e' }}>Resultado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(reportData?.disputesSummary ?? []).map((d: any) => {
+                          const won = d.coord_won === 1;
+                          const resolved = d.conflict_status === 'RESOLVED';
+                          let resultText = 'Pendiente de resolución';
+                          let resultColor = '#d97706';
+                          if (resolved) {
+                            if (won) {
+                              resultText = `✅ Ganada — Elector adjudicado a este coordinador`;
+                              resultColor = '#16a34a';
+                            } else {
+                              resultText = `❌ Perdida — Adjudicado a: ${d.winner_coord_name || 'otro coordinador'} (Lista ${d.winner_list_number || '—'})`;
+                              resultColor = '#dc2626';
+                            }
+                          } else if (d.conflict_status === 'WAITING_CONSENT') {
+                            resultText = 'Decidido por Jefe — Esperando firmas';
+                            resultColor = '#7c3aed';
+                          }
+                          const otherName = d.coord_a_id === parseInt(selectedCoordinatorFilter) ? d.coord_b_name : d.coord_a_name;
+                          const otherList = d.coord_a_id === parseInt(selectedCoordinatorFilter) ? d.list_b : d.list_a;
+                          return (
+                            <tr key={d.conflict_id} style={{ borderBottom: '1px solid #fef3c7', height: '36px', background: resolved ? (won ? 'rgba(220,252,231,0.3)' : 'rgba(254,226,226,0.3)') : 'rgba(254,243,199,0.3)' }}>
+                              <td style={{ padding: '4px 6px', fontSize: '0.68rem', fontWeight: 700, color: '#1e293b' }}>
+                                <div>{d.elector_nombre} {d.elector_apellido}</div>
+                                <div style={{ fontSize: '0.55rem', color: '#64748b' }}>CI: {d.elector_ci}</div>
+                              </td>
+                              <td style={{ padding: '4px 6px', fontSize: '0.65rem', color: '#475569' }}>
+                                <div>{d.local_votacion}</div>
+                                <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Mesa {d.mesa} · Orden {d.orden}</div>
+                              </td>
+                              <td style={{ padding: '4px 6px', fontSize: '0.62rem', color: '#334155' }}>
+                                <div style={{ fontWeight: 600 }}>vs. {otherName || 'desconocido'}</div>
+                                <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Lista {otherList || '—'}</div>
+                              </td>
+                              <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: '0.62rem', fontWeight: 700, color: resolved ? (won ? '#16a34a' : '#dc2626') : '#d97706' }}>
+                                {resolved ? (won ? 'GANADA' : 'PERDIDA') : 'PENDIENTE'}
+                              </td>
+                              <td style={{ padding: '4px 6px', fontSize: '0.62rem', fontWeight: 600, color: resultColor }}>
+                                {resultText}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {/* Fallback: disputed electors from the main list (when no coordinator filter or disputesSummary absent) */}
+                {reportType === 'electors' && selectedCoordinatorFilter === 'ALL' && disputedElectors.length > 0 && (
                   <div style={{ marginTop: '30px', pageBreakBefore: 'auto' }}>
                     <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: '#EF4444', borderBottom: '2px solid #EF4444', paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       ⚠️ Electores en Disputa / Conflicto
                     </h3>
                     <p style={{ fontSize: '0.65rem', color: '#666', marginBottom: '8px', fontStyle: 'italic' }}>
-                      Electores registrados por múltiples coordinadores. No computan como activos en la lista del coordinador.
+                      Electores registrados por múltiples coordinadores. No computan como activos en una lista.
                     </p>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
@@ -2619,17 +2687,17 @@ const TeamPanel = () => {
                           <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Elector / CI</th>
                           <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Captado Por</th>
                           <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Local / Mesa</th>
-                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Estado Disputa</th>
-                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Resolución / Ganador</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Estado</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Resolución</th>
                         </tr>
                       </thead>
                       <tbody>
                         {disputedElectors.map(e => {
-                          let resolutionText = "Pendiente de resolución";
+                          let resolutionText = 'Pendiente de resolución';
                           if (e.conflict_status === 'RESOLVED') {
-                            resolutionText = `Adjudicado a: ${e.winner_coordinator_name || 'Otro coordinador'} (Lista ${e.winner_list_number || '—'})`;
+                            resolutionText = `Adjudicado a: ${e.winner_coordinator_name || 'Otro'} (Lista ${e.winner_list_number || '—'})`;
                           } else if (e.conflict_status === 'WAITING_CONSENT') {
-                            resolutionText = "Decidido por Jefe (Esperando firmas)";
+                            resolutionText = 'Decidido por Jefe (Esperando firmas)';
                           }
                           return (
                             <tr key={e.capture_id} style={{ borderBottom: '1px solid #fee2e2', height: '32px' }}>
@@ -2648,7 +2716,7 @@ const TeamPanel = () => {
                               <td style={{ padding: '4px 6px', fontSize: '0.62rem', fontWeight: 700, color: e.conflict_status === 'RESOLVED' ? '#16a34a' : '#d97706' }}>
                                 {e.conflict_status === 'RESOLVED' ? 'RESUELTO' : 'EN DISPUTA'}
                               </td>
-                              <td style={{ padding: '4px 6px', fontSize: '0.65rem', fontWeight: 600, color: e.conflict_status === 'RESOLVED' ? '#1e3a6e' : '#64748b' }}>
+                              <td style={{ padding: '4px 6px', fontSize: '0.62rem', fontWeight: 600, color: '#64748b' }}>
                                 {resolutionText}
                               </td>
                             </tr>
