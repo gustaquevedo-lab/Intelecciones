@@ -625,7 +625,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
           COUNT(ec.id) as capture_count
         FROM users u
         LEFT JOIN lists l ON u.assigned_list_id = l.id
-        LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
+        LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id AND ec.is_disputed = 0
         WHERE u.role = 'COORDINADOR' AND u.status = 'ACTIVE' ${sec.sql}
         GROUP BY u.id ORDER BY u.nombre
       `).all(...sec.params);
@@ -672,7 +672,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
         FROM users u
         LEFT JOIN lists l ON u.assigned_list_id = l.id
         LEFT JOIN users ch ON ch.parent_id = u.id AND ch.role = 'COORDINADOR'
-        LEFT JOIN elector_captures ec ON ec.coordinator_id = ch.id
+        LEFT JOIN elector_captures ec ON ec.coordinator_id = ch.id AND ec.is_disputed = 0
         WHERE u.role = 'PADRINO' AND u.status = 'ACTIVE' ${sec.sql}
         GROUP BY u.id ORDER BY u.nombre
       `).all(...sec.params);
@@ -688,7 +688,7 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
       const sec = getSecurityFilter(req, 'u');
       const coordinators = db.prepare(`
         SELECT u.id, u.nombre, u.telefono, u.ci, u.distrito, COUNT(ec.id) as capture_count
-        FROM users u LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id
+        FROM users u LEFT JOIN elector_captures ec ON ec.coordinator_id = u.id AND ec.is_disputed = 0
         WHERE u.parent_id = ? AND u.role = 'COORDINADOR' ${sec.sql}
         GROUP BY u.id ORDER BY u.nombre
       `).all(padrinoId, ...sec.params);

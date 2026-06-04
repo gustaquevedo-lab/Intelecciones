@@ -515,7 +515,7 @@ export default function diadRoutes(upload: multer.Multer) {
           SUM(CASE WHEN ec.id IS NOT NULL THEN 1 ELSE 0 END) as registered_votos
         FROM participation_logs pl
         JOIN electors e ON pl.local_votacion = e.local_votacion AND pl.mesa = e.mesa AND pl.orden = e.orden
-        LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
+        LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
         ${distritoClause}
         GROUP BY pl.local_votacion, pl.mesa
       `, distritoParams);

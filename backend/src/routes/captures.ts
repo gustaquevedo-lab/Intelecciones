@@ -143,7 +143,7 @@ export default function capturesRoutes() {
         FROM elector_captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
         JOIN users u ON ec.coordinator_id = u.id
-        WHERE 1=1 ${sec.sql} ${listFilter} ${localFilter}
+        WHERE ec.is_disputed = 0 ${sec.sql} ${listFilter} ${localFilter}
       `).get(...params) as any;
       const total = totalCountRes?.count || 0;
 

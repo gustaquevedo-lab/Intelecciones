@@ -387,6 +387,7 @@ const CommandCenter = () => {
   const [structureData, setStructureData] = useState<any[]>([]);
   const [subStructureData, setSubStructureData] = useState<any[]>([]);
   const [electorDetails, setElectorDetails] = useState<any[]>([]);
+  const [disputesLost, setDisputesLost] = useState<any[]>([]);
   const [padrinoCaptures, setPadrinoCaptures] = useState<any>(null);
   const [editingCapture, setEditingCapture] = useState<any>(null);
   const [editTrafficLight, setEditTrafficLight] = useState<string>('GREEN');
@@ -799,7 +800,7 @@ const CommandCenter = () => {
 
   useEffect(() => {
     if (selectedCoordDetails) {
-      api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data)).catch(() => {});
+      api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => { setElectorDetails(res.data.electors || []); setDisputesLost(res.data.disputesLost || []); }).catch(() => {});
     }
   }, [selectedCoordDetails]);
 
@@ -865,7 +866,7 @@ const CommandCenter = () => {
       await api.delete(`/captures/${captureId}`);
       alert('La captura fue eliminada correctamente.');
       if (selectedCoordDetails) {
-        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data)).catch(() => {});
+        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => { setElectorDetails(res.data.electors || []); setDisputesLost(res.data.disputesLost || []); }).catch(() => {});
       }
       if (selectedPadrino) {
         api.get(`/structure/padrinos/${selectedPadrino.id}/coordinators`).then(res => {
@@ -895,7 +896,7 @@ const CommandCenter = () => {
       alert('Elector actualizado correctamente.');
       setEditingCapture(null);
       if (selectedCoordDetails) {
-        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => setElectorDetails(res.data)).catch(() => {});
+        api.get(`/structure/coordinators/${selectedCoordDetails.id}/electors`).then(res => { setElectorDetails(res.data.electors || []); setDisputesLost(res.data.disputesLost || []); }).catch(() => {});
       }
       loadData();
     } catch (err: any) {
@@ -1402,6 +1403,32 @@ const CommandCenter = () => {
                         </tbody>
                       </table>
                     </div>
+
+                    {disputesLost.length > 0 && (
+                      <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(239,68,68,0.05)', borderRadius: '12px', border: '1px solid rgba(239,68,68,0.15)' }}>
+                        <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--red)', margin: '0 0 0.75rem 0' }}>
+                          ⚠️ {disputesLost.length} disputa(s) perdida(s) — electores reasignados
+                        </p>
+                        {disputesLost.map((d: any) => (
+                          <div key={d.capture_id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(239,68,68,0.1)' }}>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{d.nombre} {d.apellido}</p>
+                              <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>CI: {d.elector_ci}</p>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Adjudicado a:</span>
+                              {d.winner_coordinator_photo ? (
+                                <img src={d.winner_coordinator_photo} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--plra-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900, color: 'white' }}>{d.winner_coordinator_name?.charAt(0)}</div>
+                              )}
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--plra-300)' }}>{d.winner_coordinator_name}</span>
+                            </div>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{d.resolved_at ? new Date(d.resolved_at).toLocaleDateString() : ''}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

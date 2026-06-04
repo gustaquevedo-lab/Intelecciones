@@ -98,7 +98,7 @@ export default function adminRoutes(upload: multer.Multer) {
       const campaigns = db.prepare(`
         SELECT c.*,
           (SELECT COUNT(*) FROM users u WHERE u.assigned_campaign_id = c.id) as campUsers,
-          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.campaign_id = c.id) as campCaptures
+          (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.campaign_id = c.id) as campCaptures
         FROM campaigns c WHERE 1=1 ${sec.sql}
       `).all(...params);
       res.json(campaigns);

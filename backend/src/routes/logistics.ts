@@ -22,7 +22,7 @@ export default function logisticsRoutes() {
           SUM(CASE WHEN COALESCE(e.is_priority, 0) = 1 THEN 1 ELSE 0 END) as priority
         FROM elector_captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
-        WHERE ec.needs_transport = 1 ${filterSql} ${district ? "AND (UPPER(COALESCE(e.ciudad, '')) = UPPER(?) OR UPPER(COALESCE(e.distrito, '')) = UPPER(?))" : ''}
+        WHERE ec.is_disputed = 0 AND ec.needs_transport = 1 ${filterSql} ${district ? "AND (UPPER(COALESCE(e.ciudad, '')) = UPPER(?) OR UPPER(COALESCE(e.distrito, '')) = UPPER(?))" : ''}
       `).get(statsParams) as any;
 
       const fleetParams = [...filterParams, ...(district ? [district, district] : [])];
@@ -53,7 +53,7 @@ export default function logisticsRoutes() {
           AVG(ec.lng) as lng
         FROM elector_captures ec
         LEFT JOIN electors e ON ec.elector_ci = e.ci
-        WHERE ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
+        WHERE ec.is_disputed = 0 AND ec.needs_transport = 1 AND ec.assigned_vehicle_id IS NULL ${filterSql}
         GROUP BY COALESCE(NULLIF(e.barrio, ''), e.local_votacion, 'Sin Barrio')
       `).all(...filterParams);
       res.json(clusters);
@@ -130,13 +130,13 @@ export function vehiclesRoutes() {
       const vehicles = db.prepare(`
         SELECT v.*, u.nombre as coordinator_name, u.photo_url as coordinator_photo,
                u.telefono as coordinator_phone, u.distrito as coordinator_distrito, l.list_number,
-               (SELECT COUNT(*) FROM elector_captures WHERE assigned_vehicle_id = v.id AND transport_status != 'COMPLETED') as current_passengers,
-               (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
-                FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci
-                WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'IN_TRANSIT') as passengers_in_transit,
-               (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
-                FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci
-                WHERE ec.assigned_vehicle_id = v.id AND ec.transport_status = 'PENDING') as passengers_pending
+               (SELECT COUNT(*) FROM elector_captures WHERE is_disputed = 0 AND assigned_vehicle_id = v.id AND transport_status != 'COMPLETED') as current_passengers,
+                (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
+                 FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci
+                 WHERE ec.is_disputed = 0 AND ec.assigned_vehicle_id = v.id AND ec.transport_status = 'IN_TRANSIT') as passengers_in_transit,
+                (SELECT GROUP_CONCAT(COALESCE(e.nombre, 'ELECTOR') || ' ' || COALESCE(e.apellido, 'NO REGISTRADO'), ', ')
+                 FROM elector_captures ec LEFT JOIN electors e ON ec.elector_ci = e.ci
+                 WHERE ec.is_disputed = 0 AND ec.assigned_vehicle_id = v.id AND ec.transport_status = 'PENDING') as passengers_pending
         FROM vehicles v
         LEFT JOIN users u ON v.assigned_user_id = u.id
         LEFT JOIN lists l ON u.assigned_list_id = l.id

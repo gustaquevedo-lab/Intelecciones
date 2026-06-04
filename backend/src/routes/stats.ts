@@ -103,9 +103,9 @@ export default function statsRoutes() {
       `;
 
       if (secEC.sql.includes('e.ciudad') || secEC.sql.includes('e.distrito') || secEC.sql.includes('e.ci')) {
-        query += ` LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE 1=1 ${secEC.sql}`;
+        query += ` LEFT JOIN electors e ON ec.elector_ci = e.ci WHERE ec.is_disputed = 0 ${secEC.sql}`;
       } else {
-        query += ` WHERE 1=1 ${secEC.sql.replace(/\be\./g, 'ec.')}`;
+        query += ` WHERE ec.is_disputed = 0 ${secEC.sql.replace(/\be\./g, 'ec.')}`;
       }
       query += campFilterEC;
 
