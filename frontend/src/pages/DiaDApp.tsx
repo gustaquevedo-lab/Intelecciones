@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Activity, Map, BarChart3, FileText, RefreshCw, Clock,
+  Activity, Map, MapPin, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
   Image, ChevronDown, ChevronUp, Zap, Shield, Truck, UserPlus,
   Plus, X
