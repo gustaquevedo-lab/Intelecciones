@@ -495,6 +495,49 @@ router.get('/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJ
   }
 });
 
+// GET /api/my-team/reports/lookup-elector — search elector by CI and get capture details
+router.get('/my-team/reports/lookup-elector', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), async (req, res) => {
+  const ci = (req.query.ci as string || '').trim().replace(/\./g, '').replace(/,/g, '');
+  if (!ci) {
+    return res.status(400).json({ error: 'Cédula de identidad requerida.' });
+  }
+
+  try {
+    const elector = db.prepare(`
+      SELECT ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito, barrio, direccion
+      FROM electors
+      WHERE ci = ?
+    `).get(ci) as any;
+
+    const capture = db.prepare(`
+      SELECT ec.id as capture_id, ec.elector_ci, ec.telefono, ec.traffic_light, ec.needs_transport, ec.is_disputed, ec.timestamp,
+             u.nombre as coordinator_name, u.telefono as coordinator_phone,
+             p.nombre as padrino_name,
+             l.list_number, l.candidate_nombre
+      FROM elector_captures ec
+      LEFT JOIN users u ON ec.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      LEFT JOIN lists l ON ec.list_id = l.id
+      WHERE ec.elector_ci = ?
+    `).get(ci) as any;
+
+    if (!elector && !capture) {
+      return res.status(404).json({ error: 'Elector no encontrado en el padrón nacional ni en las capturas de campo.' });
+    }
+
+    res.json({
+      elector: elector ? sanitizeElectorData(elector) : null,
+      capture: capture ? {
+        ...capture,
+        nombre: elector?.nombre || 'ELECTOR',
+        apellido: elector?.apellido || 'NO REGISTRADO'
+      } : null
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/my-team/reports — structured data for A4 premium reports
 router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'), async (req, res) => {
   const requesterId = req.headers['x-user-id'] as string;

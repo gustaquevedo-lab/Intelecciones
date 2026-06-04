@@ -836,6 +836,34 @@ const TeamPanel = () => {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // CI Lookup States
+  const [ciLookupValue, setCiLookupValue] = useState('');
+  const [ciLookupLoading, setCiLookupLoading] = useState(false);
+  const [ciLookupResult, setCiLookupResult] = useState<{
+    elector: any;
+    capture: any;
+  } | null>(null);
+  const [ciLookupError, setCiLookupError] = useState<string | null>(null);
+
+  const handleCiLookup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanCI = ciLookupValue.trim().replace(/\./g, '').replace(/,/g, '');
+    if (!cleanCI) return;
+
+    setCiLookupLoading(true);
+    setCiLookupError(null);
+    setCiLookupResult(null);
+
+    try {
+      const res = await api.get(`/my-team/reports/lookup-elector?ci=${cleanCI}`);
+      setCiLookupResult(res.data);
+    } catch (err: any) {
+      setCiLookupError(err.response?.data?.error || err.message || 'Error al buscar el elector.');
+    } finally {
+      setCiLookupLoading(false);
+    }
+  };
+
   // Column selector & batch export state
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(() => {
@@ -2129,8 +2157,107 @@ const TeamPanel = () => {
             </div>
           )}
 
-          {/* Copiatines Electorales */}
+           {/* Copiatines Electorales */}
           {reportType === 'copiatines' && <CopiatinesReport />}
+
+          {/* C.I. Elector Capture Lookup Searchbox */}
+          {activeTab === 'reports' && reportType === 'electors' && (
+            <div className="no-print" style={{
+              padding: '1.25rem', background: 'var(--surface-hover)', borderRadius: '16px',
+              border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <h4 style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                🔍 Buscador Rápido de Elector por Cédula (Estado de Captura)
+              </h4>
+              <form onSubmit={handleCiLookup} style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  className="modern-input-premium-styled"
+                  placeholder="Ingrese el número de C.I. (ej. 6894333)..."
+                  value={ciLookupValue}
+                  onChange={e => setCiLookupValue(e.target.value)}
+                  style={{ flex: 1, fontSize: '0.82rem', padding: '0.55rem 0.75rem', borderRadius: '10px', background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
+                />
+                <button
+                  type="submit"
+                  disabled={ciLookupLoading}
+                  style={{
+                    padding: '0.5rem 1.5rem', borderRadius: '10px', border: 'none',
+                    background: '#10B981', color: 'white', fontWeight: 800, cursor: 'pointer'
+                  }}
+                >
+                  {ciLookupLoading ? 'Buscando...' : 'Buscar'}
+                </button>
+              </form>
+
+              {ciLookupError && (
+                <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#EF4444', fontSize: '0.75rem', fontWeight: 700 }}>
+                  {ciLookupError}
+                </div>
+              )}
+
+              {ciLookupResult && (
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
+                  padding: '1rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.75rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white' }}>
+                      {ciLookupResult.elector ? `${ciLookupResult.elector.nombre} ${ciLookupResult.elector.apellido}` : 'ELECTOR DESCONOCIDO'}
+                    </span>
+                    <span style={{
+                      fontSize: '0.7rem', fontWeight: 900, padding: '3px 8px', borderRadius: '6px',
+                      background: ciLookupResult.capture ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: ciLookupResult.capture ? '#10B981' : '#EF4444',
+                      border: ciLookupResult.capture ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(239,68,68,0.3)'
+                    }}>
+                      {ciLookupResult.capture ? '✓ CAPTURADO' : '✗ NO CAPTURADO'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', fontSize: '0.78rem' }}>
+                    {/* General register info */}
+                    <div>
+                      <p style={{ margin: '0 0 0.25rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.62rem' }}>Datos del Padrón Nacional</p>
+                      {ciLookupResult.elector ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', color: 'var(--text-2)' }}>
+                          <div><strong>C.I.:</strong> {ciLookupResult.elector.ci}</div>
+                          <div><strong>Local:</strong> {ciLookupResult.elector.local_votacion}</div>
+                          <div><strong>Mesa:</strong> {ciLookupResult.elector.mesa} · <strong>Orden:</strong> {ciLookupResult.elector.orden}</div>
+                          <div><strong>Distrito:</strong> {ciLookupResult.elector.distrito} · <strong>Ciudad:</strong> {ciLookupResult.elector.ciudad}</div>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>No figura en el padrón nacional precargado.</span>
+                      )}
+                    </div>
+
+                    {/* Capture / campaign details */}
+                    <div>
+                      <p style={{ margin: '0 0 0.25rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.62rem' }}>Detalles de Captura de Campaña</p>
+                      {ciLookupResult.capture ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', color: 'var(--text-2)' }}>
+                          <div><strong>Captado por:</strong> {ciLookupResult.capture.coordinator_name} {ciLookupResult.capture.coordinator_phone ? `(${ciLookupResult.capture.coordinator_phone})` : ''}</div>
+                          {ciLookupResult.capture.padrino_name && <div><strong>Padrino:</strong> {ciLookupResult.capture.padrino_name}</div>}
+                          <div><strong>Lista:</strong> Lista {ciLookupResult.capture.list_number} {ciLookupResult.capture.candidate_nombre ? `(${ciLookupResult.capture.candidate_nombre})` : ''}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                            <strong>Semáforo:</strong>
+                            <span style={{
+                              display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%',
+                              background: TRAFFIC_COLORS[ciLookupResult.capture.traffic_light] || '#ccc'
+                            }} /> ({ciLookupResult.capture.traffic_light})
+                          </div>
+                          <div><strong>Logística Transporte:</strong> {ciLookupResult.capture.needs_transport ? '✓ REQUIERE TRANSPORTE' : 'NO REQUIERE'}</div>
+                          {!!ciLookupResult.capture.is_disputed && <div style={{ color: '#EF4444', fontWeight: 800 }}>⚠️ CAPTURA EN DISPUTA / CONFLICTO</div>}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>El elector no ha sido capturado por ningún coordinador.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Loading reports state */}
           {reportType !== 'copiatines' && loadingReports && (
