@@ -787,7 +787,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
           electorParams.push(requesterId, requesterId);
         } else {
-          const filterE = getSecurityFilter(req, 'u');
+          const filterE = getSecurityFilter(req, 'ec');
           electorSql += ` ${filterE.sql}`;
           electorParams.push(...filterE.params);
         }
@@ -983,6 +983,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
 
   try {
     const filter = getSecurityFilter(req, 'u');
+    const filterEc = getSecurityFilter(req, 'ec');
 
     let filterPadrinos: any[] = [];
     if (role !== 'PADRINO') {
@@ -1041,16 +1042,16 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
     if (searchQuery && searchQuery.trim() !== '') {
       const cleanSearch = `%${searchQuery.trim().toUpperCase()}%`;
       const cleanCI = `%${searchQuery.trim().replace(/\./g, '')}%`;
-      electorSql += ` AND (UPPER(e.nombre) LIKE ? OR UPPER(e.apellido) LIKE ? OR e.ci LIKE ?)`;
-      electorParams.push(cleanSearch, cleanSearch, cleanCI);
+      electorSql += ` AND (UPPER(e.nombre) LIKE ? OR UPPER(e.apellido) LIKE ? OR e.ci LIKE ? OR ec.elector_ci LIKE ?)`;
+      electorParams.push(cleanSearch, cleanSearch, cleanCI, cleanCI);
     }
 
     if (role === 'PADRINO') {
       electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
       electorParams.push(requesterId, requesterId);
     } else {
-      electorSql += ` ${filter.sql}`;
-      electorParams.push(...filter.params);
+      electorSql += ` ${filterEc.sql}`;
+      electorParams.push(...filterEc.params);
     }
 
     if (padrinoId && padrinoId !== 'ALL') {
