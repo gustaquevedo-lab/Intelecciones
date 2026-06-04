@@ -215,16 +215,16 @@ router.get('/structure/coordinators/:id/electors', requireRole('SUPERUSUARIO','J
              COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
              ec.traffic_light,
              cc.resolved_at,
-             winner.u.id as winner_coordinator_id,
-             winner.u.nombre as winner_coordinator_name,
-             winner.u.photo_url as winner_coordinator_photo
+             winner_u.id as winner_coordinator_id,
+             winner_u.nombre as winner_coordinator_name,
+             winner_u.photo_url as winner_coordinator_photo
       FROM elector_captures ec
       JOIN capture_conflicts cc ON (ec.id = cc.capture_id OR ec.id = cc.capture_id_b)
       LEFT JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN elector_captures winner_ec ON cc.winner_capture_id = winner_ec.id
       LEFT JOIN users AS winner_u ON winner_ec.coordinator_id = winner_u.id
       WHERE ec.coordinator_id = ? AND ec.is_disputed = 1 AND cc.status = 'RESOLVED'
-    `).all(id, id);
+    `).all(id);
 
     res.json({ electors, disputesLost });
   } catch (err: any) {
@@ -324,9 +324,23 @@ router.get('/coordinator/:id/captures', requireRole('SUPERUSUARIO','JEFE_CAMPANA
              COALESCE(e.apellido, 'NO REGISTRADO') as apellido, 
              COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
              COALESCE(e.mesa, 0) as mesa, 
-             COALESCE(e.orden, 0) as orden
+             COALESCE(e.orden, 0) as orden,
+             cc.status as conflict_status,
+             u_win.nombre as winner_coordinator_name,
+             l_win.list_number as winner_list_number
       FROM captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN capture_conflicts cc ON (
+        (ec.id = cc.capture_id OR ec.id = cc.capture_id_b)
+        AND cc.id = (
+          SELECT id FROM capture_conflicts
+          WHERE capture_id = ec.id OR capture_id_b = ec.id
+          ORDER BY timestamp DESC LIMIT 1
+        )
+      )
+      LEFT JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
+      LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+      LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
       ORDER BY ec.timestamp DESC
     `).all(id);
     res.json(captures);
@@ -804,7 +818,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           FROM users u INDEXED BY idx_users_distrito
           INNER JOIN elector_captures ec ON ec.coordinator_id = u.id
           ${needsListsJoin ? 'LEFT JOIN lists l ON ec.list_id = l.id' : ''}
-          WHERE u.distrito = ?
+          WHERE 1=1 AND u.distrito = ?
         `;
 
         let extraFilters = "";
@@ -1246,16 +1260,20 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
     let electors = await dbQueryAsync<any>(electorSql, electorParams);
 
     // Diagnostic: when searching by CI and no results, log why
-    if (searchQuery && searchQuery.trim() !== '' && electors.length === 0) {
+    let debug: any = null;
+    if (searchQuery && searchQuery.trim() !== '') {
       const rawCI = searchQuery.trim().replace(/\./g, '').replace(/,/g, '').trim();
       const electorCheck = db.prepare('SELECT ci, nombre, apellido, distrito FROM electors WHERE ci = ?').get(rawCI);
       const captureCheck = db.prepare(`SELECT ec.id, ec.is_disputed, ec.traffic_light, ec.coordinator_id, ec.list_id, u.nombre as coord_name FROM elector_captures ec LEFT JOIN users u ON ec.coordinator_id = u.id WHERE ec.elector_ci = ?`).get(rawCI) as any;
       if (electorCheck && !captureCheck) {
         console.warn(`[COPIATINES] CI ${rawCI} exists in electors but has NO capture`);
+        debug = { status: 'NO_CAPTURE', elector: electorCheck };
       } else if (captureCheck) {
         console.warn(`[COPIATINES] CI ${rawCI} has capture id=${captureCheck.id} disputed=${captureCheck.is_disputed} tl=${captureCheck.traffic_light} coord=${captureCheck.coordinator_id} coord_name=${captureCheck.coord_name} list_id=${captureCheck.list_id}`);
+        debug = { status: 'CAPTURED', elector: electorCheck, capture: captureCheck };
       } else {
         console.warn(`[COPIATINES] CI ${rawCI} NOT FOUND in electors or elector_captures`);
+        debug = { status: 'NOT_FOUND' };
       }
     }
 
@@ -1293,7 +1311,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       campaignLists = await dbQueryAsync<any>(listsSql, listsParams);
     }
 
-    res.json({ electors, campaignLists, filterPadrinos, filterCoordinators });
+    res.json({ electors, campaignLists, filterPadrinos, filterCoordinators, debug });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

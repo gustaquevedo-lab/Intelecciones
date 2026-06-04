@@ -714,6 +714,7 @@ const CopiatinesReport = () => {
   const [customSearchQuery, setCustomSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<CopiatinElector[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchDebugInfo, setSearchDebugInfo] = useState<any>(null);
   const [basket, setBasket] = useState<CopiatinElector[]>([]);
 
   // Missing States
@@ -757,9 +758,13 @@ const CopiatinesReport = () => {
   const handleCustomSearch = async () => {
     if (!customSearchQuery.trim()) return;
     setSearching(true);
+    setSearchDebugInfo(null);
     try {
       const res = await api.get(`/my-team/copiatines?search=${encodeURIComponent(customSearchQuery)}`);
       setSearchResults(res.data?.electors || []);
+      if (res.data?.debug) {
+        setSearchDebugInfo(res.data.debug);
+      }
     } catch (err) {
       console.error('Error en búsqueda de electores para copiatines:', err);
     } finally {
@@ -973,6 +978,46 @@ const CopiatinesReport = () => {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {!searching && searchDebugInfo && searchResults.length === 0 && (
+          <div style={{
+            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)',
+            padding: '1rem', borderRadius: '12px', color: '#fbbf24', fontSize: '0.8rem',
+            display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem'
+          }}>
+            <strong style={{ textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.05em', color: '#fbbf24' }}>
+              ⚠️ Información de Diagnóstico de Búsqueda (C.I. {customSearchQuery})
+            </strong>
+            {searchDebugInfo.status === 'NO_CAPTURE' && (
+              <p style={{ margin: 0, lineHeight: 1.45 }}>
+                El elector <strong>{searchDebugInfo.elector.nombre} {searchDebugInfo.elector.apellido}</strong> existe en el Padrón Nacional (distrito <strong>{searchDebugInfo.elector.distrito}</strong>), pero <strong>NO ha sido capturado ni registrado</strong> por ningún coordinador de su campaña. Copiatines solo se generan para electores que hayan sido previamente capturados.
+              </p>
+            )}
+            {searchDebugInfo.status === 'CAPTURED' && (
+              <div style={{ margin: 0, lineHeight: 1.45, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <p style={{ margin: 0 }}>
+                  El elector <strong>{searchDebugInfo.elector?.nombre || 'Elector'} {searchDebugInfo.elector?.apellido || ''}</strong> está registrado, pero no califica para aparecer en la lista de copiatines debido a:
+                </p>
+                <ul style={{ margin: '0 0 0 1.2rem', padding: 0 }}>
+                  {searchDebugInfo.capture.is_disputed === 1 && (
+                    <li><strong>Disputa activa:</strong> Su captura está en conflicto (disputa de carga entre coordinadores).</li>
+                  )}
+                  {searchDebugInfo.capture.traffic_light === 'PURPLE' && (
+                    <li><strong>Semáforo Púrpura:</strong> Está marcado con prioridad Púrpura (sin intención de voto / no elegible para copiatín).</li>
+                  )}
+                  {user?.role === 'PADRINO' && searchDebugInfo.capture.coordinator_id !== user.id && searchDebugInfo.capture.padrino_id !== user.id && (
+                    <li><strong>Fuera de tu jerarquía:</strong> Fue capturado por el coordinador <strong>{searchDebugInfo.capture.coord_name || 'otro equipo'}</strong>. Como Padrino, solo puedes ver capturas de tu propio equipo.</li>
+                  )}
+                </ul>
+              </div>
+            )}
+            {searchDebugInfo.status === 'NOT_FOUND' && (
+              <p style={{ margin: 0, lineHeight: 1.45 }}>
+                La C.I. <strong>{customSearchQuery}</strong> no se encuentra en el Padrón Nacional cargado ni posee capturas registradas en el sistema.
+              </p>
+            )}
           </div>
         )}
 

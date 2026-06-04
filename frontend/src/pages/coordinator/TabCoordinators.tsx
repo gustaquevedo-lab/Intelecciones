@@ -389,6 +389,19 @@ const TabCoordinators = (props: any) => {
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', margin: 0 }}>{cap.nombre} {cap.apellido}</h4>
                       <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>CI: {Number(cap.elector_ci).toLocaleString('es-PY')}</p>
+                      {cap.is_disputed === 1 && (
+                        <div style={{ marginTop: '0.35rem', padding: '0.4rem 0.6rem', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.7rem' }}>
+                          {cap.conflict_status === 'RESOLVED' ? (
+                            <span style={{ color: 'var(--red)', fontWeight: 800 }}>
+                              ⚠️ Perdido en disputa — Adjudicado a {cap.winner_coordinator_name || 'Otro Coordinador'} {cap.winner_list_number ? `(Lista ${cap.winner_list_number})` : ''}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--yellow)', fontWeight: 800 }}>
+                              ⚠️ En disputa (Resolución pendiente)
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div style={{ 
                       width: '10px', height: '10px', borderRadius: '50%', 

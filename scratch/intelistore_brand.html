@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InteliStore — Brand Identity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy:    #001a4d;
+      --blue:    #002d84;
+      --blue-m:  #0056b3;
+      --blue-l:  #3b82f6;
+      --emerald: #10b981;
+      --teal:    #0d9488;
+      --amber:   #f59e0b;
+      --ink:     #0f172a;
+      --slate:   #64748b;
+      --mist:    #f1f5f9;
+      --white:   #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #070e1f;
+      color: #e2e8f0;
+      line-height: 1.5;
+    }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .section { margin-bottom: 5rem; }
+    .section-label {
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--emerald);
+      margin-bottom: 0.6rem;
+    }
+    .section-title {
+      font-size: 2rem; font-weight: 900; color: #ffffff;
+      margin-bottom: 0.4rem; line-height: 1.1;
+    }
+    .section-sub {
+      font-size: 0.9rem; color: #94a3b8; margin-bottom: 2.5rem; max-width: 600px;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 700px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+    /* ── CARDS ── */
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 2rem;
+      transition: all 0.25s;
+    }
+    .card:hover { border-color: rgba(16,185,129,0.3); background: rgba(255,255,255,0.06); }
+    .card-label {
+      font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #64748b; margin-bottom: 0.4rem;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 4rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 5rem;
+    }
+    .hero-kicker {
+      font-size: 0.7rem; font-weight: 800; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--emerald); margin-bottom: 1rem;
+    }
+    .hero-title {
+      font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900;
+      line-height: 1; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, #93c5fd 60%, #10b981 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 1.5rem;
+    }
+    .hero-sub {
+      font-size: 1.1rem; color: #94a3b8; max-width: 560px; margin: 0 auto;
+    }
+
+    /* ── LOGO SHOWCASE ── */
+    .logo-canvas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      padding: 2.5rem;
+      min-height: 160px;
+      margin-bottom: 1rem;
+    }
+    .bg-light { background: var(--mist); }
+    .bg-dark  { background: var(--ink); }
+    .bg-navy  { background: var(--navy); }
+    .bg-grad  { background: linear-gradient(135deg, var(--navy) 0%, #001f5e 100%); }
+
+    /* ── LOGO A: "La Chispa" — marca principal ── */
+    .logoA-mark {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logoA-icon {
+      width: 44px; height: 44px; flex-shrink: 0;
+    }
+    .logoA-text { display: flex; flex-direction: column; line-height: 1; }
+    .logoA-inteli {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px; font-weight: 900;
+      color: #ffffff; letter-spacing: -0.04em;
+    }
+    .logoA-store {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px; font-weight: 300;
+      color: var(--emerald); letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .logoA-tagline {
+      font-size: 7px; font-weight: 700; letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.45); text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Logo light version */
+    .logoA-on-light .logoA-inteli { color: var(--blue); }
+    .logoA-on-light .logoA-store  { color: var(--emerald); }
+    .logoA-on-light .logoA-tagline { color: var(--slate); }
+
+    /* ── LOGO B: Cápsula monograma ── */
+    .logoB-mark { display: flex; align-items: center; gap: 14px; }
+    .logoB-pill {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: linear-gradient(135deg, #002d84 0%, #10b981 100%);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .logoB-wordmark {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px; font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+    .logoB-wordmark .w-inteli { color: #ffffff; }
+    .logoB-wordmark .w-store  {
+      color: var(--emerald);
+      font-weight: 400;
+    }
+    .logoB-on-light .logoB-wordmark .w-inteli { color: var(--blue); }
+
+    /* ── LOGO C: Solo marca — tipo capsule pill ── */
+    .logoC-full {
+      display: flex; flex-direction: column;
+      align-items: flex-start; gap: 3px;
+    }
+    .logoC-top {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px; font-weight: 900;
+      letter-spacing: -0.05em; line-height: 1;
+      color: #ffffff;
+    }
+    .logoC-top .c-i { color: var(--emerald); }
+    .logoC-sub-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .logoC-line {
+      height: 2px; flex-grow: 1; min-width: 40px;
+      background: linear-gradient(90deg, var(--emerald), transparent);
+    }
+    .logoC-bottom {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.28em;
+      color: rgba(255,255,255,0.5); text-transform: uppercase; white-space: nowrap;
+    }
+    .logoC-on-light .logoC-top { color: var(--blue); }
+    .logoC-on-light .logoC-top .c-i { color: var(--emerald); }
+    .logoC-on-light .logoC-bottom { color: var(--slate); }
+
+    /* ── TAGLINES ── */
+    .tagline-card { padding: 1.75rem 2rem; }
+    .tagline-tag {
+      display: inline-block;
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--emerald);
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 6px; padding: 3px 8px; margin-bottom: 0.75rem;
+    }
+    .tagline-text {
+      font-size: 1.35rem; font-weight: 800; color: #ffffff;
+      line-height: 1.2; margin-bottom: 0.5rem;
+    }
+    .tagline-why {
+      font-size: 0.78rem; color: #94a3b8; line-height: 1.5;
+    }
+    .tagline-audiences {
+      display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;
+    }
+    .audience-pill {
+      font-size: 0.62rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      border: 1px solid;
+    }
+    .pill-b2b { background: rgba(59,130,246,0.1); color: #93c5fd; border-color: rgba(59,130,246,0.3); }
+    .pill-b2c { background: rgba(16,185,129,0.1); color: #6ee7b7; border-color: rgba(16,185,129,0.3); }
+
+    /* ── PALETA ── */
+    .swatch-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .swatch {
+      border-radius: 14px; overflow: hidden;
+      flex: 1; min-width: 100px;
+    }
+    .swatch-color { height: 80px; }
+    .swatch-info { padding: 0.6rem 0.75rem; background: rgba(255,255,255,0.04); }
+    .swatch-name  { font-size: 0.72rem; font-weight: 800; color: #fff; }
+    .swatch-hex   { font-size: 0.62rem; color: #64748b; font-family: monospace; }
+    .swatch-role  { font-size: 0.6rem; color: #475569; margin-top: 2px; }
+
+    /* ── TIPOGRAFÍA ── */
+    .type-sample { margin-bottom: 1.5rem; }
+    .type-spec { font-size: 0.65rem; color: #64748b; font-family: monospace; margin-bottom: 0.25rem; }
+
+    /* ── USAGE MOCKUP ── */
+    .mockup-store {
+      border-radius: 20px;
+      background: linear-gradient(135deg, #001a4d 0%, #021233 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .mockup-nav {
+      padding: 1rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .mockup-hero-section {
+      padding: 2.5rem 1.5rem 2rem;
+      text-align: center;
+    }
+    .mockup-hero-title {
+      font-size: 1.5rem; font-weight: 900; color: #ffffff; margin-bottom: 0.5rem;
+    }
+    .mockup-hero-sub {
+      font-size: 0.78rem; color: #94a3b8; margin-bottom: 1.25rem;
+    }
+    .mockup-cta {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.5rem; border-radius: 10px;
+      background: linear-gradient(135deg, var(--emerald), #0d9488);
+      color: white; font-size: 0.8rem; font-weight: 800;
+      border: none; cursor: pointer;
+    }
+    .mockup-cards {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem; padding: 0 1.5rem 1.5rem;
+    }
+    .mockup-product {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; overflow: hidden;
+    }
+    .mockup-product-img {
+      height: 60px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+    }
+    .mockup-product-info { padding: 0.6rem 0.75rem 0.75rem; }
+    .mockup-product-name { font-size: 0.7rem; font-weight: 800; color: #e2e8f0; margin-bottom: 2px; }
+    .mockup-product-price { font-size: 0.8rem; font-weight: 900; color: var(--emerald); }
+
+    /* ── SELECTED ── */
+    .recommended {
+      position: relative;
+      border-color: rgba(16,185,129,0.5) !important;
+      box-shadow: 0 0 0 1px rgba(16,185,129,0.3), 0 8px 32px rgba(16,185,129,0.1);
+    }
+    .recommended-badge {
+      position: absolute; top: -12px; right: 20px;
+      background: var(--emerald); color: white;
+      font-size: 0.6rem; font-weight: 900; letter-spacing: 0.08em;
+      padding: 3px 10px; border-radius: 20px; text-transform: uppercase;
+    }
+    .divider {
+      height: 1px; background: rgba(255,255,255,0.06); margin: 4rem 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-kicker">Identidad de Marca — Exploración Inicial</div>
+    <div class="hero-title">InteliStore</div>
+    <div class="hero-sub">
+      La plataforma donde las campañas políticas encuentran las herramientas, datos e inteligencia que necesitan para ganar.
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- ══════════════════════════════════════════════
+         SECCIÓN 1: PROPUESTAS DE LOGOTIPO
+    ══════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-label">01 — Logotipo</div>
+      <div class="section-title">Tres propuestas de marca</div>
+      <div class="section-sub">Cada opción tiene una personalidad distinta. Las variaciones claras y oscuras muestran versatilidad.</div>
+
+      <!-- LOGO A -->
+      <div style="margin-bottom: 2rem;">
+        <div class="card-label" style="margin-bottom:0.75rem; color:#94a3b8;">
+          OPCIÓN A &nbsp;·&nbsp; "La Chispa" — Marca + Wordmark jerárquico
+        </div>
+        <div class="grid-2">
+          <!-- Oscuro -->
+          <div class="card">
+            <div class="logo-canvas bg-grad">
+              <div class="logoA-mark">
+                <!-- ÍCONO: chispa de 4 puntas inscrita en un cuadrado redondeado -->
+                <svg class="logoA-icon" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="44" height="44" rx="11" fill="url(#gradA)"/>
+                  <!-- Chispa central: 4 puntas -->
+                  <path d="M22 8 L24.2 19.8 L36 22 L24.2 24.2 L22 36 L19.8 24.2 L8 22 L19.8 19.8 Z" fill="white"/>
+                  <!-- Punto central más brillante -->
+                  <circle cx="22" cy="22" r="3" fill="#10b981"/>
+                  <defs>
+                    <linearGradient id="gradA" x1="0" y1="0" x2="44" y2="44">
+                      <stop offset="0%" stop-color="#002d84"/>
+                      <stop offset="100%" stop-color="#0d9488"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="logoA-text">
+                  <div style="display:flex;">
+                    <span class="logoA-inteli">Inteli</span>
+                    <span class="logoA-store">Store</span>
+                  </div>
+                  <div class="logoA-tagline">Inteligencia Electoral</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-label">Versión oscura / sobre azul</div>
+          </div>
+          <!-- Claro -->
+          <div class="card">
+            <div class="logo-canvas bg-light">
+              <div class="logoA-mark logoA-on-light">
+                <svg class="logoA-icon" viewBox="0 0 44 44" fill="none">
+                  <rect width="44" height="44" rx="11" fill="url(#gradA2)"/>
+                  <path d="M22 8 L24.2 19.8 L36 22 L24.2 24.2 L22 36 L19.8 24.2 L8 22 L19.8 19.8 Z" fill="white"/>
+                  <circle cx="22" cy="22" r="3" fill="#f59e0b"/>
+                  <defs>
+                    <linearGradient id="gradA2" x1="0" y1="0" x2="44" y2="44">
+                      <stop offset="0%" stop-color="#002d84"/>
+                      <stop offset="100%" stop-color="#10b981"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="logoA-text">
+                  <div style="display:flex;">
+                    <span class="logoA-inteli">Inteli</span>
+                    <span class="logoA-store">Store</span>
+                  </div>
+                  <div class="logoA-tagline" style="color:#64748b;">Inteligencia Electoral</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-label">Versión clara / sobre blanco</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOGO B - RECOMENDADO -->
+      <div style="margin-bottom: 2rem; position: relative;">
+        <div class="card-label" style="margin-bottom:0.75rem; color:#94a3b8;">
+          OPCIÓN B &nbsp;·&nbsp; Cápsula gradient + Wordmark bicolor &nbsp;
+          <span style="color: #10b981; font-weight:900;">★ RECOMENDADA</span>
+        </div>
+        <div class="grid-2">
+          <div class="card recommended">
+            <div class="recommended-badge">Recomendada</div>
+            <div class="logo-canvas bg-dark">
+              <div class="logoB-mark">
+                <div class="logoB-pill">
+                  <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                    <!-- "iS" monograma fusionado -->
+                    <!-- Barra vertical del I -->
+                    <rect x="7" y="8" width="4" height="14" rx="2" fill="white"/>
+                    <!-- Punto del i -->
+                    <circle cx="9" cy="5" r="2.2" fill="#f59e0b"/>
+                    <!-- S estilizada -->
+                    <path d="M15 10 C15 10 22 10 22 14 C22 17 15 17 15 20 C15 23 22 23 22 23"
+                          stroke="white" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+                  </svg>
+                </div>
+                <div class="logoB-wordmark">
+                  <span class="w-inteli">Inteli</span><span class="w-store">Store</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-label">Versión oscura</div>
+          </div>
+          <div class="card recommended">
+            <div class="logo-canvas bg-light">
+              <div class="logoB-mark logoB-on-light">
+                <div class="logoB-pill">
+                  <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                    <rect x="7" y="8" width="4" height="14" rx="2" fill="white"/>
+                    <circle cx="9" cy="5" r="2.2" fill="#f59e0b"/>
+                    <path d="M15 10 C15 10 22 10 22 14 C22 17 15 17 15 20 C15 23 22 23 22 23"
+                          stroke="white" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+                  </svg>
+                </div>
+                <div class="logoB-wordmark">
+                  <span class="w-inteli">Inteli</span><span class="w-store">Store</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-label">Versión clara</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOGO C -->
+      <div style="margin-bottom: 2rem;">
+        <div class="card-label" style="margin-bottom:0.75rem; color:#94a3b8;">
+          OPCIÓN C &nbsp;·&nbsp; Solo tipografía — Wordmark dramático
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="logo-canvas bg-nav" style="background:#001a4d;">
+              <div class="logoC-full">
+                <div class="logoC-top">
+                  <span class="c-i">I</span>nteliStore
+                </div>
+                <div class="logoC-sub-row">
+                  <div class="logoC-line"></div>
+                  <div class="logoC-bottom">Inteligencia Electoral</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-label">Versión oscura</div>
+          </div>
+          <div class="card">
+            <div class="logo-canvas bg-light">
+              <div class="logoC-full logoC-on-light">
+                <div class="logoC-top">
+                  <span class="c-i">I</span>nteliStore
+                </div>
+                <div class="logoC-sub-row">
+                  <div class="logoC-line"></div>
+                  <div class="logoC-bottom">Inteligencia Electoral</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-label">Versión clara</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ══════════════════════════════════════════════
+         SECCIÓN 2: ESLÓGANES
+    ══════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-label">02 — Eslogan</div>
+      <div class="section-title">Propuestas de tagline</div>
+      <div class="section-sub">
+        InteliStore tiene dos públicos: <strong style="color:#93c5fd;">los estrategas</strong> (jefes de campaña, candidatos) y
+        <strong style="color:#6ee7b7;">los ejecutores</strong> (coordinadores, padrinos, logística). El eslogan debe resonar en ambos.
+      </div>
+
+      <div class="grid-2">
+        <!-- Tagline 1 - RECOMENDADO -->
+        <div class="card tagline-card recommended" style="position:relative;">
+          <div class="recommended-badge">Favorita</div>
+          <div class="tagline-tag">Opción 1</div>
+          <div class="tagline-text">"Todo lo que necesita tu campaña, en un solo lugar."</div>
+          <div class="tagline-why">
+            Universal, sin jerga técnica. Le habla al estratega que quiere eficiencia y al ejecutor que quiere simplicidad.
+            La promesa es clara: centralización y completitud.
+          </div>
+          <div class="tagline-audiences">
+            <span class="audience-pill pill-b2b">✓ Estrategas</span>
+            <span class="audience-pill pill-b2c">✓ Ejecutores</span>
+          </div>
+        </div>
+
+        <!-- Tagline 2 -->
+        <div class="card tagline-card">
+          <div class="tagline-tag">Opción 2</div>
+          <div class="tagline-text">"La ventaja que hace la diferencia."</div>
+          <div class="tagline-why">
+            Apela a la mentalidad competitiva de cualquier equipo político. Breve, memorizable,
+            con carga emocional. Habla de resultado, no de proceso.
+          </div>
+          <div class="tagline-audiences">
+            <span class="audience-pill pill-b2b">✓ Estrategas</span>
+            <span class="audience-pill pill-b2c">~ Ejecutores</span>
+          </div>
+        </div>
+
+        <!-- Tagline 3 -->
+        <div class="card tagline-card">
+          <div class="tagline-tag">Opción 3</div>
+          <div class="tagline-text">"Inteligencia que convierte votos."</div>
+          <div class="tagline-why">
+            Directo al corazón del negocio electoral. Conecta las dos palabras clave del ecosistema:
+            inteligencia (datos, tecnología) y votos (resultado final). Muy poderoso como tagline para materiales de ventas B2B.
+          </div>
+          <div class="tagline-audiences">
+            <span class="audience-pill pill-b2b">✓ Estrategas</span>
+            <span class="audience-pill pill-b2c">~ Ejecutores</span>
+          </div>
+        </div>
+
+        <!-- Tagline 4 -->
+        <div class="card tagline-card">
+          <div class="tagline-tag">Opción 4</div>
+          <div class="tagline-text">"Tu campaña, potenciada."</div>
+          <div class="tagline-why">
+            El más conciso. "Potenciada" implica tecnología sin decirlo explícitamente.
+            Funciona muy bien en interfaces, botones y pantallas de login. Simple, accionable, optimista.
+          </div>
+          <div class="tagline-audiences">
+            <span class="audience-pill pill-b2b">✓ Estrategas</span>
+            <span class="audience-pill pill-b2c">✓ Ejecutores</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tagline largo / descriptor -->
+      <div style="margin-top: 1.5rem;">
+        <div class="card" style="padding: 2rem;">
+          <div class="tagline-tag">Descriptor largo (para About / Landing)</div>
+          <div class="tagline-text" style="font-size: 1.1rem; margin-bottom: 0.75rem;">
+            "InteliStore es la plataforma donde los equipos electorales encuentran las herramientas,
+            datos y recursos que necesitan para organizar su estructura, movilizar sus electores y ganar."
+          </div>
+          <div class="tagline-why">
+            Para uso en landing page, presentaciones y materiales de venta. No reemplaza al eslogan corto — lo expande.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ══════════════════════════════════════════════
+         SECCIÓN 3: PALETA DE COLORES
+    ══════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-label">03 — Color</div>
+      <div class="section-title">Sistema de color</div>
+      <div class="section-sub">Heredado de Intelecciones y elevado para InteliStore como producto comercial independiente.</div>
+
+      <div class="swatch-row" style="margin-bottom: 1rem;">
+        <div class="swatch">
+          <div class="swatch-color" style="background: #001a4d;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Navy</div>
+            <div class="swatch-hex">#001a4d</div>
+            <div class="swatch-role">Fondo principal, autoridad</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #002d84;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Blue Core</div>
+            <div class="swatch-hex">#002d84</div>
+            <div class="swatch-role">Primario, identidad</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #3b82f6;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Blue Light</div>
+            <div class="swatch-hex">#3b82f6</div>
+            <div class="swatch-role">Links, acentos interactivos</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: linear-gradient(135deg, #10b981, #0d9488);"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Emerald</div>
+            <div class="swatch-hex">#10b981</div>
+            <div class="swatch-role">Acción principal, "Store"</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #f59e0b;"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Amber</div>
+            <div class="swatch-hex">#f59e0b</div>
+            <div class="swatch-role">Premium, highlight, dot del iS</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; padding: 1.5rem 2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px;">
+        <div class="card-label" style="margin-bottom:0.75rem;">Regla de uso</div>
+        <div style="display:flex; gap: 2rem; flex-wrap: wrap; font-size: 0.82rem; color: #94a3b8; line-height: 1.7;">
+          <div><strong style="color:#93c5fd;">Navy + Blue</strong> → Confianza, institución, datos</div>
+          <div><strong style="color:#6ee7b7;">Emerald</strong> → Acción, compra, éxito, CTA</div>
+          <div><strong style="color:#fcd34d;">Amber</strong> → Premium, alertas positivas, destacados</div>
+          <div><strong style="color:#e2e8f0;">Blanco</strong> → Claridad, espaciado, lectura</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ══════════════════════════════════════════════
+         SECCIÓN 4: TIPOGRAFÍA
+    ══════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-label">04 — Tipografía</div>
+      <div class="section-title">Sistema tipográfico</div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-label">Display / Títulos — Outfit</div>
+          <div class="divider" style="margin: 0.75rem 0;"></div>
+          <div style="font-family:'Outfit',sans-serif; font-size:2.5rem; font-weight:900; color:#fff; letter-spacing:-0.04em; line-height:1;">
+            InteliStore
+          </div>
+          <div style="font-family:'Outfit',sans-serif; font-size:1.2rem; font-weight:600; color:#94a3b8; margin-top:0.5rem;">
+            La plataforma electoral.
+          </div>
+          <div style="margin-top:1rem; font-size:0.65rem; color:#475569; font-family:monospace;">
+            Outfit 900 — Headlines, logotipo, hero<br>
+            Outfit 600 — Subtítulos, precios, CTAs
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">Cuerpo — Montserrat</div>
+          <div class="divider" style="margin: 0.75rem 0;"></div>
+          <div style="font-family:'Montserrat',sans-serif; font-size:0.9rem; color:#cbd5e1; line-height:1.7; font-weight:500;">
+            InteliStore pone a disposición de cada equipo de campaña las herramientas que antes solo tenían las grandes estructuras. Datos, organización y seguimiento, todo en un lugar.
+          </div>
+          <div style="margin-top:1rem; font-size:0.65rem; color:#475569; font-family:monospace;">
+            Montserrat 500 — Cuerpo de texto, descripciones<br>
+            Montserrat 800 — Labels, tags, precios secundarios
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ══════════════════════════════════════════════
+         SECCIÓN 5: MOCKUP — Cómo se ve en la app
+    ══════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-label">05 — Aplicación</div>
+      <div class="section-title">Mockup de la tienda</div>
+      <div class="section-sub">Así se vería InteliStore con la identidad aplicada. Fragmento de pantalla.</div>
+
+      <div class="mockup-store">
+        <!-- NAV -->
+        <div class="mockup-nav">
+          <!-- Logo reducido -->
+          <div style="display:flex; align-items:center; gap:9px;">
+            <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+              <rect width="44" height="44" rx="11" fill="url(#gradNav)"/>
+              <rect x="7" y="8" width="8" height="4" rx="2" fill="white"/>
+              <rect x="9" y="12" width="4" height="16" rx="2" fill="white"/>
+              <rect x="7" y="27" width="8" height="4" rx="2" fill="white"/>
+              <circle cx="9" cy="5.5" r="2.2" fill="#f59e0b"/>
+              <path d="M19 12 C19 12 28 12 28 17 C28 21 19 21 19 25 C19 28.5 28 28.5 28 28.5"
+                    stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/>
+              <defs>
+                <linearGradient id="gradNav" x1="0" y1="0" x2="44" y2="44">
+                  <stop offset="0%" stop-color="#002d84"/>
+                  <stop offset="100%" stop-color="#10b981"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <span style="font-family:'Outfit',sans-serif; font-size:1rem; font-weight:900; color:#fff;">
+              Inteli<span style="color:#10b981; font-weight:300;">Store</span>
+            </span>
+          </div>
+          <div style="display:flex; gap:1.5rem; font-size:0.75rem; color:#64748b; font-weight:600;">
+            <span>Herramientas</span>
+            <span>Datos</span>
+            <span>Plantillas</span>
+            <span style="color:#10b981;">Mi cuenta</span>
+          </div>
+        </div>
+
+        <!-- HERO MOCKUP -->
+        <div class="mockup-hero-section">
+          <div style="font-size:0.65rem; font-weight:800; letter-spacing:0.15em; color:#10b981; text-transform:uppercase; margin-bottom:0.5rem;">
+            Para tu campaña 2026
+          </div>
+          <div class="mockup-hero-title">Todo lo que necesita tu campaña,<br>en un solo lugar.</div>
+          <div class="mockup-hero-sub">Herramientas, datos y recursos para equipos electorales de todos los tamaños.</div>
+          <button class="mockup-cta">Explorar catálogo →</button>
+        </div>
+
+        <!-- PRODUCT CARDS -->
+        <div class="mockup-cards">
+          <div class="mockup-product">
+            <div class="mockup-product-img" style="background: rgba(59,130,246,0.1);">📊</div>
+            <div class="mockup-product-info">
+              <div class="mockup-product-name">Panel de Reportes Premium</div>
+              <div class="mockup-product-price">G 450.000/mes</div>
+            </div>
+          </div>
+          <div class="mockup-product">
+            <div class="mockup-product-img" style="background: rgba(16,185,129,0.1);">🗳️</div>
+            <div class="mockup-product-info">
+              <div class="mockup-product-name">Copiatines Electorales</div>
+              <div class="mockup-product-price">Incluido</div>
+            </div>
+          </div>
+          <div class="mockup-product">
+            <div class="mockup-product-img" style="background: rgba(245,158,11,0.1);">🗺️</div>
+            <div class="mockup-product-info">
+              <div class="mockup-product-name">Mapa Electoral HD</div>
+              <div class="mockup-product-price">G 300.000/mes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESUMEN FINAL -->
+    <div style="text-align:center; padding: 3rem 0 0;">
+      <div style="font-size:0.65rem; font-weight:800; letter-spacing:0.15em; color:#10b981; text-transform:uppercase; margin-bottom:1rem;">Resumen de decisiones</div>
+      <div style="font-size:1.6rem; font-weight:900; color:#fff; margin-bottom:0.5rem;">Logotipo B + Tagline 1</div>
+      <div style="font-size:1rem; color:#94a3b8; max-width:500px; margin:0 auto 2rem;">
+        Marca cápsula con monograma iS y wordmark bicolor,<br>
+        acompañado del eslogan<br>
+        <strong style="color:#fff;">"Todo lo que necesita tu campaña, en un solo lugar."</strong>
+      </div>
+      <div style="font-size:0.75rem; color:#475569;">
+        Próximos pasos: refinamiento del mark iS · tipografía definitiva del tagline · guía de uso digital/impreso
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

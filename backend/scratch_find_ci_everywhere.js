@@ -1,79 +1,66 @@
-const Database = require('better-sqlite3');
-const path = require('path');
 const fs = require('fs');
-const xlsx = require('xlsx');
+const path = require('path');
+const Database = require('better-sqlite3');
 
-const ci = '6894333';
-const numericCi = 6894333;
-
-const dbFiles = [
-  path.join(__dirname, 'intellecciones.db'),
-  path.join(__dirname, 'temp_db_95b.db'),
-  path.join(__dirname, 'temp_db_95b_binary.db'),
-  path.join(__dirname, 'recovered_intellecciones.db'),
-  path.join(__dirname, '..', 'intellecciones.db'),
-  path.join(__dirname, '..', 'ruvector.db')
-];
-
-console.log('--- SEARCHING DATABASES ---');
-for (const dbFile of dbFiles) {
-  if (!fs.existsSync(dbFile)) continue;
-  console.log('Searching database:', dbFile);
+function findDbs(dir, files = []) {
+  if (dir.includes('node_modules') || dir.includes('.git') || dir.includes('.next')) return files;
   try {
-    const db = new Database(dbFile);
-    // Get all tables
+    const list = fs.readdirSync(dir);
+    for (const file of list) {
+      const fullPath = path.join(dir, file);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        findDbs(fullPath, files);
+      } else if (file.endsWith('.db')) {
+        files.push({ path: fullPath, size: stat.size });
+      }
+    }
+  } catch (e) {}
+  return files;
+}
+
+const allDbs = findDbs('c:\\Users\\Gustavo Quevedo\\OneDrive\\Dev\\Intelecciones');
+console.log(`Found ${allDbs.length} DB files:`);
+
+for (const dbInfo of allDbs) {
+  console.log(`\nDB: ${dbInfo.path} (${dbInfo.size} bytes)`);
+  if (dbInfo.size === 0) continue;
+  try {
+    const db = new Database(dbInfo.path);
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-    for (const table of tables) {
-      const tableName = table.name;
-      // Get all columns
-      const cols = db.prepare(`PRAGMA table_info(${tableName})`).all();
-      for (const col of cols) {
+    console.log('  Tables:', tables.map(t => t.name));
+    for (const tableObj of tables) {
+      const table = tableObj.name;
+      if (['electors', 'elector_captures', 'users', 'campaigns'].includes(table)) {
         try {
-          const query = `SELECT * FROM ${tableName} WHERE CAST(${col.name} AS TEXT) = ? OR CAST(${col.name} AS TEXT) LIKE ?`;
-          const rows = db.prepare(query).all(ci, `%${ci}%`);
-          if (rows.length > 0) {
-            console.log(`  FOUND in Table [${tableName}] Column [${col.name}]:`, rows);
-          }
+          const count = db.prepare(`SELECT count(*) as c from ${table}`).get().c;
+          console.log(`    - ${table}: ${count} rows`);
         } catch (e) {
-          // ignore column mismatch/query errors
+          console.log(`    - ${table}: error (${e.message})`);
         }
       }
+    }
+    // Also search for elector 4388985 specifically
+    try {
+      const hasElectors = tables.some(t => t.name === 'electors');
+      if (hasElectors) {
+        const elector = db.prepare('SELECT * FROM electors WHERE ci = ?').get('4388985');
+        if (elector) {
+          console.log('    [FOUND] elector in electors:', elector);
+        }
+      }
+      const hasCaptures = tables.some(t => t.name === 'elector_captures');
+      if (hasCaptures) {
+        const capture = db.prepare('SELECT * FROM elector_captures WHERE elector_ci = ?').get('4388985');
+        if (capture) {
+          console.log('    [FOUND] capture in elector_captures:', capture);
+        }
+      }
+    } catch (e) {
+      console.log('    Error searching CI 4388985:', e.message);
     }
     db.close();
-  } catch (e) {
-    console.error(`Error searching ${dbFile}:`, e.message);
+  } catch (err) {
+    console.log('  Failed to open:', err.message);
   }
 }
-
-console.log('\n--- SEARCHING EXCEL FILES ---');
-const excelFiles = [
-  path.join(__dirname, '00 - PEDRO J. CABALLERO.xlsx'),
-  path.join(__dirname, '..', '06 - CERRO CORA.xlsx')
-];
-
-for (const file of excelFiles) {
-  if (!fs.existsSync(file)) {
-    console.log(`Excel file not found: ${file}`);
-    continue;
-  }
-  console.log(`Searching Excel file: ${file}`);
-  try {
-    const workbook = xlsx.readFile(file);
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName];
-      const data = xlsx.utils.sheet_to_json(sheet);
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        for (const key of Object.keys(row)) {
-          const val = row[key];
-          if (val == numericCi || String(val).trim() == ci || String(val).includes(ci)) {
-            console.log(`  FOUND in sheet [${sheetName}] row [${i + 2}]:`, row);
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error(`Error reading Excel ${file}:`, e.message);
-  }
-}
-console.log('Search complete.');

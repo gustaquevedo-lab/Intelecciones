@@ -973,6 +973,7 @@ const CoordinatorApp = () => {
       // Calculate real stats from history
       const stats = { green: 0, yellow: 0, red: 0, purple: 0 };
       data.forEach((c: any) => {
+        if (c.is_disputed === 1) return;
         if (c.traffic_light === 'GREEN') stats.green++;
         else if (c.traffic_light === 'YELLOW') stats.yellow++;
         else if (c.traffic_light === 'RED') stats.red++;
