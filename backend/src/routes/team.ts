@@ -1068,7 +1068,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
     if (role === 'PADRINO') {
       electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
       electorParams.push(requesterId, requesterId);
-    } else {
+    } else if (!coordinatorId || coordinatorId === 'ALL') {
       electorSql += ` ${filterEc.sql}`;
       electorParams.push(...filterEc.params);
     }
