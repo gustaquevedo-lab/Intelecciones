@@ -1175,7 +1175,7 @@ Status: ${error.response?.status || 'N/A'}
     activeDistrict, setActiveDistrict,
     activeListId, setActiveListId,
     selectedSyncDistrict, setSelectedSyncDistrict,
-    selectedCityForLists,
+    selectedCityForLists, setSelectedCityForLists,
     cities, fileInputRef, cropperData,
     fetchData,
     handleCreateCampaign, handleUpdateCampaign, handleDeleteCampaign, handleTogglePause,
