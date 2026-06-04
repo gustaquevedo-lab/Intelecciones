@@ -1006,7 +1006,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
     }
 
     let electorSql = `
-      SELECT ec.id as capture_id, ec.elector_ci, ec.copiatin_printed_at,
+      SELECT ec.id as capture_id, ec.elector_ci, ec.copiatin_printed_at, ec.traffic_light,
              COALESCE(e.nombre, 'ELECTOR') as nombre,
              COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
              COALESCE(e.local_votacion, '') as local_votacion,
@@ -1024,9 +1024,18 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       LEFT JOIN users p ON u.parent_id = p.id
       LEFT JOIN lists l ON ec.list_id = l.id
       LEFT JOIN campaigns c ON l.campaign_id = c.id
-      WHERE 1=1 AND COALESCE(ec.traffic_light, '') != 'PURPLE' AND ec.is_disputed = 0
+      WHERE 1=1 AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE' AND ec.is_disputed = 0
     `;
     let electorParams: any[] = [];
+
+    const idsQuery = req.query.ids as string;
+    if (idsQuery && idsQuery.trim() !== '') {
+      const ids = idsQuery.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+      if (ids.length > 0) {
+        electorSql += ` AND ec.id IN (${ids.map(() => '?').join(',')})`;
+        electorParams.push(...ids);
+      }
+    }
 
     const searchQuery = req.query.search as string;
     if (searchQuery && searchQuery.trim() !== '') {

@@ -2013,6 +2013,12 @@ const TeamPanel = () => {
                     }}
                   >
                     <option value="ALL">Todos los Coordinadores ({availableCoordinators.length})</option>
+                    {selectedPadrinoFilter !== 'ALL' && (
+                      <option value={selectedPadrinoFilter}>Solo Padrino (Capturas Personales)</option>
+                    )}
+                    {selectedPadrinoFilter === 'ALL' && isPadrino && user?.id && (
+                      <option value={String(user.id)}>Solo Padrino (Capturas Personales)</option>
+                    )}
                     {availableCoordinators.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                   </select>
                 </div>

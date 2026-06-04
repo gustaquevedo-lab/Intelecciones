@@ -772,43 +772,94 @@ const CopiatinesReport = () => {
     setBasket(prev => prev.filter(b => b.capture_id !== captureId));
   };
 
-  const handlePrintBasket = () => {
+  const handlePrintBasket = async () => {
     if (basket.length === 0) return;
-    const ids = basket.map(e => e.capture_id);
-    const html = buildPrintHTML(basket, data?.campaignLists || [], user?.assigned_list_id);
-    const pw = window.open('', '_blank', 'width=900,height=700');
-    if (!pw) return;
-    pw.document.write(html);
-    pw.document.close();
-    pw.onafterprint = async () => {
-      pw.close();
-      setMarking(true);
-      try {
-        await api.post('/my-team/copiatines/mark-printed', { capture_ids: ids });
+    setMarking(true);
+    try {
+      const ids = basket.map(e => e.capture_id);
+      const res = await api.get(`/my-team/copiatines?ids=${ids.join(',')}`);
+      const latestElectors = res.data?.electors || [];
+      
+      if (latestElectors.length === 0) {
+        alert('Ninguno de los electores seleccionados es elegible para impresión en este momento (pueden haber sido cambiados a color Púrpura o marcados como disputados).');
         setBasket([]);
-        load();
-      } catch {}
+        setMarking(false);
+        return;
+      }
+
+      if (latestElectors.length < basket.length) {
+        alert(`Atención: ${basket.length - latestElectors.length} elector(es) fueron excluidos de la impresión porque su color fue actualizado a Púrpura o su estado cambió.`);
+      }
+
+      const validIds = latestElectors.map((e: any) => e.capture_id);
+      const html = buildPrintHTML(latestElectors, data?.campaignLists || [], user?.assigned_list_id);
+      const pw = window.open('', '_blank', 'width=900,height=700');
+      if (!pw) {
+        setMarking(false);
+        return;
+      }
+      pw.document.write(html);
+      pw.document.close();
+      pw.onafterprint = async () => {
+        pw.close();
+        setMarking(true);
+        try {
+          await api.post('/my-team/copiatines/mark-printed', { capture_ids: validIds });
+          setBasket([]);
+          load();
+        } catch {}
+        setMarking(false);
+      };
+    } catch (err) {
+      console.error(err);
+      alert('Error al verificar electores antes de imprimir.');
+    } finally {
       setMarking(false);
-    };
+    }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!data || data.electors.length === 0) return;
-    const ids = data.electors.map(e => e.capture_id);
-    const html = buildPrintHTML(data.electors, data.campaignLists || [], user?.assigned_list_id);
-    const pw = window.open('', '_blank', 'width=900,height=700');
-    if (!pw) return;
-    pw.document.write(html);
-    pw.document.close();
-    pw.onafterprint = async () => {
-      pw.close();
-      setMarking(true);
-      try {
-        await api.post('/my-team/copiatines/mark-printed', { capture_ids: ids });
-        load();
-      } catch {}
+    setMarking(true);
+    try {
+      const ids = data.electors.map(e => e.capture_id);
+      const res = await api.get(`/my-team/copiatines?ids=${ids.join(',')}`);
+      const latestElectors = res.data?.electors || [];
+      
+      if (latestElectors.length === 0) {
+        alert('Ninguno de los electores en la lista es elegible para impresión en este momento.');
+        setMarking(false);
+        return;
+      }
+
+      if (latestElectors.length < data.electors.length) {
+        alert(`Atención: ${data.electors.length - latestElectors.length} elector(es) fueron excluidos de la impresión porque su color fue actualizado a Púrpura o su estado cambió.`);
+      }
+
+      const validIds = latestElectors.map((e: any) => e.capture_id);
+      const html = buildPrintHTML(latestElectors, data.campaignLists || [], user?.assigned_list_id);
+      const pw = window.open('', '_blank', 'width=900,height=700');
+      if (!pw) {
+        setMarking(false);
+        return;
+      }
+      pw.document.write(html);
+      pw.document.close();
+      pw.onafterprint = async () => {
+        pw.close();
+        setMarking(true);
+        try {
+          await api.post('/my-team/copiatines/mark-printed', { capture_ids: validIds });
+          load();
+        } catch {}
+        setMarking(false);
+      };
+    } catch (err) {
+      console.error(err);
+      alert('Error al verificar electores antes de imprimir.');
+    } finally {
       setMarking(false);
-    };
+    }
   };
 
   const handleUnmarkAll = async () => {
