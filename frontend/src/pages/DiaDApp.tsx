@@ -699,132 +699,6 @@ const DiaDApp: React.FC = () => {
                     )}
                 </div>
 
-                {/* Map */}
-                <div style={{
-                  background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: '14px', overflow: 'hidden', height: '450px'
-                }}>
-                  <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Map size={14} style={{ color: 'var(--plra-300)' }} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                      Mapa de Cobertura
-                    </span>
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
-                      {[
-                        { color: 'var(--blue-lt)', label: 'Con Miembro' },
-                        { color: 'var(--red)', label: 'Sin Miembro' },
-                      ].map(l => (
-                        <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.6rem', color: 'var(--text-3)' }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.color, display: 'inline-block' }} />
-                          {l.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <MapContainer
-                    center={[-22.5447, -55.7333]}
-                    zoom={13}
-                    style={{ height: 'calc(100% - 42px)', width: '100%' }}
-                    zoomControl={false}
-                  >
-                    <TileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution='&copy; OpenStreetMap'
-                    />
-                    <ZoomControl position="bottomright" />
-                    <MapHandler activeDistrict={activeDistrict || user?.distrito} locales={locations} />
-                    
-                    {/* Voting Locations Pins */}
-                    {locations.map(loc => (
-                      <CircleMarker
-                        key={`loc-${loc.id}`}
-                        center={[loc.lat || -22.5447, loc.lng || -55.7333]}
-                        radius={6}
-                        pathOptions={{
-                          color: 'var(--plra-500)',
-                          fillColor: 'var(--plra-300)',
-                          fillOpacity: 0.8,
-                          weight: 2
-                        }}
-                      >
-                        <Popup>
-                          <strong>Local: {loc.nombre}</strong><br />
-                          <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
-                            <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.2rem' }}>{loc.nombre}</p>
-                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Local de Votación</p>
-                          </div>
-                        </Popup>
-                      </CircleMarker>
-                    ))}
-
-                    {/* Fleet Heatmap / Clusters */}
-                    {fleetLocations.map((fleet, idx) => (
-                      <CircleMarker
-                        key={`fleet-${idx}`}
-                        center={[fleet.lat, fleet.lng]}
-                        radius={Math.min(20, 8 + fleet.count * 2)}
-                        pathOptions={{
-                          color: 'transparent',
-                          fillColor: 'var(--red)',
-                          fillOpacity: 0.3,
-                        }}
-                      />
-                    ))}
-
-                    {/* Mesas (Operational Status) */}
-                    <MarkerClusterGroup>
-                      {coverage.mesas.map(mesa => (
-                        <Marker 
-                          key={`mesa-${mesa.local}-${mesa.numero}`}
-                          position={[
-                            typeof mesa.lat === 'string' ? parseFloat(mesa.lat) : (mesa.lat || -22.5447), 
-                            typeof mesa.lng === 'string' ? parseFloat(mesa.lng) : (mesa.lng || -55.7333)
-                          ]}
-                          icon={L.divIcon({
-                            className: 'custom-div-icon',
-                            html: `
-                              <div style="
-                                width: 14px; height: 14px; 
-                                background: ${mesa.operativa ? 'var(--blue-lt)' : 'var(--red)'}; 
-                                border: 2px solid white; 
-                                border-radius: 50%; 
-                                box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                              "></div>
-                            `,
-                            iconSize: [14, 14],
-                            iconAnchor: [7, 7]
-                          })}
-                        >
-                          <Popup>
-                            <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
-                              <p style={{ fontWeight: 800, fontSize: '0.85rem' }}>{mesa.local}</p>
-                              <p style={{ fontSize: '0.75rem', fontWeight: 700 }}>MESA {mesa.numero}</p>
-                              <p style={{ 
-                                fontSize: '0.65rem', color: mesa.operativa ? 'var(--green)' : 'var(--red)',
-                                fontWeight: 800, marginTop: '0.4rem', textTransform: 'uppercase'
-                              }}>
-                                {mesa.operativa ? '● OPERATIVA (MIEMBRO ASIGNADO)' : '○ PENDIENTE DE MIEMBRO'}
-                              </p>
-                              {!mesa.operativa && (
-                                <button 
-                                  onClick={() => { setSelectedMesa({local: mesa.local, numero: mesa.numero}); setShowAssignModal(true); fetchUsers(); }}
-                                  style={{
-                                    marginTop: '0.6rem', padding: '0.4rem 0.8rem', width: '100%',
-                                    background: 'var(--red)', color: 'white', border: 'none',
-                                    borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer'
-                                  }}
-                                >
-                                  ASIGNAR AHORA
-                                </button>
-                              )}
-                            </div>
-                          </Popup>
-                        </Marker>
-                      ))}
-                    </MarkerClusterGroup>
-                  </MapContainer>
-                </div>
-
                 <hr style={{ border: '0', borderTop: '1px solid var(--border)', margin: '2rem 0' }} />
 
                 {/* Constitución de Mesas (Staff Assignment) Section */}
@@ -877,7 +751,7 @@ const DiaDApp: React.FC = () => {
                 </div>
 
                 {/* Dual-Pane Workbench Layout */}
-                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'start', width: '100%' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'start', width: '100%', marginBottom: '2rem' }}>
                   
                   {/* Left Panel (2/3 width) - Grid of Mesas grouped by Voting Location */}
                   {isLoadingMembers ? (
@@ -1186,6 +1060,129 @@ const DiaDApp: React.FC = () => {
                     </div>
                   </div>
 
+                </div>
+
+                {/* Map */}
+                <div style={{
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  borderRadius: '14px', overflow: 'hidden', height: '450px'
+                }}>
+                  <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Map size={14} style={{ color: 'var(--plra-300)' }} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                      Mapa de Cobertura
+                    </span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
+                      {[
+                        { color: 'var(--blue-lt)', label: 'Con Miembro' },
+                        { color: 'var(--red)', label: 'Sin Miembro' },
+                      ].map(l => (
+                        <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.6rem', color: 'var(--text-3)' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.color, display: 'inline-block' }} />
+                          {l.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <MapContainer
+                    center={[-22.5447, -55.7333]}
+                    zoom={13}
+                    style={{ height: 'calc(100% - 42px)', width: '100%' }}
+                    zoomControl={false}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; OpenStreetMap'
+                    />
+                    <ZoomControl position="bottomright" />
+                    <MapHandler activeDistrict={activeDistrict || user?.distrito} locales={locations} />
+                    
+                    {/* Voting Locations Pins */}
+                    {locations.map(loc => (
+                      <CircleMarker
+                        key={`loc-${loc.id}`}
+                        center={[loc.lat || -22.5447, loc.lng || -55.7333]}
+                        radius={6}
+                        pathOptions={{
+                          color: 'var(--plra-500)',
+                          fillColor: 'var(--plra-300)',
+                          fillOpacity: 0.8,
+                          weight: 2
+                        }}
+                      >
+                        <Popup>
+                          <strong>Local: {loc.nombre}</strong><br />
+                          <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
+                            <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.2rem' }}>{loc.nombre}</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>Local de Votación</p>
+                          </div>
+                        </Popup>
+                      </CircleMarker>
+                    ))}
+
+                    {/* Fleet Heatmap / Clusters */}
+                    {fleetLocations.map((fleet, idx) => (
+                      <CircleMarker
+                        key={`fleet-${idx}`}
+                        center={[fleet.lat, fleet.lng]}
+                        radius={Math.min(20, 8 + fleet.count * 2)}
+                        pathOptions={{
+                          color: 'transparent',
+                          fillColor: 'var(--red)',
+                          fillOpacity: 0.3,
+                        }}
+                      />
+                    ))}
+
+                    {/* Mesas (Operational Status) */}
+                    <MarkerClusterGroup>
+                      {coverage.mesas.map(mesa => (
+                        <Marker 
+                          key={`mesa-${mesa.local}-${mesa.numero}`}
+                          position={[
+                            typeof mesa.lat === 'string' ? parseFloat(mesa.lat) : (mesa.lat || -22.5447), 
+                            typeof mesa.lng === 'string' ? parseFloat(mesa.lng) : (mesa.lng || -55.7333)
+                          ]}
+                          icon={L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `
+                              <div style="
+                                width: 14px; height: 14px; 
+                                background: ${mesa.operativa ? 'var(--blue-lt)' : 'var(--red)'}; 
+                                border: 2px solid white; 
+                                border-radius: 50%; 
+                                box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                              "></div>
+                            `,
+                            iconSize: [14, 14],
+                            iconAnchor: [7, 7]
+                          })}
+                        >
+                          <Popup>
+                            <div style={{ color: 'var(--text)', padding: '0.2rem' }}>
+                              <p style={{ fontWeight: 800, fontSize: '0.85rem' }}>{mesa.local}</p>
+                              <p style={{ fontWeight: 700, fontSize: '0.75rem', marginTop: '0.2rem' }}>Mesa N° {mesa.numero}</p>
+                              <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>
+                                Estado: <span style={{ color: mesa.operativa ? 'var(--green)' : 'var(--red)', fontWeight: 800 }}>{mesa.operativa ? 'CON CUBIERTA' : 'SIN CUBIERTA'}</span>
+                              </p>
+                              {!mesa.operativa && (
+                                <button
+                                  onClick={() => { setSelectedMesa({local: mesa.local, numero: mesa.numero}); setShowAssignModal(true); fetchUsers(); }}
+                                  style={{
+                                    marginTop: '0.6rem', padding: '0.4rem 0.8rem', width: '100%',
+                                    background: 'var(--red)', color: 'white', border: 'none',
+                                    borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800, cursor: 'pointer'
+                                  }}
+                                >
+                                  ASIGNAR AHORA
+                                </button>
+                              )}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MarkerClusterGroup>
+                  </MapContainer>
                 </div>
               </motion.div>
             )}
