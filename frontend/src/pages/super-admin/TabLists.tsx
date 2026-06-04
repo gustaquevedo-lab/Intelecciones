@@ -101,7 +101,7 @@ const TabLists = (props: any) => {
     selectedSyncDistrict, setSelectedSyncDistrict,
     activeDistrict, setActiveDistrict,
     activeListId, setActiveListId,
-    selectedCityForLists,
+    selectedCityForLists, setSelectedCityForLists,
     cities, fileInputRef, cropperData,
     fetchData,
     handleCreateCampaign, handleUpdateCampaign, handleDeleteCampaign, handleTogglePause,
