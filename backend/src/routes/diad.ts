@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import db from '../db';
 import { dbQueryAsync, dbGetAsync } from '../db-async';
-import { getCachedUserInfo, getRole, getListId } from './helpers';
+import { getCachedUserInfo, getRole, getListId, getDistrict } from './helpers';
 import { diadCoverageCache } from '../server';
 
 export default function diadRoutes(upload: multer.Multer) {
@@ -30,15 +30,22 @@ export default function diadRoutes(upload: multer.Multer) {
       listParams = [list_id];
     }
 
-    if (role !== 'SUPERUSUARIO' && user_id) {
+    const districtFilter = getDistrict(req);
+
+    if (districtFilter) {
+      districtName = districtFilter;
+    } else if (role !== 'SUPERUSUARIO' && user_id) {
       const user = getCachedUserInfo(user_id as string);
       if (user?.distrito) {
         districtName = user.distrito;
-        distritoClause = `WHERE (UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?))`;
-        distritoParams = [districtName, districtName];
-        vlClause = `AND (UPPER(vl.distrito) = UPPER(?) OR UPPER(vl.ciudad) = UPPER(?))`;
-        vlParams = [districtName, districtName];
       }
+    }
+
+    if (districtName) {
+      distritoClause = `WHERE (UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?))`;
+      distritoParams = [districtName, districtName];
+      vlClause = `AND (UPPER(vl.distrito) = UPPER(?) OR UPPER(vl.ciudad) = UPPER(?))`;
+      vlParams = [districtName, districtName];
     }
 
     try {
@@ -117,17 +124,39 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
-  router.get('/results', (req, res) => {
+  router.get('/results', async (req, res) => {
     const list_id = getListId(req);
+    const districtFilter = getDistrict(req);
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+
+    let districtName = districtFilter || '';
+    if (!districtName && role !== 'SUPERUSUARIO' && user_id) {
+      const user = getCachedUserInfo(user_id as string);
+      if (user?.distrito) districtName = user.distrito;
+    }
+
     try {
-      const formatted = db.prepare(`
+      let sql = `
         SELECT l.id, l.list_number, l.candidate_alias, l.type, l.candidate_nombre, l.option_number,
           COALESCE(SUM(ar.votos), 0) as votos
         FROM lists l
         LEFT JOIN acta_results ar ON l.id = ar.lista_id
-        ${list_id && !isNaN(list_id) ? 'WHERE l.campaign_id = (SELECT campaign_id FROM lists WHERE id = ?)' : ''}
-        GROUP BY l.id ORDER BY votos DESC
-      `).all(...(list_id && !isNaN(list_id) ? [list_id] : [])) as any[];
+        LEFT JOIN results r ON ar.acta_id = r.id
+        LEFT JOIN voting_locations vl ON r.local_votacion = vl.nombre
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      if (list_id && !isNaN(list_id)) {
+        sql += ` AND l.campaign_id = (SELECT campaign_id FROM lists WHERE id = ?)`;
+        params.push(list_id);
+      }
+      if (districtName) {
+        sql += ` AND (UPPER(vl.distrito) = UPPER(?) OR UPPER(vl.ciudad) = UPPER(?))`;
+        params.push(districtName, districtName);
+      }
+      sql += ` GROUP BY l.id ORDER BY votos DESC`;
+      const formatted = await dbQueryAsync<any>(sql, params);
       const totalVotos = formatted.reduce((acc, curr) => acc + curr.votos, 0);
       formatted.forEach(f => f.porcentaje = totalVotos > 0 ? (f.votos / totalVotos) * 100 : 0);
       res.json(formatted);
@@ -220,27 +249,66 @@ export default function diadRoutes(upload: multer.Multer) {
 
   router.get('/actas', (req, res) => {
     const list_id = getListId(req);
+    const districtFilter = getDistrict(req);
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+
+    let districtName = districtFilter || '';
+    if (!districtName && role !== 'SUPERUSUARIO' && user_id) {
+      const user = getCachedUserInfo(user_id as string);
+      if (user?.distrito) districtName = user.distrito;
+    }
+
     try {
-      const actas = db.prepare(`
+      let sql = `
         SELECT r.id, r.mesa as mesa_numero, r.local_votacion as local,
           u.nombre as submitted_by,
           ((SELECT COALESCE(SUM(votos), 0) FROM acta_results ar WHERE ar.acta_id = r.id) + r.votos_blancos + r.votos_nulos) as votos_total,
           r.foto_acta_url as foto_url, r.timestamp as submitted_at
         FROM results r
         LEFT JOIN users u ON r.veedor_id = u.id
-        ${list_id && !isNaN(list_id) ? 'WHERE r.tenant_id = ?' : ''}
-        ORDER BY r.timestamp DESC
-      `).all(...(list_id && !isNaN(list_id) ? [list_id] : []));
+        LEFT JOIN voting_locations vl ON r.local_votacion = vl.nombre
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      if (list_id && !isNaN(list_id)) {
+        sql += ` AND r.tenant_id = ?`;
+        params.push(list_id);
+      }
+      if (districtName) {
+        sql += ` AND (UPPER(vl.distrito) = UPPER(?) OR UPPER(vl.ciudad) = UPPER(?))`;
+        params.push(districtName, districtName);
+      }
+      sql += ` ORDER BY r.timestamp DESC`;
+      const actas = db.prepare(sql).all(...params);
       res.json(actas);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
   router.get('/members', (req, res) => {
+    const districtFilter = getDistrict(req);
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+
+    let districtName = districtFilter || '';
+    if (!districtName && role !== 'SUPERUSUARIO' && user_id) {
+      const user = getCachedUserInfo(user_id as string);
+      if (user?.distrito) districtName = user.distrito;
+    }
+
     try {
-      const members = db.prepare(`
+      let sql = `
         SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.role, u.ci, u.telefono
-        FROM users u WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')
-      `).all();
+        FROM users u
+        LEFT JOIN voting_locations vl ON u.assigned_local = vl.nombre
+        WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')
+      `;
+      const params: any[] = [];
+      if (districtName) {
+        sql += ` AND (UPPER(vl.distrito) = UPPER(?) OR UPPER(vl.ciudad) = UPPER(?) OR UPPER(u.distrito) = UPPER(?))`;
+        params.push(districtName, districtName, districtName);
+      }
+      const members = db.prepare(sql).all(...params);
       res.json(members);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -414,13 +482,19 @@ export default function diadRoutes(upload: multer.Multer) {
     let distritoClause = '';
     let distritoParams: any[] = [];
 
-    if (role !== 'SUPERUSUARIO' && user_id) {
+    const districtFilter = getDistrict(req);
+
+    let districtName = districtFilter || '';
+    if (!districtName && role !== 'SUPERUSUARIO' && user_id) {
       const user = getCachedUserInfo(user_id as string);
       if (user?.distrito) {
-        const districtName = user.distrito;
-        distritoClause = `WHERE (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))`;
-        distritoParams = [districtName, districtName];
+        districtName = user.distrito;
       }
+    }
+
+    if (districtName) {
+      distritoClause = `WHERE (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))`;
+      distritoParams = [districtName, districtName];
     }
 
     try {
