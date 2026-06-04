@@ -1227,7 +1227,10 @@ const CopiatinesReport = () => {
                   <div className={electorIsPJC || electorIsConcepcion ? "candidates-list" : "generic-candidates-list"}>
                     {candidatesToUse.map((list, i) => {
                       const isEmphasis = i < 2;
-                      const name = (list.candidate_nombre || list.candidate_alias || '—').toUpperCase();
+                      const name = (electorIsConcepcion
+                        ? (list.candidate_alias || list.candidate_nombre || '—')
+                        : (list.candidate_nombre || list.candidate_alias || '—')
+                      ).toUpperCase();
                       const photoUrl = resolvePhotoUrl(list.photo_url) || null;
                       const hasOption = list.option_number && list.option_number !== '0';
                       return (
