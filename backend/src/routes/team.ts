@@ -778,10 +778,10 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           LEFT JOIN lists l ON ec.list_id = l.id
           LEFT JOIN campaigns c ON l.campaign_id = c.id
           LEFT JOIN capture_conflicts cc ON (
-            (ec.id = cc.capture_id OR ec.id = cc.capture_id_b)
+            cc.elector_ci = ec.elector_ci
             AND cc.id = (
               SELECT id FROM capture_conflicts
-              WHERE capture_id = ec.id OR capture_id_b = ec.id
+              WHERE elector_ci = ec.elector_ci
               ORDER BY timestamp DESC LIMIT 1
             )
           )
@@ -816,10 +816,10 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           LEFT JOIN lists l ON ec.list_id = l.id
           LEFT JOIN campaigns c ON l.campaign_id = c.id
           LEFT JOIN capture_conflicts cc ON (
-            (ec.id = cc.capture_id OR ec.id = cc.capture_id_b)
+            cc.elector_ci = ec.elector_ci
             AND cc.id = (
               SELECT id FROM capture_conflicts
-              WHERE capture_id = ec.id OR capture_id_b = ec.id
+              WHERE elector_ci = ec.elector_ci
               ORDER BY timestamp DESC LIMIT 1
             )
           )

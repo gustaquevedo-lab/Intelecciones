@@ -476,9 +476,12 @@ function buildPrintHTML(
     </div>`;
   };
 
-  const buildCandidateRows = (lists: CampaignList[]) => lists.slice(0, 4).map((list, i) => {
+  const buildCandidateRows = (lists: CampaignList[], isConcepcion?: boolean) => lists.slice(0, 4).map((list, i) => {
     const isEmphasis = i < 2;
-    const name = (list.candidate_nombre || list.candidate_alias || '—').toUpperCase();
+    const name = (isConcepcion
+      ? (list.candidate_alias || list.candidate_nombre || '—')
+      : (list.candidate_nombre || list.candidate_alias || '—')
+    ).toUpperCase();
     const photoUrl = resolvePhotoUrl(list.photo_url);
     const photoHtml = photoUrl
       ? `<div class="candidate-photo-frame"><img src="${photoUrl}" alt="${name}"></div>`
@@ -579,7 +582,7 @@ function buildPrintHTML(
       </div>`;
     } else if (electorIsConcepcion) {
       const concepcionLists = getConcepcionLists(campaignLists, e.campaign_id, userListId);
-      const candidateRows = buildCandidateRows(concepcionLists);
+      const candidateRows = buildCandidateRows(concepcionLists, true);
       return `<div class="copiatin-card compact-card">
         <div class="top-band-new">
           <div class="top-row">
