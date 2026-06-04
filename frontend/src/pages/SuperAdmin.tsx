@@ -1127,7 +1127,7 @@ Status: ${error.response?.status || 'N/A'}
     userSearchTerm, setUserSearchTerm,
     userRoleFilter, setUserRoleFilter,
     userCampaignFilter, setUserCampaignFilter,
-    isUserVerified, isCandidateVerified, isVehicleDriverVerified,
+    isUserVerified, setIsUserVerified, isCandidateVerified, setIsCandidateVerified, isVehicleDriverVerified, setIsVehicleDriverVerified,
     newListCiudad, setNewListCiudad,
     newListCampaign, setNewListCampaign,
     newListType, setNewListType,

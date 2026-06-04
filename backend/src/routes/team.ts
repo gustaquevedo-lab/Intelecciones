@@ -679,7 +679,6 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
       coordSql += ` ORDER BY u.nombre`;
       coordinators = await dbQueryAsync<any>(coordSql, coordParams);
     }
-
     // ── 3. Electors report ──
     let electors: any[] = [];
     if (reportType === 'electors') {
@@ -700,7 +699,10 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
                  u.distrito as coordinator_district, u.assigned_list_id as coordinator_list_id,
                  u.parent_id as padrino_id, ec.coordinator_id,
                  p.nombre as padrino_name,
-                 l.list_number, c.name as campaign_name
+                 l.list_number, c.name as campaign_name,
+                 cc.status as conflict_status,
+                 u_win.nombre as winner_coordinator_name,
+                 l_win.list_number as winner_list_number
         `;
 
         const filterE = (role === 'PADRINO') ? null : getSecurityFilter(req, 'u');
@@ -775,6 +777,17 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           LEFT JOIN users p ON u.parent_id = p.id
           LEFT JOIN lists l ON ec.list_id = l.id
           LEFT JOIN campaigns c ON l.campaign_id = c.id
+          LEFT JOIN capture_conflicts cc ON (
+            (ec.id = cc.capture_id OR ec.id = cc.capture_id_b)
+            AND cc.id = (
+              SELECT id FROM capture_conflicts
+              WHERE capture_id = ec.id OR capture_id_b = ec.id
+              ORDER BY timestamp DESC LIMIT 1
+            )
+          )
+          LEFT JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
+          LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+          LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
           ORDER BY ec.timestamp DESC
         `;
         electorParams = [...extraParams, selectedDistrict, selectedDistrict, ...extraParams];
@@ -792,13 +805,27 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
                  u.distrito as coordinator_district, u.assigned_list_id as coordinator_list_id,
                  u.parent_id as padrino_id, ec.coordinator_id,
                  p.nombre as padrino_name,
-                 l.list_number, c.name as campaign_name
+                 l.list_number, c.name as campaign_name,
+                 cc.status as conflict_status,
+                 u_win.nombre as winner_coordinator_name,
+                 l_win.list_number as winner_list_number
           FROM elector_captures ec
           LEFT JOIN electors e ON ec.elector_ci = e.ci
           LEFT JOIN users u ON ec.coordinator_id = u.id
           LEFT JOIN users p ON u.parent_id = p.id
           LEFT JOIN lists l ON ec.list_id = l.id
           LEFT JOIN campaigns c ON l.campaign_id = c.id
+          LEFT JOIN capture_conflicts cc ON (
+            (ec.id = cc.capture_id OR ec.id = cc.capture_id_b)
+            AND cc.id = (
+              SELECT id FROM capture_conflicts
+              WHERE capture_id = ec.id OR capture_id_b = ec.id
+              ORDER BY timestamp DESC LIMIT 1
+            )
+          )
+          LEFT JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
+          LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+          LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
           WHERE 1=1
         `;
 

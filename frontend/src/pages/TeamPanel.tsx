@@ -51,6 +51,9 @@ interface ElectorRow {
   padrino_id?: string;
   coordinator_id?: string;
   is_disputed?: number;
+  conflict_status?: string;
+  winner_coordinator_name?: string;
+  winner_list_number?: string;
 }
 
 interface LocalRow {
@@ -942,6 +945,29 @@ const TeamPanel = () => {
   const filteredElectors = useMemo(() => {
     if (!reportData || !reportData.electors) return [];
     return reportData.electors.filter(e => {
+      if (e.is_disputed) return false;
+      if (selectedDistrictFilter !== 'ALL') {
+        if (e.elector_district !== selectedDistrictFilter && e.coordinator_district !== selectedDistrictFilter) return false;
+      }
+      if (selectedListFilter !== 'ALL' && String(e.list_number) !== selectedListFilter) return false;
+      if (selectedPadrinoFilter !== 'ALL') {
+        const matchesPadrino = String(e.padrino_id) === String(selectedPadrinoFilter) ||
+                              String(e.coordinator_id) === String(selectedPadrinoFilter);
+        if (!matchesPadrino) return false;
+      }
+      if (selectedCoordinatorFilter !== 'ALL' && String(e.coordinator_id) !== String(selectedCoordinatorFilter)) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return e.nombre.toLowerCase().includes(q) || e.apellido.toLowerCase().includes(q) || (e.elector_ci && e.elector_ci.includes(q));
+      }
+      return true;
+    });
+  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter, searchQuery]);
+
+  const disputedElectors = useMemo(() => {
+    if (!reportData || !reportData.electors) return [];
+    return reportData.electors.filter(e => {
+      if (!e.is_disputed) return false;
       if (selectedDistrictFilter !== 'ALL') {
         if (e.elector_district !== selectedDistrictFilter && e.coordinator_district !== selectedDistrictFilter) return false;
       }
@@ -1383,6 +1409,57 @@ const TeamPanel = () => {
           }
         }
       });
+
+      if (reportType === 'electors' && disputedElectors.length > 0) {
+        const disputedRows = disputedElectors.map(e => {
+          let resolutionText = "Pendiente de resolución";
+          if (e.conflict_status === 'RESOLVED') {
+            resolutionText = `Adjudicado a: ${e.winner_coordinator_name || 'Otro coordinador'} (Lista ${e.winner_list_number || '—'})`;
+          } else if (e.conflict_status === 'WAITING_CONSENT') {
+            resolutionText = "Decidido por Jefe (Esperando firmas)";
+          }
+          return [
+            `${e.nombre} ${e.apellido}\nCI: ${e.elector_ci}`,
+            `${e.coordinator_name}\nLista ${e.list_number}`,
+            `${e.local_votacion}\nMesa ${e.mesa || '—'} · Orden ${e.orden || '—'}`,
+            e.conflict_status === 'RESOLVED' ? 'RESUELTO' : 'EN DISPUTA',
+            resolutionText
+          ];
+        });
+
+        if (disputedRows.length > 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9.5);
+          doc.setTextColor(220, 38, 38);
+          const finalY = (doc as any).lastAutoTable.finalY + 10;
+          doc.text('⚠️ ELECTORES EN DISPUTA / CONFLICTO', 15, finalY);
+
+          autoTable(doc, {
+            startY: finalY + 4,
+            head: [['Elector / CI', 'Captado Por', 'Local / Mesa', 'Estado Disputa', 'Resolución / Ganador']],
+            body: disputedRows,
+            margin: { left: 15, right: 15, bottom: 15 },
+            styles: {
+              fontSize: 6.8,
+              cellPadding: 2.2,
+              font: 'helvetica',
+              textColor: [15, 23, 42],
+              lineColor: [254, 226, 226],
+              lineWidth: 0.1,
+            },
+            headStyles: {
+              fillColor: [254, 242, 242],
+              textColor: [153, 27, 27],
+              fontStyle: 'bold',
+              lineWidth: 0.2,
+              lineColor: [252, 165, 165],
+            },
+            alternateRowStyles: {
+              fillColor: [255, 250, 250],
+            }
+          });
+        }
+      }
 
       // Replace total pages placeholder
       if (typeof doc.putTotalPages === 'function') {
@@ -2398,6 +2475,60 @@ const TeamPanel = () => {
                       ))}
                     </tbody>
                   </table>
+                )}
+
+                {reportType === 'electors' && disputedElectors.length > 0 && (
+                  <div style={{ marginTop: '30px', pageBreakBefore: 'auto' }}>
+                    <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: '#EF4444', borderBottom: '2px solid #EF4444', paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      ⚠️ Electores en Disputa / Conflicto
+                    </h3>
+                    <p style={{ fontSize: '0.65rem', color: '#666', marginBottom: '8px', fontStyle: 'italic' }}>
+                      Electores registrados por múltiples coordinadores. No computan como activos en la lista del coordinador.
+                    </p>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#fef2f2', borderBottom: '2px solid #fca5a5' }}>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Elector / CI</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Captado Por</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Local / Mesa</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Estado Disputa</th>
+                          <th style={{ padding: '6px 4px', textAlign: 'left', fontSize: '0.62rem', fontWeight: 800, color: '#991b1b' }}>Resolución / Ganador</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {disputedElectors.map(e => {
+                          let resolutionText = "Pendiente de resolución";
+                          if (e.conflict_status === 'RESOLVED') {
+                            resolutionText = `Adjudicado a: ${e.winner_coordinator_name || 'Otro coordinador'} (Lista ${e.winner_list_number || '—'})`;
+                          } else if (e.conflict_status === 'WAITING_CONSENT') {
+                            resolutionText = "Decidido por Jefe (Esperando firmas)";
+                          }
+                          return (
+                            <tr key={e.capture_id} style={{ borderBottom: '1px solid #fee2e2', height: '32px' }}>
+                              <td style={{ padding: '4px 6px', fontSize: '0.68rem', fontWeight: 700, color: '#1e293b' }}>
+                                <div>{e.nombre} {e.apellido}</div>
+                                <div style={{ fontSize: '0.55rem', color: '#64748b' }}>CI: {e.elector_ci}</div>
+                              </td>
+                              <td style={{ padding: '4px 6px', fontSize: '0.65rem', color: '#334155' }}>
+                                <div style={{ fontWeight: 600 }}>{e.coordinator_name}</div>
+                                <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Lista {e.list_number}</div>
+                              </td>
+                              <td style={{ padding: '4px 6px', fontSize: '0.65rem', color: '#475569' }}>
+                                <div>{e.local_votacion}</div>
+                                <div style={{ fontSize: '0.55rem', color: '#64748b' }}>Mesa {e.mesa} · Orden {e.orden}</div>
+                              </td>
+                              <td style={{ padding: '4px 6px', fontSize: '0.62rem', fontWeight: 700, color: e.conflict_status === 'RESOLVED' ? '#16a34a' : '#d97706' }}>
+                                {e.conflict_status === 'RESOLVED' ? 'RESUELTO' : 'EN DISPUTA'}
+                              </td>
+                              <td style={{ padding: '4px 6px', fontSize: '0.65rem', fontWeight: 600, color: e.conflict_status === 'RESOLVED' ? '#1e3a6e' : '#64748b' }}>
+                                {resolutionText}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
 
                 {/* 4. VOTING CENTERS COVERAGE TABLE */}
