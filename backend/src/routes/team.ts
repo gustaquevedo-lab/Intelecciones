@@ -689,7 +689,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
       if (selectedDistrict && selectedDistrict !== 'ALL') {
         const baseSelect = `
           SELECT ec.id as capture_id, ec.elector_ci, ec.telefono as elector_telefono,
-                 ec.traffic_light, ec.needs_transport, ec.timestamp,
+                 ec.traffic_light, ec.needs_transport, ec.timestamp, ec.is_disputed,
                  COALESCE(e.nombre, 'ELECTOR') as nombre,
                  COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
                  COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
@@ -781,7 +781,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
       } else {
         electorSql = `
           SELECT ec.id as capture_id, ec.elector_ci, ec.telefono as elector_telefono,
-                 ec.traffic_light, ec.needs_transport, ec.timestamp,
+                 ec.traffic_light, ec.needs_transport, ec.timestamp, ec.is_disputed,
                  COALESCE(e.nombre, 'ELECTOR') as nombre,
                  COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
                  COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion,
@@ -1025,66 +1025,109 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
       );
     }
 
-    let electorSql = `
-      SELECT ec.id as capture_id, ec.elector_ci, ec.copiatin_printed_at, ec.traffic_light,
-             COALESCE(e.nombre, 'ELECTOR') as nombre,
-             COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
-             COALESCE(e.local_votacion, '') as local_votacion,
-             COALESCE(e.mesa, 0) as mesa,
-             COALESCE(e.orden, 0) as orden,
-             COALESCE(e.ciudad, e.distrito, '') as ciudad,
-             u.nombre as coordinator_name,
-             u.parent_id as padrino_id,
-             p.nombre as padrino_name,
-             l.list_number, l.option_number, l.candidate_nombre, l.candidate_alias,
-             l.campaign_id, c.name as campaign_name
-      FROM elector_captures ec
-      LEFT JOIN electors e ON ec.elector_ci = e.ci
-      LEFT JOIN users u ON ec.coordinator_id = u.id
-      LEFT JOIN users p ON u.parent_id = p.id
-      LEFT JOIN lists l ON ec.list_id = l.id
-      LEFT JOIN campaigns c ON l.campaign_id = c.id
-      WHERE 1=1 AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE' AND ec.is_disputed = 0
-    `;
+    let electorSql = '';
     let electorParams: any[] = [];
-
-    const idsQuery = req.query.ids as string;
-    if (idsQuery && idsQuery.trim() !== '') {
-      const ids = idsQuery.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
-      if (ids.length > 0) {
-        electorSql += ` AND ec.id IN (${ids.map(() => '?').join(',')})`;
-        electorParams.push(...ids);
-      }
-    }
-
     const searchQuery = req.query.search as string;
+
     if (searchQuery && searchQuery.trim() !== '') {
+      // Search captured electors by name, apellido, or CI
+      electorSql = `
+        SELECT ec.id as capture_id, ec.elector_ci, ec.copiatin_printed_at, ec.traffic_light, ec.is_disputed,
+               COALESCE(e.nombre, 'ELECTOR') as nombre,
+               COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
+               COALESCE(e.local_votacion, '') as local_votacion,
+               COALESCE(e.mesa, 0) as mesa,
+               COALESCE(e.orden, 0) as orden,
+               COALESCE(e.ciudad, e.distrito, '') as ciudad,
+               u.nombre as coordinator_name,
+               u.parent_id as padrino_id,
+               p.nombre as padrino_name,
+               l.list_number, l.option_number, l.candidate_nombre, l.candidate_alias,
+               l.campaign_id, c.name as campaign_name
+        FROM elector_captures ec
+        LEFT JOIN electors e ON ec.elector_ci = e.ci
+        LEFT JOIN users u ON ec.coordinator_id = u.id
+        LEFT JOIN users p ON u.parent_id = p.id
+        LEFT JOIN lists l ON ec.list_id = l.id
+        LEFT JOIN campaigns c ON l.campaign_id = c.id
+        WHERE 1=1 AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE'
+      `;
       const cleanSearch = `%${searchQuery.trim().toUpperCase()}%`;
       const cleanCI = `%${searchQuery.trim().replace(/\./g, '').replace(/,/g, '').trim()}%`;
       electorSql += ` AND (UPPER(e.nombre) LIKE ? OR UPPER(e.apellido) LIKE ? OR e.ci LIKE ? OR ec.elector_ci LIKE ?)`;
       electorParams.push(cleanSearch, cleanSearch, cleanCI, cleanCI);
-    }
 
-    if (role === 'PADRINO') {
-      electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
-      electorParams.push(requesterId, requesterId);
-    } else if (!coordinatorId || coordinatorId === 'ALL') {
-      electorSql += ` ${filterEc.sql}`;
-      electorParams.push(...filterEc.params);
-    }
+      // Apply filters if present
+      if (role === 'PADRINO') {
+        electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
+        electorParams.push(requesterId, requesterId);
+      } else if (coordinatorId && coordinatorId !== 'ALL') {
+        electorSql += ` AND ec.coordinator_id = ?`;
+        electorParams.push(parseInt(coordinatorId));
+      } else if (padrinoId && padrinoId !== 'ALL') {
+        electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
+        electorParams.push(parseInt(padrinoId), parseInt(padrinoId));
+      }
 
-    if (padrinoId && padrinoId !== 'ALL') {
-      electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
-      electorParams.push(parseInt(padrinoId), parseInt(padrinoId));
-    }
-    if (coordinatorId && coordinatorId !== 'ALL') {
-      electorSql += ` AND ec.coordinator_id = ?`;
-      electorParams.push(parseInt(coordinatorId));
-    }
-    if (printedStatus === 'pending' || onlyUnprinted) {
-      electorSql += ` AND ec.copiatin_printed_at IS NULL`;
-    } else if (printedStatus === 'printed') {
-      electorSql += ` AND ec.copiatin_printed_at IS NOT NULL`;
+      if (printedStatus === 'pending' || onlyUnprinted) {
+        electorSql += ` AND ec.copiatin_printed_at IS NULL`;
+      } else if (printedStatus === 'printed') {
+        electorSql += ` AND ec.copiatin_printed_at IS NOT NULL`;
+      }
+    } else {
+      // Normal flow (only captured electors)
+      electorSql = `
+        SELECT ec.id as capture_id, ec.elector_ci, ec.copiatin_printed_at, ec.traffic_light, ec.is_disputed,
+               COALESCE(e.nombre, 'ELECTOR') as nombre,
+               COALESCE(e.apellido, 'NO REGISTRADO') as apellido,
+               COALESCE(e.local_votacion, '') as local_votacion,
+               COALESCE(e.mesa, 0) as mesa,
+               COALESCE(e.orden, 0) as orden,
+               COALESCE(e.ciudad, e.distrito, '') as ciudad,
+               u.nombre as coordinator_name,
+               u.parent_id as padrino_id,
+               p.nombre as padrino_name,
+               l.list_number, l.option_number, l.candidate_nombre, l.candidate_alias,
+               l.campaign_id, c.name as campaign_name
+        FROM elector_captures ec
+        LEFT JOIN electors e ON ec.elector_ci = e.ci
+        LEFT JOIN users u ON ec.coordinator_id = u.id
+        LEFT JOIN users p ON u.parent_id = p.id
+        LEFT JOIN lists l ON ec.list_id = l.id
+        LEFT JOIN campaigns c ON l.campaign_id = c.id
+        WHERE 1=1 AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE'
+      `;
+
+      const idsQuery = req.query.ids as string;
+      if (idsQuery && idsQuery.trim() !== '') {
+        const ids = idsQuery.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+        if (ids.length > 0) {
+          electorSql += ` AND ec.id IN (${ids.map(() => '?').join(',')})`;
+          electorParams.push(...ids);
+        }
+      }
+
+      if (role === 'PADRINO') {
+        electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
+        electorParams.push(requesterId, requesterId);
+      } else if (!coordinatorId || coordinatorId === 'ALL') {
+        electorSql += ` ${filterEc.sql}`;
+        electorParams.push(...filterEc.params);
+      }
+
+      if (padrinoId && padrinoId !== 'ALL') {
+        electorSql += ` AND (u.parent_id = ? OR ec.coordinator_id = ?)`;
+        electorParams.push(parseInt(padrinoId), parseInt(padrinoId));
+      }
+      if (coordinatorId && coordinatorId !== 'ALL') {
+        electorSql += ` AND ec.coordinator_id = ?`;
+        electorParams.push(parseInt(coordinatorId));
+      }
+      if (printedStatus === 'pending' || onlyUnprinted) {
+        electorSql += ` AND ec.copiatin_printed_at IS NULL`;
+      } else if (printedStatus === 'printed') {
+        electorSql += ` AND ec.copiatin_printed_at IS NOT NULL`;
+      }
     }
 
     electorSql += ` ORDER BY e.apellido, e.nombre LIMIT 500`;
@@ -1152,10 +1195,14 @@ router.post('/my-team/copiatines/mark-printed', requireRole('SUPERUSUARIO','JEFE
     return res.status(400).json({ error: 'capture_ids requerido' });
   }
   try {
-    const placeholders = capture_ids.map(() => '?').join(',');
+    const validIds = capture_ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    if (validIds.length === 0) {
+      return res.json({ success: true });
+    }
+    const placeholders = validIds.map(() => '?').join(',');
     db.prepare(
       `UPDATE elector_captures SET copiatin_printed_at = CURRENT_TIMESTAMP WHERE id IN (${placeholders}) AND copiatin_printed_at IS NULL`
-    ).run(...capture_ids);
+    ).run(...validIds);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1169,10 +1216,14 @@ router.post('/my-team/copiatines/unmark-printed', requireRole('SUPERUSUARIO','JE
     return res.status(400).json({ error: 'capture_ids requerido' });
   }
   try {
-    const placeholders = capture_ids.map(() => '?').join(',');
+    const validIds = capture_ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    if (validIds.length === 0) {
+      return res.json({ success: true });
+    }
+    const placeholders = validIds.map(() => '?').join(',');
     db.prepare(
       `UPDATE elector_captures SET copiatin_printed_at = NULL WHERE id IN (${placeholders})`
-    ).run(...capture_ids);
+    ).run(...validIds);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

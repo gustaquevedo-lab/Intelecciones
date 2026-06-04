@@ -50,6 +50,7 @@ interface ElectorRow {
   coordinator_list_id?: number;
   padrino_id?: string;
   coordinator_id?: string;
+  is_disputed?: number;
 }
 
 interface LocalRow {
@@ -2337,7 +2338,18 @@ const TeamPanel = () => {
                             />
                           </td>
                           <td style={{ padding: '4px 6px', fontSize: '0.7rem', fontWeight: 700, color: '#0f172a' }}>
-                            <div>{e.nombre} {e.apellido}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span>{e.nombre} {e.apellido}</span>
+                              {!!e.is_disputed && (
+                                <span style={{
+                                  background: 'rgba(239,68,68,0.1)', color: '#EF4444',
+                                  fontSize: '0.55rem', fontWeight: 900, padding: '1px 4px',
+                                  borderRadius: '4px', border: '1px solid rgba(239,68,68,0.2)'
+                                }}>
+                                  ⚠️ EN DISPUTA
+                                </span>
+                              )}
+                            </div>
                             <div style={{ fontSize: '0.58rem', color: '#64748b', fontWeight: 500 }}>CI: {e.elector_ci}</div>
                           </td>
                           <td style={{ padding: '4px 6px', fontSize: '0.68rem', color: '#334155' }}>{e.elector_telefono || "—"}</td>

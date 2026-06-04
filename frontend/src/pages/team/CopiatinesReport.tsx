@@ -4,8 +4,9 @@ import api, { getImageUrl } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 interface CopiatinElector {
-  capture_id: number;
+  capture_id: number | string;
   elector_ci: string;
+  is_disputed?: number;
   nombre: string;
   apellido: string;
   local_votacion: string;
@@ -768,7 +769,7 @@ const CopiatinesReport = () => {
     setBasket(prev => [...prev, elector]);
   };
 
-  const removeFromBasket = (captureId: number) => {
+  const removeFromBasket = (captureId: number | string) => {
     setBasket(prev => prev.filter(b => b.capture_id !== captureId));
   };
 
@@ -881,6 +882,18 @@ const CopiatinesReport = () => {
     }
   };
 
+  const handleUnmarkOne = async (captureId: number | string) => {
+    setLoading(true);
+    try {
+      await api.post('/my-team/copiatines/unmark-printed', { capture_ids: [captureId] });
+      load();
+    } catch (err: any) {
+      alert('Error al desmarcar copiatín: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const printed = data?.electors.filter(e => e.copiatin_printed_at).length ?? 0;
   const total = data?.electors.length ?? 0;
   const unprinted = total - printed;
@@ -934,8 +947,17 @@ const CopiatinesReport = () => {
             </p>
             {searchResults.map(e => (
               <div key={e.capture_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', padding: '0.25rem 0' }}>
-                <span style={{ color: 'white', fontWeight: 700 }}>
+                <span style={{ color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   {e.nombre} {e.apellido} (C.I. {formatCI(e.elector_ci)})
+                  {!!e.is_disputed && (
+                    <span style={{
+                      background: 'rgba(239,68,68,0.15)', color: 'var(--red)',
+                      fontSize: '0.55rem', fontWeight: 900, padding: '1px 5px',
+                      borderRadius: '4px', border: '1px solid rgba(239,68,68,0.3)'
+                    }}>
+                      ⚠️ EN DISPUTA
+                    </span>
+                  )}
                 </span>
                 <button
                   onClick={() => addToBasket(e)}
@@ -1141,6 +1163,15 @@ const CopiatinesReport = () => {
 
               return (
                  <div key={e.capture_id} className={`${cardClass}${e.copiatin_printed_at ? ' printed' : ''}`} style={{ position: 'relative' }}>
+                   {!!e.is_disputed && (
+                      <div style={{
+                        position: 'absolute', top: '3px', left: '3px', zIndex: 10,
+                        background: '#EF4444', color: 'white', fontSize: '6px', fontWeight: 900,
+                        borderRadius: '3px', padding: '1px 4px', letterSpacing: '0.5px'
+                      }}>
+                        ⚠️ EN DISPUTA
+                      </div>
+                    )}
                    {e.copiatin_printed_at && (
                      <div className="printed-badge" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                        ✓ IMPRESO
