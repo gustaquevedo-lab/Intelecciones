@@ -1041,7 +1041,7 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
     const searchQuery = req.query.search as string;
     if (searchQuery && searchQuery.trim() !== '') {
       const cleanSearch = `%${searchQuery.trim().toUpperCase()}%`;
-      const cleanCI = `%${searchQuery.trim().replace(/\./g, '')}%`;
+      const cleanCI = `%${searchQuery.trim().replace(/\./g, '').replace(/,/g, '').trim()}%`;
       electorSql += ` AND (UPPER(e.nombre) LIKE ? OR UPPER(e.apellido) LIKE ? OR e.ci LIKE ? OR ec.elector_ci LIKE ?)`;
       electorParams.push(cleanSearch, cleanSearch, cleanCI, cleanCI);
     }
@@ -1070,7 +1070,21 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
 
     electorSql += ` ORDER BY e.apellido, e.nombre LIMIT 500`;
 
-    const electors = await dbQueryAsync<any>(electorSql, electorParams);
+    let electors = await dbQueryAsync<any>(electorSql, electorParams);
+
+    // Diagnostic: when searching by CI and no results, log why
+    if (searchQuery && searchQuery.trim() !== '' && electors.length === 0) {
+      const rawCI = searchQuery.trim().replace(/\./g, '').replace(/,/g, '').trim();
+      const electorCheck = db.prepare('SELECT ci, nombre, apellido, distrito FROM electors WHERE ci = ?').get(rawCI);
+      const captureCheck = db.prepare(`SELECT ec.id, ec.is_disputed, ec.traffic_light, ec.coordinator_id, ec.list_id, u.nombre as coord_name FROM elector_captures ec LEFT JOIN users u ON ec.coordinator_id = u.id WHERE ec.elector_ci = ?`).get(rawCI) as any;
+      if (electorCheck && !captureCheck) {
+        console.warn(`[COPIATINES] CI ${rawCI} exists in electors but has NO capture`);
+      } else if (captureCheck) {
+        console.warn(`[COPIATINES] CI ${rawCI} has capture id=${captureCheck.id} disputed=${captureCheck.is_disputed} tl=${captureCheck.traffic_light} coord=${captureCheck.coordinator_id} coord_name=${captureCheck.coord_name} list_id=${captureCheck.list_id}`);
+      } else {
+        console.warn(`[COPIATINES] CI ${rawCI} NOT FOUND in electors or elector_captures`);
+      }
+    }
 
     const requesterInfo = getCachedUserInfo(requesterId);
     let campaignLists: any[] = [];
