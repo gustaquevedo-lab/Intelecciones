@@ -23,6 +23,7 @@
     "jspdf-autotable": "^5.0.8",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
+    "localforage": "^1.10.0",
     "lucide-react": "^1.8.0",
     "posthog-js": "^1.376.5",
     "react": "^19.2.5",

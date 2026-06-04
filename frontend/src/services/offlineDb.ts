@@ -1,9 +1,15 @@
+import localforage from 'localforage';
 import { debug } from '../utils/debug';
 
 const DB_NAME = 'InteleccionesOffline';
 const DB_VERSION = 3; // Incremented for new indexes
 const STORE_NAME = 'electors';
-const SYNC_STORE = 'pending_sync';
+
+// Configure localforage for the pending sync queue
+const pendingSyncStore = localforage.createInstance({
+  name: DB_NAME,
+  storeName: 'pending_sync'
+});
 
 // Singleton connection to avoid creating multiple connections
 let dbInstance: IDBDatabase | null = null;
@@ -68,14 +74,6 @@ export const initOfflineDB = (): Promise<IDBDatabase> => {
           store.createIndex('apellido', 'apellido', { unique: false });
           store.createIndex('full_name', ['nombre', 'apellido'], { unique: false });
         }
-
-        // Store for Pending Sync Actions (Captures, Votes, etc.)
-        if (!db.objectStoreNames.contains(SYNC_STORE)) {
-          const syncStore = db.createObjectStore(SYNC_STORE, { keyPath: 'id', autoIncrement: true });
-          // Add indexes for faster lookups
-          syncStore.createIndex('timestamp', 'timestamp', { unique: false });
-          syncStore.createIndex('type', 'type', { unique: false });
-        }
         
         debug.log(`[DB] IndexedDB schema updated to v${DB_VERSION}`);
       };
@@ -99,131 +97,47 @@ export const resetOfflineDB = () => {
 };
 
 export const queuePendingAction = async (action: { type: string; url: string; method: string; data: any; timestamp: number }) => {
-  const db = await initOfflineDB();
-  
-  return new Promise((resolve, reject) => {
-    // Check if transaction is active
-    if (!db.objectStoreNames.contains(SYNC_STORE)) {
-      debug.error('[DB] Sync store not available');
-      reject(new Error('Sync store not available'));
-      return;
-    }
-    
-    try {
-      const transaction = db.transaction(SYNC_STORE, 'readwrite');
-      const store = transaction.objectStore(SYNC_STORE);
-      const request = store.add(action);
-      
-      request.onsuccess = () => {
-        debug.log(`[DB] Action queued: ${action.type} (ID: ${request.result})`);
-        resolve(request.result);
-      };
-      
-      request.onerror = () => {
-        debug.error('[DB] Failed to queue action:', request.error);
-        reject(request.error);
-      };
-      
-      // Handle transaction errors
-      transaction.onerror = () => {
-        debug.error('[DB] Transaction error:', transaction.error);
-        reject(transaction.error);
-      };
-    } catch (err) {
-      debug.error('[DB] Exception queueing action:', err);
-      // Reset connection on error
-      resetOfflineDB();
-      reject(err);
-    }
-  });
+  try {
+    const id = Date.now() + Math.random().toString(36).substring(2, 9);
+    const actionWithId = { ...action, id };
+    await pendingSyncStore.setItem(id, actionWithId);
+    debug.log(`[localforage] Action queued: ${action.type} (ID: ${id})`);
+    return id;
+  } catch (err) {
+    debug.error('[localforage] Failed to queue action:', err);
+    throw err;
+  }
 };
 
 export const getPendingActions = async (): Promise<any[]> => {
-  const db = await initOfflineDB();
-  
-  return new Promise((resolve, reject) => {
-    if (!db.objectStoreNames.contains(SYNC_STORE)) {
-      resolve([]);
-      return;
-    }
-    
-    try {
-      const transaction = db.transaction(SYNC_STORE, 'readonly');
-      const store = transaction.objectStore(SYNC_STORE);
-      const request = store.getAll();
-      
-      request.onsuccess = () => {
-        const results = request.result || [];
-        debug.log(`[DB] Retrieved ${results.length} pending actions`);
-        resolve(results);
-      };
-      
-      request.onerror = () => {
-        debug.error('[DB] Failed to get pending actions:', request.error);
-        reject(request.error);
-      };
-      
-      transaction.onerror = () => {
-        debug.error('[DB] Transaction error:', transaction.error);
-        reject(transaction.error);
-      };
-    } catch (err) {
-      debug.error('[DB] Exception getting pending actions:', err);
-      resolve([]); // Return empty on error rather than crashing
-    }
-  });
+  try {
+    const actions: any[] = [];
+    await pendingSyncStore.iterate((value) => {
+      actions.push(value);
+    });
+    // Sort by timestamp ascending
+    return actions.sort((a, b) => a.timestamp - b.timestamp);
+  } catch (err) {
+    debug.error('[localforage] Failed to get pending actions:', err);
+    return [];
+  }
 };
 
 export const getPendingActionsCount = async (): Promise<number> => {
-  const db = await initOfflineDB();
-  
-  return new Promise((resolve, reject) => {
-    if (!db.objectStoreNames.contains(SYNC_STORE)) {
-      resolve(0);
-      return;
-    }
-    
-    try {
-      const transaction = db.transaction(SYNC_STORE, 'readonly');
-      const store = transaction.objectStore(SYNC_STORE);
-      const countRequest = store.count();
-      
-      countRequest.onsuccess = () => resolve(countRequest.result);
-      countRequest.onerror = () => reject(countRequest.error);
-    } catch {
-      resolve(0);
-    }
-  });
+  try {
+    return await pendingSyncStore.length();
+  } catch {
+    return 0;
+  }
 };
 
-export const removePendingAction = async (id: number): Promise<void> => {
-  const db = await initOfflineDB();
-  
-  return new Promise((resolve, reject) => {
-    if (!db.objectStoreNames.contains(SYNC_STORE)) {
-      resolve(); // Already empty
-      return;
-    }
-    
-    try {
-      const transaction = db.transaction(SYNC_STORE, 'readwrite');
-      const store = transaction.objectStore(SYNC_STORE);
-      const request = store.delete(id);
-      
-      request.onsuccess = () => {
-        debug.log(`[DB] Action removed: ID ${id}`);
-        resolve();
-      };
-      
-      request.onerror = () => {
-        debug.error('[DB] Failed to remove action:', request.error);
-        reject(request.error);
-      };
-    } catch (err) {
-      debug.error('[DB] Exception removing action:', err);
-      resolve(); // Don't fail on remove errors
-    }
-  });
+export const removePendingAction = async (id: any): Promise<void> => {
+  try {
+    await pendingSyncStore.removeItem(String(id));
+    debug.log(`[localforage] Action removed: ID ${id}`);
+  } catch (err) {
+    debug.error('[localforage] Failed to remove action:', err);
+  }
 };
 
 export const savePadronOffline = async (electors: any[], onProgress?: (pct: number) => void) => {

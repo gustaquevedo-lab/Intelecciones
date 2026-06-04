@@ -238,8 +238,19 @@ export function vehiclesRoutes() {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── PUT /api/vehicles/:id/driver ────────────────────────────────────────────
+  router.put('/:id/driver', (req, res) => {
+    const { driver_name, driver_ci, driver_phone } = req.body;
+    const vehicleId = req.params.id;
+    try {
+      db.prepare('UPDATE vehicles SET driver_name = ?, driver_ci = ?, driver_phone = ? WHERE id = ?')
+        .run(driver_name, driver_ci, driver_phone, vehicleId);
+      res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── GET /api/vehicles/:id/passengers ────────────────────────────────────────
-  router.get('/:id/passengers', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR'), (req, res) => {
+  router.get('/:id/passengers', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR','DRIVER'), (req, res) => {
     try {
       const passengers = db.prepare(`
         SELECT ec.id as capture_id, ec.transport_status, ec.telefono as contact_phone,

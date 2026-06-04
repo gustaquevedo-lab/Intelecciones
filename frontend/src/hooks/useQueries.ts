@@ -154,3 +154,18 @@ export function useLogisticsClusters(district?: string | null) {
     staleTime: 60 * 1000,
   });
 }
+
+// 12. Dia D Voter Participation Summary hook
+export function useParticipationSummary(district?: string | null) {
+  return useQuery({
+    queryKey: ['diad', 'participation-summary', district],
+    queryFn: async () => {
+      const res = await api.get('/diad/participation-summary', {
+        params: { district }
+      });
+      return res.data;
+    },
+    staleTime: 15 * 1000, // Refresh every 15 seconds during Dia D
+  });
+}
+

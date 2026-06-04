@@ -73,6 +73,15 @@ addColumnIfNotExists("whatsapp_terminals", "phone_number", "TEXT");
 addColumnIfNotExists("whatsapp_terminals", "warmup_enabled", "INTEGER DEFAULT 0");
 addColumnIfNotExists("attendance", "photo_url", "TEXT");
 
+// Create index optimizations on startup
+try {
+  db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_voted ON participation_logs(local_votacion, mesa, orden);");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_local_mesa ON participation_logs(local_votacion, mesa);");
+} catch (e: any) {
+  console.error("MIGRATION ERROR creating indexes for participation_logs:", e.message);
+}
+
+
 // Only run heavy schema checks if version changed
 if (dbVersion < currentSchemaVersion) {
     console.log(`MIGRATION: Database version [${dbVersion}] detected. Updating to [${currentSchemaVersion}]...`);

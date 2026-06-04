@@ -10,7 +10,8 @@ import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import api, { getImageUrl } from '../services/api';
-import { useCoverage, useLocales, useDiadResults, useDiadActas, useDiadMembers, useLogisticsClusters } from '../hooks/useQueries';
+import { useCoverage, useLocales, useDiadResults, useDiadActas, useDiadMembers, useLogisticsClusters, useParticipationSummary } from '../hooks/useQueries';
+import { exportMesaToExcel, exportLocalToExcel } from '../utils/excelExport';
 import { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import * as L from 'leaflet';
@@ -138,7 +139,7 @@ const DiaDApp: React.FC = () => {
   const { user, activeDistrict } = useAuth();
   const { settings } = useSettings();
 
-  const [activeTab, setActiveTab] = useState<'cobertura' | 'resultados' | 'dhondt' | 'actas' | 'miembros'>('cobertura');
+  const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros'>('cobertura');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
 
@@ -149,6 +150,36 @@ const DiaDApp: React.FC = () => {
   const { data: resultadosData, isLoading: resultadosLoading, refetch: refetchResults } = useDiadResults(activeDistrict);
   const { data: actasData, isLoading: actasLoading, refetch: refetchActas } = useDiadActas(activeDistrict);
   const { data: membersListData, isLoading: membersLoading, refetch: refetchMembers } = useDiadMembers(activeDistrict);
+  const { data: participationData, isLoading: participationLoading, refetch: refetchParticipation } = useParticipationSummary(activeDistrict);
+
+  // States for Monitoreo tab
+  const [selectedMesaDetail, setSelectedMesaDetail] = useState<{ local: string; mesa: number } | null>(null);
+  const [mesaVoters, setMesaVoters] = useState<any[]>([]);
+  const [mesaVotersLoading, setMesaVotersLoading] = useState(false);
+  const [exportingLocal, setExportingLocal] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState('');
+  const [showClosedMesasLog, setShowClosedMesasLog] = useState(false);
+
+  // Countdown to 16:00
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(16, 0, 0, 0); // 16:00
+      const diff = target.getTime() - now.getTime();
+      if (diff <= 0) {
+        setTimeRemaining('VOTACIÓN CERRADA');
+      } else {
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeRemaining(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+      }
+    };
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const coverage = coverageData || {
     total_mesas: 0, 
@@ -343,13 +374,48 @@ const DiaDApp: React.FC = () => {
         refetchActas(),
         refetchLocations(),
         refetchFleet(),
-        refetchMembers()
+        refetchMembers(),
+        refetchParticipation()
       ]);
       setLastRefresh(new Date());
     } catch (err) {
       /* background fetch - empty state handles this */
     }
-  }, [refetchCoverage, refetchResults, refetchActas, refetchLocations, refetchFleet, refetchMembers]);
+  }, [refetchCoverage, refetchResults, refetchActas, refetchLocations, refetchFleet, refetchMembers, refetchParticipation]);
+
+  // Load voters when a specific mesa is selected
+  useEffect(() => {
+    if (selectedMesaDetail) {
+      const fetchMesaVoters = async () => {
+        setMesaVotersLoading(true);
+        try {
+          const res = await api.get(`/diad/participation-detail/${encodeURIComponent(selectedMesaDetail.local)}/${selectedMesaDetail.mesa}`);
+          setMesaVoters(res.data || []);
+        } catch (err) {
+          console.error("Error fetching voters:", err);
+          alert("Error al cargar los votantes");
+        } finally {
+          setMesaVotersLoading(false);
+        }
+      };
+      fetchMesaVoters();
+    } else {
+      setMesaVoters([]);
+    }
+  }, [selectedMesaDetail]);
+
+  const handleExportLocal = async (localName: string) => {
+    setExportingLocal(localName);
+    try {
+      const res = await api.get(`/diad/participation-detail/${encodeURIComponent(localName)}`);
+      exportLocalToExcel(localName, res.data || []);
+    } catch (err) {
+      console.error("Error exporting local data:", err);
+      alert("Error al exportar los datos del local");
+    } finally {
+      setExportingLocal(null);
+    }
+  };
 
   useEffect(() => {
     const isElectionDay = true; // Relaxed for testing or pre-election day monitoring
@@ -380,6 +446,7 @@ const DiaDApp: React.FC = () => {
 
   const TABS = [
     { id: 'cobertura', label: 'Cobertura', icon: <Activity size={14} /> },
+    { id: 'participacion', label: 'Participación', icon: <Users size={14} /> },
     { id: 'miembros', label: 'Staff Mesas', icon: <Users size={14} /> },
     { id: 'resultados', label: 'Resultados', icon: <BarChart3 size={14} /> },
     { id: 'dhondt', label: "D'Hondt", icon: <Award size={14} /> },
@@ -1857,6 +1924,122 @@ const DiaDApp: React.FC = () => {
                 >
                   {assigningLoading ? 'PROCESANDO...' : 'ASIGNAR MIEMBRO'}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Detailed Mesa Voters Overlay Panel ── */}
+      <AnimatePresence>
+        {selectedMesaDetail && (
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0, left: 0,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', justifyContent: 'flex-end', zIndex: 1000
+          }} onClick={() => setSelectedMesaDetail(null)}>
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+              style={{
+                width: '100%', maxWidth: '550px', height: '100%',
+                background: 'var(--surface)', borderLeft: '1px solid var(--border)',
+                display: 'flex', flexDirection: 'column', boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
+                padding: '1.5rem'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', fontFamily: 'Space Grotesk', textTransform: 'uppercase' }}>
+                    Mesa {selectedMesaDetail.mesa}
+                  </h2>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 700, marginTop: '0.1rem' }}>
+                    {selectedMesaDetail.local}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => exportMesaToExcel(selectedMesaDetail.local, selectedMesaDetail.mesa, mesaVoters)}
+                    disabled={mesaVoters.length === 0}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      color: 'white',
+                      background: 'linear-gradient(135deg, #1558B0, #0D3D7A)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}
+                  >
+                    <FileText size={12} /> Exportar Excel
+                  </button>
+                  <button
+                    onClick={() => setSelectedMesaDetail(null)}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                      borderRadius: '50%', width: '28px', height: '28px', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', color: 'var(--text)', cursor: 'pointer'
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Voter list */}
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                {mesaVotersLoading ? (
+                  <SkeletonTable rows={10} cols={4} />
+                ) : mesaVoters.length === 0 ? (
+                  <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-3)' }}>
+                    <Users size={32} style={{ marginBottom: '0.75rem' }} />
+                    <p style={{ fontSize: '0.75rem' }}>No hay registros de votos para esta mesa.</p>
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-3)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem 0.25rem', fontWeight: 700 }}>Orden</th>
+                        <th style={{ padding: '0.5rem', fontWeight: 700 }}>Nombre</th>
+                        <th style={{ padding: '0.5rem', fontWeight: 700, textAlign: 'center' }}>C.I.</th>
+                        <th style={{ padding: '0.5rem', fontWeight: 700, textAlign: 'center' }}>Sistema</th>
+                        <th style={{ padding: '0.5rem 0.25rem', fontWeight: 700, textAlign: 'right' }}>Hora</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mesaVoters.map((voter: any) => {
+                        const name = `${voter.nombre || ''} ${voter.apellido || ''}`.trim() || 'SIN NOMBRE';
+                        const time = voter.voted_at ? new Date(voter.voted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+                        return (
+                          <tr key={voter.ci} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                            <td style={{ padding: '0.6rem 0.25rem', fontWeight: 700, color: 'var(--text-3)' }}>{voter.orden}</td>
+                            <td style={{ padding: '0.6rem', fontWeight: 600, color: 'var(--text)' }}>{name}</td>
+                            <td style={{ padding: '0.6rem', textAlign: 'center', fontFamily: 'monospace' }}>{voter.ci}</td>
+                            <td style={{ padding: '0.6rem', textAlign: 'center' }}>
+                              <span style={{
+                                padding: '0.15rem 0.4rem', borderRadius: '4px',
+                                fontSize: '0.55rem', fontWeight: 800,
+                                background: voter.registrado === 1 ? 'rgba(37,200,130,0.1)' : 'rgba(255,255,255,0.04)',
+                                color: voter.registrado === 1 ? '#25C882' : 'var(--text-3)'
+                              }}>
+                                {voter.registrado === 1 ? 'SÍ' : 'NO'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.6rem 0.25rem', textAlign: 'right', color: 'var(--text-3)', fontSize: '0.65rem' }}>{time}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </motion.div>
           </div>

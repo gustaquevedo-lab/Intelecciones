@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MapPin, CheckSquare, Check, Minus, Plus, Camera, Upload, Send, FileText,
-  Users, RefreshCw, X, AlertOctagon, HelpCircle
+  Users, RefreshCw, X, AlertOctagon, HelpCircle, QrCode, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { Skeleton } from '../components/Skeleton';
 import api from '../services/api';
 import { startSiren, stopSiren } from '../utils/sirenAudio';
+import { useSSE } from '../hooks/useSSE';
 
 interface ListaVotos {
   lista_id: number;
@@ -394,6 +395,55 @@ const ActaFinalTab = () => {
   const [loading, setLoading] = useState(true);
   const [tableInfo, setTableInfo] = useState({ local: '', mesa: '', mesa_id: null as number | null });
   const fileRef = useRef<HTMLInputElement>(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [scannerPasteData, setScannerPasteData] = useState('');
+
+  const handleParseQRData = (rawText: string) => {
+    try {
+      let data: any;
+      if (rawText.trim().startsWith('{')) {
+        data = JSON.parse(rawText);
+      } else {
+        // Parse format like: TSJE|mesa:5|blancos:8|nulos:4|1:15|2:28
+        const parts = rawText.split('|');
+        const votosMap: Record<number, number> = {};
+        let blancos = 0;
+        let nulos = 0;
+        parts.forEach(part => {
+          const pair = part.split(':');
+          if (pair.length === 2) {
+            const key = pair[0].trim();
+            const val = pair[1].trim();
+            if (key === 'blancos') blancos = parseInt(val) || 0;
+            else if (key === 'nulos') nulos = parseInt(val) || 0;
+            else {
+              const listId = parseInt(key);
+              if (!isNaN(listId)) {
+                votosMap[listId] = parseInt(val) || 0;
+              }
+            }
+          }
+        });
+        data = { blancos, nulos, votos: votosMap };
+      }
+
+      if (data) {
+        if (data.blancos !== undefined) setVotosEnBlanco(data.blancos);
+        if (data.nulos !== undefined) setVotosNulos(data.nulos);
+        if (data.votos) {
+          setListas(prev => prev.map(l => ({
+            ...l,
+            votos: data.votos[l.lista_id] !== undefined ? data.votos[l.lista_id] : l.votos
+          })));
+        }
+        setShowQRScanner(false);
+        setError('');
+        alert('✅ Datos del QR TSJE importados correctamente. Verifique los campos antes de enviar.');
+      }
+    } catch (e) {
+      alert('⚠️ Error al decodificar el formato del QR. Ingrese el texto correcto o digite manualmente.');
+    }
+  };
 
   useEffect(() => { loadActaData(); }, []);
 
@@ -658,10 +708,128 @@ const ActaFinalTab = () => {
           ))}
       </div>
 
+      {/* Escanear QR TSJE (Urna Electrónica) */}
+      <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.25rem', border: '1px dashed var(--plra-400)', background: 'rgba(0,71,171,0.05)' }}>
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <QrCode size={16} /> Escaneo de Urna Electrónica TSJE
+        </h3>
+        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '1rem' }}>
+          Escanee el código QR impreso por la urna para autocompletar todos los votos al instante.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowQRScanner(true)}
+          style={{
+            width: '100%', padding: '0.75rem', borderRadius: '12px', border: 'none',
+            background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.8rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer'
+          }}
+        >
+          <Camera size={16} /> ESCANEAR QR TSJE
+        </button>
+      </div>
+
+      {/* QR SCANNER SIMULATION MODAL */}
+      <AnimatePresence>
+        {showQRScanner && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.95)', zIndex: 99999,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '2rem'
+          }}>
+            <div style={{ width: '100%', maxWidth: '360px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <span style={{ color: 'white', fontWeight: 800, fontSize: '0.9rem' }}>Escanear QR de Urna TSJE</span>
+              <button 
+                type="button" 
+                onClick={() => setShowQRScanner(false)}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Viewfinder simulation */}
+            <div style={{
+              width: '280px', height: '280px', border: '3px solid var(--plra-400)', borderRadius: '24px',
+              position: 'relative', overflow: 'hidden', background: '#080d16',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem',
+              boxShadow: '0 0 30px rgba(0,71,171,0.4)'
+            }}>
+              {/* Laser line animation */}
+              <motion.div
+                animate={{ y: [-130, 130, -130] }}
+                transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute', left: 0, right: 0, height: '4px', background: 'var(--plra-400)',
+                  boxShadow: '0 0 15px var(--plra-400)', zIndex: 2
+                }}
+              />
+              <QrCode size={120} style={{ opacity: 0.15, color: 'white' }} />
+              <p style={{ position: 'absolute', bottom: '20px', fontSize: '0.65rem', color: 'var(--text-3)', textAlign: 'center', width: '80%', zIndex: 3 }}>
+                Apunta al código QR impreso en el ticket
+              </p>
+            </div>
+
+            {/* Manual input / Simulation trigger */}
+            <div style={{ width: '100%', maxWidth: '300px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const mockData = `TSJE|mesa:${tableInfo.mesa}|blancos:5|nulos:2|${listas.map((l, idx) => `${l.lista_id}:${10 + idx * 8}`).join('|')}`;
+                  handleParseQRData(mockData);
+                }}
+                style={{
+                  width: '100%', padding: '0.85rem', borderRadius: '12px', border: 'none',
+                  background: 'linear-gradient(135deg, #22C47E, #16a34a)', color: 'white',
+                  fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(34,196,126,0.3)'
+                }}
+              >
+                ⚡ SIMULAR ESCANEO QR TSJE
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.5rem 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800 }}>O COPEAR CÓDIGO</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+              </div>
+
+              <input
+                type="text"
+                placeholder="Pegue aquí el string del QR..."
+                value={scannerPasteData}
+                onChange={e => setScannerPasteData(e.target.value)}
+                style={{
+                  width: '100%', padding: '0.75rem', borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'white', fontSize: '0.8rem', outline: 'none'
+                }}
+              />
+              {scannerPasteData && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleParseQRData(scannerPasteData);
+                    setScannerPasteData('');
+                  }}
+                  style={{
+                    width: '100%', padding: '0.65rem', borderRadius: '10px', border: 'none',
+                    background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer'
+                  }}
+                >
+                  PROCESAR CÓDIGO PEGAR
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Foto del acta */}
       <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
         <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Camera size={16} /> Foto del Acta Oficial
+          <Camera size={16} /> Foto del Acta Oficial (Física)
         </h3>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} style={{ display: 'none' }} />
         {photoPreview ? (
@@ -669,7 +837,7 @@ const ActaFinalTab = () => {
             <img src={photoPreview} alt="Vista previa" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '16px', border: '2px solid var(--green)' }} />
             <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
               style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '8px', color: 'white', padding: '8px 12px', fontSize: '0.75rem', fontWeight: 800 }}>
-              CAMBIAR FOTO
+               CAMBIAR FOTO
             </motion.button>
           </div>
         ) : (
@@ -766,6 +934,86 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
     }
   };
 
+  const [sosActive, setSosActive] = useState(false);
+  const [sosLoading, setSosLoading] = useState(false);
+  const [liveSOSAlert, setLiveSOSAlert] = useState<any>(null);
+  
+  // Incident reporting states
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [incidentMesa, setIncidentMesa] = useState<number | ''>('');
+  const [incidentType, setIncidentType] = useState('Sustitución de Miembro');
+  const [incidentDescription, setIncidentDescription] = useState('');
+  const [incidentPhoto, setIncidentPhoto] = useState<File | null>(null);
+  const [incidentPhotoPreview, setIncidentPhotoPreview] = useState<string | null>(null);
+  const [incidentSubmitting, setIncidentSubmitting] = useState(false);
+  const incidentFileRef = useRef<HTMLInputElement>(null);
+
+  // Monitor SSE for real-time SOS alerts and broadcast
+  useSSE(useCallback((event) => {
+    if (event.type === 'SOS_ALERT') {
+      const alertData = event.data;
+      setLiveSOSAlert(alertData);
+      setSosActive(true);
+      startSiren();
+    }
+  }, []));
+
+  const handleIncidentPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIncidentPhoto(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setIncidentPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleIncidentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!incidentDescription.trim()) {
+      alert('Por favor describa el incidente.');
+      return;
+    }
+    
+    setIncidentSubmitting(true);
+    try {
+      if (navigator.onLine) {
+        const formData = new FormData();
+        formData.append('local', user.assigned_local || 'General');
+        formData.append('mesa', String(incidentMesa));
+        formData.append('type', incidentType);
+        formData.append('description', incidentDescription);
+        if (incidentPhoto) {
+          formData.append('photo', incidentPhoto);
+        }
+        await api.post('/diad/incidents', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        // Offline queueing
+        const base64Data = incidentPhotoPreview || null;
+        const { safePost } = await import('../services/syncService');
+        await safePost('INCIDENT_REPORT', '/diad/incidents', {
+          local: user.assigned_local || 'General',
+          mesa: incidentMesa,
+          type: incidentType,
+          description: incidentDescription,
+          foto_base64: base64Data
+        });
+      }
+      
+      alert('✅ Incidencia/Sustitución reportada correctamente.');
+      setShowIncidentModal(false);
+      setIncidentMesa('');
+      setIncidentDescription('');
+      setIncidentPhoto(null);
+      setIncidentPhotoPreview(null);
+    } catch (err) {
+      alert('Error al reportar la incidencia.');
+    } finally {
+      setIncidentSubmitting(false);
+    }
+  };
+
   const handleLiberate = async (memberId: number, mesaNum: number) => {
     if (!window.confirm(`¿Liberar al mesario de la Mesa ${mesaNum}?`)) return;
     setActionLoading(true);
@@ -785,9 +1033,6 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
 
   const standbyPool = members.filter(m => !m.assigned_local || m.assigned_local === 'SIN ASIGNACIÓN' || m.assigned_local === '---');
   const filteredStandby = standbyPool.filter(m => !searchQuery || m.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || m.ci?.includes(searchQuery));
-
-  const [sosActive, setSosActive] = useState(false);
-  const [sosLoading, setSosLoading] = useState(false);
 
   // Monitor cross-tab / local storage sync events for SOS trigger
   useEffect(() => {
@@ -942,6 +1187,17 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
               <span style={{ fontSize: '0.55rem', color: 'var(--red)', fontWeight: 800, textTransform: 'uppercase' }}>Vacantes</span>
             </div>
           </div>
+          <button
+            onClick={() => setShowIncidentModal(true)}
+            style={{
+              marginTop: '1rem', width: '100%', padding: '0.75rem', borderRadius: '12px',
+              border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.05)',
+              color: '#F59E0B', fontSize: '0.8rem', fontWeight: 900, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+            }}
+          >
+            <AlertTriangle size={16} /> REPORTAR INCIDENCIA / SUSTITUCIÓN
+          </button>
         </div>
 
         {/* Mesas List */}
@@ -1193,6 +1449,223 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
                   )}
                 </div>
 
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* INCIDENT REPORT MODAL */}
+        <AnimatePresence>
+          {showIncidentModal && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+              zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem'
+            }}>
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                style={{
+                  width: '100%', maxWidth: '400px',
+                  background: 'var(--surface-light)', borderRadius: '24px',
+                  padding: '1.75rem', border: '1px solid var(--border)',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                  display: 'flex', flexDirection: 'column', gap: '1.2rem'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 900, color: 'white', margin: 0 }}>
+                    Reportar Incidencia o Sustitución
+                  </h4>
+                  <button 
+                    onClick={() => setShowIncidentModal(false)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleIncidentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                      Mesa Afectada
+                    </label>
+                    <select
+                      value={incidentMesa}
+                      onChange={e => setIncidentMesa(e.target.value ? Number(e.target.value) : '')}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'white', outline: 'none' }}
+                    >
+                      <option value="">-- Mesa General / Todas --</option>
+                      {mesas.map(m => (
+                        <option key={m.numero} value={m.numero} style={{ background: '#0e1726' }}>Mesa {m.numero}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                      Tipo de Incidencia
+                    </label>
+                    <select
+                      value={incidentType}
+                      onChange={e => setIncidentType(e.target.value)}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'white', outline: 'none' }}
+                    >
+                      <option value="Sustitución de Miembro" style={{ background: '#0e1726' }}>Sustitución de Miembro</option>
+                      <option value="Falta de Materiales / Copiatines" style={{ background: '#0e1726' }}>Falta de Materiales / Copiatines</option>
+                      <option value="Impugnación de Voto" style={{ background: '#0e1726' }}>Impugnación de Voto</option>
+                      <option value="Disturbios / Intento de Fraude" style={{ background: '#0e1726' }}>Disturbios / Intento de Fraude</option>
+                      <option value="Otros" style={{ background: '#0e1726' }}>Otros incidentes</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                      Descripción / Detalles
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Describa brevemente qué ocurrió y qué medidas se tomaron..."
+                      value={incidentDescription}
+                      onChange={e => setIncidentDescription(e.target.value)}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'white', outline: 'none', resize: 'none', fontSize: '0.8rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                      Foto del Acta de Incidencia o Comprobante
+                    </label>
+                    <input 
+                      ref={incidentFileRef} 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment" 
+                      onChange={handleIncidentPhotoSelect} 
+                      style={{ display: 'none' }} 
+                    />
+                    
+                    {incidentPhotoPreview ? (
+                      <div style={{ position: 'relative', marginTop: '0.5rem' }}>
+                        <img src={incidentPhotoPreview} alt="Vista previa" style={{ width: '100%', maxHeight: '150px', objectFit: 'cover', borderRadius: '12px', border: '1px solid var(--plra-400)' }} />
+                        <button 
+                          type="button" 
+                          onClick={() => { setIncidentPhoto(null); setIncidentPhotoPreview(null); }}
+                          style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '4px', color: 'white', padding: '4px 8px', fontSize: '0.6rem', fontWeight: 800 }}
+                        >
+                          QUITAR
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => incidentFileRef.current?.click()}
+                        style={{
+                          width: '100%', padding: '1rem', border: '1px dashed var(--border)', borderRadius: '12px',
+                          background: 'rgba(255,255,255,0.01)', color: 'var(--text-2)', fontSize: '0.75rem', fontWeight: 800,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer'
+                        }}
+                      >
+                        <Camera size={16} /> TOMAR FOTO DEL ACTA
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={incidentSubmitting}
+                    style={{
+                      width: '100%', padding: '0.85rem', borderRadius: '14px', border: 'none',
+                      background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: 'white',
+                      fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer', marginTop: '0.5rem',
+                      boxShadow: '0 4px 15px rgba(245,158,11,0.2)'
+                    }}
+                  >
+                    {incidentSubmitting ? 'Enviando Reporte...' : '✓ REGISTRAR INCIDENCIA'}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* LIVE SOS ALERT OVERLAY */}
+        <AnimatePresence>
+          {liveSOSAlert && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(220,38,38,0.4)', backdropFilter: 'blur(10px)',
+              zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem'
+            }}>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                style={{
+                  width: '100%', maxWidth: '340px',
+                  background: '#0B0202', borderRadius: '24px',
+                  padding: '2rem', border: '3px solid #EF4444',
+                  boxShadow: '0 0 50px rgba(239,68,68,0.7)',
+                  textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1.25rem'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1 }}
+                    style={{
+                      width: '72px', height: '72px', borderRadius: '50%',
+                      background: 'rgba(239,68,68,0.1)', border: '2px solid #EF4444',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                  >
+                    <AlertOctagon size={40} color="#EF4444" />
+                  </motion.div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', margin: '0 0 0.5rem' }}>
+                    🚨 ALERTA ROJA RECIBIDA
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: '#FCA5A5', margin: 0, lineHeight: 1.4 }}>
+                    {liveSOSAlert.body}
+                  </p>
+                  {liveSOSAlert.latitude && (
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
+                      Ubicación: {liveSOSAlert.latitude.toFixed(5)}, {liveSOSAlert.longitude.toFixed(5)}
+                    </p>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {liveSOSAlert.latitude && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${liveSOSAlert.latitude},${liveSOSAlert.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '0.85rem', borderRadius: '12px', background: 'white', color: '#EF4444',
+                        fontWeight: 900, fontSize: '0.8rem', textDecoration: 'none', display: 'block'
+                      }}
+                    >
+                      🗺️ VER EN GOOGLE MAPS
+                    </a>
+                  )}
+                  <button
+                    onClick={() => {
+                      setLiveSOSAlert(null);
+                      setSosActive(false);
+                      stopSiren();
+                    }}
+                    style={{
+                      padding: '0.85rem', borderRadius: '12px', background: '#EF4444', color: 'white',
+                      fontWeight: 900, fontSize: '0.8rem', border: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    🔕 SILENCIAR ALERTA
+                  </button>
+                </div>
               </motion.div>
             </div>
           )}

@@ -6,7 +6,7 @@ import {
   ClipboardCheck, ArrowRight, AlertCircle, AlertTriangle,
   CheckCheck, ThumbsUp, HelpCircle, X, Shield, Share2, History, Edit2, Trash2, MessageSquare, Fingerprint, Landmark,
   UserPlus, Camera, LayoutList, Users, Mic, Square, ChevronRight,
-  Car, Inbox, Truck, Download, Activity
+  Car, Inbox, Truck, Download, Activity, Award
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +24,8 @@ import TabHistory from './coordinator/TabHistory';
 import TabSupport from './coordinator/TabSupport';
 import TabDisputes from './coordinator/TabDisputes';
 import TabCoordinators from './coordinator/TabCoordinators';
+import TabLogistics from './coordinator/TabLogistics';
+import TabDHondt from './coordinator/TabDHondt';
 
 const formatWhatsApp = (phone: string) => {
   if (!phone) return '';
@@ -172,7 +174,7 @@ const CoordinatorApp = () => {
   const [showModal, setShowModal] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [needsTransport, setNeedsTransport] = useState(false);
-  const [activeTab, setActiveTab] = useState<'search' | 'history' | 'support' | 'coordinators' | 'disputes'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'history' | 'support' | 'coordinators' | 'disputes' | 'logistics' | 'dhondt'>('search');
   const [history, setHistory] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [editingCapture, setEditingCapture] = useState<any>(null);
@@ -1165,6 +1167,8 @@ const CoordinatorApp = () => {
           {[
             { id: 'search', icon: <Search size={16} />, label: 'Consulta' },
             { id: 'history', icon: <History size={16} />, label: 'Historial' },
+            { id: 'logistics', icon: <Car size={16} />, label: 'Logística' },
+            { id: 'dhondt', icon: <Award size={16} />, label: "D'Hondt" },
             ...(isReadOnly ? [{ id: 'disputes', icon: <AlertTriangle size={16} />, label: 'Disputas' }] : [{ id: 'support', icon: <HelpCircle size={16} />, label: 'Soporte' }]),
             ...((user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') ? [{ id: 'coordinators', icon: <Users size={16} />, label: user?.role === 'JEFE_CAMPANA' ? 'Padrinos' : 'Equipos' }] : [])
           ].map((item: any) => (
@@ -1204,6 +1208,8 @@ const CoordinatorApp = () => {
           {activeTab === 'support' && <TabSupport {...tabProps} />}
           {activeTab === 'disputes' && <TabDisputes {...tabProps} />}
           {activeTab === 'coordinators' && (user?.role === 'PADRINO' || user?.role === 'JEFE_CAMPANA') && <TabCoordinators {...tabProps} />}
+          {activeTab === 'logistics' && <TabLogistics activeDistrict={activeDistrict || user?.distrito} />}
+          {activeTab === 'dhondt' && <TabDHondt />}
         </AnimatePresence>
       </div>
 

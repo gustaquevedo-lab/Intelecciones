@@ -121,7 +121,7 @@ export default function diadRoutes(upload: multer.Multer) {
     const list_id = getListId(req);
     try {
       const formatted = db.prepare(`
-        SELECT l.id, l.list_number, l.candidate_alias, l.type, l.candidate_nombre,
+        SELECT l.id, l.list_number, l.candidate_alias, l.type, l.candidate_nombre, l.option_number,
           COALESCE(SUM(ar.votos), 0) as votos
         FROM lists l
         LEFT JOIN acta_results ar ON l.id = ar.lista_id
@@ -354,8 +354,221 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  // 🚨 POST /api/diad/incidents - Report substitutions/incidences with photos
+  router.post('/incidents', upload.single('photo'), (req, res) => {
+    const { mesa, type, description, local, foto_base64 } = req.body;
+    const userId = req.headers['x-user-id'];
+    try {
+      let photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+      if (!photoUrl && foto_base64 && typeof foto_base64 === 'string') {
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const matches = foto_base64.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+          if (matches && matches.length === 3) {
+            const ext = matches[1];
+            const dataBuffer = Buffer.from(matches[2], 'base64');
+            const filename = `offline-incident-${Date.now()}.${ext}`;
+            const uploadDir = process.env.NODE_ENV === 'production' ? '/app/data/uploads' : path.join(__dirname, '../../uploads');
+            if (!fs.existsSync(uploadDir)) {
+              fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(uploadDir, filename), dataBuffer);
+            photoUrl = `/uploads/${filename}`;
+          }
+        } catch (fileErr) {
+          console.error('[OFFLINE_INCIDENT] Error saving base64 image:', fileErr);
+        }
+      }
+
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, action, entity, entity_id, details)
+        VALUES (?, 'INCIDENT_REPORT', 'LOCAL', ?, ?)
+      `).run(
+        userId ? Number(userId) : null,
+        local || 'GENERAL',
+        JSON.stringify({ mesa, type, description, photoUrl })
+      );
+
+      // SSE Broadcast incident to coordinators
+      const { sseClients } = require('../server');
+      const payload = {
+        type: 'INCIDENT_ALERT',
+        data: { local, mesa, type, description, photoUrl, time: new Date().toLocaleTimeString() }
+      };
+      sseClients.forEach((client: any) => {
+        try { client.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {}
+      });
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GET /api/diad/participation-summary ───────────────────────────────────
+  router.get('/participation-summary', async (req, res) => {
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+
+    let distritoClause = '';
+    let distritoParams: any[] = [];
+
+    if (role !== 'SUPERUSUARIO' && user_id) {
+      const user = getCachedUserInfo(user_id as string);
+      if (user?.distrito) {
+        const districtName = user.distrito;
+        distritoClause = `WHERE (UPPER(e.distrito) = UPPER(?) OR UPPER(e.ciudad) = UPPER(?))`;
+        distritoParams = [districtName, districtName];
+      }
+    }
+
+    try {
+      // 1. Get total electors by local and mesa
+      const electorsGrouped = await dbQueryAsync<any>(`
+        SELECT e.local_votacion, e.mesa, COUNT(*) as total_electors
+        FROM electors e
+        ${distritoClause}
+        GROUP BY e.local_votacion, e.mesa
+      `, distritoParams);
+
+      // 2. Get voted electors and registered voted electors by local and mesa
+      const participationGrouped = await dbQueryAsync<any>(`
+        SELECT
+          pl.local_votacion,
+          pl.mesa,
+          COUNT(*) as total_votos,
+          SUM(CASE WHEN ec.id IS NOT NULL THEN 1 ELSE 0 END) as registered_votos
+        FROM participation_logs pl
+        JOIN electors e ON pl.local_votacion = e.local_votacion AND pl.mesa = e.mesa AND pl.orden = e.orden
+        LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
+        ${distritoClause}
+        GROUP BY pl.local_votacion, pl.mesa
+      `, distritoParams);
+
+      const localsMap = new Map<string, {
+        local: string;
+        total_electors: number;
+        total_votos: number;
+        registered_votos: number;
+        mesas: Record<number, {
+          mesa: number;
+          total_electors: number;
+          total_votos: number;
+          registered_votos: number;
+        }>
+      }>();
+
+      electorsGrouped.forEach((row: any) => {
+        const localKey = row.local_votacion;
+        if (!localsMap.has(localKey)) {
+          localsMap.set(localKey, {
+            local: localKey,
+            total_electors: 0,
+            total_votos: 0,
+            registered_votos: 0,
+            mesas: {}
+          });
+        }
+        const localData = localsMap.get(localKey)!;
+        localData.total_electors += row.total_electors;
+        localData.mesas[row.mesa] = {
+          mesa: row.mesa,
+          total_electors: row.total_electors,
+          total_votos: 0,
+          registered_votos: 0
+        };
+      });
+
+      participationGrouped.forEach((row: any) => {
+        const localKey = row.local_votacion;
+        const localData = localsMap.get(localKey);
+        if (localData) {
+          localData.total_votos += row.total_votos;
+          localData.registered_votos += row.registered_votos || 0;
+          if (localData.mesas[row.mesa]) {
+            localData.mesas[row.mesa].total_votos = row.total_votos;
+            localData.mesas[row.mesa].registered_votos = row.registered_votos || 0;
+          }
+        }
+      });
+
+      const response = Array.from(localsMap.values()).map(local => ({
+        local: local.local,
+        total_electors: local.total_electors,
+        total_votos: local.total_votos,
+        registered_votos: local.registered_votos,
+        mesas: Object.values(local.mesas).sort((a, b) => a.mesa - b.mesa)
+      })).sort((a, b) => a.local.localeCompare(b.local));
+
+      res.json(response);
+    } catch (err: any) {
+      console.error('[DIAD PARTICIPATION SUMMARY ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GET /api/diad/participation-detail/:local/:mesa ───────────────────────
+  router.get('/participation-detail/:local/:mesa', async (req, res) => {
+    const { local, mesa } = req.params;
+    const mesaNum = parseInt(mesa);
+    if (isNaN(mesaNum)) {
+      return res.status(400).json({ error: 'Mesa inválida' });
+    }
+
+    try {
+      const voters = await dbQueryAsync<any>(`
+        SELECT
+          e.nombre,
+          e.apellido,
+          e.ci,
+          e.orden,
+          pl.timestamp as voted_at,
+          (CASE WHEN ec.id IS NOT NULL THEN 1 ELSE 0 END) as registrado
+        FROM participation_logs pl
+        JOIN electors e ON pl.local_votacion = e.local_votacion AND pl.mesa = e.mesa AND pl.orden = e.orden
+        LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
+        WHERE pl.local_votacion = ? AND pl.mesa = ?
+        ORDER BY pl.timestamp DESC
+      `, [local, mesaNum]);
+
+      res.json(voters);
+    } catch (err: any) {
+      console.error('[DIAD PARTICIPATION DETAIL ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GET /api/diad/participation-detail/:local ──────────────────────────────
+  router.get('/participation-detail/:local', async (req, res) => {
+    const { local } = req.params;
+    try {
+      const voters = await dbQueryAsync<any>(`
+        SELECT
+          e.nombre,
+          e.apellido,
+          e.ci,
+          e.orden,
+          e.mesa,
+          pl.timestamp as voted_at,
+          (CASE WHEN ec.id IS NOT NULL THEN 1 ELSE 0 END) as registrado
+        FROM participation_logs pl
+        JOIN electors e ON pl.local_votacion = e.local_votacion AND pl.mesa = e.mesa AND pl.orden = e.orden
+        LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
+        WHERE pl.local_votacion = ?
+        ORDER BY e.mesa ASC, pl.timestamp DESC
+      `, [local]);
+
+      res.json(voters);
+    } catch (err: any) {
+      console.error('[DIAD PARTICIPATION LOCAL DETAIL ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }
+
 
 export function veedorRoutes() {
   const router = Router();
