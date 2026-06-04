@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue } from 'react';
 import { Users, Plus, ChevronDown, ChevronRight, Phone, Shield, UserCheck, X, AlertCircle, CheckCircle, Loader, Search, Camera, FileText, Printer, Download, Edit, Trash2, Key } from 'lucide-react';
 import api, { getImageUrl } from '../services/api';
 import CopiatinesReport from './team/CopiatinesReport';
@@ -835,6 +835,7 @@ const TeamPanel = () => {
   const [loadingReports, setLoadingReports] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   // CI Lookup States
   const [ciLookupValue, setCiLookupValue] = useState('');
@@ -948,13 +949,13 @@ const TeamPanel = () => {
     return reportData.padrinos.filter(p => {
       if (selectedDistrictFilter !== 'ALL' && p.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(p.list_number) !== selectedListFilter) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
+      if (deferredSearchQuery) {
+        const q = deferredSearchQuery.toLowerCase();
         return p.nombre.toLowerCase().includes(q) || (p.ci && p.ci.includes(q)) || (p.username && p.username.includes(q));
       }
       return true;
     });
-  }, [reportData, selectedDistrictFilter, selectedListFilter, searchQuery]);
+  }, [reportData, selectedDistrictFilter, selectedListFilter, deferredSearchQuery]);
 
   const filteredCoordinators = useMemo(() => {
     if (!reportData || !reportData.coordinators) return [];
@@ -962,13 +963,13 @@ const TeamPanel = () => {
       if (selectedDistrictFilter !== 'ALL' && c.distrito !== selectedDistrictFilter) return false;
       if (selectedListFilter !== 'ALL' && String(c.list_number) !== selectedListFilter) return false;
       if (selectedPadrinoFilter !== 'ALL' && String(c.parent_id) !== String(selectedPadrinoFilter)) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
+      if (deferredSearchQuery) {
+        const q = deferredSearchQuery.toLowerCase();
         return c.nombre.toLowerCase().includes(q) || (c.ci && c.ci.includes(q)) || (c.username && c.username.includes(q));
       }
       return true;
     });
-  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, searchQuery]);
+  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, deferredSearchQuery]);
 
   const filteredElectors = useMemo(() => {
     if (!reportData || !reportData.electors) return [];
@@ -984,13 +985,13 @@ const TeamPanel = () => {
         if (!matchesPadrino) return false;
       }
       if (selectedCoordinatorFilter !== 'ALL' && String(e.coordinator_id) !== String(selectedCoordinatorFilter)) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
+      if (deferredSearchQuery) {
+        const q = deferredSearchQuery.toLowerCase();
         return e.nombre.toLowerCase().includes(q) || e.apellido.toLowerCase().includes(q) || (e.elector_ci && e.elector_ci.includes(q));
       }
       return true;
     });
-  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter, searchQuery]);
+  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter, deferredSearchQuery]);
 
   const disputedElectors = useMemo(() => {
     if (!reportData || !reportData.electors) return [];
@@ -1006,24 +1007,24 @@ const TeamPanel = () => {
         if (!matchesPadrino) return false;
       }
       if (selectedCoordinatorFilter !== 'ALL' && String(e.coordinator_id) !== String(selectedCoordinatorFilter)) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
+      if (deferredSearchQuery) {
+        const q = deferredSearchQuery.toLowerCase();
         return e.nombre.toLowerCase().includes(q) || e.apellido.toLowerCase().includes(q) || (e.elector_ci && e.elector_ci.includes(q));
       }
       return true;
     });
-  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter, searchQuery]);
+  }, [reportData, selectedDistrictFilter, selectedListFilter, selectedPadrinoFilter, selectedCoordinatorFilter, deferredSearchQuery]);
 
   const filteredLocales = useMemo(() => {
     if (!reportData || !reportData.locales) return [];
     return reportData.locales.filter(l => {
       if (selectedDistrictFilter !== 'ALL' && l.distrito !== selectedDistrictFilter) return false;
-      if (searchQuery) {
-        return l.local_votacion.toLowerCase().includes(searchQuery.toLowerCase());
+      if (deferredSearchQuery) {
+        return l.local_votacion.toLowerCase().includes(deferredSearchQuery.toLowerCase());
       }
       return true;
     });
-  }, [reportData, selectedDistrictFilter, searchQuery]);
+  }, [reportData, selectedDistrictFilter, deferredSearchQuery]);
 
   // Load team data
   const mountedRef = useRef(true);

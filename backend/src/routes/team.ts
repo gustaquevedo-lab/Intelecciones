@@ -85,29 +85,49 @@ router.get('/padrino/team-stats', (req, res) => {
 // New Structure Endpoints for Command Hierarchy
 router.get('/structure/padrinos', (req, res) => {
   const sec = getSecurityFilter(req, 'u');
-  const role = getRole(req);
 
   try {
     const padrinos = db.prepare(`
+      WITH coord_map AS (
+        SELECT id AS coord_id, parent_id AS padrino_id
+        FROM users
+        WHERE role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+      ),
+      capture_stats AS (
+        SELECT
+          COALESCE(cm.padrino_id, ec.coordinator_id) AS padrino_id,
+          COUNT(*)                                                              AS total_electors,
+          SUM(CASE WHEN ec.traffic_light = 'GREEN'  THEN 1 ELSE 0 END)         AS green_total,
+          SUM(CASE WHEN ec.traffic_light = 'YELLOW' THEN 1 ELSE 0 END)         AS yellow_total,
+          SUM(CASE WHEN ec.traffic_light = 'RED'    THEN 1 ELSE 0 END)         AS red_total,
+          SUM(CASE WHEN ec.traffic_light = 'PURPLE' THEN 1 ELSE 0 END)         AS purple_total,
+          SUM(CASE WHEN ec.needs_transport = 1      THEN 1 ELSE 0 END)         AS transport_total
+        FROM elector_captures ec
+        LEFT JOIN coord_map cm ON cm.coord_id = ec.coordinator_id
+        WHERE ec.is_disputed = 0
+        GROUP BY COALESCE(cm.padrino_id, ec.coordinator_id)
+      ),
+      coord_count AS (
+        SELECT parent_id AS padrino_id, COUNT(*) AS coordinator_count
+        FROM users
+        WHERE role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+        GROUP BY parent_id
+      )
       SELECT u.id, u.nombre, u.photo_url, u.telefono, u.assigned_list_id,
              l.list_number, l.option_number,
-             (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id) + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id))) AS total_electors,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id AND ec.needs_transport = 1) + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.needs_transport = 1)) AS transport_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id AND ec.traffic_light = 'GREEN') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'GREEN')) AS green_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id AND ec.traffic_light = 'YELLOW') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'YELLOW')) AS yellow_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id AND ec.traffic_light = 'RED') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'RED')) AS red_total,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id AND ec.traffic_light = 'PURPLE') + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.traffic_light = 'PURPLE')) AS purple_total
-       FROM users u
-       LEFT JOIN lists l ON u.assigned_list_id = l.id
-       WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
-       ORDER BY u.nombre
+             COALESCE(cc.coordinator_count, 0)  AS coordinator_count,
+             COALESCE(cs.total_electors, 0)     AS total_electors,
+             COALESCE(cs.transport_total, 0)    AS transport_total,
+             COALESCE(cs.green_total, 0)        AS green_total,
+             COALESCE(cs.yellow_total, 0)       AS yellow_total,
+             COALESCE(cs.red_total, 0)          AS red_total,
+             COALESCE(cs.purple_total, 0)       AS purple_total
+      FROM users u
+      LEFT JOIN lists l ON u.assigned_list_id = l.id
+      LEFT JOIN capture_stats cs ON cs.padrino_id = u.id
+      LEFT JOIN coord_count cc ON cc.padrino_id = u.id
+      WHERE u.role IN ('PADRINO', 'SUBJEFE') ${sec.sql}
+      ORDER BY u.nombre
     `).all(...sec.params);
     res.json(padrinos);
   } catch (err: any) {
@@ -476,15 +496,36 @@ router.get('/my-team', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJ
     // JEFE_CAMPANA / SUBJEFE / SUPERUSUARIO: list view with index-friendly subqueries
     const filter = getSecurityFilter(req, 'u');
     const padrinos = db.prepare(`
+      WITH coord_map AS (
+        SELECT id AS coord_id, parent_id AS padrino_id
+        FROM users
+        WHERE role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+      ),
+      capture_stats AS (
+        SELECT
+          COALESCE(cm.padrino_id, ec.coordinator_id) AS padrino_id,
+          COUNT(*)                                                              AS total_captures,
+          SUM(CASE WHEN ec.needs_transport = 1      THEN 1 ELSE 0 END)         AS needs_transport
+        FROM elector_captures ec
+        LEFT JOIN coord_map cm ON cm.coord_id = ec.coordinator_id
+        WHERE ec.is_disputed = 0
+        GROUP BY COALESCE(cm.padrino_id, ec.coordinator_id)
+      ),
+      coord_count AS (
+        SELECT parent_id AS padrino_id, COUNT(*) AS coordinator_count
+        FROM users
+        WHERE role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')
+        GROUP BY parent_id
+      )
       SELECT u.id, u.nombre, u.username, u.ci, u.telefono, u.photo_url, u.status,
              u.assigned_list_id, l.list_number, l.candidate_alias,
-             (SELECT COUNT(*) FROM users u2 WHERE u2.parent_id = u.id AND u2.role IN ('COORDINADOR', 'MIEMBRO_DE_MESA')) AS coordinator_count,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id) + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id))) AS total_captures,
-             ((SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id = u.id AND ec.needs_transport = 1) + 
-              (SELECT COUNT(*) FROM elector_captures ec WHERE ec.is_disputed = 0 AND ec.coordinator_id IN (SELECT id FROM users WHERE parent_id = u.id) AND ec.needs_transport = 1)) AS needs_transport
+             COALESCE(cc.coordinator_count, 0)  AS coordinator_count,
+             COALESCE(cs.total_captures, 0)     AS total_captures,
+             COALESCE(cs.needs_transport, 0)    AS needs_transport
        FROM users u
        LEFT JOIN lists l ON u.assigned_list_id = l.id
+       LEFT JOIN capture_stats cs ON cs.padrino_id = u.id
+       LEFT JOIN coord_count cc ON cc.padrino_id = u.id
        WHERE u.role IN ('PADRINO', 'SUBJEFE') ${filter.sql}
        ORDER BY u.nombre
     `).all(...filter.params);
