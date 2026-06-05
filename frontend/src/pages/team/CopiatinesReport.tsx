@@ -957,7 +957,7 @@ const CopiatinesReport = () => {
               <div key={e.capture_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', padding: '0.25rem 0' }}>
                 <span style={{ color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   {e.nombre} {e.apellido} (C.I. {formatCI(e.elector_ci)})
-                  {!!e.is_disputed && (
+                  {!!e.is_disputed && !(e.ciudad?.toUpperCase().includes('CONCEPCION') || e.ciudad?.toUpperCase().includes('CONCEPCIÓN')) && (
                     <span style={{
                       background: 'rgba(239,68,68,0.15)', color: 'var(--red)',
                       fontSize: '0.55rem', fontWeight: 900, padding: '1px 5px',
@@ -1001,8 +1001,17 @@ const CopiatinesReport = () => {
                   El elector <strong>{searchDebugInfo.elector?.nombre || 'Elector'} {searchDebugInfo.elector?.apellido || ''}</strong> está registrado, pero no califica para aparecer en la lista de copiatines debido a:
                 </p>
                 <ul style={{ margin: '0 0 0 1.2rem', padding: 0 }}>
-                  {searchDebugInfo.capture.is_disputed === 1 && (
+                  {searchDebugInfo.capture.is_disputed === 1 && !(
+                    searchDebugInfo.elector?.distrito?.toUpperCase().includes('CONCEPCION') ||
+                    searchDebugInfo.elector?.distrito?.toUpperCase().includes('CONCEPCI')
+                  ) && (
                     <li><strong>Disputa activa:</strong> Su captura está en conflicto (disputa de carga entre coordinadores).</li>
+                  )}
+                  {searchDebugInfo.capture.is_disputed === 1 && (
+                    searchDebugInfo.elector?.distrito?.toUpperCase().includes('CONCEPCION') ||
+                    searchDebugInfo.elector?.distrito?.toUpperCase().includes('CONCEPCI')
+                  ) && (
+                    <li style={{ color: '#fbbf24' }}><strong>En disputa — Tratamiento especial Concepción:</strong> Aun así se permite imprimir copiatín.</li>
                   )}
                   {searchDebugInfo.capture.traffic_light === 'PURPLE' && (
                     <li><strong>Semáforo Púrpura:</strong> Está marcado con prioridad Púrpura (sin intención de voto / no elegible para copiatín).</li>
@@ -1211,7 +1220,7 @@ const CopiatinesReport = () => {
 
               return (
                  <div key={e.capture_id} className={`${cardClass}${e.copiatin_printed_at ? ' printed' : ''}`} style={{ position: 'relative' }}>
-                   {!!e.is_disputed && (
+                   {!!e.is_disputed && !electorIsConcepcion && (
                       <div style={{
                         position: 'absolute', top: '3px', left: '3px', zIndex: 10,
                         background: '#EF4444', color: 'white', fontSize: '6px', fontWeight: 900,

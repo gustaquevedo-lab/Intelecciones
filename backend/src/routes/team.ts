@@ -1220,7 +1220,13 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
         LEFT JOIN users p ON u.parent_id = p.id
         LEFT JOIN lists l ON ec.list_id = l.id
         LEFT JOIN campaigns c ON l.campaign_id = c.id
-        WHERE 1=1 AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE' AND ec.is_disputed = 0
+        WHERE 1=1
+          AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE'
+          AND (
+            ec.is_disputed = 0
+            OR UPPER(COALESCE(e.ciudad, e.distrito, '')) LIKE '%CONCEPCION%'
+            OR UPPER(COALESCE(e.ciudad, e.distrito, '')) LIKE '%CONCEPCI%N%'
+          )
       `;
       const cleanSearch = `%${searchQuery.trim().toUpperCase()}%`;
       const cleanCI = `%${searchQuery.trim().replace(/\./g, '').replace(/,/g, '').trim()}%`;
@@ -1265,7 +1271,13 @@ router.get('/my-team/copiatines', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PAD
         LEFT JOIN users p ON u.parent_id = p.id
         LEFT JOIN lists l ON ec.list_id = l.id
         LEFT JOIN campaigns c ON l.campaign_id = c.id
-        WHERE 1=1 AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE' AND ec.is_disputed = 0
+        WHERE 1=1
+          AND UPPER(COALESCE(ec.traffic_light, '')) != 'PURPLE'
+          AND (
+            ec.is_disputed = 0
+            OR UPPER(COALESCE(e.ciudad, e.distrito, '')) LIKE '%CONCEPCION%'
+            OR UPPER(COALESCE(e.ciudad, e.distrito, '')) LIKE '%CONCEPCI%N%'
+          )
       `;
 
       const idsQuery = req.query.ids as string;
