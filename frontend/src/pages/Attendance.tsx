@@ -1334,16 +1334,27 @@ const Attendance: React.FC = () => {
             animate={{ scale: 1, opacity: 1 }}
             className="attendance-modal-content"
           >
-            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', fontWeight: 800 }}>Confirmar Asistencia</h3>
+            <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', fontWeight: 800 }}>
+              {activeTab === 'register' ? 'Confirmar Presencia' : 'Confirmar Ausencia'}
+            </h3>
             <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              Define el cargo asignado, número de contacto y foto del asistente.
+              {activeTab === 'register' 
+                ? 'Define el cargo asignado, número de contacto y foto del asistente.'
+                : 'Define el cargo asignado y número de contacto (la foto es opcional).'}
             </p>
 
             <form onSubmit={handleRegisterAttendance}>
               {/* Photo Capture Section */}
               <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: validationTried && !photoUrl ? 'var(--red)' : 'var(--text-3)', display: 'block', marginBottom: '0.5rem', textAlign: 'left', fontWeight: validationTried && !photoUrl ? 750 : 'normal' }}>
-                  Foto del Asistente * {validationTried && !photoUrl && '(Requerido)'}
+                <span style={{ 
+                  fontSize: '0.8rem', 
+                  color: (validationTried && !photoUrl && activeTab !== 'register_absent') ? 'var(--red)' : 'var(--text-3)', 
+                  display: 'block', 
+                  marginBottom: '0.5rem', 
+                  textAlign: 'left', 
+                  fontWeight: (validationTried && !photoUrl && activeTab !== 'register_absent') ? 750 : 'normal' 
+                }}>
+                  Foto del Asistente {activeTab === 'register_absent' ? '(Opcional)' : '*'} {(validationTried && !photoUrl && activeTab !== 'register_absent') && '(Requerido)'}
                 </span>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
@@ -1375,21 +1386,21 @@ const Attendance: React.FC = () => {
                       style={{
                         width: '90px', height: '90px', borderRadius: '50%',
                         background: 'var(--input-bg)', 
-                        border: validationTried && !photoUrl ? '2px dashed #EF4444' : '2px dashed var(--border-mid)',
+                        border: (validationTried && !photoUrl && activeTab !== 'register_absent') ? '2px dashed #EF4444' : '2px dashed var(--border-mid)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer', transition: 'all 0.2s',
-                        boxShadow: validationTried && !photoUrl ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none'
+                        boxShadow: (validationTried && !photoUrl && activeTab !== 'register_absent') ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none'
                       }}
                     >
                       {uploadingPhoto ? (
                         <div className="spinner" style={{ width: '20px', height: '20px' }} />
                       ) : (
                         <>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={validationTried && !photoUrl ? '#EF4444' : 'var(--text-3)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={(validationTried && !photoUrl && activeTab !== 'register_absent') ? '#EF4444' : 'var(--text-3)'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                             <circle cx="12" cy="13" r="4"></circle>
                           </svg>
-                          <span style={{ fontSize: '0.62rem', color: validationTried && !photoUrl ? '#EF4444' : 'var(--text-3)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
+                          <span style={{ fontSize: '0.62rem', color: (validationTried && !photoUrl && activeTab !== 'register_absent') ? '#EF4444' : 'var(--text-3)', marginTop: '4px', fontWeight: 700 }}>CAMARA</span>
                         </>
                       )}
                     </div>
@@ -1410,11 +1421,11 @@ const Attendance: React.FC = () => {
                       onClick={() => fileInputRef.current?.click()}
                       style={{
                         background: 'var(--input-bg)',
-                        border: validationTried && !photoUrl ? '1px solid #EF4444' : '1px solid var(--border-mid)',
+                        border: (validationTried && !photoUrl && activeTab !== 'register_absent') ? '1px solid #EF4444' : '1px solid var(--border-mid)',
                         padding: '0.4rem 1rem',
                         borderRadius: '8px',
                         fontSize: '0.75rem',
-                        color: validationTried && !photoUrl ? '#EF4444' : 'var(--text)',
+                        color: (validationTried && !photoUrl && activeTab !== 'register_absent') ? '#EF4444' : 'var(--text)',
                         fontWeight: 700,
                         cursor: 'pointer'
                       }}
