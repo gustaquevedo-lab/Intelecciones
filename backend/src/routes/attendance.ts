@@ -65,11 +65,20 @@ export default function attendanceRoutes() {
 
     try {
       const result = db.prepare(`
-        INSERT OR REPLACE INTO attendance (ci, nombre, apellido, distrito, cargo, telefono, photo_url, registered_by, attended)
+        INSERT INTO attendance (ci, nombre, apellido, distrito, cargo, telefono, photo_url, registered_by, attended)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(ci) DO UPDATE SET
+          nombre = excluded.nombre,
+          apellido = COALESCE(excluded.apellido, apellido),
+          distrito = excluded.distrito,
+          cargo = excluded.cargo,
+          telefono = excluded.telefono,
+          photo_url = COALESCE(excluded.photo_url, photo_url),
+          registered_by = COALESCE(excluded.registered_by, registered_by),
+          attended = CASE WHEN attended = 1 THEN 1 ELSE excluded.attended END
       `).run(cleanCI, nombre, apellido || '', distrito, cargo, cleanPhone, photo_url || null, userId || null, finalAttended);
 
-      logAction(userId ? Number(userId) : null, 'REGISTER_ATTENDANCE', 'ATTENDANCE', cleanCI, `Registered attendance status ${finalAttended} for ${nombre} as ${cargo}`);
+      logAction(userId ? Number(userId) : null, 'REGISTER_ATTENDANCE', 'ATTENDANCE', cleanCI, `Registered/Updated attendance status ${finalAttended} for ${nombre} as ${cargo}`);
       res.json({ success: true, id: result.lastInsertRowid });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -237,6 +246,111 @@ export default function attendanceRoutes() {
       db.prepare('DELETE FROM attendance').run();
       logAction(userId ? Number(userId) : null, 'WIPE_ATTENDANCE', 'ATTENDANCE', null, 'Wiped all attendance data');
       res.json({ success: true, message: 'Todos los datos de asistencia han sido eliminados.' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /recover-photos — recovers lost photos from uploads directory using audit logs matching
+  router.get('/recover-photos', requireRole('SUPERUSUARIO', 'JEFE_CAMPANA'), (req, res) => {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
+    let uploadDir = process.env.NODE_ENV === 'production' ? '/app/data/uploads' : path.join(dbDir, 'uploads');
+    
+    if (process.env.NODE_ENV !== 'production') {
+      const rootBackendPath = path.join(process.cwd(), 'backend');
+      if (fs.existsSync(rootBackendPath) && fs.statSync(rootBackendPath).isDirectory()) {
+        uploadDir = path.join(rootBackendPath, 'uploads');
+      }
+    }
+
+    if (!fs.existsSync(uploadDir)) {
+      return res.status(404).json({ error: `Directorio de uploads no encontrado en: ${uploadDir}` });
+    }
+
+    try {
+      const logs = db.prepare(`
+        SELECT entity_id as ci, timestamp 
+        FROM audit_logs 
+        WHERE action = 'REGISTER_ATTENDANCE'
+        ORDER BY timestamp ASC
+      `).all() as any[];
+
+      if (logs.length === 0) {
+        return res.json({ success: true, message: 'No hay logs de registro de asistencia en el historial de auditoría.', recovered: 0 });
+      }
+
+      const parsedLogs = logs.map(l => {
+        const dateStr = l.timestamp.includes('Z') ? l.timestamp : `${l.timestamp.replace(' ', 'T')}Z`;
+        return {
+          ci: l.ci,
+          time: new Date(dateStr).getTime()
+        };
+      }).filter(l => !isNaN(l.time));
+
+      const files = fs.readdirSync(uploadDir);
+      const photoFiles: { filename: string; time: number }[] = [];
+
+      for (const file of files) {
+        const match = file.match(/^(\d+)-/);
+        if (match) {
+          const fileMs = parseInt(match[1]);
+          photoFiles.push({
+            filename: file,
+            time: fileMs
+          });
+        }
+      }
+
+      if (photoFiles.length === 0) {
+        return res.json({ success: true, message: 'No se encontraron fotos con timestamp en el nombre en la carpeta uploads.', recovered: 0 });
+      }
+
+      photoFiles.sort((a, b) => a.time - b.time);
+      parsedLogs.sort((a, b) => a.time - b.time);
+
+      let recoveredCount = 0;
+      const updates: { ci: string; photo_url: string }[] = [];
+
+      const host = req.get('host') || '';
+      let protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+      if (process.env.NODE_ENV === 'production' || host.includes('railway.app') || host.includes('vercel.app')) {
+        protocol = 'https';
+      }
+      const baseUrl = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : `${protocol}://${host}`;
+
+      for (const photo of photoFiles) {
+        const matchedLog = parsedLogs.find(log => log.time >= photo.time && log.time <= photo.time + 60000);
+        if (matchedLog) {
+          const photoUrl = `${baseUrl}/uploads/${photo.filename}`;
+          updates.push({
+            ci: matchedLog.ci,
+            photo_url: photoUrl
+          });
+        }
+      }
+
+      db.transaction(() => {
+        for (const update of updates) {
+          db.prepare(`
+            UPDATE attendance 
+            SET photo_url = ? 
+            WHERE ci = ? AND (photo_url IS NULL OR photo_url = '')
+          `).run(update.photo_url, update.ci);
+          recoveredCount++;
+        }
+      })();
+
+      res.json({
+        success: true,
+        message: `Búsqueda y recuperación completada.`,
+        analyzed_logs: logs.length,
+        analyzed_files: photoFiles.length,
+        matches_found: updates.length,
+        db_records_restored: recoveredCount
+      });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
