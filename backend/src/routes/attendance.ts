@@ -52,7 +52,7 @@ export default function attendanceRoutes() {
 
   // Register attendance
   router.post('/register', (req, res) => {
-    const { ci, nombre, apellido, distrito, cargo, telefono, photo_url } = req.body;
+    const { ci, nombre, apellido, distrito, cargo, telefono, photo_url, attended } = req.body;
     const userId = req.headers['x-user-id'] as string;
 
     if (!ci || !nombre || !distrito || !cargo || !telefono) {
@@ -61,14 +61,15 @@ export default function attendanceRoutes() {
 
     const cleanCI = ci.toString().replace(/\./g, '').replace(/ /g, '').trim();
     const cleanPhone = normalizePhone(telefono);
+    const finalAttended = attended !== undefined ? Number(attended) : 1;
 
     try {
       const result = db.prepare(`
-        INSERT OR REPLACE INTO attendance (ci, nombre, apellido, distrito, cargo, telefono, photo_url, registered_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(cleanCI, nombre, apellido || '', distrito, cargo, cleanPhone, photo_url || null, userId || null);
+        INSERT OR REPLACE INTO attendance (ci, nombre, apellido, distrito, cargo, telefono, photo_url, registered_by, attended)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(cleanCI, nombre, apellido || '', distrito, cargo, cleanPhone, photo_url || null, userId || null, finalAttended);
 
-      logAction(userId ? Number(userId) : null, 'REGISTER_ATTENDANCE', 'ATTENDANCE', cleanCI, `Registered attendance for ${nombre} as ${cargo}`);
+      logAction(userId ? Number(userId) : null, 'REGISTER_ATTENDANCE', 'ATTENDANCE', cleanCI, `Registered attendance status ${finalAttended} for ${nombre} as ${cargo}`);
       res.json({ success: true, id: result.lastInsertRowid });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -192,7 +193,7 @@ export default function attendanceRoutes() {
   // Edit attendance record
   router.put('/:id', (req, res) => {
     const { id } = req.params;
-    const { cargo, telefono, photo_url } = req.body;
+    const { cargo, telefono, photo_url, attended } = req.body;
     const userId = req.headers['x-user-id'] as string;
 
     if (!cargo || !telefono) {
@@ -204,11 +205,11 @@ export default function attendanceRoutes() {
     try {
       db.prepare(`
         UPDATE attendance 
-        SET cargo = ?, telefono = ?, photo_url = COALESCE(?, photo_url)
+        SET cargo = ?, telefono = ?, photo_url = COALESCE(?, photo_url), attended = COALESCE(?, attended)
         WHERE id = ?
-      `).run(cargo, cleanPhone, photo_url || null, id);
+      `).run(cargo, cleanPhone, photo_url || null, attended !== undefined ? Number(attended) : null, id);
 
-      logAction(userId ? Number(userId) : null, 'UPDATE_ATTENDANCE', 'ATTENDANCE', id, `Updated attendance record ID ${id} with cargo ${cargo} and phone ${cleanPhone}`);
+      logAction(userId ? Number(userId) : null, 'UPDATE_ATTENDANCE', 'ATTENDANCE', id, `Updated attendance record ID ${id} with cargo ${cargo}, phone ${cleanPhone}, attended ${attended}`);
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

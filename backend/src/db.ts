@@ -448,6 +448,7 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("whatsapp_templates", "contact_phone", "TEXT");
     addColumnIfNotExists("whatsapp_messages", "terminal_id", "TEXT DEFAULT 'default'");
     addColumnIfNotExists("whatsapp_messages", "contact_name", "TEXT");
+    addColumnIfNotExists("attendance", "attended", "INTEGER DEFAULT 1");
     addColumnIfNotExists("whatsapp_messages", "type", "TEXT DEFAULT 'chat'");
     addColumnIfNotExists("whatsapp_messages", "media_url", "TEXT");
     addColumnIfNotExists("whatsapp_broadcast_logs", "terminal_id", "TEXT DEFAULT 'default'");

@@ -27,6 +27,7 @@ interface Assistant {
   photo_url?: string;
   timestamp: string;
   registered_by_name?: string;
+  attended?: number;
 }
 
 const Attendance: React.FC = () => {
@@ -66,7 +67,8 @@ const Attendance: React.FC = () => {
     );
   }
 
-  const [activeTab, setActiveTab] = useState<'register' | 'list'>('register');
+  const [activeTab, setActiveTab] = useState<'register' | 'register_absent' | 'list'>('register');
+  const [filterPresence, setFilterPresence] = useState<'all' | 'present' | 'absent'>('all');
   const [ciSearch, setCiSearch] = useState('');
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [elector, setElector] = useState<ElectorDetails | null>(null);
@@ -197,9 +199,9 @@ const Attendance: React.FC = () => {
   };
 
   // Close warning helpers
-  const getMissingFields = () => {
+  const getMissingFields = (isAbsent = activeTab === 'register_absent') => {
     const missing = [];
-    if (!photoUrl) missing.push('Foto');
+    if (!photoUrl && !isAbsent) missing.push('Foto');
     const digitsOnly = telefono.replace(/\D/g, '');
     // Minimum digits for a phone suffix after 595 (should be at least 6 digits, e.g. 595981123456)
     if (!telefono.trim() || telefono === '+595' || digitsOnly.length <= 5) {
@@ -222,7 +224,7 @@ const Attendance: React.FC = () => {
   };
 
   const handleCloseEditModal = () => {
-    const missing = getMissingFields();
+    const missing = getMissingFields(editingAssistant?.attended === 0);
     if (missing.length > 0) {
       setValidationTried(true);
       const confirmClose = window.confirm(
@@ -289,7 +291,8 @@ const Attendance: React.FC = () => {
         distrito: elector.distrito,
         cargo,
         telefono,
-        photo_url: photoUrl
+        photo_url: photoUrl,
+        attended: activeTab === 'register_absent' ? 0 : 1
       });
 
       setSuccessMsg(`¡Presencia confirmada con éxito para ${elector.nombre} ${elector.apellido}!`);
@@ -423,20 +426,25 @@ const Attendance: React.FC = () => {
     
     const rowsHtml = filteredAssistants.map(a => `
       <tr>
-        <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">
-          <img src="${a.photo_url ? getImageUrl(a.photo_url) : 'https://i.pravatar.cc/100?u=' + a.ci}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;" />
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">
+          <img src="${a.photo_url ? getImageUrl(a.photo_url) : 'https://i.pravatar.cc/100?u=' + a.ci}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid #cbd5e1;" />
         </td>
-        <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">${a.nombre} ${a.apellido || ''}</td>
-        <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; color: #475569; font-family: monospace; font-size: 14px;">${parseInt(a.ci).toLocaleString('es-PY')}</td>
-        <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; color: #2563eb;">${a.telefono}</td>
-        <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; color: #475569;">${a.distrito}</td>
-        <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0;">
-          <span style="background: ${a.cargo === 'APODERADO' ? '#fee2e2' : '#dbeafe'}; color: ${a.cargo === 'APODERADO' ? '#991b1b' : '#1e40af'}; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid ${a.cargo === 'APODERADO' ? '#fca5a5' : '#bfdbfe'};">
-            ${a.cargo}
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1e293b; font-size: 11px;">${a.nombre} ${a.apellido || ''}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #475569; font-family: monospace; font-size: 11px;">${parseInt(a.ci).toLocaleString('es-PY')}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #2563eb; font-size: 11px;">${a.telefono}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 11px;">${a.distrito}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">
+          <span style="background: ${a.cargo === 'APODERADO' ? '#fee2e2' : '#dbeafe'}; color: ${a.cargo === 'APODERADO' ? '#991b1b' : '#1e40af'}; padding: 2px 6px; border-radius: 12px; font-size: 9px; font-weight: 700; border: 1px solid ${a.cargo === 'APODERADO' ? '#fca5a5' : '#bfdbfe'}; display: inline-block;">
+            ${a.cargo.replace(/_/g, ' ')}
           </span>
         </td>
-        <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px;">
-          ${new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">
+          <span style="background: ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#d1fae5' : '#fee2e2'}; color: ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#065f46' : '#991b1b'}; padding: 2px 6px; border-radius: 12px; font-size: 9px; font-weight: 700; border: 1px solid ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#a7f3d0' : '#fca5a5'}; display: inline-block;">
+            ${(a.attended === undefined || a.attended === null || a.attended === 1) ? 'Asistente' : 'Ausente'}
+          </span>
+        </td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 11px;">
+          ${new Date(a.timestamp).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Asuncion' })}
         </td>
       </tr>
     `).join('');
@@ -446,14 +454,75 @@ const Attendance: React.FC = () => {
         <head>
           <title>Reporte Premium de Asistentes</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8fafc; color: #334155; margin: 40px; }
-            .report-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 30px; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #1A5FB4; padding-bottom: 20px; margin-bottom: 25px; }
-            .title { font-size: 26px; font-weight: 850; color: #1e3a8a; letter-spacing: -0.02em; }
-            .meta { font-size: 13px; color: #64748b; text-align: right; line-height: 1.4; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th { background: #1e3a8a; color: white; padding: 12px 10px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
-            tr:nth-child(even) { background-color: #f8fafc; }
+            @page {
+              size: A4;
+              margin: 12mm 10mm;
+            }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+              background: #ffffff; 
+              color: #1e293b; 
+              margin: 0; 
+              padding: 0;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .report-card { 
+              background: white; 
+              padding: 0; 
+            }
+            .header { 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: center; 
+              border-bottom: 3px solid #1e3a8a; 
+              padding-bottom: 10px; 
+              margin-bottom: 15px; 
+            }
+            .title { 
+              font-size: 20px; 
+              font-weight: 800; 
+              color: #1e3a8a; 
+              letter-spacing: -0.02em; 
+            }
+            .meta { 
+              font-size: 11px; 
+              color: #64748b; 
+              text-align: right; 
+              line-height: 1.3; 
+            }
+            .summary-box {
+              display: flex; 
+              justify-content: space-between; 
+              align-items: center; 
+              margin-bottom: 15px; 
+              background: #eff6ff; 
+              padding: 8px 12px; 
+              border-radius: 8px; 
+              border: 1px solid #bfdbfe; 
+              font-family: sans-serif;
+              font-size: 12px;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-top: 10px; 
+            }
+            th { 
+              background: #1e3a8a !important; 
+              color: white !important; 
+              padding: 8px 6px; 
+              text-align: left; 
+              font-size: 11px; 
+              text-transform: uppercase; 
+              letter-spacing: 0.05em; 
+            }
+            tr {
+              page-break-inside: avoid;
+            }
+            tr:nth-child(even) { 
+              background-color: #f8fafc !important; 
+            }
           </style>
         </head>
         <body>
@@ -461,30 +530,55 @@ const Attendance: React.FC = () => {
             <div class="header">
               <div>
                 <div class="title">INTELECCIONES</div>
-                <div style="font-size: 15px; color: #059669; font-weight: 700; margin-top: 4px;">Reporte Premium de Asistencia - Día D</div>
+                <div style="font-size: 12px; color: #059669; font-weight: 700; margin-top: 2px;">Reporte Premium de Asistencia - Día D</div>
               </div>
               <div class="meta">
                 <div><strong>Generado por:</strong> ${user?.nombre || 'Superusuario'}</div>
-                <div><strong>Fecha:</strong> ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                <div><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-PY', { timeZone: 'America/Asuncion' })} a las ${new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Asuncion' })}</div>
                 <div><strong>Distrito:</strong> ${user?.distrito || 'Global'}</div>
               </div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #eff6ff; padding: 15px 20px; border-radius: 12px; border: 1px solid #bfdbfe; font-family: sans-serif;">
-              <span style="font-size: 15px; color: #1e3a8a; font-weight: 600;">Resumen de la Reunión General:</span>
-              <span style="font-size: 15px; color: #1e3a8a; font-weight: 800; background: #3b82f6; color: white; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);">
-                ${filteredAssistants.length} Asistente(s) Registrado(s)
-              </span>
+            <div class="summary-box">
+              <span style="color: #1e3a8a; font-weight: 700;">Resumen de la Reunión General:</span>
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px;">
+                <span style="background: #1e3a8a; color: white; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">
+                  Total: ${filteredAssistants.length}
+                </span>
+                <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">
+                  Asistentes: ${filteredAssistants.filter(a => a.attended === undefined || a.attended === null || a.attended === 1).length}
+                </span>
+                <span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">
+                  Ausentes: ${filteredAssistants.filter(a => a.attended === 0).length}
+                </span>
+                ${filteredAssistants.filter(a => a.cargo === 'MIEMBRO_DE_MESA').length > 0 ? `
+                <span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; border: 1px solid #bfdbfe;">
+                  Mesa: ${filteredAssistants.filter(a => a.cargo === 'MIEMBRO_DE_MESA').length}
+                </span>` : ''}
+                ${filteredAssistants.filter(a => a.cargo === 'APODERADO').length > 0 ? `
+                <span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; border: 1px solid #fca5a5;">
+                  Apoderados: ${filteredAssistants.filter(a => a.cargo === 'APODERADO').length}
+                </span>` : ''}
+                ${filteredAssistants.filter(a => a.cargo === 'VEEDOR').length > 0 ? `
+                <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; border: 1px solid #fde68a;">
+                  Veedores: ${filteredAssistants.filter(a => a.cargo === 'VEEDOR').length}
+                </span>` : ''}
+                ${filteredAssistants.filter(a => a.cargo === 'COORDINADOR').length > 0 ? `
+                <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; border: 1px solid #bae6fd;">
+                  Coordinadores: ${filteredAssistants.filter(a => a.cargo === 'COORDINADOR').length}
+                </span>` : ''}
+              </div>
             </div>
             <table>
               <thead>
                 <tr>
-                  <th style="width: 70px; text-align: center;">Avatar</th>
+                  <th style="width: 50px; text-align: center;">Avatar</th>
                   <th>Nombre</th>
-                  <th>Cédula</th>
-                  <th>Teléfono</th>
+                  <th style="width: 90px;">Cédula</th>
+                  <th style="width: 110px;">Teléfono</th>
                   <th>Distrito</th>
-                  <th>Cargo</th>
-                  <th>Presencia</th>
+                  <th style="width: 110px; text-align: center;">Cargo</th>
+                  <th style="width: 80px; text-align: center;">Estado</th>
+                  <th style="width: 80px;">Presencia</th>
                 </tr>
               </thead>
               <tbody>
@@ -506,7 +600,13 @@ const Attendance: React.FC = () => {
   const filteredAssistants = assistants.filter(a => {
     const searchLower = searchTerm.toLowerCase();
     const fullName = `${a.nombre} ${a.apellido || ''}`.toLowerCase();
-    return fullName.includes(searchLower) || a.ci.includes(searchLower) || a.telefono.includes(searchLower);
+    const matchesSearch = fullName.includes(searchLower) || a.ci.includes(searchLower) || a.telefono.includes(searchLower);
+    if (!matchesSearch) return false;
+
+    const isPresent = a.attended === undefined || a.attended === null || a.attended === 1;
+    if (filterPresence === 'present') return isPresent;
+    if (filterPresence === 'absent') return !isPresent;
+    return true;
   });
 
   return (
@@ -588,38 +688,145 @@ const Attendance: React.FC = () => {
         <div style={{
           display: 'flex',
           justifyContent: 'center',
-          gap: '1.5rem',
+          alignItems: 'center',
+          gap: '1rem',
           marginBottom: '2rem',
           flexWrap: 'wrap'
         }}>
+          {/* Total card */}
           <div className="card-premium-styled" style={{
-            padding: '1.25rem 2rem',
+            padding: '0.8rem 1.5rem',
             textAlign: 'center',
-            minWidth: '220px',
+            minWidth: '130px',
             background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
             border: '1px solid var(--border-mid)',
-            borderRadius: '16px',
+            borderRadius: '14px',
             boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
             backdropFilter: 'blur(4px)'
           }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem' }}>
-              Total Asistentes
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>
+              Registrados
             </div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, background: 'linear-gradient(95deg, #3B82F6 0%, #10B981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0, padding: 0, lineHeight: 1 }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text)', margin: 0, padding: 0, lineHeight: 1 }}>
               {assistants.length}
+            </div>
+          </div>
+
+          {/* Present card */}
+          <div className="card-premium-styled" style={{
+            padding: '0.8rem 1.5rem',
+            textAlign: 'center',
+            minWidth: '130px',
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: '14px',
+            boxShadow: '0 8px 32px 0 rgba(16, 185, 129, 0.07)',
+            backdropFilter: 'blur(4px)'
+          }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>
+              Asistentes
+            </div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--green)', margin: 0, padding: 0, lineHeight: 1 }}>
+              {assistants.filter(a => a.attended === undefined || a.attended === null || a.attended === 1).length}
+            </div>
+          </div>
+
+          {/* Absent card */}
+          <div className="card-premium-styled" style={{
+            padding: '0.8rem 1.5rem',
+            textAlign: 'center',
+            minWidth: '130px',
+            background: 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '14px',
+            boxShadow: '0 8px 32px 0 rgba(239, 68, 68, 0.07)',
+            backdropFilter: 'blur(4px)'
+          }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>
+              Ausentes
+            </div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--red)', margin: 0, padding: 0, lineHeight: 1 }}>
+              {assistants.filter(a => a.attended === 0).length}
+            </div>
+          </div>
+
+          {/* Breakdown cards */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '0.5rem 0.8rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '85px'
+            }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>Miembros</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3B82F6' }}>
+                {assistants.filter(a => a.cargo === 'MIEMBRO_DE_MESA').length}
+              </span>
+            </div>
+
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '0.5rem 0.8rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '85px'
+            }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>Apoderados</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#EF4444' }}>
+                {assistants.filter(a => a.cargo === 'APODERADO').length}
+              </span>
+            </div>
+
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '0.5rem 0.8rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '85px'
+            }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>Veedores</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#F59E0B' }}>
+                {assistants.filter(a => a.cargo === 'VEEDOR').length}
+              </span>
+            </div>
+
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '0.5rem 0.8rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '85px'
+            }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>Coordinadores</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10B981' }}>
+                {assistants.filter(a => a.cargo === 'COORDINADOR').length}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Tab Switcher */}
-        <div className="attendance-tab-switcher">
+        <div className="attendance-tab-switcher" style={{ display: 'flex', gap: '0.5rem', background: 'var(--surface-light)', padding: '0.4rem', borderRadius: '14px', marginBottom: '2rem' }}>
           <button 
             onClick={() => setActiveTab('register')}
             style={{
               flex: 1,
               background: activeTab === 'register' ? 'var(--plra-600)' : 'transparent',
               border: 'none',
-              padding: '0.8rem',
+              padding: '0.75rem',
               borderRadius: '10px',
               color: activeTab === 'register' ? 'white' : 'var(--text-3)',
               fontWeight: 700,
@@ -630,12 +837,32 @@ const Attendance: React.FC = () => {
             Registrar Presencia
           </button>
           <button 
+            onClick={() => {
+              setActiveTab('register_absent');
+              setElector(null);
+              setCiSearch('');
+            }}
+            style={{
+              flex: 1,
+              background: activeTab === 'register_absent' ? 'var(--plra-600)' : 'transparent',
+              border: 'none',
+              padding: '0.75rem',
+              borderRadius: '10px',
+              color: activeTab === 'register_absent' ? 'white' : 'var(--text-3)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Registrar Ausencia
+          </button>
+          <button 
             onClick={() => setActiveTab('list')}
             style={{
               flex: 1,
               background: activeTab === 'list' ? 'var(--plra-600)' : 'transparent',
               border: 'none',
-              padding: '0.8rem',
+              padding: '0.75rem',
               borderRadius: '10px',
               color: activeTab === 'list' ? 'white' : 'var(--text-3)',
               fontWeight: 700,
@@ -643,14 +870,14 @@ const Attendance: React.FC = () => {
               transition: 'all 0.2s'
             }}
           >
-            Asistentes Registrados
+            Historial Registrado
           </button>
         </div>
 
         <AnimatePresence mode="wait">
-          {activeTab === 'register' ? (
+          {(activeTab === 'register' || activeTab === 'register_absent') ? (
             <motion.div
-              key="register-tab"
+              key={activeTab}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
@@ -673,7 +900,9 @@ const Attendance: React.FC = () => {
 
               {/* CI Search Input Form */}
               <div className="attendance-card">
-                <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>Buscar por Número de Cédula</h3>
+                <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
+                  {activeTab === 'register' ? 'Registrar Presencia (Con Foto)' : 'Registrar Ausencia (Sin Foto Obligatoria)'}
+                </h3>
                 <form onSubmit={handleSearch} className="attendance-search-form">
                   <input
                     type="text"
@@ -770,21 +999,21 @@ const Attendance: React.FC = () => {
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <button
-                        onClick={handleOpenRegister}
-                        style={{
-                          background: 'linear-gradient(90deg, #2E84F0 0%, #1A5FB4 100%)',
-                          border: 'none',
-                          padding: '0.8rem 2rem',
-                          borderRadius: '12px',
-                          color: 'white',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 14px rgba(46, 132, 240, 0.4)',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        Confirmar Presencia
-                      </button>
+                    onClick={handleOpenRegister}
+                    style={{
+                      background: activeTab === 'register' ? 'linear-gradient(90deg, #2E84F0 0%, #1A5FB4 100%)' : 'linear-gradient(90deg, #10B981 0%, #059669 100%)',
+                      border: 'none',
+                      padding: '0.8rem 2rem',
+                      borderRadius: '12px',
+                      color: 'white',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      boxShadow: activeTab === 'register' ? '0 4px 14px rgba(46, 132, 240, 0.4)' : '0 4px 14px rgba(16, 185, 129, 0.4)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {activeTab === 'register' ? 'Confirmar Presencia' : 'Confirmar Ausencia'}
+                  </button>
                     </div>
                   </motion.div>
                 )}
@@ -812,22 +1041,42 @@ const Attendance: React.FC = () => {
 
               {/* Search list and filters */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                <input
-                  type="text"
-                  placeholder="Buscar en la lista por nombre, C.I. o teléfono..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    flex: 1,
-                    minWidth: '250px',
-                    background: 'var(--input-bg)',
-                    border: '1px solid var(--border-mid)',
-                    borderRadius: '10px',
-                    padding: '0.6rem 1rem',
-                    color: 'var(--text)',
-                    outline: 'none'
-                  }}
-                />
+                <div style={{ flex: 1, display: 'flex', gap: '0.75rem', minWidth: '280px' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar en la lista por nombre, C.I. o teléfono..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      flex: 1,
+                      background: 'var(--input-bg)',
+                      border: '1px solid var(--border-mid)',
+                      borderRadius: '10px',
+                      padding: '0.6rem 1rem',
+                      color: 'var(--text)',
+                      outline: 'none'
+                    }}
+                  />
+                  
+                  <select
+                    value={filterPresence}
+                    onChange={(e) => setFilterPresence(e.target.value as any)}
+                    style={{
+                      background: 'var(--input-bg)',
+                      border: '1px solid var(--border-mid)',
+                      borderRadius: '10px',
+                      padding: '0.6rem 1rem',
+                      color: 'var(--text)',
+                      outline: 'none',
+                      fontWeight: 650,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">Presencia: Todos</option>
+                    <option value="present">Presencia: Asistentes</option>
+                    <option value="absent">Presencia: Ausentes</option>
+                  </select>
+                </div>
                 
                 <button
                   onClick={handlePrintReport}
@@ -956,6 +1205,7 @@ const Attendance: React.FC = () => {
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Teléfono</th>
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Distrito</th>
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Cargo</th>
+                        <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Estado</th>
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>Hora</th>
                         <th style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-3)', textAlign: 'center' }}>Acciones</th>
                       </tr>
@@ -1005,8 +1255,21 @@ const Attendance: React.FC = () => {
                               {assistant.cargo}
                             </span>
                           </td>
+                          <td style={{ padding: '1rem' }}>
+                            <span className={(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'attendance-role-miembro' : 'attendance-role-apoderado'} style={{
+                              background: (assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: (assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'var(--green)' : 'var(--red)',
+                              border: `1px solid ${(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}>
+                              {(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'Asistente' : 'Ausente'}
+                            </span>
+                          </td>
                           <td style={{ padding: '1rem', fontSize: '0.8rem', color: 'var(--text-3)' }}>
-                            {new Date(assistant.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(assistant.timestamp).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Asuncion' })}
                           </td>
                           <td style={{ padding: '1rem', textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
