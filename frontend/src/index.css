@@ -633,6 +633,11 @@ select option:active {
   animation: spin 0.7s linear infinite;
 }
 
+.spin {
+  animation: spin 0.7s linear infinite;
+}
+
+
 /* ============================================================
    SCROLLBAR
    ============================================================ */

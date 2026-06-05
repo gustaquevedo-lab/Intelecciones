@@ -5,7 +5,8 @@ import {
   ChevronDown,
   Download, MapPin, Bell, X, Search,
   ChevronRight, Truck, Target, MessageSquare, Mic, Clock,
-  RefreshCw, CheckCircle, Plus, ExternalLink, Trash2, Edit
+  RefreshCw, CheckCircle, Plus, ExternalLink, Trash2, Edit,
+  XCircle, Loader2
 } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import MainLayout from '../components/MainLayout';
@@ -412,6 +413,57 @@ const CommandCenter = () => {
   const [disputesReportSearch, setDisputesReportSearch] = useState('');
   const [disputesReportLocalFilter, setDisputesReportLocalFilter] = useState('');
   const [isGeneratingDisputesPDF, setIsGeneratingDisputesPDF] = useState(false);
+
+  // ── CI Lookup for disputes ──
+  const [ciLookupValue, setCiLookupValue] = useState('');
+  const [ciLookupLoading, setCiLookupLoading] = useState(false);
+  const [ciLookupResult, setCiLookupResult] = useState<any>(null);
+  const [ciLookupError, setCiLookupError] = useState<string | null>(null);
+  const [clearingDispute, setClearingDispute] = useState(false);
+  const [clearDisputeMsg, setClearDisputeMsg] = useState<string | null>(null);
+
+  const handleCiLookupDispute = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const ci = ciLookupValue.trim().replace(/\./g, '').replace(/,/g, '');
+    if (!ci) return;
+    setCiLookupLoading(true);
+    setCiLookupResult(null);
+    setCiLookupError(null);
+    setClearDisputeMsg(null);
+    try {
+      const res = await api.get(`/admin/conflicts/lookup?ci=${ci}`, {
+        headers: { 'x-user-id': authUser?.id }
+      });
+      setCiLookupResult(res.data);
+    } catch (err: any) {
+      setCiLookupError(err.response?.data?.error || 'Error al buscar');
+    } finally {
+      setCiLookupLoading(false);
+    }
+  };
+
+  const handleClearDispute = async (ci: string) => {
+    if (!window.confirm(`¿Confirmas que querés limpiar la disputa para CI ${ci}? Esto pondrá is_disputed=0 en todas sus capturas.`)) return;
+    setClearingDispute(true);
+    setClearDisputeMsg(null);
+    try {
+      await api.post('/admin/conflicts/clear-dispute', { ci, force: true }, {
+        headers: { 'x-user-id': authUser?.id }
+      });
+      setClearDisputeMsg(`✅ Disputa limpiada correctamente para CI ${ci}`);
+      // Refrescar el lookup
+      const res = await api.get(`/admin/conflicts/lookup?ci=${ci}`, {
+        headers: { 'x-user-id': authUser?.id }
+      });
+      setCiLookupResult(res.data);
+      // Refrescar conflictos activos
+      setConflicts(prev => prev.filter((c: any) => c.elector_ci !== ci));
+    } catch (err: any) {
+      setClearDisputeMsg(`❌ Error: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setClearingDispute(false);
+    }
+  };
 
   const handleExportReport = async (padrinoId: number) => {
     setIsGeneratingReport(true);
@@ -1467,7 +1519,173 @@ const CommandCenter = () => {
                   </div>
                 </header>
 
-                {/* Active Disputes Grid */}
+                {/* ── CI Lookup Buscador ── */}
+                {['SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE'].includes(authUser?.role || '') && (
+                  <div style={{
+                    background: 'var(--surface)', borderRadius: '20px',
+                    border: '1px solid var(--border)', padding: '1.5rem',
+                    marginBottom: '2rem', boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Search size={15} style={{ color: 'var(--red)' }} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>Buscador de Disputas por CI</p>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>Consultá y resolvé disputas directamente por número de cédula</p>
+                      </div>
+                    </div>
+                    <form onSubmit={handleCiLookupDispute} style={{ display: 'flex', gap: '0.75rem', marginBottom: ciLookupResult || ciLookupError ? '1.25rem' : 0 }}>
+                      <input
+                        type="text"
+                        value={ciLookupValue}
+                        onChange={e => { setCiLookupValue(e.target.value); setCiLookupResult(null); setCiLookupError(null); setClearDisputeMsg(null); }}
+                        placeholder="Ingresá el número de cédula..."
+                        style={{
+                          flex: 1, padding: '0.7rem 1rem', borderRadius: '12px',
+                          background: 'var(--bg)', border: '1px solid var(--border)',
+                          color: 'var(--text)', fontSize: '0.9rem', fontWeight: 700,
+                          outline: 'none'
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={ciLookupLoading || !ciLookupValue.trim()}
+                        style={{
+                          padding: '0.7rem 1.5rem', borderRadius: '12px',
+                          background: ciLookupLoading ? 'var(--surface-3)' : 'var(--red)',
+                          color: 'white', border: 'none', fontWeight: 900, fontSize: '0.8rem',
+                          cursor: ciLookupLoading ? 'default' : 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem'
+                        }}
+                      >
+                        {ciLookupLoading ? <Loader2 size={14} className="spin" /> : <Search size={14} />}
+                        {ciLookupLoading ? 'Buscando...' : 'Buscar'}
+                      </button>
+                    </form>
+
+                    {ciLookupError && (
+                      <div style={{ padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--red)', fontSize: '0.8rem', fontWeight: 700 }}>
+                        {ciLookupError}
+                      </div>
+                    )}
+
+                    {clearDisputeMsg && (
+                      <div style={{ padding: '0.75rem 1rem', borderRadius: '12px', background: clearDisputeMsg.startsWith('✅') ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${clearDisputeMsg.startsWith('✅') ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`, color: clearDisputeMsg.startsWith('✅') ? 'var(--green)' : 'var(--red)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '1rem' }}>
+                        {clearDisputeMsg}
+                      </div>
+                    )}
+
+                    {ciLookupResult && (() => {
+                      const { elector, captures, conflicts: ciConflicts } = ciLookupResult;
+                      const isDisputed = captures.some((c: any) => c.is_disputed === 1);
+                      const activeConflictsCount = ciConflicts.filter((c: any) => ['PENDING','WAITING_CONSENT'].includes(c.conflict_status)).length;
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          {/* Ficha del elector */}
+                          <div style={{ padding: '1.25rem', borderRadius: '16px', background: 'var(--bg)', border: `2px solid ${isDisputed ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.3)'}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                              <div>
+                                {elector ? (
+                                  <>
+                                    <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', margin: 0 }}>{elector.nombre} {elector.apellido}</p>
+                                    <p style={{ fontSize: '0.72rem', color: 'var(--text-3)', margin: '2px 0 0', fontWeight: 700 }}>CI: {elector.ci} · {elector.local_votacion} · Mesa {elector.mesa} · Orden {elector.orden}</p>
+                                    <p style={{ fontSize: '0.68rem', color: 'var(--text-3)', margin: '2px 0 0' }}>{elector.distrito}</p>
+                                  </>
+                                ) : (
+                                  <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-3)', margin: 0 }}>Elector no registrado en padrón (CI: {ciLookupValue})</p>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{
+                                  padding: '0.4rem 0.9rem', borderRadius: '100px', fontWeight: 900, fontSize: '0.7rem',
+                                  background: isDisputed ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)',
+                                  color: isDisputed ? 'var(--red)' : 'var(--green)',
+                                  border: `1px solid ${isDisputed ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`
+                                }}>
+                                  {isDisputed ? '⚠️ EN DISPUTA' : '✅ SIN DISPUTA'}
+                                </div>
+                                {isDisputed && ['SUPERUSUARIO','JEFE_CAMPANA'].includes(authUser?.role || '') && (
+                                  <button
+                                    onClick={() => handleClearDispute(elector?.ci || ciLookupValue.trim())}
+                                    disabled={clearingDispute}
+                                    style={{
+                                      padding: '0.4rem 1rem', borderRadius: '100px', fontWeight: 900, fontSize: '0.7rem',
+                                      background: 'var(--red)', color: 'white', border: 'none',
+                                      cursor: clearingDispute ? 'default' : 'pointer',
+                                      display: 'flex', alignItems: 'center', gap: '0.4rem'
+                                    }}
+                                  >
+                                    {clearingDispute ? <Loader2 size={12} className="spin" /> : <XCircle size={12} />}
+                                    Limpiar Disputa
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {/* Capturas */}
+                            {captures.length > 0 && (
+                              <div style={{ marginTop: '0.75rem' }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Capturas registradas ({captures.length})</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                  {captures.map((cap: any) => (
+                                    <div key={cap.capture_id} style={{
+                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                      padding: '0.5rem 0.75rem', borderRadius: '10px',
+                                      background: cap.is_disputed ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)',
+                                      border: `1px solid ${cap.is_disputed ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}`
+                                    }}>
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text)' }}>{cap.coordinator_name}</span>
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginLeft: '0.5rem' }}>Lista {cap.list_number} · {new Date(cap.timestamp).toLocaleDateString('es-PY')}</span>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: cap.traffic_light === 'GREEN' ? '#10b981' : cap.traffic_light === 'YELLOW' ? '#f59e0b' : cap.traffic_light === 'RED' ? '#ef4444' : '#a855f7' }} />
+                                        {cap.is_disputed ? <span style={{ fontSize: '0.6rem', color: 'var(--red)', fontWeight: 900 }}>DISPUTADA</span> : <span style={{ fontSize: '0.6rem', color: 'var(--green)', fontWeight: 900 }}>OK</span>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {/* Historial de conflictos */}
+                            {ciConflicts.length > 0 && (
+                              <div style={{ marginTop: '0.75rem' }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Historial de conflictos ({ciConflicts.length})</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                  {ciConflicts.map((cf: any) => {
+                                    const isPending = ['PENDING','WAITING_CONSENT'].includes(cf.conflict_status);
+                                    return (
+                                      <div key={cf.conflict_id} style={{
+                                        padding: '0.6rem 0.75rem', borderRadius: '10px',
+                                        background: isPending ? 'rgba(239,68,68,0.06)' : 'rgba(100,116,139,0.06)',
+                                        border: `1px solid ${isPending ? 'rgba(239,68,68,0.2)' : 'rgba(100,116,139,0.15)'}`
+                                      }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isPending ? 'var(--red)' : 'var(--text-3)' }}>
+                                            {isPending ? '🔴 ACTIVO' : '✅ RESUELTO'} — {cf.coord_a_name} (L{cf.list_a}) vs {cf.coord_b_name} (L{cf.list_b})
+                                          </span>
+                                          <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>{new Date(cf.timestamp).toLocaleDateString('es-PY')}</span>
+                                        </div>
+                                        {cf.winner_name && (
+                                          <p style={{ fontSize: '0.65rem', color: 'var(--green)', fontWeight: 700, margin: '4px 0 0' }}>Ganador: {cf.winner_name} · Lista {cf.winner_list}</p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            {captures.length === 0 && (
+                              <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', fontStyle: 'italic', marginTop: '0.5rem' }}>Este elector no tiene capturas registradas.</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+
                 {conflicts.length === 0 ? (
                   <div style={{ padding: '4rem', textAlign: 'center', background: 'var(--surface)', borderRadius: '24px', border: '1px dashed var(--border)' }}>
                     <CheckCircle size={48} style={{ color: 'var(--green)', marginBottom: '1.5rem', opacity: 0.5 }} />
@@ -1765,7 +1983,7 @@ const CommandCenter = () => {
                         </div>
 
                         {showResolveModal.conflict_status === 'WAITING_CONSENT' ? (
-                            (user?.role === 'SUBJEFE' && user?.assigned_list_id === showResolveModal.list_id_a && showResolveModal.consent_a === 0) ? (
+                            (authUser?.role === 'SUBJEFE' && authUser?.assigned_list_id === showResolveModal.list_id_a && showResolveModal.consent_a === 0) ? (
                                 <button 
                                     onClick={() => handleConsent(showResolveModal.conflict_id)}
                                     style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--blue)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}
@@ -1827,7 +2045,7 @@ const CommandCenter = () => {
                         </div>
 
                         {showResolveModal.conflict_status === 'WAITING_CONSENT' ? (
-                            (user?.role === 'SUBJEFE' && user?.assigned_list_id === showResolveModal.list_id_b && showResolveModal.consent_b === 0) ? (
+                            (authUser?.role === 'SUBJEFE' && authUser?.assigned_list_id === showResolveModal.list_id_b && showResolveModal.consent_b === 0) ? (
                                 <button 
                                     onClick={() => handleConsent(showResolveModal.conflict_id)}
                                     style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: 'var(--blue)', color: 'white', border: 'none', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', transition: '0.2s', boxShadow: 'var(--shadow-sm)' }}

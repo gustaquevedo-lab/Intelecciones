@@ -446,5 +446,91 @@ export function conflictsRoutes() {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+
+  // ── GET /api/admin/conflicts/lookup?ci=XXX ──────────────────────────────────
+  // Busca el estado de disputa de un elector por CI
+  router.get('/lookup', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO'), (req, res) => {
+    const ci = (req.query.ci as string || '').replace(/\./g, '').replace(/,/g, '').trim();
+    if (!ci) return res.status(400).json({ error: 'Se requiere el parámetro ci' });
+    try {
+      const elector = db.prepare(`
+        SELECT e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden, e.distrito
+        FROM electors e WHERE e.ci = ?
+      `).get(ci) as any;
+
+      const captures = db.prepare(`
+        SELECT ec.id as capture_id, ec.elector_ci, ec.is_disputed, ec.traffic_light,
+               ec.timestamp, ec.coordinator_id,
+               u.nombre as coordinator_name, u.role as coordinator_role,
+               l.list_number
+        FROM elector_captures ec
+        LEFT JOIN users u ON ec.coordinator_id = u.id
+        LEFT JOIN lists l ON ec.list_id = l.id
+        WHERE ec.elector_ci = ?
+        ORDER BY ec.timestamp DESC
+      `).all(ci) as any[];
+
+      const conflicts = db.prepare(`
+        SELECT cc.id as conflict_id, cc.status as conflict_status, cc.conflict_type,
+               cc.timestamp, cc.resolved_at,
+               cc.capture_id as capture_a_id, cc.capture_id_b as capture_b_id,
+               ua.nombre as coord_a_name, la.list_number as list_a,
+               ub.nombre as coord_b_name, lb.list_number as list_b,
+               u_win.nombre as winner_name, lw.list_number as winner_list
+        FROM capture_conflicts cc
+        LEFT JOIN elector_captures ca ON cc.capture_id = ca.id
+        LEFT JOIN users ua ON ca.coordinator_id = ua.id
+        LEFT JOIN lists la ON ca.list_id = la.id
+        LEFT JOIN elector_captures cb ON cc.capture_id_b = cb.id
+        LEFT JOIN users ub ON cb.coordinator_id = ub.id
+        LEFT JOIN lists lb ON cb.list_id = lb.id
+        LEFT JOIN elector_captures cw ON cc.winner_capture_id = cw.id
+        LEFT JOIN users u_win ON cw.coordinator_id = u_win.id
+        LEFT JOIN lists lw ON cw.list_id = lw.id
+        WHERE cc.elector_ci = ?
+        ORDER BY cc.timestamp DESC
+      `).all(ci) as any[];
+
+      res.json({ elector: elector || null, captures, conflicts });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── POST /api/admin/conflicts/clear-dispute ──────────────────────────────────
+  // Resetea is_disputed=0 para un CI y resuelve conflictos huérfanos/activos
+  router.post('/clear-dispute', requireRole('SUPERUSUARIO','JEFE_CAMPANA'), (req, res) => {
+    const ci = (req.body.ci as string || '').replace(/\./g, '').replace(/,/g, '').trim();
+    const force = req.body.force === true; // si force=true, limpia aunque haya conflictos activos
+    const user_id = parseInt(req.headers['x-user-id'] as string || '0');
+    if (!ci) return res.status(400).json({ error: 'Se requiere el campo ci' });
+    try {
+      db.transaction(() => {
+        const activeConflicts = db.prepare(
+          `SELECT id FROM capture_conflicts WHERE elector_ci = ? AND status IN ('PENDING','WAITING_CONSENT')`
+        ).all(ci) as any[];
+
+        if (activeConflicts.length > 0 && !force) {
+          throw new Error(`Hay ${activeConflicts.length} conflicto(s) activo(s) para esta CI. Usa force=true para limpiar de todas formas.`);
+        }
+
+        // Marcar todos los conflictos activos como RESOLVED con winner=null
+        if (activeConflicts.length > 0) {
+          db.prepare(
+            `UPDATE capture_conflicts SET status = 'RESOLVED', resolved_at = datetime('now') WHERE elector_ci = ? AND status IN ('PENDING','WAITING_CONSENT')`
+          ).run(ci);
+        }
+
+        // Resetear is_disputed en todas las capturas
+        const updated = db.prepare(
+          `UPDATE elector_captures SET is_disputed = 0 WHERE elector_ci = ? AND is_disputed = 1`
+        ).run(ci);
+
+        logAction(user_id, 'CLEAR_DISPUTE', 'CONFLICT', 0, `Admin cleared dispute for CI ${ci} — ${updated.changes} capture(s) reset, ${activeConflicts.length} conflict(s) resolved`);
+        invalidateAllReportsCaches();
+      })();
+      res.json({ success: true, message: `Disputa limpiada para CI ${ci}` });
+    } catch (err: any) { res.status(400).json({ error: err.message }); }
+  });
+
   return router;
+
 }

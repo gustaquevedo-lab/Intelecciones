@@ -788,7 +788,26 @@ export const runBootstrapChecks = () => {
         }
       }
     })();
+    // ── DISPUTE HOTFIX: reset stale is_disputed flags for specific CIs ──
+    // These electors have no active disputes in PJC but were left with is_disputed=1
+    (() => {
+      const staleCIs = ['2849982', '8509539'];
+      for (const ci of staleCIs) {
+        const activeConflict = db.prepare(
+          `SELECT id FROM capture_conflicts WHERE elector_ci = ? AND status IN ('PENDING','WAITING_CONSENT') LIMIT 1`
+        ).get(ci) as any;
+        if (!activeConflict) {
+          const updated = db.prepare(
+            `UPDATE elector_captures SET is_disputed = 0 WHERE elector_ci = ? AND is_disputed = 1`
+          ).run(ci);
+          if (updated.changes > 0) {
+            console.log(`[DISPUTE HOTFIX] Cleared stale is_disputed for CI ${ci} (${updated.changes} capture(s))`);
+          }
+        }
+      }
+    })();
     console.log("DATABASE: Bootstrap checks complete.");
+
   } catch (e: any) {
     console.error("DATABASE ERROR (Bootstrap):", e.message);
   }

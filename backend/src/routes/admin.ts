@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import fs from 'fs';
+import path from 'path';
 import * as XLSX from 'xlsx';
 import db from '../db';
 import {
@@ -578,6 +579,98 @@ export default function adminRoutes(upload: multer.Multer) {
       res.json({ success: true, message: `Contraseña reseteada. El usuario debe ingresar con su nombre de usuario (${defaultPassword}) y cambiarla.` });
     } catch (err: any) {
       console.error(`[RESET-PASSWORD ERROR]`, err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── POST /api/admin/backup ─────────────────────────────────────────────────
+  router.post('/admin/backup', adminLimiter, (req, res) => {
+    const role = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+    if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Solo SUPERUSUARIO' });
+
+    try {
+      const dbPath = (db as any).name;
+      const backupDir = path.join(path.dirname(dbPath), 'backups');
+      if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupFile = path.join(backupDir, `intellecciones-${timestamp}.db`);
+
+      db.backup(backupFile);
+      console.log(`[BACKUP] Created: ${backupFile}`);
+      res.json({ success: true, file: path.basename(backupFile), path: backupFile });
+    } catch (err: any) {
+      console.error('[BACKUP ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GET /api/admin/backups ─────────────────────────────────────────────────
+  router.get('/admin/backups', adminLimiter, (req, res) => {
+    const role = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+    if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Solo SUPERUSUARIO' });
+
+    try {
+      const dbPath = (db as any).name;
+      const backupDir = path.join(path.dirname(dbPath), 'backups');
+      if (!fs.existsSync(backupDir)) return res.json({ backups: [] });
+
+      const files = fs.readdirSync(backupDir)
+        .filter(f => f.endsWith('.db'))
+        .map(f => {
+          const fp = path.join(backupDir, f);
+          const stat = fs.statSync(fp);
+          return { name: f, size: stat.size, created: stat.birthtime };
+        })
+        .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+
+      res.json({ backups: files, directory: backupDir });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── POST /api/admin/reset-operational ──────────────────────────────────────
+  router.post('/admin/reset-operational', adminLimiter, (req, res) => {
+    const role = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
+    if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Solo SUPERUSUARIO' });
+
+    const { confirm } = req.body;
+    if (confirm !== 'BORRAR TODO') {
+      return res.status(400).json({ error: 'Debe enviar confirm: "BORRAR TODO" en el body para proceder.' });
+    }
+
+    try {
+      const tables = [
+        'elector_captures',
+        'capture_conflicts',
+        'participation_logs',
+        'audit_logs',
+        'field_requests',
+        'results',
+        'acta_results',
+        'whatsapp_broadcast_logs',
+        'whatsapp_broadcast_recipients',
+        'whatsapp_messages',
+        'attendance',
+        'login_attempts',
+      ];
+
+      const results: Record<string, number> = {};
+      db.exec('PRAGMA foreign_keys = OFF');
+      for (const table of tables) {
+        const r = db.prepare(`DELETE FROM ${table}`).run();
+        results[table] = r.changes;
+      }
+      db.exec('PRAGMA foreign_keys = ON');
+
+      // Vacuum to reclaim space
+      db.exec('VACUUM');
+
+      console.log('[RESET] Operational data wiped:', results);
+      res.json({ success: true, message: 'Datos operativos eliminados. Sistema listo para Día D.', wiped: results });
+    } catch (err: any) {
+      console.error('[RESET ERROR]', err);
       res.status(500).json({ error: err.message });
     }
   });
