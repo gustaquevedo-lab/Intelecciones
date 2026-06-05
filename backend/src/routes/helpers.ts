@@ -145,11 +145,11 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
           )`;
           params.push(...allVariants, ...allVariants, ...allVariants);
         } else if (tableAlias === 'ec') {
-          sql += ` AND e.distrito IN (${placeHolders})`;
-          params.push(...allVariants);
+          sql += ` AND (e.distrito IN (${placeHolders}) OR e.ciudad IN (${placeHolders}))`;
+          params.push(...allVariants, ...allVariants);
         } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
-          sql += ` AND e.distrito IN (${placeHolders})`;
-          params.push(...allVariants);
+          sql += ` AND (e.distrito IN (${placeHolders}) OR e.ciudad IN (${placeHolders}))`;
+          params.push(...allVariants, ...allVariants);
         } else if (tableAlias === 'loc') {
           sql += ` AND (${tableAlias}.ciudad IN (${placeHolders}) OR ${tableAlias}.distrito IN (${placeHolders}))`;
           params.push(...allVariants, ...allVariants);
