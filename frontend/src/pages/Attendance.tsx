@@ -743,7 +743,7 @@ const Attendance: React.FC = () => {
             backdropFilter: 'blur(4px)'
           }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>
-              Miembros (Sin Foto)
+              Miembros de Mesa
             </div>
             <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#3b82f6', margin: 0, padding: 0, lineHeight: 1 }}>
               {assistants.filter(a => a.attended === 0).length}
