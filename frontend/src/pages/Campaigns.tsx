@@ -26,9 +26,19 @@ const Campaigns: React.FC = () => {
         fetchTenants();
     }, []);
 
+    const getApiUrl = (path: string) => {
+        const apiBase = import.meta.env.VITE_API_URL || '';
+        let base = apiBase.trim();
+        if (!base) return `/api${path}`;
+        if (!base.startsWith('http')) {
+            base = `https://${base}`;
+        }
+        return `${base.replace(/\/$/, '')}/api${path}`;
+    };
+
     const fetchTenants = async () => {
         try {
-            const res = await apiFetch('http://localhost:5000/api/campaigns'); 
+            const res = await apiFetch(getApiUrl('/campaigns')); 
             if (res.ok) {
                 const data = await res.json();
                 setTenants(data);
@@ -40,7 +50,7 @@ const Campaigns: React.FC = () => {
     const handleTogglePause = async (id: number, currentStatus: string) => {
         const newStatus = currentStatus === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
         try {
-            const res = await apiFetch(`http://localhost:5000/api/campaigns/${id}`, {
+            const res = await apiFetch(getApiUrl(`/campaigns/${id}`), {
                 method: 'PUT',
                 body: JSON.stringify({ status: newStatus })
             });
@@ -58,7 +68,7 @@ const Campaigns: React.FC = () => {
         const lookup = async () => {
             if (formData.candidate_ci.length >= 5) {
                 try {
-                    const res = await apiFetch(`http://localhost:5000/api/admin/verify-candidate/${formData.candidate_ci}`);
+                    const res = await apiFetch(getApiUrl(`/admin/verify-candidate/${formData.candidate_ci}`));
                     if (res.ok) {
                         const data = await res.json();
                         setFormData({
@@ -80,7 +90,7 @@ const Campaigns: React.FC = () => {
         if (!formData.candidate_ci) return;
         setVerifying(true);
         try {
-            const res = await apiFetch(`http://localhost:5000/api/admin/verify-candidate/${formData.candidate_ci}`);
+            const res = await apiFetch(getApiUrl(`/admin/verify-candidate/${formData.candidate_ci}`));
             if (res.ok) {
                 const data = await res.json();
                 setFormData({
@@ -103,7 +113,7 @@ const Campaigns: React.FC = () => {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await apiFetch('http://localhost:5000/api/campaigns', {
+            const res = await apiFetch(getApiUrl('/campaigns'), {
                 method: 'POST',
                 body: JSON.stringify({
                     name: `Campaña ${formData.name}`,
