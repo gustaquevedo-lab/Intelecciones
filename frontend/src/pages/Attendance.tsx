@@ -439,8 +439,8 @@ const Attendance: React.FC = () => {
           </span>
         </td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">
-          <span style="background: ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#d1fae5' : '#fee2e2'}; color: ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#065f46' : '#991b1b'}; padding: 2px 6px; border-radius: 12px; font-size: 9px; font-weight: 700; border: 1px solid ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#a7f3d0' : '#fca5a5'}; display: inline-block;">
-            ${(a.attended === undefined || a.attended === null || a.attended === 1) ? 'Asistente' : 'Ausente'}
+          <span style="background: ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#d1fae5' : '#dbeafe'}; color: ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#065f46' : '#1e40af'}; padding: 2px 6px; border-radius: 12px; font-size: 9px; font-weight: 700; border: 1px solid ${(a.attended === undefined || a.attended === null || a.attended === 1) ? '#a7f3d0' : '#bfdbfe'}; display: inline-block;">
+            ${(a.attended === undefined || a.attended === null || a.attended === 1) ? 'Asistente' : 'Miembro de Mesa'}
           </span>
         </td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 11px;">
@@ -547,8 +547,8 @@ const Attendance: React.FC = () => {
                 <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">
                   Asistentes: ${filteredAssistants.filter(a => a.attended === undefined || a.attended === null || a.attended === 1).length}
                 </span>
-                <span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">
-                  Ausentes: ${filteredAssistants.filter(a => a.attended === 0).length}
+                <span style="background: #3b82f6; color: white; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">
+                  Miembros de Mesa: ${filteredAssistants.filter(a => a.attended === 0).length}
                 </span>
                 ${filteredAssistants.filter(a => a.cargo === 'MIEMBRO_DE_MESA').length > 0 ? `
                 <span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; border: 1px solid #bfdbfe;">
@@ -731,21 +731,21 @@ const Attendance: React.FC = () => {
             </div>
           </div>
 
-          {/* Absent card */}
+          {/* Miembros de Mesa card */}
           <div className="card-premium-styled" style={{
             padding: '0.8rem 1.5rem',
             textAlign: 'center',
             minWidth: '130px',
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
+            background: 'rgba(59, 130, 246, 0.15)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
             borderRadius: '14px',
-            boxShadow: '0 8px 32px 0 rgba(239, 68, 68, 0.07)',
+            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.07)',
             backdropFilter: 'blur(4px)'
           }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>
-              Ausentes
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>
+              Miembros (Sin Foto)
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--red)', margin: 0, padding: 0, lineHeight: 1 }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#3b82f6', margin: 0, padding: 0, lineHeight: 1 }}>
               {assistants.filter(a => a.attended === 0).length}
             </div>
           </div>
@@ -854,7 +854,7 @@ const Attendance: React.FC = () => {
               transition: 'all 0.2s'
             }}
           >
-            Registrar Ausencia
+            Miembros de Mesa
           </button>
           <button 
             onClick={() => setActiveTab('list')}
@@ -901,7 +901,7 @@ const Attendance: React.FC = () => {
               {/* CI Search Input Form */}
               <div className="attendance-card">
                 <h3 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
-                  {activeTab === 'register' ? 'Registrar Presencia (Con Foto)' : 'Registrar Ausencia (Sin Foto Obligatoria)'}
+                  {activeTab === 'register' ? 'Registrar Presencia (Con Foto)' : 'Registro de Miembros de Mesa (Sin Foto)'}
                 </h3>
                 <form onSubmit={handleSearch} className="attendance-search-form">
                   <input
@@ -1012,7 +1012,7 @@ const Attendance: React.FC = () => {
                       transition: 'all 0.2s'
                     }}
                   >
-                    {activeTab === 'register' ? 'Confirmar Presencia' : 'Confirmar Ausencia'}
+                    {activeTab === 'register' ? 'Confirmar Presencia' : 'Confirmar Miembro de Mesa'}
                   </button>
                     </div>
                   </motion.div>
@@ -1072,9 +1072,9 @@ const Attendance: React.FC = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="all">Presencia: Todos</option>
-                    <option value="present">Presencia: Asistentes</option>
-                    <option value="absent">Presencia: Ausentes</option>
+                    <option value="all">Filtro: Todos</option>
+                    <option value="present">Filtro: Asistentes</option>
+                    <option value="absent">Filtro: Miembros de Mesa</option>
                   </select>
                 </div>
                 
@@ -1257,15 +1257,15 @@ const Attendance: React.FC = () => {
                           </td>
                           <td style={{ padding: '1rem' }}>
                             <span className={(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'attendance-role-miembro' : 'attendance-role-apoderado'} style={{
-                              background: (assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                              color: (assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'var(--green)' : 'var(--red)',
-                              border: `1px solid ${(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                              background: (assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                              color: (assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'var(--green)' : '#3b82f6',
+                              border: `1px solid ${(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
                               padding: '0.2rem 0.5rem',
                               borderRadius: '6px',
                               fontSize: '0.75rem',
                               fontWeight: 600
                             }}>
-                              {(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'Asistente' : 'Ausente'}
+                              {(assistant.attended === undefined || assistant.attended === null || assistant.attended === 1) ? 'Asistente' : 'Miembro de Mesa'}
                             </span>
                           </td>
                           <td style={{ padding: '1rem', fontSize: '0.8rem', color: 'var(--text-3)' }}>
@@ -1335,7 +1335,7 @@ const Attendance: React.FC = () => {
             className="attendance-modal-content"
           >
             <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.3rem', fontWeight: 800 }}>
-              {activeTab === 'register' ? 'Confirmar Presencia' : 'Confirmar Ausencia'}
+              {activeTab === 'register' ? 'Confirmar Presencia' : 'Confirmar Miembro de Mesa'}
             </h3>
             <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
               {activeTab === 'register' 
