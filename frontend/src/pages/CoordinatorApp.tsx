@@ -222,36 +222,64 @@ const CoordinatorApp = () => {
 
     if (!window.confirm(confirmMsg)) return;
     setIsDownloading(true);
-    setDownloadProgress(10);
+    setDownloadProgress(5);
+    
     try {
-      const targetDistrict = activeDistrict || user?.distrito;
-      const res = await api.get('/offline/padron', { 
-        params: { district: targetDistrict },
-        timeout: 300000 
-      });
-      setDownloadProgress(60);
-      if (!res.data || res.data.length === 0) {
+      const pageSize = 15000;
+      let offset = 0;
+      let allElectors: any[] = [];
+      let hasMore = true;
+
+      while (hasMore) {
+        const res = await api.get('/offline/padron', { 
+          params: { 
+            district: targetDistrict,
+            limit: pageSize,
+            offset: offset
+          },
+          timeout: 45000
+        });
+
+        const data = res.data || [];
+        if (data.length === 0) {
+          hasMore = false;
+        } else {
+          allElectors = allElectors.concat(data);
+          offset += data.length;
+          
+          const pct = Math.min(90, Math.floor((allElectors.length / (allElectors.length + pageSize)) * 80));
+          setDownloadProgress(5 + pct);
+          
+          if (data.length < pageSize) {
+            hasMore = false;
+          }
+        }
+      }
+
+      setDownloadProgress(80);
+      if (allElectors.length === 0) {
         alert('No se encontraron electores para tu zona.');
         setIsDownloading(false);
         setDownloadProgress(0);
         return;
       }
-      setDownloadProgress(75);
-      await savePadronOffline(res.data, (pct) => {
-        setDownloadProgress(75 + Math.floor(pct * 0.25));
+      
+      setDownloadProgress(85);
+      await savePadronOffline(allElectors, (pct) => {
+        setDownloadProgress(85 + Math.floor(pct * 0.15));
       });
       setDownloadProgress(100);
       const count = await getOfflineStats();
       setOfflineCount(count);
       
-      // Store current timestamp as the last synchronized version
       localStorage.setItem('last_padron_sync_timestamp', Date.now().toString());
       
       alert(`Padrón descargado con éxito: ${count} electores disponibles offline.`);
       setIsStatsLoading(false);
     } catch (err: any) {
       setIsStatsLoading(false);
-      alert('Error al descargar el padrón. Verifique su conexión.');
+      console.error('[DOWNLOAD ERROR]', err);
+      alert('Error al descargar el padrón. El servidor tardó demasiado en responder o se perdió la conexión. Vuelva a intentarlo.');
     } finally {
       setIsDownloading(false);
       setDownloadProgress(0);
