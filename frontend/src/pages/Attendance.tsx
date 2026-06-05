@@ -107,9 +107,7 @@ const Attendance: React.FC = () => {
   const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'list') {
-      fetchAssistants();
-    }
+    fetchAssistants();
   }, [activeTab]);
 
   const fetchAssistants = async () => {
@@ -299,6 +297,7 @@ const Attendance: React.FC = () => {
       setCiSearch('');
       setShowModal(false);
       setValidationTried(false);
+      fetchAssistants();
       
       // Auto-hide success after 5 seconds
       setTimeout(() => setSuccessMsg(''), 5000);
@@ -470,6 +469,12 @@ const Attendance: React.FC = () => {
                 <div><strong>Distrito:</strong> ${user?.distrito || 'Global'}</div>
               </div>
             </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #eff6ff; padding: 15px 20px; border-radius: 12px; border: 1px solid #bfdbfe; font-family: sans-serif;">
+              <span style="font-size: 15px; color: #1e3a8a; font-weight: 600;">Resumen de la Reunión General:</span>
+              <span style="font-size: 15px; color: #1e3a8a; font-weight: 800; background: #3b82f6; color: white; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);">
+                ${filteredAssistants.length} Asistente(s) Registrado(s)
+              </span>
+            </div>
             <table>
               <thead>
                 <tr>
@@ -577,6 +582,33 @@ const Attendance: React.FC = () => {
             borderRadius: '2px',
             margin: '1rem auto 0'
           }} />
+        </div>
+
+        {/* Counter of Assistants */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '1.5rem',
+          marginBottom: '2rem',
+          flexWrap: 'wrap'
+        }}>
+          <div className="card-premium-styled" style={{
+            padding: '1.25rem 2rem',
+            textAlign: 'center',
+            minWidth: '220px',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
+            border: '1px solid var(--border-mid)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+            backdropFilter: 'blur(4px)'
+          }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem' }}>
+              Total Asistentes
+            </div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 900, background: 'linear-gradient(95deg, #3B82F6 0%, #10B981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0, padding: 0, lineHeight: 1 }}>
+              {assistants.length}
+            </div>
+          </div>
         </div>
 
         {/* Tab Switcher */}
