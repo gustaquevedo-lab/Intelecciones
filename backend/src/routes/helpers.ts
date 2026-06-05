@@ -109,33 +109,56 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
 
       if (effectiveDistrict) {
         const d = effectiveDistrict;
-        console.log(`[SECURITY] Applying district filter: ${d} for table ${tableAlias}`);
+        const normalized = d.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+        const variants = [normalized];
+        if (normalized === 'CONCEPCION') variants.push('CONCEPCIÓN');
+        if (normalized === 'ASUNCION') variants.push('ASUNCIÓN');
+        if (normalized === 'ITAPUA') variants.push('ITAPÚA');
+        if (normalized === 'GUAIRA') variants.push('GUAIRÁ');
+        if (normalized === 'CAAGUAZU') variants.push('CAAGUAZÚ');
+        if (normalized === 'CAAZAPA') variants.push('CAAZAPÁ');
+        if (normalized === 'PARAGUARI') variants.push('PARAGUARÍ');
+        if (normalized === 'ALTO PARANA') variants.push('ALTO PARANÁ');
+        if (normalized === 'NEEMBUCU') {
+          variants.push('ÑEEMBUCÚ');
+          variants.push('ÑEEMBUCU');
+          variants.push('NEEMBUCÚ');
+        }
+        if (normalized === 'CANINDEYU') variants.push('CANINDEYÚ');
+        if (normalized === 'BOQUERON') variants.push('BOQUERÓN');
+
+        // Let's add lowercase and uppercase variants to ensure match regardless of case
+        const allVariants = Array.from(new Set([
+          ...variants,
+          ...variants.map(v => v.toLowerCase()),
+          ...variants.map(v => v.toUpperCase())
+        ]));
+
+        console.log(`[SECURITY] Applying district filter variants: [${allVariants.join(', ')}] for table ${tableAlias}`);
+        const placeHolders = allVariants.map(() => '?').join(',');
 
         if (tableAlias === 'u') {
           sql += ` AND (
-            u.distrito = ? OR
-            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND l2.ciudad = ?) OR
-            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND c2.distrito = ?)
+            u.distrito IN (${placeHolders}) OR
+            EXISTS (SELECT 1 FROM lists l2 WHERE l2.id = u.assigned_list_id AND l2.ciudad IN (${placeHolders})) OR
+            EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND c2.distrito IN (${placeHolders}))
           )`;
-          params.push(d, d, d);
+          params.push(...allVariants, ...allVariants, ...allVariants);
         } else if (tableAlias === 'ec') {
-          sql += ` AND e.distrito = ?`;
-          params.push(d);
+          sql += ` AND e.distrito IN (${placeHolders})`;
+          params.push(...allVariants);
         } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
-          sql += ` AND e.distrito = ?`;
-          params.push(d);
+          sql += ` AND e.distrito IN (${placeHolders})`;
+          params.push(...allVariants);
+        } else if (tableAlias === 'loc') {
+          sql += ` AND (${tableAlias}.ciudad IN (${placeHolders}) OR ${tableAlias}.distrito IN (${placeHolders}))`;
+          params.push(...allVariants, ...allVariants);
         } else {
           let col = 'distrito';
           if (tableAlias === 'l') col = 'ciudad';
 
-          sql += ` AND ${tableAlias}.${col} = ?`;
-          params.push(d);
-
-          if (tableAlias === 'loc') {
-            sql = sql.slice(0, -1);
-            sql = sql.replace(` AND ${tableAlias}.${col} = `, ` AND (${tableAlias}.ciudad = ? OR ${tableAlias}.distrito = ?)`);
-            params.push(d);
-          }
+          sql += ` AND ${tableAlias}.${col} IN (${placeHolders})`;
+          params.push(...allVariants);
         }
       }
 
