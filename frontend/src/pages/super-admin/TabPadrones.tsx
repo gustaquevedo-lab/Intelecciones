@@ -14,7 +14,7 @@ import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leafl
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import { Navigate } from 'react-router-dom';
-import { getImageUrl } from '../../services/api';
+import api, { getImageUrl } from '../../services/api';
 import { ImageCropperModal } from '../../components/ImageCropperModal';
 import L from 'leaflet';
 
@@ -113,8 +113,38 @@ const TabPadrones = (props: any) => {
     handleWipeCaptures,
     handleFileUpload, onCropComplete,
     handleLookupUserCI, handleLookupCandidate, handleLookupDriverCI,
-    fetchAuditData,
   } = props;
+
+  const handleImportPadron = async (file: File) => {
+    if (!importCity.trim()) {
+      alert('Por favor, especifique el nombre de la ciudad/distrito antes de importar.');
+      return;
+    }
+    
+    setImportingPadron(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('distrito', importCity.trim().toUpperCase());
+    if (selectedCampaignId && selectedCampaignId !== 'all') {
+      formData.append('campaign_id', selectedCampaignId);
+    }
+
+    try {
+      const response = await api.post('/admin/import-padron', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      alert(`Padrón importado con éxito: ${response.data.count} electores cargados.`);
+      setImportCity('');
+      if (fetchData) fetchData();
+    } catch (err: any) {
+      console.error('[IMPORT PADRON ERROR]', err);
+      alert('Error al importar el padrón: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setImportingPadron(false);
+    }
+  };
 
   return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', maxWidth: '1000px' }}>

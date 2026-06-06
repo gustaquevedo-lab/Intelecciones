@@ -615,5 +615,26 @@ router.post('/admin/:id/reset-password', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.put('/profile/photo', (req, res) => {
+    const userId = req.headers['x-user-id'] as string;
+    const { photo_url } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+    if (!photo_url) {
+      return res.status(400).json({ error: 'photo_url es requerido' });
+    }
+
+    try {
+      db.prepare('UPDATE users SET photo_url = ? WHERE id = ?').run(photo_url, userId);
+      clearUserCache(userId);
+      invalidateAllReportsCaches();
+      res.json({ success: true, photo_url });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }

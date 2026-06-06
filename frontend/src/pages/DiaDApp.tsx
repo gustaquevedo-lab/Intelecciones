@@ -29,7 +29,7 @@ const MapHandler = ({ activeDistrict, locales }: { activeDistrict?: string, loca
   useEffect(() => {
     if (activeDistrict && activeDistrict !== lastDistrict) {
       const city = activeDistrict.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const CIUDADES_PARAGUAY: Record<string, { lat: number; lng: number; zoom: number }> = {
+      const MAP_DISTRICTS: Record<string, { lat: number; lng: number; zoom: number }> = {
         'PEDRO JUAN CABALLERO': { lat: -22.545, lng: -55.72, zoom: 14 },
         'ASUNCION': { lat: -25.2637, lng: -57.5759, zoom: 13 },
         'CIUDAD DEL ESTE': { lat: -25.5097, lng: -54.6111, zoom: 13 },
@@ -40,8 +40,8 @@ const MapHandler = ({ activeDistrict, locales }: { activeDistrict?: string, loca
         'ZANJA PYTA': { lat: -22.6186, lng: -55.6795, zoom: 14 },
         'KARAPAI': { lat: -23.4194, lng: -55.8458, zoom: 14 }
       };
-      if (CIUDADES_PARAGUAY[city]) {
-        map.flyTo([CIUDADES_PARAGUAY[city].lat, CIUDADES_PARAGUAY[city].lng], CIUDADES_PARAGUAY[city].zoom, { duration: 2 });
+      if (MAP_DISTRICTS[city]) {
+        map.flyTo([MAP_DISTRICTS[city].lat, MAP_DISTRICTS[city].lng], MAP_DISTRICTS[city].zoom, { duration: 2 });
         setLastDistrict(activeDistrict);
       } else if (locales && locales.length > 0) {
         const validLocales = locales.filter(l => l.lat != null && l.lng != null);
@@ -144,6 +144,32 @@ const DiaDApp: React.FC = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
   
+  // Data queries (TanStack Query)
+  const { data: coverageData, isLoading: coverageLoading, refetch: refetchCoverage } = useCoverage(activeDistrict);
+  const { data: locationsData, isLoading: locationsLoading, refetch: refetchLocations } = useLocales(activeDistrict);
+  const { data: fleetLocationsData, isLoading: fleetLoading, refetch: refetchFleet } = useLogisticsClusters(activeDistrict);
+  const { data: resultadosData, isLoading: resultadosLoading, refetch: refetchResults } = useDiadResults(activeDistrict);
+  const { data: actasData, isLoading: actasLoading, refetch: refetchActas } = useDiadActas(activeDistrict);
+  const { data: membersListData, isLoading: membersLoading, refetch: refetchMembers } = useDiadMembers(activeDistrict);
+  const { data: participationData, isLoading: participationLoading, refetch: refetchParticipation } = useParticipationSummary(activeDistrict);
+
+  const fetchData = useCallback(async () => {
+    try {
+      await Promise.all([
+        refetchCoverage(),
+        refetchResults(),
+        refetchActas(),
+        refetchLocations(),
+        refetchFleet(),
+        refetchMembers(),
+        refetchParticipation()
+      ]);
+      setLastRefresh(new Date());
+    } catch (err) {
+      /* background fetch - empty state handles this */
+    }
+  }, [refetchCoverage, refetchResults, refetchActas, refetchLocations, refetchFleet, refetchMembers, refetchParticipation]);
+
   // Real-time vote confirmation toasts
   const [toasts, setToasts] = useState<any[]>([]);
 
@@ -166,15 +192,6 @@ const DiaDApp: React.FC = () => {
       fetchData();
     }
   }, [fetchData]));
-
-  // Data queries (TanStack Query)
-  const { data: coverageData, isLoading: coverageLoading, refetch: refetchCoverage } = useCoverage(activeDistrict);
-  const { data: locationsData, isLoading: locationsLoading, refetch: refetchLocations } = useLocales(activeDistrict);
-  const { data: fleetLocationsData, isLoading: fleetLoading, refetch: refetchFleet } = useLogisticsClusters(activeDistrict);
-  const { data: resultadosData, isLoading: resultadosLoading, refetch: refetchResults } = useDiadResults(activeDistrict);
-  const { data: actasData, isLoading: actasLoading, refetch: refetchActas } = useDiadActas(activeDistrict);
-  const { data: membersListData, isLoading: membersLoading, refetch: refetchMembers } = useDiadMembers(activeDistrict);
-  const { data: participationData, isLoading: participationLoading, refetch: refetchParticipation } = useParticipationSummary(activeDistrict);
 
   // States for Monitoreo tab
   const [selectedMesaDetail, setSelectedMesaDetail] = useState<{ local: string; mesa: number } | null>(null);
@@ -389,23 +406,6 @@ const DiaDApp: React.FC = () => {
       setUsersToAssign(res.data.filter((u: any) => ['COORDINADOR', 'VEEDOR', 'MIEMBRO_MESA'].includes(u.role)));
     } catch (err) { /* empty state handles this */ }
   };
-
-  const fetchData = useCallback(async () => {
-    try {
-      await Promise.all([
-        refetchCoverage(),
-        refetchResults(),
-        refetchActas(),
-        refetchLocations(),
-        refetchFleet(),
-        refetchMembers(),
-        refetchParticipation()
-      ]);
-      setLastRefresh(new Date());
-    } catch (err) {
-      /* background fetch - empty state handles this */
-    }
-  }, [refetchCoverage, refetchResults, refetchActas, refetchLocations, refetchFleet, refetchMembers, refetchParticipation]);
 
   // Load voters when a specific mesa is selected
   useEffect(() => {

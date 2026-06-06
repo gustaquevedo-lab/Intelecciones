@@ -227,13 +227,40 @@ export function vehiclesRoutes() {
           WHERE UPPER(REPLACE(v.plate, '-', '')) = UPPER(REPLACE(?, '-', ''))
         `).get(plate) as any;
       } else if (driver_ci) {
+        const cleanCI = driver_ci.toString().replace(/\./g, '').trim();
         vehicle = db.prepare(`
           SELECT v.*, u.nombre as coordinator_name, u.telefono as coordinator_phone, u.photo_url as coordinator_photo
           FROM vehicles v LEFT JOIN users u ON v.assigned_user_id = u.id
           WHERE REPLACE(v.driver_ci, '.', '') = REPLACE(?, '.', '')
         `).get(driver_ci) as any;
+
+        if (!vehicle) {
+          const user = db.prepare(`
+            SELECT id, nombre, role, ci, telefono, assigned_local, assigned_mesa, distrito, assigned_table_role
+            FROM users
+            WHERE REPLACE(ci, '.', '') = ? OR username = ? OR REPLACE(username, '.', '') = ?
+          `).get(cleanCI, cleanCI, cleanCI) as any;
+
+          if (user) {
+            vehicle = {
+              id: user.id,
+              description: `Móvil Personal - ${user.nombre}`,
+              plate: 'PJC-000',
+              capacity: 4,
+              status: 'AVAILABLE',
+              driver_name: user.nombre,
+              driver_ci: user.ci,
+              driver_phone: user.telefono || '',
+              coordinator_name: user.nombre,
+              coordinator_phone: user.telefono || '',
+              coordinator_distrito: user.assigned_local || user.distrito || 'Pedro Juan Caballero',
+              mesa_number: user.assigned_mesa || 1,
+              mesa_role: user.assigned_table_role || user.role,
+            };
+          }
+        }
       }
-      if (!vehicle) return res.status(404).json({ error: 'Vehículo o chofer no registrado en el sistema' });
+      if (!vehicle) return res.status(404).json({ error: 'Usuario o chofer no registrado en el sistema' });
       res.json(vehicle);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });

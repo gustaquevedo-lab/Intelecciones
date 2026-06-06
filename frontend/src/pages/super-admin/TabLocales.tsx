@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Plus, Search, Trash2, Edit2, UserPlus, Flag,
   Users as UsersIcon, Database, Activity, CheckCircle2,
@@ -10,13 +10,14 @@ import {
 import { ManagementTable } from '../../components/ManagementTable';
 import { Skeleton, SkeletonTable } from '../../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import { Navigate } from 'react-router-dom';
 import { getImageUrl } from '../../services/api';
 import { ImageCropperModal } from '../../components/ImageCropperModal';
 import L from 'leaflet';
+import { CIUDADES_PARAGUAY } from '../../constants/cities';
 
 const ICON_SVGS: Record<string, string> = {
   Landmark: `<polygon points="12 2 22 7 2 7 12 2"></polygon><line x1="3" y1="22" x2="21" y2="22"></line><line x1="6" y1="18" x2="6" y2="11"></line><line x1="10" y1="18" x2="10" y2="11"></line><line x1="14" y1="18" x2="14" y2="11"></line><line x1="18" y1="18" x2="18" y2="11"></line>`,
@@ -53,6 +54,14 @@ const createCustomIcon = (color: string, iconName: string = 'Landmark', size: nu
     iconAnchor: [size / 2, size],
     popupAnchor: [0, -size],
   });
+};
+
+const MapRecenter = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, zoom, { duration: 1.5 });
+  }, [center, zoom, map]);
+  return null;
 };
 
 const TabLocales = (props: any) => {
