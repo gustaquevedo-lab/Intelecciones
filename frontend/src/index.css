@@ -1911,3 +1911,13 @@ select option:active {
   }
 }
 
+/* OLED/Battery Optimizations & Premium Tap States */
+.elector-grid-item {
+  will-change: transform, background-color, border-color;
+  user-select: none;
+}
+.elector-grid-item:active {
+  transform: scale(0.90) !important;
+}
+
+

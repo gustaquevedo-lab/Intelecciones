@@ -298,7 +298,7 @@ export default function diadRoutes(upload: multer.Multer) {
 
     try {
       let sql = `
-        SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.role, u.ci, u.telefono
+        SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.role, u.ci, u.telefono, u.assigned_table_role
         FROM users u
         LEFT JOIN voting_locations vl ON u.assigned_local = vl.nombre
         WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')
@@ -314,7 +314,7 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   router.post('/members/assign', (req, res) => {
-    const { ci, local, mesa, user_id, role } = req.body;
+    const { ci, local, mesa, user_id, role, table_role } = req.body;
     if (!ci && !user_id) return res.status(400).json({ error: 'ci o user_id es requerido' });
     if (!local) return res.status(400).json({ error: 'local es requerido' });
     if (mesa === undefined || mesa === null || isNaN(Number(mesa))) return res.status(400).json({ error: 'mesa debe ser un número' });
@@ -337,7 +337,7 @@ export default function diadRoutes(upload: multer.Multer) {
         }
       }
       if (!targetId) return res.status(400).json({ error: 'No se pudo identificar al usuario' });
-      db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ? WHERE id = ?`).run(local, mesa, targetRole, targetId);
+      db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -636,6 +636,79 @@ export default function diadRoutes(upload: multer.Multer) {
       res.json(voters);
     } catch (err: any) {
       console.error('[DIAD PARTICIPATION LOCAL DETAIL ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── MESA CONSTITUTION ENDPOINTS ──────────────────────────────────────────
+  router.post('/mesa/confirm', (req, res) => {
+    const { local_votacion, mesa } = req.body;
+    if (!local_votacion || mesa === undefined) {
+      return res.status(400).json({ error: 'local_votacion y mesa son requeridos' });
+    }
+    try {
+      db.prepare(`
+        INSERT INTO mesa_constitutions (local_votacion, mesa, is_confirmed, confirmed_at)
+        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+        ON CONFLICT(local_votacion, mesa) DO UPDATE SET
+          is_confirmed = 1,
+          confirmed_at = CURRENT_TIMESTAMP
+      `).run(local_votacion, mesa);
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/mesa/upload-acta', upload.single('photo'), (req, res) => {
+    const { local_votacion, mesa } = req.body;
+    if (!local_votacion || mesa === undefined) {
+      return res.status(400).json({ error: 'local_votacion y mesa son requeridos' });
+    }
+    try {
+      const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+      if (!photoUrl) {
+        return res.status(400).json({ error: 'La fotografía del acta es requerida' });
+      }
+
+      db.prepare(`
+        INSERT INTO mesa_constitutions (local_votacion, mesa, foto_acta_url, constituted_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(local_votacion, mesa) DO UPDATE SET
+          foto_acta_url = ?,
+          constituted_at = CURRENT_TIMESTAMP
+      `).run(local_votacion, mesa, photoUrl, photoUrl);
+
+      res.json({ success: true, foto_acta_url: photoUrl });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/mesa/status/:local/:mesa', (req, res) => {
+    const { local, mesa } = req.params;
+    try {
+      const constitution = db.prepare(`
+        SELECT is_confirmed, foto_acta_url, confirmed_at, constituted_at
+        FROM mesa_constitutions
+        WHERE local_votacion = ? AND mesa = ?
+      `).get(local, mesa) as any;
+
+      const members = db.prepare(`
+        SELECT id, nombre, role, ci, telefono, assigned_table_role
+        FROM users
+        WHERE assigned_local = ? AND assigned_mesa = ?
+      `).all(local, mesa) as any[];
+
+      res.json({
+        is_confirmed: constitution ? !!constitution.is_confirmed : false,
+        foto_acta_url: constitution ? constitution.foto_acta_url : null,
+        confirmed_at: constitution ? constitution.confirmed_at : null,
+        constituted_at: constitution ? constitution.constituted_at : null,
+        members
+      });
+    } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });

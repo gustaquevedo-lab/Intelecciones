@@ -9,6 +9,7 @@ import {
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useSSE } from '../hooks/useSSE';
 import api, { getImageUrl } from '../services/api';
 import { useCoverage, useLocales, useDiadResults, useDiadActas, useDiadMembers, useLogisticsClusters, useParticipationSummary } from '../hooks/useQueries';
 import { exportMesaToExcel, exportLocalToExcel } from '../utils/excelExport';
@@ -142,6 +143,29 @@ const DiaDApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros'>('cobertura');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
+  
+  // Real-time vote confirmation toasts
+  const [toasts, setToasts] = useState<any[]>([]);
+
+  useSSE(useCallback((event: any) => {
+    if (event.type === 'VOTE_CONFIRMED') {
+      const voteData = event.data;
+      const newToast = {
+        id: Date.now(),
+        message: `¡Voto confirmado! ${voteData.nombre} ${voteData.apellido || ''} - Local: ${voteData.local_votacion} (Mesa ${voteData.mesa}, Orden ${voteData.orden})`,
+        data: voteData
+      };
+      setToasts(prev => [newToast, ...prev].slice(0, 5));
+      
+      // Auto-remove toast after 8 seconds
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== newToast.id));
+      }, 8000);
+
+      // Trigger data refetch to update counters in real-time
+      fetchData();
+    }
+  }, [fetchData]));
 
   // Data queries (TanStack Query)
   const { data: coverageData, isLoading: coverageLoading, refetch: refetchCoverage } = useCoverage(activeDistrict);
@@ -2085,6 +2109,73 @@ const DiaDApp: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* Real-time Vote Confirmation Toasts */}
+      <div style={{
+        position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 99999,
+        display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '400px'
+      }}>
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 50, scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              style={{
+                background: 'rgba(13, 27, 42, 0.95)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(37, 200, 130, 0.3)',
+                borderLeft: '4px solid var(--green)',
+                borderRadius: '12px',
+                padding: '1rem',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '0.75rem'
+              }}
+            >
+              <div style={{
+                background: 'rgba(34, 197, 94, 0.1)',
+                borderRadius: '50%',
+                padding: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--green)'
+              }}>
+                <CheckCircle2 size={18} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white' }}>¡VOTO CONFIRMADO!</span>
+                  <button
+                    onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 0 }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-2)', lineHeight: 1.3 }}>
+                  <strong>{toast.data.nombre} {toast.data.apellido || ''}</strong> acaba de confirmar su voto.
+                </p>
+                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', padding: '2px 6px', borderRadius: '4px' }}>
+                    Mesa {toast.data.mesa}
+                  </span>
+                  <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', padding: '2px 6px', borderRadius: '4px' }}>
+                    Orden {toast.data.orden}
+                  </span>
+                  <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', padding: '2px 6px', borderRadius: '4px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {toast.data.local_votacion}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </MainLayout>
   );
 };

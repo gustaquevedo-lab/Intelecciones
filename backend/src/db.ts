@@ -41,7 +41,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 26; // Update this to trigger migrations
+const currentSchemaVersion = 28; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -72,6 +72,7 @@ addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
 addColumnIfNotExists("whatsapp_terminals", "phone_number", "TEXT");
 addColumnIfNotExists("whatsapp_terminals", "warmup_enabled", "INTEGER DEFAULT 0");
 addColumnIfNotExists("attendance", "photo_url", "TEXT");
+addColumnIfNotExists("users", "assigned_table_role", "TEXT");
 
 // Create index optimizations on startup
 try {
@@ -591,10 +592,43 @@ if (dbVersion < currentSchemaVersion) {
         DELETE FROM capture_conflicts 
         WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b;
       `).run();
+    } catch (e: any) {
+      console.error("MIGRATION ERROR in repair block:", e.message);
+    }
 
-      console.log("MIGRATION: Successfully repaired and synchronized existing capture conflicts.");
-    } catch (err: any) {
-      console.log("MIGRATION: Conflict repair skipped or error:", err.message);
+     // CREATE vote_validations table (Fase 0.5 QR validation)
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS vote_validations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          elector_ci TEXT NOT NULL,
+          validator_id INTEGER NOT NULL,
+          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(validator_id) REFERENCES users(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_vote_validations_ci ON vote_validations(elector_ci);
+      `);
+      console.log("MIGRATION: Created table vote_validations and index idx_vote_validations_ci.");
+    } catch (e: any) {
+      console.error("MIGRATION ERROR creating table vote_validations:", e.message);
+    }
+
+    // CREATE mesa_constitutions table (Fase 0.5 Mesa Constitution & Substitution)
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mesa_constitutions (
+          local_votacion TEXT NOT NULL,
+          mesa INTEGER NOT NULL,
+          is_confirmed INTEGER DEFAULT 0,
+          foto_acta_url TEXT,
+          confirmed_at DATETIME,
+          constituted_at DATETIME,
+          PRIMARY KEY (local_votacion, mesa)
+        );
+      `);
+      console.log("MIGRATION: Created table mesa_constitutions.");
+    } catch (e: any) {
+      console.error("MIGRATION ERROR creating table mesa_constitutions:", e.message);
     }
 
     setDbVersion(currentSchemaVersion);

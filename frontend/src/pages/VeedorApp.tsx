@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { Skeleton } from '../components/Skeleton';
-import api from '../services/api';
+import api, { getImageUrl } from '../services/api';
 import { startSiren, stopSiren } from '../utils/sirenAudio';
 import { useSSE } from '../hooks/useSSE';
 
@@ -101,6 +101,47 @@ const VeedorApp = () => {
 
 
 /* ─────────────────────────────────────────────
+   ELECTOR GRID ITEM COMPONENT (battery optimized)
+   ───────────────────────────────────────────── */
+const ElectorGridItem = React.memo(({ order, isVoted, onClick }: {
+  order: number;
+  isVoted: boolean;
+  onClick: (order: number) => void;
+}) => {
+  return (
+    <button
+      type="button"
+      onClick={() => !isVoted && onClick(order)}
+      style={{
+        height: '95px',
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        borderRadius: '18px', 
+        border: '2px solid',
+        cursor: isVoted ? 'default' : 'pointer',
+        background: isVoted ? 'var(--plra-600)' : 'rgba(255,255,255,0.03)',
+        borderColor: isVoted ? 'var(--plra-400)' : 'rgba(255,255,255,0.08)',
+        position: 'relative', 
+        transition: 'transform 0.1s ease-in-out, background-color 0.15s, border-color 0.15s',
+        boxShadow: isVoted ? 'none' : '0 4px 14px rgba(0,0,0,0.15)',
+        width: '100%',
+        color: 'white',
+        outline: 'none'
+      }}
+      className="elector-grid-item"
+    >
+      {isVoted ? (
+        <Check size={38} style={{ color: 'var(--white)' }} strokeWidth={3.5} />
+      ) : (
+        <span style={{ fontSize: '2.3rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>{order}</span>
+      )}
+    </button>
+  );
+});
+
+/* ─────────────────────────────────────────────
    VEEDURÍA TAB (optimized for mobile)
    ───────────────────────────────────────────── */
 const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) => {
@@ -158,13 +199,13 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
 
   if (!hasAssignment && !loading && (user?.role === 'MIEMBRO_DE_MESA' || user?.role === 'VEEDOR')) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)' }}>
-        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-           <MapPin size={40} style={{ color: 'var(--text-3)' }} />
+      <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-3)' }}>
+        <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+           <MapPin size={44} style={{ color: 'var(--text-3)' }} />
         </div>
-        <h3 style={{ color: 'white', fontWeight: 800 }}>Sin Mesa Asignada</h3>
-        <p style={{ fontSize: '0.9rem' }}>Aún no tienes un local o mesa de votación asignada en el sistema.</p>
-        <p style={{ fontSize: '0.75rem', marginTop: '1rem', opacity: 0.7 }}>Contacta a tu coordinador para que asigne tu local y mesa.</p>
+        <h3 style={{ color: 'white', fontWeight: 800, fontSize: '1.25rem' }}>Sin Mesa Asignada</h3>
+        <p style={{ fontSize: '1rem', marginTop: '0.5rem' }}>Aún no tienes un local o mesa de votación asignada en el sistema.</p>
+        <p style={{ fontSize: '0.85rem', marginTop: '1.25rem', opacity: 0.7 }}>Contacta a tu coordinador para que asigne tu local y mesa.</p>
       </div>
     );
   }
@@ -173,34 +214,34 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
     <>
       {/* Header táctico optimizado */}
       <header className="card-premium-styled" style={{ 
-        padding: '1.25rem', 
-        marginBottom: '1rem', 
+        padding: '1.5rem', 
+        marginBottom: '1.25rem', 
         display: 'flex', 
         flexDirection: 'column',
-        gap: '1rem'
+        gap: '1.25rem'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <MapPin size={16} style={{ color: tableInfo.local === 'SIN ASIGNACIÓN' ? 'var(--red)' : 'var(--plra-300)' }} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+              <MapPin size={18} style={{ color: tableInfo.local === 'SIN ASIGNACIÓN' ? 'var(--red)' : 'var(--plra-300)' }} />
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1.2 }}>
                 {tableInfo.local || 'Cargando...'}
               </h2>
             </div>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 800 }}>
-                MESA: <span style={{ color: 'var(--plra-200)', fontSize: '1rem' }}>{tableInfo.mesa || '—'}</span>
+            <div style={{ display: 'flex', gap: '1.25rem' }}>
+              <p style={{ fontSize: '1rem', color: 'var(--text-3)', fontWeight: 800 }}>
+                MESA: <span style={{ color: 'var(--plra-200)', fontSize: '1.2rem', fontWeight: 900 }}>{tableInfo.mesa || '—'}</span>
               </p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 800 }}>
-                TOTAL: <span style={{ color: 'var(--text)', fontSize: '1rem' }}>{tableInfo.total}</span>
+              <p style={{ fontSize: '1rem', color: 'var(--text-3)', fontWeight: 800 }}>
+                TOTAL: <span style={{ color: 'var(--text)', fontSize: '1.2rem', fontWeight: 900 }}>{tableInfo.total}</span>
               </p>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--green)', lineHeight: 1 }}>
+            <p style={{ fontSize: '2.4rem', fontWeight: 900, color: 'var(--green)', lineHeight: 1 }}>
               {votedOrders.size}
             </p>
-            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase' }}>Presentes</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Presentes</p>
           </div>
         </div>
 
@@ -214,15 +255,15 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
             }}
             style={{
               width: '100%',
-              padding: '1rem',
-              borderRadius: '12px',
+              padding: '1.2rem',
+              borderRadius: '14px',
               border: 'none',
               background: 'linear-gradient(135deg, #EF4444, #B91C1C)',
               color: 'white',
               fontWeight: 900,
-              fontSize: '0.9rem',
+              fontSize: '1.05rem',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.07em',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -230,7 +271,7 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
               boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)'
             }}
           >
-            <CheckSquare size={20} />
+            <CheckSquare size={22} />
             Cerrar Votación
           </motion.button>
         )}
@@ -238,72 +279,53 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
 
       {loading ? (
         <div style={{ padding: '1rem' }}>
-          <Skeleton height={100} borderRadius={16} style={{ marginBottom: '1rem' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(85px, 1fr))', gap: '0.75rem' }}>
+          <Skeleton height={110} borderRadius={18} style={{ marginBottom: '1rem' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.8rem' }}>
             {Array.from({ length: 12 }).map((_, i) => (
-              <Skeleton key={i} height={90} borderRadius={16} />
+              <Skeleton key={i} height={95} borderRadius={18} />
             ))}
           </div>
         </div>
       ) : (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(85px, 1fr))',
-          gap: '0.75rem',
-          paddingBottom: '2rem'
+          gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
+          gap: '0.8rem',
+          paddingBottom: '2.5rem'
         }}>
           {electors.map((order) => {
             const isVoted = votedOrders.has(order);
             return (
-              <motion.button
-                key={order}
-                whileTap={{ scale: 0.85 }}
-                onClick={() => handleMarkRequest(order)}
-                style={{
-                  height: '90px',
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center',
-                  borderRadius: '16px', border: '2px solid',
-                  cursor: isVoted ? 'default' : 'pointer',
-                  background: isVoted ? 'var(--plra-600)' : 'rgba(255,255,255,0.03)',
-                  borderColor: isVoted ? 'var(--plra-400)' : 'rgba(255,255,255,0.08)',
-                  position: 'relative', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: isVoted ? 'none' : '0 4px 12px rgba(0,0,0,0.1)'
-                }}
-              >
-                <span style={{
-                  fontSize: '0.75rem', fontWeight: 900,
-                  color: isVoted ? 'rgba(255,255,255,0.3)' : 'var(--text-3)',
-                  position: 'absolute', top: '8px', left: '10px'
-                }}>
-                  #{order}
-                </span>
+              <div key={order} style={{ position: 'relative' }}>
+                <ElectorGridItem 
+                  order={order}
+                  isVoted={isVoted}
+                  onClick={handleMarkRequest}
+                />
                 
-                {isVoted ? (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                    <Check size={32} style={{ color: 'var(--white)' }} strokeWidth={3} />
-                  </motion.div>
-                ) : (
-                  <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white' }}>{order}</span>
-                )}
-
                 <AnimatePresence>
                   {showSuccess === order && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.5, y: 0 }}
-                      animate={{ opacity: 1, scale: 2, y: -40 }}
+                      animate={{ opacity: 1, scale: 1.6, y: -25 }}
                       exit={{ opacity: 0, scale: 0.5 }}
                       style={{
-                        position: 'absolute', zIndex: 10,
-                        background: 'var(--green)', borderRadius: '50%',
-                        padding: '8px', boxShadow: '0 8px 25px rgba(34,197,94,0.6)'
+                        position: 'absolute', 
+                        zIndex: 10,
+                        top: '25px', 
+                        left: '25px',
+                        background: 'var(--green)', 
+                        borderRadius: '50%',
+                        padding: '8px', 
+                        boxShadow: '0 8px 25px rgba(34,197,94,0.6)',
+                        pointerEvents: 'none'
                       }}
                     >
-                      <Check size={24} color="var(--white)" strokeWidth={3} />
+                      <Check size={22} color="var(--white)" strokeWidth={3} />
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.button>
+              </div>
             );
           })}
         </div>
@@ -323,41 +345,41 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               style={{
-                width: '100%', maxWidth: '320px',
+                width: '100%', maxWidth: '340px',
                 background: 'var(--surface-light)', borderRadius: '24px',
-                padding: '2rem', textAlign: 'center',
+                padding: '2.2rem', textAlign: 'center',
                 border: '1px solid var(--border)',
                 boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
               }}
             >
               <div style={{ 
-                width: '80px', height: '80px', borderRadius: '50%', 
+                width: '90px', height: '90px', borderRadius: '50%', 
                 background: 'rgba(59,130,246,0.1)', color: '#3B82F6',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 margin: '0 auto 1.5rem'
               }}>
-                <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>{confirmingOrder}</span>
+                <span style={{ fontSize: '2.8rem', fontWeight: 900 }}>{confirmingOrder}</span>
               </div>
               
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'white', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginBottom: '0.6rem' }}>
                 Confirmar Voto
               </h3>
-              <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                ¿Desea marcar como presente al elector número <strong>#{confirmingOrder}</strong>?
+              <p style={{ color: 'var(--text-2)', fontSize: '1rem', marginBottom: '2.2rem' }}>
+                ¿Desea marcar como presente al elector número <strong style={{ color: 'white' }}>#{confirmingOrder}</strong>?
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={confirmMarkVote}
                   style={{
-                    padding: '1.25rem', borderRadius: '16px', border: 'none',
+                    padding: '1.35rem', borderRadius: '18px', border: 'none',
                     background: 'var(--green)', color: 'white',
-                    fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer',
+                    fontWeight: 900, fontSize: '1.2rem', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem'
                   }}
                 >
-                  <Check size={24} strokeWidth={3} />
+                  <Check size={26} strokeWidth={3.5} />
                   SÍ, CONFIRMAR
                 </motion.button>
                 
@@ -365,7 +387,7 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
                   onClick={() => setConfirmingOrder(null)}
                   style={{
                     padding: '1rem', background: 'transparent', border: 'none',
-                    color: 'var(--text-3)', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer'
+                    color: 'var(--text-3)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer'
                   }}
                 >
                   CANCELAR
@@ -573,26 +595,26 @@ const ActaFinalTab = () => {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       className="card-premium-styled"
-      style={{ padding: '3rem', textAlign: 'center', marginTop: '2rem' }}
+      style={{ padding: '3.5rem 2rem', textAlign: 'center', marginTop: '2rem' }}
     >
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.1 }}
         style={{
-          width: '72px', height: '72px', borderRadius: '50%',
+          width: '80px', height: '80px', borderRadius: '50%',
           background: 'linear-gradient(135deg, #22C47E, #1aab6d)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 1.5rem',
           boxShadow: '0 0 30px rgba(34,196,126,0.35)'
         }}
       >
-        <Check size={36} color="var(--white)" strokeWidth={3} />
+        <Check size={40} color="var(--white)" strokeWidth={3} />
       </motion.div>
-      <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.5rem' }}>
+      <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.75rem' }}>
         Acta Enviada
       </h2>
-      <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', maxWidth: '280px', margin: '0 auto' }}>
+      <p style={{ color: 'var(--text-3)', fontSize: '1rem', maxWidth: '300px', margin: '0 auto', lineHeight: 1.4 }}>
         Los resultados de la mesa <strong style={{ color: 'var(--plra-200)' }}>{tableInfo.mesa}</strong> fueron
         registrados correctamente. El sistema Día D ya los está procesando.
       </p>
@@ -602,50 +624,50 @@ const ActaFinalTab = () => {
   return (
     <form onSubmit={handleSubmit}>
       {/* Mesa header */}
-      <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <MapPin size={20} style={{ color: 'var(--plra-300)', flexShrink: 0 }} />
+      <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <MapPin size={24} style={{ color: 'var(--plra-300)', flexShrink: 0 }} />
         <div>
-          <p style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)' }}>{tableInfo.local || 'Sin asignación'}</p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', fontWeight: 800 }}>
-            MESA <span style={{ color: 'var(--plra-200)', fontSize: '1.1rem' }}>{tableInfo.mesa || '—'}</span>
+          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)' }}>{tableInfo.local || 'Sin asignación'}</p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-3)', fontWeight: 800 }}>
+            MESA <span style={{ color: 'var(--plra-200)', fontSize: '1.25rem', fontWeight: 900 }}>{tableInfo.mesa || '—'}</span>
           </p>
         </div>
       </div>
 
       {/* Votos por lista */}
-      <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-        <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>
+      <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>
           Votos por lista
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {listas.map(l => (
             <div key={l.lista_id} style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-              padding: '0.9rem 1rem',
+              display: 'flex', alignItems: 'center', gap: '0.85rem',
+              padding: '1.1rem 1.25rem',
               background: 'rgba(255,255,255,0.02)',
-              borderRadius: '16px',
+              borderRadius: '18px',
               border: '1px solid var(--border)'
             }}>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.1rem' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: l.color }} />
-                  <span style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white' }}>{l.nombre}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: l.color }} />
+                  <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white' }}>{l.nombre}</span>
                 </div>
-                <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700 }}>LISTA {l.lista_id}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700 }}>LISTA {l.lista_id}</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <motion.button
                   type="button" whileTap={{ scale: 0.85 }}
                   onClick={() => updateVotos(l.lista_id, -1)}
                   style={{
-                    width: '42px', height: '42px', borderRadius: '12px',
+                    width: '46px', height: '46px', borderRadius: '14px',
                     border: '1px solid var(--border)',
                     background: 'rgba(255,255,255,0.05)', color: 'white',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer'
                   }}
                 >
-                  <Minus size={18} strokeWidth={3} />
+                  <Minus size={20} strokeWidth={3} />
                 </motion.button>
                 <input
                   type="number"
@@ -653,10 +675,10 @@ const ActaFinalTab = () => {
                   value={l.votos}
                   onChange={e => setVotosDirecto(l.lista_id, e.target.value)}
                   style={{
-                    width: '65px', textAlign: 'center',
+                    width: '75px', textAlign: 'center',
                     background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '10px', color: 'white',
-                    fontSize: '1.4rem', fontWeight: 900, padding: '0.4rem',
+                    borderRadius: '12px', color: 'white',
+                    fontSize: '1.7rem', fontWeight: 900, padding: '0.5rem 0.25rem',
                     outline: 'none'
                   }}
                 />
@@ -664,14 +686,14 @@ const ActaFinalTab = () => {
                   type="button" whileTap={{ scale: 0.85 }}
                   onClick={() => updateVotos(l.lista_id, 1)}
                   style={{
-                    width: '42px', height: '42px', borderRadius: '12px',
+                    width: '46px', height: '46px', borderRadius: '14px',
                     border: 'none',
                     background: 'var(--plra-500)', color: 'white',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,71,171,0.3)'
                   }}
                 >
-                  <Plus size={18} strokeWidth={3} />
+                  <Plus size={20} strokeWidth={3} />
                 </motion.button>
               </div>
             </div>
@@ -680,28 +702,28 @@ const ActaFinalTab = () => {
       </div>
 
       {/* Otros resultados - BLANCOS Y NULOS - Gigantes */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
           {[
             { label: 'Blancos', value: votosEnBlanco, setter: setVotosEnBlanco, color: '#94A3B8' },
             { label: 'Nulos', value: votosNulos, setter: setVotosNulos, color: '#EF4444' },
           ].map(({ label, value, setter, color }) => (
-            <div key={label} className="card-premium-styled" style={{ padding: '1rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>{label}</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <div key={label} className="card-premium-styled" style={{ padding: '1.25rem 1rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.85rem' }}>{label}</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
                 <motion.button
                   type="button" whileTap={{ scale: 0.8 }}
                   onClick={() => setter(v => Math.max(0, v - 1))}
-                  style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '40px', height: '40px', borderRadius: '12px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Minus size={14} strokeWidth={3} />
+                  <Minus size={16} strokeWidth={3} />
                 </motion.button>
-                <span style={{ fontSize: '1.8rem', fontWeight: 900, color, minWidth: '40px' }}>{value}</span>
+                <span style={{ fontSize: '2.2rem', fontWeight: 900, color, minWidth: '45px' }}>{value}</span>
                 <motion.button
                   type="button" whileTap={{ scale: 0.8 }}
                   onClick={() => setter(v => v + 1)}
-                  style={{ width: '36px', height: '36px', borderRadius: '10px', border: 'none', background: 'rgba(255,255,255,0.1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '40px', height: '40px', borderRadius: '12px', border: 'none', background: 'rgba(255,255,255,0.1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Plus size={14} strokeWidth={3} />
+                  <Plus size={16} strokeWidth={3} />
                 </motion.button>
               </div>
             </div>
@@ -709,23 +731,23 @@ const ActaFinalTab = () => {
       </div>
 
       {/* Escanear QR TSJE (Urna Electrónica) */}
-      <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.25rem', border: '1px dashed var(--plra-400)', background: 'rgba(0,71,171,0.05)' }}>
-        <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <QrCode size={16} /> Escaneo de Urna Electrónica TSJE
+      <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem', border: '1px dashed var(--plra-400)', background: 'rgba(0,71,171,0.05)' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <QrCode size={18} /> Escaneo de Urna Electrónica TSJE
         </h3>
-        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '1rem' }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.1rem' }}>
           Escanee el código QR impreso por la urna para autocompletar todos los votos al instante.
         </p>
         <button
           type="button"
           onClick={() => setShowQRScanner(true)}
           style={{
-            width: '100%', padding: '0.75rem', borderRadius: '12px', border: 'none',
-            background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.8rem',
+            width: '100%', padding: '0.9rem', borderRadius: '14px', border: 'none',
+            background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.9rem',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer'
           }}
         >
-          <Camera size={16} /> ESCANEAR QR TSJE
+          <Camera size={18} /> ESCANEAR QR TSJE
         </button>
       </div>
 
@@ -739,13 +761,13 @@ const ActaFinalTab = () => {
             padding: '2rem'
           }}>
             <div style={{ width: '100%', maxWidth: '360px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <span style={{ color: 'white', fontWeight: 800, fontSize: '0.9rem' }}>Escanear QR de Urna TSJE</span>
+              <span style={{ color: 'white', fontWeight: 800, fontSize: '1rem' }}>Escanear QR de Urna TSJE</span>
               <button 
                 type="button" 
                 onClick={() => setShowQRScanner(false)}
-                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
@@ -766,13 +788,13 @@ const ActaFinalTab = () => {
                 }}
               />
               <QrCode size={120} style={{ opacity: 0.15, color: 'white' }} />
-              <p style={{ position: 'absolute', bottom: '20px', fontSize: '0.65rem', color: 'var(--text-3)', textAlign: 'center', width: '80%', zIndex: 3 }}>
+              <p style={{ position: 'absolute', bottom: '20px', fontSize: '0.75rem', color: 'var(--text-3)', textAlign: 'center', width: '80%', zIndex: 3 }}>
                 Apunta al código QR impreso en el ticket
               </p>
             </div>
 
             {/* Manual input / Simulation trigger */}
-            <div style={{ width: '100%', maxWidth: '300px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ width: '100%', maxWidth: '300px', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <button
                 type="button"
                 onClick={() => {
@@ -780,9 +802,9 @@ const ActaFinalTab = () => {
                   handleParseQRData(mockData);
                 }}
                 style={{
-                  width: '100%', padding: '0.85rem', borderRadius: '12px', border: 'none',
+                  width: '100%', padding: '0.95rem', borderRadius: '14px', border: 'none',
                   background: 'linear-gradient(135deg, #22C47E, #16a34a)', color: 'white',
-                  fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer',
+                  fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
                   boxShadow: '0 4px 15px rgba(34,196,126,0.3)'
                 }}
               >
@@ -791,7 +813,7 @@ const ActaFinalTab = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.5rem 0' }}>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 800 }}>O COPEAR CÓDIGO</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 800 }}>O COPIAR CÓDIGO</span>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
               </div>
 
@@ -801,9 +823,9 @@ const ActaFinalTab = () => {
                 value={scannerPasteData}
                 onChange={e => setScannerPasteData(e.target.value)}
                 style={{
-                  width: '100%', padding: '0.75rem', borderRadius: '10px',
+                  width: '100%', padding: '0.85rem', borderRadius: '10px',
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'white', fontSize: '0.8rem', outline: 'none'
+                  color: 'white', fontSize: '0.85rem', outline: 'none'
                 }}
               />
               {scannerPasteData && (
@@ -814,11 +836,11 @@ const ActaFinalTab = () => {
                     setScannerPasteData('');
                   }}
                   style={{
-                    width: '100%', padding: '0.65rem', borderRadius: '10px', border: 'none',
-                    background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer'
+                    width: '100%', padding: '0.75rem', borderRadius: '10px', border: 'none',
+                    background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer'
                   }}
                 >
-                  PROCESAR CÓDIGO PEGAR
+                  PROCESAR CÓDIGO PEGADO
                 </button>
               )}
             </div>
@@ -827,33 +849,33 @@ const ActaFinalTab = () => {
       </AnimatePresence>
 
       {/* Foto del acta */}
-      <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Camera size={16} /> Foto del Acta Oficial (Física)
+      <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.75rem' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Camera size={18} /> Foto del Acta Oficial (Física)
         </h3>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} style={{ display: 'none' }} />
         {photoPreview ? (
           <div style={{ position: 'relative' }}>
             <img src={photoPreview} alt="Vista previa" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '16px', border: '2px solid var(--green)' }} />
             <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-              style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '8px', color: 'white', padding: '8px 12px', fontSize: '0.75rem', fontWeight: 800 }}>
+              style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '8px', color: 'white', padding: '8px 12px', fontSize: '0.8rem', fontWeight: 800 }}>
                CAMBIAR FOTO
-            </motion.button>
+             </motion.button>
           </div>
         ) : (
           <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => fileRef.current?.click()}
-            style={{ width: '100%', padding: '2.5rem 1rem', border: '2px dashed var(--border)', borderRadius: '20px', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-            <Upload size={36} style={{ color: 'var(--plra-300)' }} />
-            <p style={{ fontSize: '1rem', fontWeight: 900, color: 'white' }}>CAPTURAR ACTA</p>
+            style={{ width: '100%', padding: '3rem 1rem', border: '2px dashed var(--border)', borderRadius: '20px', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+            <Upload size={40} style={{ color: 'var(--plra-300)' }} />
+            <p style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white' }}>CAPTURAR ACTA</p>
           </motion.button>
         )}
       </div>
       
       {error && (
         <div style={{ 
-          padding: '1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', 
-          borderRadius: '12px', color: '#F87171', fontSize: '0.85rem', fontWeight: 700, 
-          marginBottom: '1.5rem', textAlign: 'center' 
+          padding: '1.1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', 
+          borderRadius: '14px', color: '#F87171', fontSize: '0.95rem', fontWeight: 700, 
+          marginBottom: '1.75rem', textAlign: 'center' 
         }}>
           {error}
         </div>
@@ -865,17 +887,17 @@ const ActaFinalTab = () => {
         disabled={submitting}
         whileTap={{ scale: 0.95 }}
         style={{
-          width: '100%', padding: '1.25rem',
-          borderRadius: '18px', border: 'none',
+          width: '100%', padding: '1.4rem',
+          borderRadius: '20px', border: 'none',
           background: submitting ? 'var(--text-3)' : 'linear-gradient(135deg, #22C47E 0%, #16a34a 100%)',
-          color: 'white', fontWeight: 900, fontSize: '1.1rem',
-          textTransform: 'uppercase', letterSpacing: '0.1em',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
+          color: 'white', fontWeight: 900, fontSize: '1.25rem',
+          textTransform: 'uppercase', letterSpacing: '0.12em',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.85rem',
           boxShadow: '0 8px 30px rgba(22, 163, 74, 0.4)',
-          marginBottom: '3rem'
+          marginBottom: '3.5rem'
         }}
       >
-        {submitting ? 'Enviando...' : <><Send size={20} /> ENVIAR RESULTADOS</>}
+        {submitting ? 'Enviando...' : <><Send size={22} /> ENVIAR RESULTADOS</>}
       </motion.button>
     </form>
   );
@@ -892,18 +914,35 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
   const [showSwapDrawer, setShowSwapDrawer] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRoleForAssign, setSelectedRoleForAssign] = useState<'PRESIDENTE' | 'VOCAL' | 'VEEDOR'>('PRESIDENTE');
+  const [substitutingMemberId, setSubstitutingMemberId] = useState<number | null>(null);
+  const [mesaConstitutions, setMesaConstitutions] = useState<Record<number, { is_confirmed: boolean, foto_acta_url: string | null }>>({});
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const covRes = await api.get('/api/diad/coverage');
-      const memRes = await api.get('/api/diad/members');
+      const covRes = await api.get('/diad/coverage');
+      const memRes = await api.get('/diad/members');
       
       // Filter mesas belonging to the apoderado's school
       const schoolName = user?.assigned_local || '';
       const schoolMesas = covRes.data.mesas.filter((m: any) => m.local === schoolName);
       setMesas(schoolMesas);
       setMembers(memRes.data);
+
+      const constitutionStatuses: Record<number, any> = {};
+      for (const m of schoolMesas) {
+        try {
+          const statusRes = await api.get(`/diad/mesa/status/${encodeURIComponent(schoolName)}/${m.numero}`);
+          constitutionStatuses[m.numero] = {
+            is_confirmed: statusRes.data.is_confirmed,
+            foto_acta_url: statusRes.data.foto_acta_url
+          };
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      setMesaConstitutions(constitutionStatuses);
     } catch (err) {
     } finally {
       setLoading(false);
@@ -918,17 +957,64 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
     if (!selectedMesa) return;
     setActionLoading(true);
     try {
+      if (substitutingMemberId) {
+        // Liberate outgoing member first
+        await api.post('/diad/members/assign', {
+          user_id: substitutingMemberId,
+          local: null,
+          mesa: null
+        });
+      }
+
       await api.post('/diad/members/assign', {
         user_id: memberId,
         local: user.assigned_local,
         mesa: selectedMesa,
-        role: memberRole
+        role: memberRole,
+        table_role: selectedRoleForAssign
       });
       setShowSwapDrawer(false);
       setSelectedMesa(null);
+      setSubstitutingMemberId(null);
       await loadData();
     } catch (err) {
       alert('Error al asignar mesario.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmIntegrants = async (mesaNum: number) => {
+    setActionLoading(true);
+    try {
+      await api.post('/diad/mesa/confirm', {
+        local_votacion: user.assigned_local,
+        mesa: mesaNum
+      });
+      alert('✅ Integrantes confirmados con éxito.');
+      await loadData();
+    } catch (err) {
+      alert('Error al confirmar integrantes.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUploadActa = async (mesaNum: number, file: File) => {
+    setActionLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('local_votacion', user.assigned_local);
+      formData.append('mesa', String(mesaNum));
+      formData.append('photo', file);
+
+      await api.post('/diad/mesa/upload-acta', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      alert('✅ Fotografía del acta subida correctamente. Mesa constituida oficialmente.');
+      await loadData();
+    } catch (err) {
+      alert('Error al subir la fotografía del acta.');
     } finally {
       setActionLoading(false);
     }
@@ -1225,8 +1311,16 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '3rem' }}>
             {mesas.map(mesa => {
-              const assigned = members.find(mem => mem.assigned_local === user.assigned_local && mem.assigned_mesa === mesa.numero);
-              const isOK = !!assigned;
+              const mesaMembers = members.filter(mem => mem.assigned_local === user.assigned_local && mem.assigned_mesa === mesa.numero);
+              const constitution = mesaConstitutions[mesa.numero];
+              const isConfirmed = constitution?.is_confirmed || false;
+              const fotoActaUrl = constitution?.foto_acta_url || null;
+
+              const roles = [
+                { key: 'PRESIDENTE', label: 'Presidente' },
+                { key: 'VOCAL', label: 'Vocal' },
+                { key: 'VEEDOR', label: 'Veedor' }
+              ] as const;
 
               return (
                 <div 
@@ -1234,109 +1328,247 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
                   className="card-premium-styled"
                   style={{
                     padding: '1rem',
-                    border: isOK ? '1px solid rgba(37,200,130,0.15)' : '1px solid rgba(239,68,68,0.2)',
+                    border: fotoActaUrl 
+                      ? '1px solid rgba(37,200,130,0.15)' 
+                      : isConfirmed 
+                        ? '1px solid rgba(59,130,246,0.2)' 
+                        : '1px solid rgba(239,68,68,0.2)',
                     background: 'rgba(255,255,255,0.01)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.6rem'
+                    gap: '0.8rem'
                   }}
                 >
+                  {/* Card Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'white' }}>
                       MESA {mesa.numero}
                     </span>
                     <span style={{
                       padding: '2px 8px', borderRadius: '6px', fontSize: '0.55rem', fontWeight: 900,
-                      background: isOK ? 'rgba(37,200,130,0.1)' : 'rgba(239,68,68,0.1)',
-                      color: isOK ? 'var(--green)' : 'var(--red)',
-                      border: `1px solid ${isOK ? 'rgba(37,200,130,0.2)' : 'rgba(239,68,68,0.2)'}`
+                      background: fotoActaUrl 
+                        ? 'rgba(37,200,130,0.1)' 
+                        : isConfirmed 
+                          ? 'rgba(59,130,246,0.1)' 
+                          : 'rgba(239,68,68,0.1)',
+                      color: fotoActaUrl 
+                        ? 'var(--green)' 
+                        : isConfirmed 
+                          ? '#3B82F6' 
+                          : 'var(--red)',
+                      border: `1px solid ${
+                        fotoActaUrl 
+                          ? 'rgba(37,200,130,0.2)' 
+                          : isConfirmed 
+                            ? 'rgba(59,130,246,0.2)' 
+                            : 'rgba(239,68,68,0.2)'
+                      }`
                     }}>
-                      {isOK ? 'CONSTITUIDA' : 'FALTA VOTO CONTROL'}
+                      {fotoActaUrl 
+                        ? 'CONSTITUIDA OFICIALMENTE' 
+                        : isConfirmed 
+                          ? 'INTEGRANTES CONFIRMADOS' 
+                          : 'PENDIENTE DE CONFIRMACIÓN'}
                     </span>
                   </div>
 
-                  {isOK ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>
-                        {assigned.nombre}
-                      </span>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
-                        CI: {assigned.ci || '—'} · <span style={{ color: 'var(--plra-300)', fontWeight: 800 }}>{assigned.role}</span>
-                      </span>
+                  {/* Roles List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    {roles.map(role => {
+                      const member = mesaMembers.find(m => m.assigned_table_role === role.key);
 
-                      {/* Call/WhatsApp Actions */}
-                      {assigned.telefono && (
-                        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
-                          <a 
-                            href={`tel:${assigned.telefono}`}
-                            style={{
-                              padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border)',
-                              background: 'rgba(255,255,255,0.03)', color: 'var(--text-2)', fontSize: '0.62rem',
-                              fontWeight: 700, textDecoration: 'none'
-                            }}
-                          >
-                            📞 Llamar
-                          </a>
-                          <a 
-                            href={`https://wa.me/595${assigned.telefono.replace(/\s+/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(34,197,94,0.2)',
-                              background: 'rgba(34,197,94,0.05)', color: '#4ADE80', fontSize: '0.62rem',
-                              fontWeight: 700, textDecoration: 'none'
-                            }}
-                          >
-                            💬 WhatsApp
-                          </a>
+                      return (
+                        <div 
+                          key={role.key} 
+                          style={{ 
+                            padding: '0.6rem', 
+                            background: 'rgba(255,255,255,0.01)', 
+                            border: '1px solid var(--border)', 
+                            borderRadius: '8px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.3rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase' }}>
+                              {role.label}
+                            </span>
+                            {member ? (
+                              <span style={{ fontSize: '0.55rem', color: '#10B981', fontWeight: 800 }}>
+                                ✓ Asignado
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.55rem', color: '#EF4444', fontWeight: 800 }}>
+                                Sin Asignar
+                              </span>
+                            )}
+                          </div>
+
+                          {member ? (
+                            <div>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>
+                                {member.nombre}
+                              </div>
+                              <div style={{ fontSize: '0.62rem', color: 'var(--text-3)' }}>
+                                CI: {member.ci || '—'}
+                              </div>
+
+                              {/* Call/WhatsApp Actions */}
+                              {member.telefono && (
+                                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem' }}>
+                                  <a 
+                                    href={`tel:${member.telefono}`}
+                                    style={{
+                                      padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)',
+                                      background: 'rgba(255,255,255,0.03)', color: 'var(--text-2)', fontSize: '0.58rem',
+                                      fontWeight: 700, textDecoration: 'none'
+                                    }}
+                                  >
+                                    📞 Llamar
+                                  </a>
+                                  <a 
+                                    href={`https://wa.me/595${member.telefono.replace(/\s+/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(34,197,94,0.2)',
+                                      background: 'rgba(34,197,94,0.05)', color: '#4ADE80', fontSize: '0.58rem',
+                                      fontWeight: 700, textDecoration: 'none'
+                                    }}
+                                  >
+                                    💬 WhatsApp
+                                  </a>
+                                </div>
+                              )}
+
+                              {/* Member Specific Assignment Actions */}
+                              <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.4rem', borderTop: '1px dashed rgba(255,255,255,0.05)', paddingTop: '0.4rem' }}>
+                                <button
+                                  onClick={() => { 
+                                    setSelectedMesa(mesa.numero); 
+                                    setSelectedRoleForAssign(role.key); 
+                                    setSubstitutingMemberId(member.id); 
+                                    setShowSwapDrawer(true); 
+                                  }}
+                                  style={{
+                                    flex: 1, padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)',
+                                    background: 'rgba(255,255,255,0.02)', color: 'var(--text-2)', fontSize: '0.6rem',
+                                    fontWeight: 800, cursor: 'pointer'
+                                  }}
+                                >
+                                  SUSTITUIR
+                                </button>
+                                <button
+                                  onClick={() => handleLiberate(member.id, mesa.numero)}
+                                  style={{
+                                    padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.15)',
+                                    background: 'rgba(239,68,68,0.05)', color: 'var(--red)', fontSize: '0.6rem',
+                                    fontWeight: 800, cursor: 'pointer'
+                                  }}
+                                >
+                                  LIBERAR
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { 
+                                setSelectedMesa(mesa.numero); 
+                                setSelectedRoleForAssign(role.key); 
+                                setSubstitutingMemberId(null); 
+                                setShowSwapDrawer(true); 
+                              }}
+                              style={{
+                                width: '100%', padding: '0.4rem', borderRadius: '6px', border: 'none',
+                                background: 'linear-gradient(135deg, #3B82F6, #2563EB)', color: 'white',
+                                fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
+                              }}
+                            >
+                              + ASIGNAR {role.key}
+                            </button>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ padding: '0.25rem 0' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
-                        Sin mesario designado.
-                      </span>
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
 
-                  {/* Actions row */}
-                  <div style={{ display: 'flex', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.6rem', marginTop: '0.2rem' }}>
-                    {isOK ? (
-                      <>
-                        <button
-                          onClick={() => { setSelectedMesa(mesa.numero); setShowSwapDrawer(true); }}
-                          style={{
-                            flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)',
-                            background: 'rgba(255,255,255,0.02)', color: 'var(--text-2)', fontSize: '0.7rem',
-                            fontWeight: 800, cursor: 'pointer'
-                          }}
-                        >
-                          CAMBIAR STAFF
-                        </button>
-                        <button
-                          onClick={() => handleLiberate(assigned.id, mesa.numero)}
-                          style={{
-                            padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.15)',
-                            background: 'rgba(239,68,68,0.05)', color: 'var(--red)', fontSize: '0.7rem',
-                            fontWeight: 800, cursor: 'pointer'
-                          }}
-                        >
-                          LIBERAR
-                        </button>
-                      </>
-                    ) : (
+                  {/* Mesa Constitution Actions */}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {!isConfirmed ? (
                       <button
-                        onClick={() => { setSelectedMesa(mesa.numero); setShowSwapDrawer(true); }}
+                        onClick={() => handleConfirmIntegrants(mesa.numero)}
+                        disabled={actionLoading}
                         style={{
-                          width: '100%', padding: '0.6rem', borderRadius: '8px', border: 'none',
-                          background: 'linear-gradient(135deg, #22C47E, #16a34a)', color: 'white',
+                          width: '100%', padding: '0.65rem', borderRadius: '8px', border: 'none',
+                          background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white',
                           fontSize: '0.72rem', fontWeight: 900, cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(34,197,94,0.2)'
+                          boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
                         }}
                       >
-                        🟢 ASIGNAR DE RESERVA
+                        ✓ CONFIRMAR INTEGRANTES
                       </button>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#10B981', fontSize: '0.7rem', fontWeight: 800 }}>
+                        <span>✓ INTEGRANTES CONFIRMADOS EN SERVIDOR</span>
+                      </div>
+                    )}
+
+                    <div>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment" 
+                        id={`acta-upload-${mesa.numero}`}
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleUploadActa(mesa.numero, file);
+                        }}
+                      />
+                      
+                      <button
+                        onClick={() => document.getElementById(`acta-upload-${mesa.numero}`)?.click()}
+                        disabled={!isConfirmed || actionLoading}
+                        style={{
+                          width: '100%', 
+                          padding: '0.65rem', 
+                          borderRadius: '8px', 
+                          border: isConfirmed ? '1px dashed #10B981' : '1px solid var(--border)',
+                          background: isConfirmed ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.01)',
+                          color: isConfirmed ? '#10B981' : 'var(--text-3)',
+                          fontSize: '0.72rem', 
+                          fontWeight: 900, 
+                          cursor: isConfirmed ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Camera size={14} /> FOTOGRAFÍA ACTA DE CONSTITUCIÓN
+                      </button>
+                    </div>
+
+                    {fotoActaUrl && (
+                      <div style={{ marginTop: '0.4rem' }}>
+                        <a 
+                          href={getImageUrl(fotoActaUrl) || '#'} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            fontSize: '0.65rem',
+                            color: 'var(--plra-300)',
+                            fontWeight: 800,
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <FileText size={14} /> Ver Acta de Constitución subida
+                        </a>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1377,14 +1609,18 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <h4 style={{ fontSize: '0.95rem', fontWeight: 900, color: 'white', margin: 0 }}>
-                      Asignar Suplente a Mesa {selectedMesa}
+                      {substitutingMemberId 
+                        ? `Sustituir ${selectedRoleForAssign} · Mesa ${selectedMesa}` 
+                        : `Asignar ${selectedRoleForAssign} · Mesa ${selectedMesa}`}
                     </h4>
                     <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: 0 }}>
-                      Seleccione personal libre del banco de reserva del local.
+                      {substitutingMemberId 
+                        ? 'Seleccione el reemplazante de la reserva que asumirá este cargo.' 
+                        : 'Seleccione personal libre del banco de reserva del local.'}
                     </p>
                   </div>
                   <button 
-                    onClick={() => { setShowSwapDrawer(false); setSelectedMesa(null); }}
+                    onClick={() => { setShowSwapDrawer(false); setSelectedMesa(null); setSubstitutingMemberId(null); }}
                     style={{
                       width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)',
                       border: 'none', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1442,7 +1678,9 @@ const ApoderadoPanel = ({ user }: { user: any }) => {
                           }}>
                             {m.role}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--green)', fontWeight: 900 }}>➔ Asignar</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--green)', fontWeight: 900 }}>
+                            {substitutingMemberId ? '➔ Sustituir' : '➔ Asignar'}
+                          </span>
                         </div>
                       </div>
                     ))

@@ -125,15 +125,34 @@ export default function adminRoutes(upload: multer.Multer) {
   // ── PUT /api/campaigns/:id ──────────────────────────────────────────────────
   router.put('/campaigns/:id', (req, res) => {
     const { id } = req.params;
-    const { name, status, slogan, photo_url, enabled_modules, goal, distrito } = req.body;
     try {
-      const modulesStr = Array.isArray(enabled_modules) ? enabled_modules.join(',') : enabled_modules;
+      const existing = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id) as any;
+      if (!existing) {
+        return res.status(404).json({ error: 'Campaña no encontrada' });
+      }
+
+      const name = req.body.name !== undefined ? req.body.name : existing.name;
+      const status = req.body.status !== undefined ? req.body.status : existing.status;
+      const slogan = req.body.slogan !== undefined ? req.body.slogan : existing.slogan;
+      const photo_url = req.body.photo_url !== undefined ? req.body.photo_url : existing.photo_url;
+      const goal = req.body.goal !== undefined ? req.body.goal : existing.goal;
+      const distrito = req.body.distrito !== undefined ? req.body.distrito : existing.distrito;
+
+      let modulesStr = existing.enabled_modules;
+      if (req.body.enabled_modules !== undefined) {
+        modulesStr = Array.isArray(req.body.enabled_modules)
+          ? req.body.enabled_modules.join(',')
+          : req.body.enabled_modules;
+      }
+
       const finalDist = distrito ? distrito.toString().toUpperCase().trim() : '';
       const finalName = name ? name.toString().toUpperCase().trim() : '';
       const finalSlogan = slogan ? slogan.toString().toUpperCase().trim() : '';
+
       db.prepare('UPDATE campaigns SET name = ?, status = ?, slogan = ?, photo_url = ?, enabled_modules = ?, goal = ?, distrito = ? WHERE id = ?')
         .run(finalName, status || 'ACTIVE', finalSlogan, photo_url || null, modulesStr || 'COMMAND_CENTER,REGISTRY', goal || 1000, finalDist, id);
-      logAction(1, 'UPDATE', 'CAMPAIGN', id, `Updated campaign ${name}`);
+
+      logAction(1, 'UPDATE', 'CAMPAIGN', id, `Updated campaign ${finalName}`);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });

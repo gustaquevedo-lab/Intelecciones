@@ -8,6 +8,7 @@ const SuperAdmin = React.lazy(() => import('./pages/SuperAdmin'));
 const LogisticsApp = React.lazy(() => import('./pages/LogisticsApp'));
 const Communications = React.lazy(() => import('./pages/Communications'));
 const DiaDApp = React.lazy(() => import('./pages/DiaDApp'));
+const ValidatorApp = React.lazy(() => import('./pages/ValidatorApp'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const Attendance = React.lazy(() => import('./pages/Attendance'));
 const DriverApp = React.lazy(() => import('./pages/DriverApp'));
@@ -69,6 +70,7 @@ const AppRoutes = () => {
       <Route path="/logistica" element={<LogisticsApp />} />
       <Route path="/comunicaciones" element={<Communications />} />
       <Route path="/diad" element={<DiaDApp />} />
+      <Route path="/validator" element={<ValidatorApp />} />
       <Route path="/asistencia" element={<Attendance />} />
       <Route path="/chofer" element={<DriverApp />} />
       <Route path="/catering" element={<CateringApp />} />

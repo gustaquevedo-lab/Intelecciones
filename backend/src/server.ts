@@ -35,6 +35,8 @@ import fs from 'fs';
 import { z } from 'zod';
 import db, { runBootstrapChecks } from './db';
 import { whatsappService } from './whatsappService';
+import { Jimp, loadFont } from 'jimp';
+import qrcode from 'qrcode';
 import * as XLSX from 'xlsx';
 import whatsappRoutes from './routes/whatsapp';
 import diadRoutes, { veedorRoutes } from './routes/diad';
@@ -924,15 +926,218 @@ app.post('/api/login', loginLimiter, (req, res) => {
   }
 });
 
-app.post('/api/dia-d/vote', (req, res) => {
+app.post('/api/dia-d/vote', async (req, res) => {
   const tenant_id = getTenant(req);
   const { elector_ci } = req.body;
+  if (!elector_ci) return res.status(400).json({ error: 'elector_ci es requerido' });
+
   try {
+    // 1. Register or update the vote in tenant_electors
     db.prepare(`
       INSERT OR REPLACE INTO tenant_electors (tenant_id, elector_ci, status, last_visit)
       VALUES (?, ?, 'Voto Realizado', CURRENT_TIMESTAMP)
     `).run(tenant_id, elector_ci);
-    res.json({ success: true });
+
+    // 2. Fetch elector details
+    const elector = db.prepare(`
+      SELECT e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden, e.distrito, ec.telefono, ec.list_id
+      FROM electors e
+      LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci AND ec.is_disputed = 0
+      WHERE e.ci = ?
+    `).get(elector_ci) as any;
+
+    if (!elector) {
+      return res.json({ success: true, warning: 'Voto registrado, pero elector no encontrado en el padrón.' });
+    }
+
+    const fullName = `${elector.nombre} ${elector.apellido || ''}`.trim();
+    
+    // Resolve base url
+    const host = req.get('host') || '';
+    let protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+    if (process.env.NODE_ENV === 'production' || host.includes('railway.app') || host.includes('vercel.app')) {
+      protocol = 'https';
+    }
+    const baseUrl = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : `${protocol}://${host}`;
+    
+    // 3. Generate Styled QR Code Card (QR + Name)
+    const verificationUrl = `${baseUrl}/validator?ci=${elector_ci}`;
+    const qrBuffer = await qrcode.toBuffer(verificationUrl, {
+      margin: 1,
+      width: 300,
+      errorCorrectionLevel: 'H'
+    });
+
+    const qrCard = new Jimp({ width: 400, height: 480, color: 0xffffffff });
+    const qrImage = await Jimp.read(qrBuffer);
+
+    // Try to load logo and overlay in center of QR
+    try {
+      const logoPath = process.env.NODE_ENV === 'production' 
+        ? path.join(__dirname, '../public/favicon.png')
+        : path.join(__dirname, '../../frontend/public/favicon.png');
+
+      if (fs.existsSync(logoPath)) {
+        const logo = await Jimp.read(logoPath);
+        logo.resize({ w: 50, h: 50 });
+        qrImage.composite(logo, 125, 125);
+      } else {
+        const fallbackLogoPath = path.join(process.cwd(), 'frontend/public/favicon.png');
+        if (fs.existsSync(fallbackLogoPath)) {
+          const logo = await Jimp.read(fallbackLogoPath);
+          logo.resize({ w: 50, h: 50 });
+          qrImage.composite(logo, 125, 125);
+        }
+      }
+    } catch (logoErr) {
+      console.warn('[QR LOGO ERROR] Could not overlay logo on QR:', logoErr);
+    }
+
+    qrCard.composite(qrImage, 50, 30);
+
+    // Print elector name centered at the bottom
+    try {
+      const fontPath = process.env.NODE_ENV === 'production'
+        ? path.join(__dirname, '../node_modules/@jimp/plugin-print/fonts/open-sans/open-sans-32-black/open-sans-32-black.fnt')
+        : path.join(__dirname, '../node_modules/@jimp/plugin-print/fonts/open-sans/open-sans-32-black/open-sans-32-black.fnt');
+      
+      const font = await loadFont(fontPath);
+      qrCard.print({
+        font: font,
+        x: 0,
+        y: 380,
+        text: {
+          text: fullName.toUpperCase(),
+          alignmentX: 'center' as any,
+          alignmentY: 'middle' as any
+        },
+        maxWidth: 400
+      });
+    } catch (fontErr) {
+      console.error('[QR FONT ERROR] Could not print elector name on QR:', fontErr);
+    }
+
+    const fileName = `qr-${elector_ci}.png`;
+    const fullOutputPath = path.join(uploadDir, fileName);
+    await qrCard.write(fullOutputPath as `${string}.${string}`);
+
+    const qrMediaUrl = `${baseUrl}/uploads/${fileName}`;
+
+    // 4. Send via WhatsApp if telephone is registered
+    if (elector.telefono) {
+      try {
+        const terminals = await whatsappService.getTerminals(elector.list_id);
+        const connectedTerminal = terminals.find(t => t.status === 'CONNECTED');
+        const terminalId = connectedTerminal ? connectedTerminal.id : 'default';
+
+        const caption = `¡Hola ${fullName}! Confirmamos la recepción de tu voto. Aquí tienes tu credencial QR para verificar tu asistencia. Presentá este código QR ante los validadores habilitados.`;
+        await whatsappService.sendMedia(terminalId, elector.telefono, qrMediaUrl, caption);
+        console.log(`[VOTE FLOW] QR sent to WhatsApp number: ${elector.telefono}`);
+      } catch (wsErr: any) {
+        console.error('[VOTE FLOW] WhatsApp dispatch failed:', wsErr.message);
+      }
+    }
+
+    // 5. Broadcast real-time SSE confirmation to all connected web clients
+    const ssePayload = {
+      type: 'VOTE_CONFIRMED',
+      data: {
+        ci: elector.ci,
+        nombre: elector.nombre,
+        apellido: elector.apellido,
+        local_votacion: elector.local_votacion,
+        mesa: elector.mesa,
+        orden: elector.orden,
+        distrito: elector.distrito,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    sseClients.forEach((client: any) => {
+      try {
+        client.write(`data: ${JSON.stringify(ssePayload)}\n\n`);
+      } catch (sseErr) {
+        // Ignored
+      }
+    });
+
+    res.json({ success: true, qr_url: qrMediaUrl });
+  } catch (err: any) {
+    console.error('[VOTE ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/dia-d/validate', (req, res) => {
+  const { elector_ci, validator_id } = req.body;
+  if (!elector_ci) return res.status(400).json({ error: 'elector_ci es requerido' });
+  const valId = validator_id || req.headers['x-user-id'];
+  if (!valId) return res.status(400).json({ error: 'validator_id es requerido' });
+
+  try {
+    const elector = db.prepare(`
+      SELECT e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden, e.distrito
+      FROM electors e
+      WHERE e.ci = ?
+    `).get(elector_ci) as any;
+
+    if (!elector) {
+      return res.status(404).json({ error: 'Elector no encontrado en el padrón' });
+    }
+
+    db.prepare(`
+      INSERT INTO vote_validations (elector_ci, validator_id)
+      VALUES (?, ?)
+    `).run(elector_ci, valId);
+
+    const validator = db.prepare('SELECT nombre FROM users WHERE id = ?').get(valId) as any;
+
+    res.json({
+      success: true,
+      elector: {
+        ci: elector.ci,
+        nombre: elector.nombre,
+        apellido: elector.apellido,
+        local_votacion: elector.local_votacion,
+        mesa: elector.mesa,
+        orden: elector.orden,
+        distrito: elector.distrito
+      },
+      validation: {
+        validator_name: validator?.nombre || 'Validador',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/dia-d/validate/:ci', (req, res) => {
+  const { ci } = req.params;
+  try {
+    const elector = db.prepare(`
+      SELECT e.ci, e.nombre, e.apellido, e.local_votacion, e.mesa, e.orden, e.distrito
+      FROM electors e
+      WHERE e.ci = ?
+    `).get(ci) as any;
+
+    if (!elector) {
+      return res.status(404).json({ error: 'Elector no encontrado en el padrón' });
+    }
+
+    const validations = db.prepare(`
+      SELECT vv.timestamp, u.nombre as validator_name
+      FROM vote_validations vv
+      JOIN users u ON vv.validator_id = u.id
+      WHERE vv.elector_ci = ?
+      ORDER BY vv.timestamp DESC
+    `).all(ci) as any[];
+
+    res.json({
+      elector,
+      validations
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
