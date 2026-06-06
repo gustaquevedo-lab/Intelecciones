@@ -24,7 +24,7 @@ const db = new Database(dbPath);
 // Ensure Concepcion district and local exists or determine it
 // Let's query voting_locations or electors to find Concepcion local.
 let localCod = 'LOC_CONCEPCION';
-let localNombre = 'LOCAL SALESIANO SAN JOSE';
+let localNombre = 'INSTITUTO SALESIANO SAN JOSE';
 let distrito = 'CONCEPCION';
 
 const existingLocal = db.prepare("SELECT cod_local, nombre, distrito FROM voting_locations WHERE distrito LIKE '%CONCEPCION%' OR nombre LIKE '%SALESIANO%' LIMIT 1").get() as any;
