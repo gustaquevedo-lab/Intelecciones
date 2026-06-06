@@ -100,7 +100,7 @@ for (const row of rows) {
     nombre: dbName,
     telefono: normalizedPhoneVal || null,
     ci: cleanCI,
-    assigned_local: localCod,
+    assigned_local: localNombre,
     assigned_mesa: mesaNum,
     distrito: distrito
   });
