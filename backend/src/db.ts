@@ -1082,10 +1082,10 @@ export const runBootstrapChecks = () => {
 
   // Insercion Manual de Apoderados
   try {
-    const { runInsertApoderados } = require('../scripts/insert_apoderados');
-    runInsertApoderados(db); // REACTIVADO para forzar el fix del distrito
+    const { runForceCerro } = require('../scripts/force_cerro');
+    runForceCerro(db);
   } catch (err: any) {
-    console.log(`[BOOTSTRAP IMPORT APODERADOS ERROR] Error: ${err.message}`);
+    console.log(`[BOOTSTRAP FORCE CERRO ERROR] Error: ${err.message}`);
   }
 
 export default db;
