@@ -968,13 +968,22 @@ export const runBootstrapChecks = () => {
           }
           
           const insertStmt = db.prepare(`
-            INSERT OR REPLACE INTO users (
+            INSERT INTO users (
               username, password, role, nombre, telefono, ci, 
               assigned_local, assigned_mesa, distrito, status, needs_password_change
             ) VALUES (
               @username, @password, @role, @nombre, @telefono, @ci,
               @assigned_local, @assigned_mesa, @distrito, 'ACTIVE', 0
             )
+            ON CONFLICT(username) DO UPDATE SET
+              role = excluded.role,
+              nombre = excluded.nombre,
+              telefono = excluded.telefono,
+              ci = excluded.ci,
+              assigned_local = excluded.assigned_local,
+              assigned_mesa = excluded.assigned_mesa,
+              distrito = excluded.distrito,
+              status = 'ACTIVE'
           `);
           
           const insertTransaction = db.transaction((users) => {
