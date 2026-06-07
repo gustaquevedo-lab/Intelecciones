@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Map, MapPin, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
-  Image, ChevronDown, ChevronUp, Zap, Shield, Truck, UserPlus,
-  Plus, X
+  Image, ChevronDown, ChevronUp, ChevronRight, Zap, Shield, Truck, UserPlus,
+  Plus, X, Download
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -173,6 +173,78 @@ const DiaDApp: React.FC = () => {
   // Real-time vote confirmation toasts
   const [toasts, setToasts] = useState<any[]>([]);
 
+  // Export Logic
+  const handleExportTXT = async (voters: any[], filename: string) => {
+    const text = voters.map(v => v.ci).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.txt`;
+    a.click();
+  };
+
+  const handleExportPDF = async (voters: any[], title: string, filename: string) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.setTextColor(21, 88, 176); // PLRA Blue
+      doc.text(title, 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generado: ${new Date().toLocaleString('es-PY')}`, 14, 28);
+      
+      const tableColumn = ["Orden", "C.I.", "Nombre Completo", "Hora de Voto", "Registrado"];
+      const tableRows = voters.map(v => [
+        v.orden,
+        v.ci,
+        `${v.nombre || ''} ${v.apellido || ''}`.trim() || 'SIN NOMBRE',
+        v.voted_at ? new Date(v.voted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+        v.registrado === 1 ? 'SÍ' : 'NO'
+      ]);
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 35,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [21, 88, 176], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 248, 255] }
+      });
+
+      doc.save(`${filename}.pdf`);
+    } catch (e) {
+      console.error('Error generando PDF', e);
+      alert('Error al generar el reporte PDF. Asegúrese de tener conexión.');
+    }
+  };
+
+  const exportGlobalParticipation = async (format: 'txt' | 'pdf') => {
+    // Para exportar todo, obtenemos el detalle de cada local y lo unimos
+    if (!participationData || participationData.length === 0) return;
+    try {
+      let allVoters: any[] = [];
+      for (const loc of participationData) {
+        const res = await apiClient.get(`/api/diad/participation-detail/${encodeURIComponent(loc.local)}`, { headers: { 'x-district': activeDistrict } });
+        allVoters = allVoters.concat(res.data);
+      }
+      if (format === 'txt') {
+        handleExportTXT(allVoters, `Participacion_Global_${activeDistrict}`);
+      } else {
+        handleExportPDF(allVoters, `Reporte Global de Sufragio - ${activeDistrict}`, `Reporte_Global_${activeDistrict}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error al obtener datos globales para exportar.');
+    }
+  };
+
+
   useSSE(useCallback((event: any) => {
     if (event.type === 'VOTE_CONFIRMED') {
       const voteData = event.data;
@@ -221,6 +293,20 @@ const DiaDApp: React.FC = () => {
     const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Auto-refresh Participacion cada 30 segundos si la pestaña está activa
+  useEffect(() => {
+    let interval: any;
+    if (activeTab === 'participacion') {
+      interval = setInterval(() => {
+        refetchParticipation();
+        setLastRefresh(new Date());
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTab, refetchParticipation]);
 
   const coverage = coverageData || {
     total_mesas: 0, 
@@ -1174,6 +1260,133 @@ const DiaDApp: React.FC = () => {
               </motion.div>
             )}
 
+            {/* ══════════ TAB: PARTICIPACIÓN ══════════ */}
+            {activeTab === 'participacion' && (
+              <motion.div key="participacion" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                
+                {/* KPIs Globales */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Electores Totales</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text)' }}>
+                      {(participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 0).toLocaleString('es-PY')}
+                    </div>
+                  </div>
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sufragios Registrados</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--blue)' }}>
+                      {(participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0).toLocaleString('es-PY')}
+                    </div>
+                  </div>
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>% Participación Global</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--green)' }}>
+                      {((participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0) / (participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 1) * 100).toFixed(1)}%
+                    </div>
+                    <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginTop: '0.5rem', overflow: 'hidden' }}>
+                      <motion.div 
+                        initial={{ width: 0 }} 
+                        animate={{ width: `${((participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0) / (participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 1) * 100)}%` }} 
+                        style={{ height: '100%', background: 'var(--green)' }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Desglose por Local de Votación</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button 
+                      onClick={() => exportGlobalParticipation('txt')}
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <FileText size={14} /> TXT Global
+                    </button>
+                    <button 
+                      onClick={() => exportGlobalParticipation('pdf')}
+                      style={{ background: 'linear-gradient(135deg, #1558B0, #0D3D7A)', border: 'none', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <Download size={14} /> PDF Premium
+                    </button>
+                    <button 
+                      onClick={() => { refetchParticipation(); setLastRefresh(new Date()); }}
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <RefreshCw size={14} /> Actualizar Ahora
+                    </button>
+                  </div>
+                </div>
+
+                {participationLoading ? (
+                  <div style={{ display: 'grid', gap: '1rem' }}>{[1,2,3].map(i => <Skeleton key={i} height={80} borderRadius={12} />)}</div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {participationData?.map((local: any) => {
+                      const pct = local.total_electors > 0 ? (local.total_votos / local.total_electors) * 100 : 0;
+                      const isExpanded = expandedLocales[local.local];
+                      return (
+                        <div key={local.local} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
+                          <div 
+                            onClick={() => setExpandedLocales(p => ({...p, [local.local]: !p[local.local]}))}
+                            style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '2rem', cursor: 'pointer', background: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent' }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text)' }}>{local.local}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem', color: 'var(--text-2)' }}>
+                                <span><strong style={{color:'var(--text)'}}>{local.total_votos.toLocaleString('es-PY')}</strong> / {local.total_electors.toLocaleString('es-PY')} electores</span>
+                                <div style={{ width: 120, height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                                  <div style={{ width: `${pct}%`, height: '100%', background: pct > 40 ? 'var(--green)' : pct > 20 ? 'var(--blue)' : 'var(--text-3)' }} />
+                                </div>
+                                <span>{pct.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <div style={{ color: 'var(--text-3)' }}>
+                              {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                            </div>
+                          </div>
+
+                          {/* Mesas Grid */}
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)' }}>
+                                <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                                  {local.mesas.map((m: any) => {
+                                    const mPct = m.total_electors > 0 ? (m.total_votos / m.total_electors) * 100 : 0;
+                                    return (
+                                      <div 
+                                        key={m.mesa} 
+                                        onClick={() => {
+                                          setSelectedMesaDetail({ local: local.local, mesa: m.mesa });
+                                          setMesaVoters([]);
+                                          setMesaVotersLoading(true);
+                                          apiClient.get(`/api/diad/participation-detail/${encodeURIComponent(local.local)}/${m.mesa}`, { headers: { 'x-district': activeDistrict } })
+                                            .then(res => setMesaVoters(res.data))
+                                            .catch(err => console.error(err))
+                                            .finally(() => setMesaVotersLoading(false));
+                                        }}
+                                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem', cursor: 'pointer', transition: 'all 0.2s', ...({ '&:hover': { background: 'rgba(255,255,255,0.05)', transform: 'translateY(-2px)' } } as any) }}
+                                      >
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.4rem' }}>Mesa {m.mesa}</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: mPct > 40 ? 'var(--green)' : 'var(--blue)', marginBottom: '0.2rem' }}>{m.total_votos} <span style={{fontSize:'0.65rem', color:'var(--text-3)', fontWeight:600}}>/ {m.total_electors}</span></div>
+                                        <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+                                          <div style={{ width: `${mPct}%`, height: '100%', background: mPct > 40 ? 'var(--green)' : 'var(--blue)' }} />
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+              </motion.div>
+            )}
+
             {/* ══════════ TAB: RESULTADOS ══════════ */}
             {activeTab === 'resultados' && (
               <motion.div key="resultados" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
@@ -1909,23 +2122,26 @@ const DiaDApp: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <button
-                    onClick={() => exportMesaToExcel(selectedMesaDetail.local, selectedMesaDetail.mesa, mesaVoters)}
+                    onClick={() => handleExportTXT(mesaVoters, `Participacion_Mesa_${selectedMesaDetail.mesa}_${selectedMesaDetail.local}`)}
                     disabled={mesaVoters.length === 0}
                     style={{
-                      padding: '0.35rem 0.75rem',
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      color: 'white',
-                      background: 'linear-gradient(135deg, #1558B0, #0D3D7A)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem'
+                      padding: '0.35rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text)',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
                     }}
                   >
-                    <FileText size={12} /> Exportar Excel
+                    <FileText size={12} /> TXT
+                  </button>
+                  <button
+                    onClick={() => handleExportPDF(mesaVoters, `Reporte Sufragio - ${selectedMesaDetail.local} - Mesa ${selectedMesaDetail.mesa}`, `Reporte_Mesa_${selectedMesaDetail.mesa}_${selectedMesaDetail.local}`)}
+                    disabled={mesaVoters.length === 0}
+                    style={{
+                      padding: '0.35rem 0.75rem', fontSize: '0.7rem', fontWeight: 700, color: 'white',
+                      background: 'linear-gradient(135deg, #1558B0, #0D3D7A)', border: 'none', borderRadius: '8px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
+                    }}
+                  >
+                    <Download size={12} /> PDF Premium
                   </button>
                   <button
                     onClick={() => setSelectedMesaDetail(null)}
