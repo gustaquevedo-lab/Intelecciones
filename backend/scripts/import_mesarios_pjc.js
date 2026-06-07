@@ -149,10 +149,31 @@ function runImport(db, excelPath) {
       // Respetamos la mesa y el local que dice el excel (p.local y p.mesa).
 
 
-      const username = `mesario_${p.ci}`;
-      const password = `pass_${p.ci}`;
-      insertStmt.run(username, password, p.role, nombreReal, p.ci, p.phone, p.local, finalMesa, finalTableRole);
-      inserted++;
+      const username = p.ci;
+
+      try {
+        const existingUser = db.prepare('SELECT id FROM users WHERE username = ? OR ci = ?').get(username, p.ci);
+        if (existingUser) {
+          db.prepare('UPDATE users SET role = ?, nombre = ?, telefono = ?, distrito = ?, assigned_local = ?, assigned_mesa = ?, assigned_table_role = ? WHERE id = ?').run(
+            p.role, nombreReal, p.phone, 'PEDRO JUAN CABALLERO', p.local, finalMesa, finalTableRole, existingUser.id
+          );
+        } else {
+          insertStmt.run(
+            username,
+            username,
+            p.role,
+            nombreReal,
+            p.ci,
+            p.phone,
+            p.local,
+            finalMesa,
+            finalTableRole
+          );
+        }
+        inserted++;
+      } catch (err) {
+        console.error(`Error procesando ${p.ci}:`, err);
+      }
     }
   })();
 
