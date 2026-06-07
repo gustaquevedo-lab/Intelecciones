@@ -181,6 +181,7 @@ if (dbVersion < currentSchemaVersion) {
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(veedor_id) REFERENCES users(id)
       );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_participation_unique_vote ON participation_logs(local_votacion, mesa, orden);
 
       CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
