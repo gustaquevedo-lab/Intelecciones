@@ -364,6 +364,10 @@ router.get('/data', async (req, res) => {
         db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
       }
       
+      // Clear cache explicitly after modification
+      const cacheKey = `${req.headers['x-user-id'] || 'global'}_${req.headers['x-list-id'] || ''}`;
+      diadCoverageCache.del(cacheKey);
+      
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
