@@ -50,39 +50,34 @@ function runImport(db, excelPath) {
     const currentLocal = localMap[rawLocal] || rawLocal;
 
     let inMiembrosSection = false;
+    let inApoderadosSection = false;
 
     for (let r = 0; r < data.length; r++) {
       const row = data[r];
       if (!row || !row.length) continue;
 
-      const col0 = String(row[0] || '').toUpperCase().trim();
-      
-      // Check Apoderados
-      if (col0.includes('APODERADO DE LOCAL')) {
-        const ci = String(row[2] || '').trim().replace(/\D/g, '');
-        let phone = String(row[3] || '').trim();
-        if (ci) {
-          if (!mapByCi.has(ci)) {
-            mapByCi.set(ci, { role: 'APODERADO', local: currentLocal, ci, phone: normalizePhone(phone), mesa: null, tableRole: null });
-          }
-        }
-        continue;
-      }
+      const rowText = row.map(c => String(c || '').toUpperCase().trim()).join(' ');
 
-      // Check Miembros start
-      if (col0.includes('MIEMBROS DE  MESAS') || col0.includes('MIEMBROS DE MESA') || col0 === 'N°' || String(row[1] || '').toUpperCase().includes('CARGO')) {
+      if (rowText.includes('MIEMBROS DE  MESA') || rowText.includes('MIEMBROS DE MESA') || (rowText.includes('CARGO') && !rowText.includes('APODERADO'))) {
         inMiembrosSection = true;
+        inApoderadosSection = false;
         continue;
       }
 
-      if (inMiembrosSection) {
+      if (rowText.includes('APODERADO')) {
+        inApoderadosSection = true;
+        inMiembrosSection = false;
+        // La misma fila puede tener ya los datos del primer apoderado
+      }
+
+      if (inApoderadosSection || inMiembrosSection) {
         let ci = null;
         let phone = null;
         let roleDesc = '';
         let mesa = null;
         let name = null;
 
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 15; i++) {
           const cell = row[i];
           if (cell === undefined || cell === null) continue;
           const s = String(cell).trim();
@@ -105,12 +100,17 @@ function runImport(db, excelPath) {
           }
         }
 
-        if (ci && mesa !== null) {
-          let tableRole = 'VOCAL';
-          if (roleDesc.includes('PTE') || roleDesc.includes('PRESIDENT')) tableRole = 'PRESIDENTE';
-          
-          if (!mapByCi.has(ci)) {
-            mapByCi.set(ci, { role: 'MIEMBRO_MESA', local: currentLocal, ci, mesa, tableRole, phone: normalizePhone(phone), name });
+        if (ci) {
+          if (inApoderadosSection) {
+            if (!mapByCi.has(ci)) {
+              mapByCi.set(ci, { role: 'APODERADO', local: currentLocal, ci, phone: normalizePhone(phone), mesa: null, tableRole: null, name });
+            }
+          } else if (inMiembrosSection && mesa !== null) {
+            let tableRole = 'VOCAL';
+            if (roleDesc.includes('PTE') || roleDesc.includes('PRESIDENT')) tableRole = 'PRESIDENTE';
+            if (!mapByCi.has(ci)) {
+              mapByCi.set(ci, { role: 'MIEMBRO_MESA', local: currentLocal, ci, mesa, tableRole, phone: normalizePhone(phone), name });
+            }
           }
         }
       }
