@@ -315,8 +315,9 @@ export default function diadRoutes(upload: multer.Multer) {
       `;
       const params: any[] = [];
       if (districtName) {
-        sql += ` AND (UPPER(vl.distrito) = UPPER(?) OR UPPER(vl.ciudad) = UPPER(?) OR UPPER(u.distrito) = UPPER(?))`;
-        params.push(districtName, districtName, districtName);
+        let baseDistrict = districtName.replace('Ó', 'O').replace('ó', 'o');
+        sql += ` AND (UPPER(vl.distrito) LIKE UPPER(?) OR UPPER(vl.ciudad) LIKE UPPER(?) OR UPPER(u.distrito) LIKE UPPER(?))`;
+        params.push(`%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`);
       }
       const members = db.prepare(sql).all(...params);
       res.json(members);
