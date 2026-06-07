@@ -81,11 +81,13 @@ export default function diadRoutes(upload: multer.Multer) {
         SELECT
           e.local_votacion as local, e.mesa as numero, vl.lat, vl.lng,
           (CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) as reportada,
-          (CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) as operativa
+          (CASE WHEN u.id IS NOT NULL THEN 1 ELSE 0 END) as operativa,
+          (CASE WHEN mc.is_confirmed = 1 THEN 1 ELSE 0 END) as confirmada
         FROM (SELECT local_votacion, mesa FROM electors ${distritoClause} GROUP BY local_votacion, mesa) e
         JOIN voting_locations vl ON e.local_votacion = vl.nombre
         LEFT JOIN (SELECT id, local_votacion, mesa FROM results GROUP BY local_votacion, mesa) r ON r.local_votacion = e.local_votacion AND r.mesa = e.mesa
         LEFT JOIN (SELECT id, assigned_local, assigned_mesa FROM users WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') GROUP BY assigned_local, assigned_mesa) u ON u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa
+        LEFT JOIN mesa_constitutions mc ON mc.local_votacion = e.local_votacion AND mc.mesa = e.mesa
         WHERE 1=1 ${vlClause}
       `, [...distritoParams, ...vlParams]);
 

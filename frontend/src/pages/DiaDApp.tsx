@@ -928,10 +928,10 @@ const DiaDApp: React.FC = () => {
                                       </span>
                                       <span style={{
                                         fontSize: '0.58rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px',
-                                        background: isDesignada ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
-                                        color: isDesignada ? '#F59E0B' : 'var(--red)'
+                                        background: mesa.confirmada ? 'rgba(34,197,94,0.12)' : isDesignada ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                                        color: mesa.confirmada ? '#4ADE80' : isDesignada ? '#F59E0B' : 'var(--red)'
                                       }}>
-                                        {isDesignada ? 'DESIGNADA' : 'VACANTE'}
+                                        {mesa.confirmada ? 'CONFIRMADA' : isDesignada ? 'DESIGNADA' : 'VACANTE'}
                                       </span>
                                     </div>
 

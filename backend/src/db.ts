@@ -915,13 +915,27 @@ export const runBootstrapChecks = () => {
         
         // PJC Import
         try {
-          const pjcExcelPath = path.resolve(process.cwd(), 'MESARIOS 2026.xlsx');
-          if (fs.existsSync(pjcExcelPath)) {
-             console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx, iniciando importación...');
+          let pjcExcelPath = '';
+          const pjcPaths = [
+            path.resolve(dbDir, 'MESARIOS 2026.xlsx'),
+            path.resolve(process.cwd(), 'MESARIOS 2026.xlsx'),
+            path.resolve(__dirname, 'MESARIOS 2026.xlsx'),
+            path.resolve(__dirname, '..', 'MESARIOS 2026.xlsx'),
+            path.resolve(__dirname, '../..', 'MESARIOS 2026.xlsx')
+          ];
+          for (const p of pjcPaths) {
+            if (fs.existsSync(p)) {
+              pjcExcelPath = p;
+              break;
+            }
+          }
+
+          if (pjcExcelPath) {
+             console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx en ' + pjcExcelPath);
              const { runImport } = require('../scripts/import_mesarios_pjc');
              runImport(db, pjcExcelPath);
           } else {
-             console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado, omitiendo.');
+             console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado en ninguna ruta, omitiendo.');
           }
         } catch (err: any) {
            console.log(`[BOOTSTRAP IMPORT PJC ERROR] Error importando PJC: ${err.message}`);
