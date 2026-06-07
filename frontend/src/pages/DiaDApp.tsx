@@ -1030,13 +1030,17 @@ const DiaDApp: React.FC = () => {
                                   whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}
                                   onClick={async () => {
+                                    const telf = window.prompt('Ingrese el número de WhatsApp para este mesario (Opcional, ej: 0981...):');
+                                    if (telf === null) return; // Cancelled
+                                    
                                     setAssigningLoading(true);
                                     try {
                                       await api.post('/diad/members/assign', { 
                                         ci: memberFilter.trim(),
                                         local: selectedMesaForSwap.local, 
                                         mesa: selectedMesaForSwap.numero,
-                                        role: 'MIEMBRO_MESA'
+                                        role: 'MIEMBRO_MESA',
+                                        telefono: telf.trim() || undefined
                                       });
                                       setSelectedMesaForSwap(null);
                                       setMemberFilter('');

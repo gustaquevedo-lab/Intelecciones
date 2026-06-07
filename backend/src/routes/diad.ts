@@ -314,7 +314,7 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   router.post('/members/assign', (req, res) => {
-    const { ci, local, mesa, user_id, role, table_role } = req.body;
+    const { ci, local, mesa, user_id, role, table_role, telefono } = req.body;
     if (!ci && !user_id) return res.status(400).json({ error: 'ci o user_id es requerido' });
     if (local === undefined) return res.status(400).json({ error: 'local es requerido' });
     if (mesa === undefined) return res.status(400).json({ error: 'mesa es requerido' });
@@ -332,7 +332,7 @@ export default function diadRoutes(upload: multer.Multer) {
           const username = `member_${ci}`;
           const password = `pass_${ci}`;
           const fullName = `${elector.nombre} ${elector.apellido}`;
-          const result = db.prepare(`INSERT INTO users (username, password, role, nombre, ci) VALUES (?, ?, ?, ?, ?)`).run(username, password, targetRole, fullName, ci);
+          const result = db.prepare(`INSERT INTO users (username, password, role, nombre, ci, telefono) VALUES (?, ?, ?, ?, ?, ?)`).run(username, password, targetRole, fullName, ci, telefono || null);
           targetId = result.lastInsertRowid;
         }
       }
@@ -343,7 +343,12 @@ export default function diadRoutes(upload: multer.Multer) {
         db.prepare(`UPDATE users SET assigned_local = NULL, assigned_mesa = NULL WHERE assigned_local = ? AND assigned_mesa = ? AND role != 'APODERADO'`).run(local, mesa);
       }
       
-      db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
+      if (telefono) {
+        db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?, telefono = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, telefono, targetId);
+      } else {
+        db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
+      }
+      
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
