@@ -765,6 +765,7 @@ const DiaDApp: React.FC = () => {
                       {locations.map(loc => {
                         const mesasInLoc = coverage.mesas.filter(m => m.local === loc.nombre);
                         if (mesasInLoc.length === 0) return null;
+                        const apoderadosInLoc = membersList.filter(m => m.role === 'APODERADO' && m.assigned_local === loc.nombre);
 
                         return (
                           <div key={loc.cod_local} className="card-premium-styled" style={{ padding: '1.25rem' }}>
@@ -776,6 +777,20 @@ const DiaDApp: React.FC = () => {
                                 {mesasInLoc.length} MESAS
                               </span>
                             </div>
+
+                            {/* Apoderados List */}
+                            {apoderadosInLoc.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', rowGap: '0.3rem', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0.75rem', background: 'rgba(59,130,246,0.03)', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.1)' }}>
+                                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.3rem', marginRight: '0.2rem' }}>
+                                  <Shield size={10} /> Apoderados ({apoderadosInLoc.length}):
+                                </span>
+                                {apoderadosInLoc.map((ap, i) => (
+                                  <span key={ap.id} style={{ fontSize: '0.65rem', fontWeight: 700, color: 'white' }}>
+                                    {ap.nombre}{ap.telefono ? ` (📞 ${ap.telefono})` : ''}{i < apoderadosInLoc.length - 1 ? ' • ' : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
 
                             {/* Mesas Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.8rem' }}>
