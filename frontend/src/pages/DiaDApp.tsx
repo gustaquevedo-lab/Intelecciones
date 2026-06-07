@@ -462,7 +462,8 @@ const DiaDApp: React.FC = () => {
         ci: globalRegCI,
         local: globalRegLocal,
         mesa: globalRegMesa,
-        role: globalRegRole
+        role: ['PRESIDENTE', 'VOCAL'].includes(globalRegRole) ? 'MIEMBRO_MESA' : globalRegRole,
+        table_role: ['PRESIDENTE', 'VOCAL'].includes(globalRegRole) ? globalRegRole : null
       });
       setShowGlobalRegister(false);
       setGlobalRegCI('');
@@ -2341,7 +2342,8 @@ const DiaDApp: React.FC = () => {
                             await api.post('/diad/members/assign', { 
                               user_id: u.id, 
                               local: selectedMesa.local, 
-                              mesa: selectedMesa.numero 
+                              mesa: selectedMesa.numero,
+                              role: ['MIEMBRO_MESA', 'VEEDOR', 'APODERADO'].includes(u.role) ? u.role : 'MIEMBRO_MESA'
                             });
                             setShowAssignModal(false);
                             fetchData();
