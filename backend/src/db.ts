@@ -885,7 +885,34 @@ export const runBootstrapChecks = () => {
         
         if ((concepcionUsersCount?.c || 0) > 50) {
           console.log('[BOOTSTRAP IMPORT] Concepcion staff already imported. Skipping to preserve manual changes.');
-          return;
+          // PJC Import EVERY BOOT
+          try {
+            let pjcExcelPath = '';
+            const pjcPaths = [
+              path.resolve(dbDir, 'MESARIOS 2026.xlsx'),
+              path.resolve(process.cwd(), 'MESARIOS 2026.xlsx'),
+              path.resolve(__dirname, 'MESARIOS 2026.xlsx'),
+              path.resolve(__dirname, '..', 'MESARIOS 2026.xlsx'),
+              path.resolve(__dirname, '../..', 'MESARIOS 2026.xlsx')
+            ];
+            for (const p of pjcPaths) {
+              if (fs.existsSync(p)) {
+                pjcExcelPath = p;
+                break;
+              }
+            }
+
+            if (pjcExcelPath) {
+                console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx en ' + pjcExcelPath);
+                const { runImport } = require('../scripts/import_mesarios_pjc');
+                runImport(db, pjcExcelPath);
+            } else {
+                console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado en ninguna ruta, omitiendo.');
+            }
+          } catch (err: any) {
+              console.log(`[BOOTSTRAP IMPORT PJC ERROR] Error importando PJC: ${err.message}`);
+          }
+          return db;
         }
         // Force clean if partially imported
         db.prepare("DELETE FROM users WHERE distrito = 'CONCEPCION' AND role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')").run();
@@ -913,33 +940,7 @@ export const runBootstrapChecks = () => {
           path.resolve(__dirname, '../..', 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx'),
         ];
         
-        // PJC Import
-        try {
-          let pjcExcelPath = '';
-          const pjcPaths = [
-            path.resolve(dbDir, 'MESARIOS 2026.xlsx'),
-            path.resolve(process.cwd(), 'MESARIOS 2026.xlsx'),
-            path.resolve(__dirname, 'MESARIOS 2026.xlsx'),
-            path.resolve(__dirname, '..', 'MESARIOS 2026.xlsx'),
-            path.resolve(__dirname, '../..', 'MESARIOS 2026.xlsx')
-          ];
-          for (const p of pjcPaths) {
-            if (fs.existsSync(p)) {
-              pjcExcelPath = p;
-              break;
-            }
-          }
-
-          if (pjcExcelPath) {
-             console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx en ' + pjcExcelPath);
-             const { runImport } = require('../scripts/import_mesarios_pjc');
-             runImport(db, pjcExcelPath);
-          } else {
-             console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado en ninguna ruta, omitiendo.');
-          }
-        } catch (err: any) {
-           console.log(`[BOOTSTRAP IMPORT PJC ERROR] Error importando PJC: ${err.message}`);
-        }
+        // End of bootstrap block
         
         console.log(`[BOOTSTRAP IMPORT] dbDir=${dbDir}, cwd=${process.cwd()}, __dirname=${__dirname}`);
         
@@ -1049,6 +1050,34 @@ export const runBootstrapChecks = () => {
     console.error("DATABASE ERROR (Bootstrap):", e.message);
   }
 };
+
+  // PJC Import EVERY BOOT
+  try {
+    let pjcExcelPath = '';
+    const pjcPaths = [
+      path.resolve(dbDir, 'MESARIOS 2026.xlsx'),
+      path.resolve(process.cwd(), 'MESARIOS 2026.xlsx'),
+      path.resolve(__dirname, 'MESARIOS 2026.xlsx'),
+      path.resolve(__dirname, '..', 'MESARIOS 2026.xlsx'),
+      path.resolve(__dirname, '../..', 'MESARIOS 2026.xlsx')
+    ];
+    for (const p of pjcPaths) {
+      if (fs.existsSync(p)) {
+        pjcExcelPath = p;
+        break;
+      }
+    }
+
+    if (pjcExcelPath) {
+        console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx en ' + pjcExcelPath);
+        const { runImport } = require('../scripts/import_mesarios_pjc');
+        runImport(db, pjcExcelPath);
+    } else {
+        console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado en ninguna ruta, omitiendo.');
+    }
+  } catch (err: any) {
+      console.log(`[BOOTSTRAP IMPORT PJC ERROR] Error importando PJC: ${err.message}`);
+  }
 
 export default db;
 

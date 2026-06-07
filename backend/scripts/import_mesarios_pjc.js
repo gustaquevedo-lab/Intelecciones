@@ -123,8 +123,6 @@ function runImport(db, excelPath) {
   let sentToSuplentes = 0;
 
   db.transaction(() => {
-    // Limpiar tabla users para PJC antes de arrancar, para no dejar sucios
-    db.prepare("DELETE FROM users WHERE distrito = 'PEDRO JUAN CABALLERO' AND role IN ('MIEMBRO_MESA', 'APODERADO')").run();
 
     const getElectorStmt = db.prepare("SELECT nombre, apellido, local_votacion, mesa FROM electors WHERE TRIM(REPLACE(CAST(ci AS TEXT), '.', '')) = ? OR LTRIM(TRIM(REPLACE(CAST(ci AS TEXT), '.', '')), '0') = ?");
     const insertStmt = db.prepare(`
