@@ -915,6 +915,65 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  router.get('/diagnose-votes-concepcion', (req, res) => {
+    try {
+      // Check Concepcion voting participation
+      const concepcionLocations = db.prepare(`
+        SELECT DISTINCT nombre FROM voting_locations
+        WHERE distrito LIKE '%CONCEPCION%' OR ciudad LIKE '%CONCEPCION%'
+      `).all() as any[];
+
+      const locationNames = concepcionLocations.map(l => l.nombre);
+
+      // Check participation logs for Concepcion
+      const participationByMesa = db.prepare(`
+        SELECT local_votacion, mesa, COUNT(*) as votos
+        FROM participation_logs
+        WHERE local_votacion IN (${locationNames.map(() => '?').join(',')})
+        GROUP BY local_votacion, mesa
+        ORDER BY votos DESC
+      `).all(...locationNames) as any[];
+
+      // Check results (actas) for Concepcion
+      const resultsByMesa = db.prepare(`
+        SELECT local_votacion, mesa, COUNT(*) as acta_count
+        FROM results
+        WHERE local_votacion IN (${locationNames.map(() => '?').join(',')})
+        GROUP BY local_votacion, mesa
+      `).all(...locationNames) as any[];
+
+      // Check audit logs for voting activity
+      const auditVotingActivity = db.prepare(`
+        SELECT action, COUNT(*) as count, MAX(timestamp) as last_activity
+        FROM audit_logs
+        WHERE entity = 'PARTICIPATION' OR entity = 'VOTE' OR action LIKE '%vote%' OR action LIKE '%VOTE%'
+        GROUP BY action
+        ORDER BY last_activity DESC
+      `).all() as any[];
+
+      // Total votos vs actas
+      const summary = {
+        concepcion_locations: locationNames.length,
+        total_participation_logs: db.prepare(`SELECT COUNT(*) as cnt FROM participation_logs`).get(),
+        total_results: db.prepare(`SELECT COUNT(*) as cnt FROM results`).get(),
+        participation_in_concepcion: participationByMesa.length,
+        results_in_concepcion: resultsByMesa.length
+      };
+
+      res.json({
+        concepcionLocations: locationNames,
+        participationByMesa: participationByMesa.slice(0, 20),
+        resultsByMesa: resultsByMesa.slice(0, 20),
+        auditVotingActivity: auditVotingActivity.slice(0, 10),
+        summary,
+        warning: participationByMesa.length === 0 ? '⚠️ NO PARTICIPATION LOGS FOUND FOR CONCEPCION' : '',
+        info: 'If participation_logs is empty but results exist, votes may be saved directly without participation tracking'
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   router.get('/diagnose-critical', (req, res) => {
     try {
       // 1. Check Concepcion members
