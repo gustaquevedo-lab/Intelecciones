@@ -749,6 +749,15 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  router.get('/debug-cerro', (req, res) => {
+    try {
+      const users = db.prepare("SELECT id, username, ci, nombre, role, assigned_local, distrito FROM users WHERE assigned_local LIKE '%CERRO%'").all();
+      res.json({ users });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return router;
 }
 
