@@ -147,6 +147,75 @@ const StatCard: React.FC<{ label: string; value: string | number; color?: string
   </div>
 );
 
+const CountdownBanner = () => {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isClosed, setIsClosed] = useState(false);
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(16, 0, 0, 0);
+
+      const diff = target.getTime() - now.getTime();
+      if (diff <= 0) {
+        setTimeLeft('VOTACIÓN CERRADA');
+        setIsClosed(true);
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      const pad = (num: number) => String(num).padStart(2, '0');
+      setTimeLeft(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
+      setIsClosed(false);
+    };
+
+    calculateTime();
+    const interval = setInterval(calculateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{
+      background: isClosed ? 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(153,27,27,0.15))' : 'linear-gradient(135deg, rgba(30,58,138,0.2), rgba(23,37,84,0.2))',
+      border: '1px solid var(--border)',
+      borderRadius: '16px',
+      padding: '1.25rem 2rem',
+      marginBottom: '1.5rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: '1rem',
+      boxShadow: '0 8px 30px rgba(0,0,0,0.15)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{
+          width: '8px', height: '8px', borderRadius: '50%',
+          background: isClosed ? 'var(--red, #EF4444)' : 'var(--green, #22C55E)',
+          boxShadow: isClosed ? '0 0 10px #EF4444' : '0 0 10px #22C55E',
+        }} />
+        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-2)', letterSpacing: '0.05em' }}>
+          {isClosed ? 'PROCESO DE ELECCIÓN' : 'TIEMPO RESTANTE PARA EL CIERRE DE MESAS (16:00)'}
+        </span>
+      </div>
+      <div style={{
+        fontSize: '2.0rem',
+        fontWeight: 950,
+        fontFamily: 'monospace',
+        color: isClosed ? '#EF4444' : 'var(--blue, #3B82F6)',
+        letterSpacing: '0.05em',
+        textShadow: isClosed ? '0 0 15px rgba(239,68,68,0.2)' : '0 0 15px rgba(59,130,246,0.2)'
+      }}>
+        {timeLeft}
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 const DiaDApp: React.FC = () => {
   const { user, activeDistrict, setActiveDistrict } = useAuth();
@@ -1421,6 +1490,7 @@ const DiaDApp: React.FC = () => {
             {activeTab === 'participacion' && (
               <motion.div key="participacion" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 
+                <CountdownBanner />
                 {/* KPIs Globales */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
