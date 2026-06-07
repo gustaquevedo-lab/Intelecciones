@@ -737,6 +737,18 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  router.post('/wipe-test-data', (req, res) => {
+    try {
+      // Clear all test data for Dia D
+      db.prepare('DELETE FROM mesa_constitutions').run();
+      db.prepare('DELETE FROM participation_logs').run();
+      db.prepare('UPDATE users SET assigned_mesa = 0, assigned_table_role = NULL').run();
+      res.json({ success: true, message: 'Base de datos limpia de pruebas.' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }
 
