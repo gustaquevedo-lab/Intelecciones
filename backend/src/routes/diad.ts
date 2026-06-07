@@ -316,8 +316,8 @@ export default function diadRoutes(upload: multer.Multer) {
   router.post('/members/assign', (req, res) => {
     const { ci, local, mesa, user_id, role, table_role } = req.body;
     if (!ci && !user_id) return res.status(400).json({ error: 'ci o user_id es requerido' });
-    if (!local) return res.status(400).json({ error: 'local es requerido' });
-    if (mesa === undefined || mesa === null || isNaN(Number(mesa))) return res.status(400).json({ error: 'mesa debe ser un número' });
+    if (local === undefined) return res.status(400).json({ error: 'local es requerido' });
+    if (mesa === undefined) return res.status(400).json({ error: 'mesa es requerido' });
     if (role && !['MIEMBRO_MESA', 'VEEDOR', 'APODERADO'].includes(role)) return res.status(400).json({ error: 'role inválido' });
     const targetRole = role || 'MIEMBRO_MESA';
     try {
@@ -337,6 +337,12 @@ export default function diadRoutes(upload: multer.Multer) {
         }
       }
       if (!targetId) return res.status(400).json({ error: 'No se pudo identificar al usuario' });
+      
+      // If we are assigning to a specific table (not just liberating), clear any previous member first
+      if (local && mesa !== null) {
+        db.prepare(`UPDATE users SET assigned_local = NULL, assigned_mesa = NULL WHERE assigned_local = ? AND assigned_mesa = ? AND role != 'APODERADO'`).run(local, mesa);
+      }
+      
       db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
