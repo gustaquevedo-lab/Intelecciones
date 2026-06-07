@@ -325,6 +325,40 @@ const DiaDApp: React.FC = () => {
   const [editApoNombre, setEditApoNombre] = useState('');
   const [editApoCI, setEditApoCI] = useState('');
   const [editApoPhone, setEditApoPhone] = useState('');
+
+  const [showCreateApoModal, setShowCreateApoModal] = useState(false);
+  const [newApoRole, setNewApoRole] = useState('APODERADO');
+  const [newApoNombre, setNewApoNombre] = useState('');
+  const [newApoCI, setNewApoCI] = useState('');
+  const [newApoPhone, setNewApoPhone] = useState('');
+  const [newApoLocal, setNewApoLocal] = useState('');
+  const [newApoMesa, setNewApoMesa] = useState<number | null>(null);
+
+  const handleCreateApo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/admin/users', {
+        nombre: newApoNombre,
+        ci: newApoCI,
+        username: newApoCI,
+        password: newApoCI,
+        telefono: newApoPhone,
+        role: newApoRole,
+        assigned_local: newApoLocal,
+        assigned_mesa: newApoMesa,
+        distrito: locations[0]?.ciudad || 'PEDRO JUAN CABALLERO'
+      });
+      fetchUsers();
+      setShowCreateApoModal(false);
+      setNewApoNombre('');
+      setNewApoCI('');
+      setNewApoPhone('');
+      setNewApoLocal('');
+      setNewApoMesa(null);
+    } catch (err: any) {
+      alert("Error: " + (err.response?.data?.error || err.message));
+    }
+  }
   const fleetLocations = fleetLocationsData || [];
   const resultados = resultadosData || [];
   const actas = actasData || [];
@@ -681,6 +715,19 @@ const DiaDApp: React.FC = () => {
               }}
             >
               <RefreshCw size={11} /> Actualizar
+            </button>
+            <button
+              onClick={() => setShowCreateApoModal(true)}
+              style={{
+                padding: '0.3rem 0.65rem', borderRadius: '8px',
+                border: 'none',
+                background: 'var(--plra-500)',
+                color: 'white', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                fontSize: '0.65rem', fontWeight: 800
+              }}
+            >
+              <UserPlus size={11} /> CREAR STAFF
             </button>
           </div>
         </div>
@@ -2388,6 +2435,84 @@ const DiaDApp: React.FC = () => {
               <div className="modal-footer-premium-styled">
                 <button type="button" onClick={() => setEditingApoderado(null)} className="btn-cancel-styled">Cancelar</button>
                 <button type="submit" className="btn-confirm-styled">Guardar Cambios <Save size={18} /></button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- CREATE APODERADO / MIEMBRO MODAL --- */}
+      {showCreateApoModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateApoModal(false)}>
+          <div 
+            className="modal-content" 
+            style={{ width: '450px', maxWidth: '90vw' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header-premium">
+              <h2>Crear Staff (Día D)</h2>
+              <button className="icon-btn" onClick={() => setShowCreateApoModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleCreateApo}>
+              <div className="modal-body-premium">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Rol</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setNewApoRole('APODERADO')}
+                        style={{
+                          flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid',
+                          background: newApoRole === 'APODERADO' ? 'rgba(59,130,246,0.1)' : 'var(--surface-light)',
+                          borderColor: newApoRole === 'APODERADO' ? 'var(--blue)' : 'var(--border)',
+                          color: newApoRole === 'APODERADO' ? 'white' : 'var(--text-3)',
+                          fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer'
+                        }}
+                      >APODERADO DE LOCAL</button>
+                      <button
+                        type="button"
+                        onClick={() => setNewApoRole('MIEMBRO_MESA')}
+                        style={{
+                          flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid',
+                          background: newApoRole === 'MIEMBRO_MESA' ? 'rgba(59,130,246,0.1)' : 'var(--surface-light)',
+                          borderColor: newApoRole === 'MIEMBRO_MESA' ? 'var(--blue)' : 'var(--border)',
+                          color: newApoRole === 'MIEMBRO_MESA' ? 'white' : 'var(--text-3)',
+                          fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer'
+                        }}
+                      >MIEMBRO DE MESA</button>
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Nombre Completo</label>
+                    <input className="modern-input-premium-styled" value={newApoNombre} onChange={e => setNewApoNombre(e.target.value)} required />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Cédula de Identidad</label>
+                    <input className="modern-input-premium-styled" value={newApoCI} onChange={e => setNewApoCI(e.target.value.replace(/\D/g, ''))} required />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Teléfono (WhatsApp)</label>
+                    <input className="modern-input-premium-styled" value={newApoPhone} onChange={e => setNewApoPhone(e.target.value)} placeholder="Ej: 595981..." />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Local Asignado</label>
+                    <select className="modern-input-premium-styled" value={newApoLocal} onChange={e => setNewApoLocal(e.target.value)} required>
+                      <option value="">Seleccione Local...</option>
+                      {locations.map((l: any) => <option key={l.cod_local} value={l.nombre}>{l.nombre}</option>)}
+                    </select>
+                  </div>
+                  {newApoRole === 'MIEMBRO_MESA' && (
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Mesa Nro.</label>
+                      <input type="number" className="modern-input-premium-styled" value={newApoMesa || ''} onChange={e => setNewApoMesa(parseInt(e.target.value) || null)} required />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer-premium-styled">
+                <button type="button" onClick={() => setShowCreateApoModal(false)} className="btn-cancel-styled">Cancelar</button>
+                <button type="submit" className="btn-confirm-styled">Crear Operador <Plus size={18} /></button>
               </div>
             </form>
           </div>
