@@ -12,8 +12,9 @@ export default function diadRoutes(upload: multer.Multer) {
     const list_id = getListId(req);
     const role = getRole(req);
     const user_id = req.headers['x-user-id'];
+    const districtFilter = getDistrict(req);
 
-    const cacheKey = `${user_id || 'global'}_${list_id || ''}`;
+    const cacheKey = `${user_id || 'global'}_${list_id || ''}_${districtFilter || 'ALL'}`;
     const cached = await diadCoverageCache.get(cacheKey);
     if (cached) return res.json(cached);
 
@@ -29,8 +30,6 @@ export default function diadRoutes(upload: multer.Multer) {
       listClause = `AND u.assigned_list_id = ?`;
       listParams = [list_id];
     }
-
-    const districtFilter = getDistrict(req);
 
     if (districtFilter) {
       districtName = districtFilter;
@@ -365,8 +364,7 @@ router.get('/data', async (req, res) => {
       }
       
       // Clear cache explicitly after modification
-      const cacheKey = `${req.headers['x-user-id'] || 'global'}_${req.headers['x-list-id'] || ''}`;
-      diadCoverageCache.del(cacheKey);
+      await diadCoverageCache.invalidate();
       
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }

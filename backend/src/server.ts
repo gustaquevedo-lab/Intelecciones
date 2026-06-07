@@ -184,6 +184,9 @@ export function createCache<T>(prefix: string, defaultTtlMs: number) {
     invalidate: async (): Promise<void> => {
       await cacheService.invalidate(`${prefix}:`);
     },
+    del: async (key: string): Promise<void> => {
+      await cacheService.delete(`${prefix}:${key}`);
+    },
     cleanup: () => {}
   };
 }

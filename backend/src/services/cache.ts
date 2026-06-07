@@ -61,6 +61,18 @@ class CacheService {
     return entry.value as T;
   }
 
+  async delete(key: string): Promise<void> {
+    if (this.redisConnected && this.redis) {
+      try {
+        await this.redis.del(key);
+        return;
+      } catch (e) {
+        logger.error({ err: e }, `[CACHE] Redis delete error for key ${key}`);
+      }
+    }
+    this.memoryCache.delete(key);
+  }
+
   async set<T>(key: string, value: T, ttlSec: number): Promise<void> {
     if (this.redisConnected && this.redis) {
       try {
