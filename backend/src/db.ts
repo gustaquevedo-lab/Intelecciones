@@ -1045,6 +1045,55 @@ export const runBootstrapChecks = () => {
         console.log(`[BOOTSTRAP IMPORT ERROR] Stack: ${err.stack}`);
       }
     })();
+
+    // ── SEED CAMPAIGN AND LISTS (CANDIDATURAS EN PUGNA INTERNAS PLRA) ──
+    try {
+      db.prepare(`
+        INSERT OR IGNORE INTO campaigns (id, name, status, goal, enabled_modules)
+        VALUES (1, 'Internas PLRA 2026', 'active', 1000, 'COMMAND_CENTER,REGISTRY,RESULTS')
+      `).run();
+
+      const hasGeneralLists = db.prepare("SELECT 1 FROM lists WHERE candidate_alias = 'ANR' LIMIT 1").get();
+      if (hasGeneralLists) {
+        console.log("[BOOTSTRAP] Wiping general lists to seed PLRA internal movements...");
+        db.prepare("DELETE FROM acta_results").run();
+        db.prepare("DELETE FROM results").run();
+        db.prepare("DELETE FROM lists").run();
+      }
+
+      const listsCount = db.prepare("SELECT COUNT(*) as cnt FROM lists").get() as any;
+      if (listsCount && listsCount.cnt === 0) {
+        console.log("[BOOTSTRAP] Seeding default PLRA internal movements...");
+        const defaultLists = [
+          // INTENDENTE
+          { campaign_id: 1, type: 'INTENDENTE', list_number: '9', candidate_alias: 'FIL (L9)', candidate_nombre: 'Movimiento Frente de Integración Liberal', is_adversary: 0 },
+          { campaign_id: 1, type: 'INTENDENTE', list_number: '22', candidate_alias: 'Equipo Joven (L22)', candidate_nombre: 'Movimiento Equipo Joven', is_adversary: 1 },
+          { campaign_id: 1, type: 'INTENDENTE', list_number: '100', candidate_alias: 'Cambiemos (L100)', candidate_nombre: 'Movimiento Cambiemos', is_adversary: 1 },
+          // CONCEJAL
+          { campaign_id: 1, type: 'CONCEJAL', list_number: '9', candidate_alias: 'FIL (L9)', candidate_nombre: 'Lista 9 - FIL', is_adversary: 0 },
+          { campaign_id: 1, type: 'CONCEJAL', list_number: '22', candidate_alias: 'Equipo Joven (L22)', candidate_nombre: 'Lista 22 - Equipo Joven', is_adversary: 1 },
+          { campaign_id: 1, type: 'CONCEJAL', list_number: '100', candidate_alias: 'Cambiemos (L100)', candidate_nombre: 'Lista 100 - Cambiemos', is_adversary: 1 },
+          { campaign_id: 1, type: 'CONCEJAL', list_number: '4', candidate_alias: 'Cambio Imbatible (L4)', candidate_nombre: 'Lista 4 - Cambio Imbatible', is_adversary: 1 },
+          { campaign_id: 1, type: 'CONCEJAL', list_number: '15', candidate_alias: 'Frente Integrador (L15)', candidate_nombre: 'Lista 15 - Frente Integrador Liberal', is_adversary: 1 },
+          // AUTORIDADES PARTIDARIAS
+          { campaign_id: 1, type: 'AUTORIDADES', list_number: '9', candidate_alias: 'FIL (L9)', candidate_nombre: 'Lista 9 - FIL', is_adversary: 0 },
+          { campaign_id: 1, type: 'AUTORIDADES', list_number: '22', candidate_alias: 'Equipo Joven (L22)', candidate_nombre: 'Lista 22 - Equipo Joven', is_adversary: 1 },
+          { campaign_id: 1, type: 'AUTORIDADES', list_number: '100', candidate_alias: 'Cambiemos (L100)', candidate_nombre: 'Lista 100 - Cambiemos', is_adversary: 1 }
+        ];
+
+        const insertList = db.prepare(`
+          INSERT INTO lists (campaign_id, type, list_number, candidate_alias, candidate_nombre, is_adversary)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        for (const item of defaultLists) {
+          insertList.run(item.campaign_id, item.type, item.list_number, item.candidate_alias, item.candidate_nombre, item.is_adversary);
+        }
+        console.log(`[BOOTSTRAP] Successfully seeded ${defaultLists.length} PLRA internal lists.`);
+      }
+    } catch (seedErr: any) {
+      console.error("[BOOTSTRAP ERROR] Failed to seed campaign/lists:", seedErr.message);
+    }
+
     console.log("DATABASE: Bootstrap checks complete.");
 
   } catch (e: any) {

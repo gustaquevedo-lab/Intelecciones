@@ -1,0 +1,692 @@
+[
+  {
+    "asistida": "3 - NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2824",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2824",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "nombre_corto": "NLUPLV",
+    "numero": "3",
+    "orden_absoluto": [
+      2824
+    ]
+  },
+  {
+    "asistida": "9 - FRENTE RADICAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2825",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2825",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "FRENTE RADICAL",
+    "nombre_corto": "FR",
+    "numero": "9",
+    "orden_absoluto": [
+      2825
+    ]
+  },
+  {
+    "asistida": "100 - DIALOGO AZUL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2826",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2826",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "DIALOGO AZUL",
+    "nombre_corto": "DA",
+    "numero": "100",
+    "orden_absoluto": [
+      2826
+    ]
+  },
+  {
+    "asistida": "3 - NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2830",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2830",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "nombre_corto": "NLUPLV",
+    "numero": "3",
+    "orden_absoluto": [
+      2830
+    ]
+  },
+  {
+    "asistida": "9 - FRENTE RADICAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2831",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2831",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "FRENTE RADICAL",
+    "nombre_corto": "FR",
+    "numero": "9",
+    "orden_absoluto": [
+      2831
+    ]
+  },
+  {
+    "asistida": "100 - DIALOGO AZUL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2832",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2832",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "DIALOGO AZUL",
+    "nombre_corto": "DA",
+    "numero": "100",
+    "orden_absoluto": [
+      2832
+    ]
+  },
+  {
+    "asistida": "3 - NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2833",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2833",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "nombre_corto": "NLUPLV",
+    "numero": "3",
+    "orden_absoluto": [
+      2833
+    ]
+  },
+  {
+    "asistida": "9 - FRENTE RADICAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2834",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2834",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "FRENTE RADICAL",
+    "nombre_corto": "FR",
+    "numero": "9",
+    "orden_absoluto": [
+      2834
+    ]
+  },
+  {
+    "asistida": "100 - DIALOGO AZUL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2835",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2835",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "DIALOGO AZUL",
+    "nombre_corto": "DA",
+    "numero": "100",
+    "orden_absoluto": [
+      2835
+    ]
+  },
+  {
+    "asistida": "3 - NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2836",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2836",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "nombre_corto": "NLUPLV",
+    "numero": "3",
+    "orden_absoluto": [
+      2836
+    ]
+  },
+  {
+    "asistida": "9 - FRENTE RADICAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2837",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2837",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "FRENTE RADICAL",
+    "nombre_corto": "FR",
+    "numero": "9",
+    "orden_absoluto": [
+      2837
+    ]
+  },
+  {
+    "asistida": "21 - SIGLO 21",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2838",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2838",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "SIGLO 21",
+    "nombre_corto": "S21",
+    "numero": "21",
+    "orden_absoluto": [
+      2838
+    ]
+  },
+  {
+    "asistida": "100 - DIALOGO AZUL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2839",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2839",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "DIALOGO AZUL",
+    "nombre_corto": "DA",
+    "numero": "100",
+    "orden_absoluto": [
+      2839
+    ]
+  },
+  {
+    "asistida": "3 - NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2881",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2881",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "nombre_corto": "NLUPLV",
+    "numero": "3",
+    "orden_absoluto": [
+      2881
+    ]
+  },
+  {
+    "asistida": "9 - FRENTE RADICAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2882",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2882",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "FRENTE RADICAL",
+    "nombre_corto": "FR",
+    "numero": "9",
+    "orden_absoluto": [
+      2882
+    ]
+  },
+  {
+    "asistida": "100 - DIALOGO AZUL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "2883",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "2883",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "DIALOGO AZUL",
+    "nombre_corto": "DA",
+    "numero": "100",
+    "orden_absoluto": [
+      2883
+    ]
+  },
+  {
+    "asistida": "1 - COHERENCIA LIBERAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3172",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3172",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "COHERENCIA LIBERAL",
+    "nombre_corto": "CL",
+    "numero": "1",
+    "orden_absoluto": [
+      3172
+    ]
+  },
+  {
+    "asistida": "3 - NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3173",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3173",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "nombre_corto": "NLUPLV",
+    "numero": "3",
+    "orden_absoluto": [
+      3173
+    ]
+  },
+  {
+    "asistida": "9 - FRENTE RADICAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3174",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3174",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "FRENTE RADICAL",
+    "nombre_corto": "FR",
+    "numero": "9",
+    "orden_absoluto": [
+      3174
+    ]
+  },
+  {
+    "asistida": "13 - CAMBIO PARA EL CAMBIO",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3175",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3175",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "CAMBIO PARA EL CAMBIO",
+    "nombre_corto": "CPC",
+    "numero": "13",
+    "orden_absoluto": [
+      3175
+    ]
+  },
+  {
+    "asistida": "21 - SIGLO 21",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3176",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3176",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "SIGLO 21",
+    "nombre_corto": "S21",
+    "numero": "21",
+    "orden_absoluto": [
+      3176
+    ]
+  },
+  {
+    "asistida": "25 - OÑONDIVEPA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3177",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3177",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "OÑONDIVEPA",
+    "nombre_corto": "MLO",
+    "numero": "25",
+    "orden_absoluto": [
+      3177
+    ]
+  },
+  {
+    "asistida": "100 - DIALOGO AZUL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3178",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3178",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "DIALOGO AZUL",
+    "nombre_corto": "DA",
+    "numero": "100",
+    "orden_absoluto": [
+      3178
+    ]
+  },
+  {
+    "asistida": "1 - COHERENCIA LIBERAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3179",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3179",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "COHERENCIA LIBERAL",
+    "nombre_corto": "CL",
+    "numero": "1",
+    "orden_absoluto": [
+      3179
+    ]
+  },
+  {
+    "asistida": "3 - NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3180",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3180",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "NUEVO LIBERALISMO UNIDAD PARA LA VICTORIA",
+    "nombre_corto": "NLUPLV",
+    "numero": "3",
+    "orden_absoluto": [
+      3180
+    ]
+  },
+  {
+    "asistida": "9 - FRENTE RADICAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3181",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3181",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "FRENTE RADICAL",
+    "nombre_corto": "FR",
+    "numero": "9",
+    "orden_absoluto": [
+      3181
+    ]
+  },
+  {
+    "asistida": "13 - CAMBIO PARA EL CAMBIO",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3182",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3182",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "CAMBIO PARA EL CAMBIO",
+    "nombre_corto": "CPC",
+    "numero": "13",
+    "orden_absoluto": [
+      3182
+    ]
+  },
+  {
+    "asistida": "21 - SIGLO 21",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3183",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3183",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "SIGLO 21",
+    "nombre_corto": "S21",
+    "numero": "21",
+    "orden_absoluto": [
+      3183
+    ]
+  },
+  {
+    "asistida": "45 - LA DERECHA LIBERAL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3184",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3184",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "LA DERECHA LIBERAL",
+    "nombre_corto": "LDL",
+    "numero": "45",
+    "orden_absoluto": [
+      3184
+    ]
+  },
+  {
+    "asistida": "100 - DIALOGO AZUL",
+    "clase": "Lista",
+    "cod_alianza": null,
+    "cod_partido": null,
+    "codigo": "3185",
+    "color": [
+      "#FFFFFF"
+    ],
+    "color_tipografia": [
+      "#000000"
+    ],
+    "id_candidatura": "3185",
+    "imagenes": [
+      "default_lista"
+    ],
+    "nombre": "DIALOGO AZUL",
+    "nombre_corto": "DA",
+    "numero": "100",
+    "orden_absoluto": [
+      3185
+    ]
+  }
+]

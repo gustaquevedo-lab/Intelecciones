@@ -1,0 +1,8779 @@
+[
+  {
+    "asistida": "Luis Carlos Gill",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18961",
+    "id_candidatura": "2824.18961",
+    "id_umv": 1563,
+    "imagenes": [
+      "2824.18961",
+      "2824.18962",
+      "2824.18963",
+      "2824.18964",
+      "2824.18965",
+      "2824.18966",
+      "2824.18967",
+      "2824.18968",
+      "2824.18969",
+      "2824.18970",
+      "2824.18971",
+      "2824.18972",
+      "2824.18973"
+    ],
+    "nombre": "Luis Carlos Gill",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2824,
+      7,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Dario Dos Santos Ferreira",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18962",
+    "id_candidatura": "2824.18962",
+    "id_umv": 1564,
+    "imagenes": [
+      "2824.18962"
+    ],
+    "nombre": "Ruben Dario Dos Santos Ferreira",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2824,
+      7,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Elsa Fernandez Rodriguez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18963",
+    "id_candidatura": "2824.18963",
+    "id_umv": 1565,
+    "imagenes": [
+      "2824.18963"
+    ],
+    "nombre": "Elsa Fernandez Rodriguez",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2824,
+      7,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gerardo Arguello",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18964",
+    "id_candidatura": "2824.18964",
+    "id_umv": 1566,
+    "imagenes": [
+      "2824.18964"
+    ],
+    "nombre": "Gerardo Arguello",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2824,
+      7,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sergio Ortiz",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18965",
+    "id_candidatura": "2824.18965",
+    "id_umv": 1567,
+    "imagenes": [
+      "2824.18965"
+    ],
+    "nombre": "Sergio Ortiz",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2824,
+      7,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dolli Villalba",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18966",
+    "id_candidatura": "2824.18966",
+    "id_umv": 1568,
+    "imagenes": [
+      "2824.18966"
+    ],
+    "nombre": "Dolli Villalba",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2824,
+      7,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sergio Arzamendia",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18967",
+    "id_candidatura": "2824.18967",
+    "id_umv": 1569,
+    "imagenes": [
+      "2824.18967"
+    ],
+    "nombre": "Sergio Arzamendia",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2824,
+      7,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ricardo Villalba",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18968",
+    "id_candidatura": "2824.18968",
+    "id_umv": 1570,
+    "imagenes": [
+      "2824.18968"
+    ],
+    "nombre": "Ricardo Villalba",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2824,
+      7,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Barreto",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18969",
+    "id_candidatura": "2824.18969",
+    "id_umv": 1571,
+    "imagenes": [
+      "2824.18969"
+    ],
+    "nombre": "Oscar Barreto",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2824,
+      7,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Derlis Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18970",
+    "id_candidatura": "2824.18970",
+    "id_umv": 1572,
+    "imagenes": [
+      "2824.18970"
+    ],
+    "nombre": "Derlis Benitez",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2824,
+      7,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fernando Olmedo Rivarola",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18971",
+    "id_candidatura": "2824.18971",
+    "id_umv": 1573,
+    "imagenes": [
+      "2824.18971"
+    ],
+    "nombre": "Fernando Olmedo Rivarola",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2824,
+      7,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Angel Dario Ovelar Paredes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18972",
+    "id_candidatura": "2824.18972",
+    "id_umv": 1574,
+    "imagenes": [
+      "2824.18972"
+    ],
+    "nombre": "Angel Dario Ovelar Paredes",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      2824,
+      7,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Maristela Ybarra Gonzalez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2824",
+    "codigo": "2824.18973",
+    "id_candidatura": "2824.18973",
+    "id_umv": 1575,
+    "imagenes": [
+      "2824.18973"
+    ],
+    "nombre": "Maristela Ybarra Gonzalez",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      2824,
+      7,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Eliane Dominguez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18974",
+    "id_candidatura": "2825.18974",
+    "id_umv": 1576,
+    "imagenes": [
+      "2825.18974",
+      "2825.18975",
+      "2825.18976",
+      "2825.18977",
+      "2825.18978",
+      "2825.18979",
+      "2825.18980",
+      "2825.18981",
+      "2825.18982",
+      "2825.18983",
+      "2825.18984",
+      "2825.18985",
+      "2825.18986",
+      "2825.18987"
+    ],
+    "nombre": "Eliane Dominguez",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2825,
+      7,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Anibal Ruben Acosta Orue",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18975",
+    "id_candidatura": "2825.18975",
+    "id_umv": 1577,
+    "imagenes": [
+      "2825.18975"
+    ],
+    "nombre": "Anibal Ruben Acosta Orue",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2825,
+      7,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fany Mabel Avila Godoy",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18976",
+    "id_candidatura": "2825.18976",
+    "id_umv": 1578,
+    "imagenes": [
+      "2825.18976"
+    ],
+    "nombre": "Fany Mabel Avila Godoy",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2825,
+      7,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carlos Eleuterio Ortiz Rivas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18977",
+    "id_candidatura": "2825.18977",
+    "id_umv": 1579,
+    "imagenes": [
+      "2825.18977"
+    ],
+    "nombre": "Carlos Eleuterio Ortiz Rivas",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2825,
+      7,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Romualdo Gonzalez Avalos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18978",
+    "id_candidatura": "2825.18978",
+    "id_umv": 1580,
+    "imagenes": [
+      "2825.18978"
+    ],
+    "nombre": "Romualdo Gonzalez Avalos",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2825,
+      7,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Hector Ramon Delgado Romero",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18979",
+    "id_candidatura": "2825.18979",
+    "id_umv": 1581,
+    "imagenes": [
+      "2825.18979"
+    ],
+    "nombre": "Hector Ramon Delgado Romero",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2825,
+      7,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Norma Elizabeth Salinas Romero",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18980",
+    "id_candidatura": "2825.18980",
+    "id_umv": 1582,
+    "imagenes": [
+      "2825.18980"
+    ],
+    "nombre": "Norma Elizabeth Salinas Romero",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2825,
+      7,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gerardo Andres Valdez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18981",
+    "id_candidatura": "2825.18981",
+    "id_umv": 1583,
+    "imagenes": [
+      "2825.18981"
+    ],
+    "nombre": "Gerardo Andres Valdez",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2825,
+      7,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Teodoro Salinas Britez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18982",
+    "id_candidatura": "2825.18982",
+    "id_umv": 1584,
+    "imagenes": [
+      "2825.18982"
+    ],
+    "nombre": "Teodoro Salinas Britez",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2825,
+      7,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Justo Acosta Rojas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18983",
+    "id_candidatura": "2825.18983",
+    "id_umv": 1585,
+    "imagenes": [
+      "2825.18983"
+    ],
+    "nombre": "Justo Acosta Rojas",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2825,
+      7,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Ramon Acosta Lopez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18984",
+    "id_candidatura": "2825.18984",
+    "id_umv": 1586,
+    "imagenes": [
+      "2825.18984"
+    ],
+    "nombre": "Oscar Ramon Acosta Lopez",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2825,
+      7,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Mendieta Rojas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18985",
+    "id_candidatura": "2825.18985",
+    "id_umv": 1587,
+    "imagenes": [
+      "2825.18985"
+    ],
+    "nombre": "Ruben Mendieta Rojas",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2825,
+      7,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cristian Diosnel Duarte Ramirez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18986",
+    "id_candidatura": "2825.18986",
+    "id_umv": 1588,
+    "imagenes": [
+      "2825.18986"
+    ],
+    "nombre": "Cristian Diosnel Duarte Ramirez",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      2825,
+      7,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fabiano Saavedra Cañete Junior",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2825",
+    "codigo": "2825.18987",
+    "id_candidatura": "2825.18987",
+    "id_umv": 1589,
+    "imagenes": [
+      "2825.18987"
+    ],
+    "nombre": "Fabiano Saavedra Cañete Junior",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      2825,
+      7,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ingrid Rodriguez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18988",
+    "id_candidatura": "2826.18988",
+    "id_umv": 1590,
+    "imagenes": [
+      "2826.18988",
+      "2826.18989",
+      "2826.18990",
+      "2826.18991",
+      "2826.18992",
+      "2826.18993",
+      "2826.18994",
+      "2826.18995",
+      "2826.18996",
+      "default_mujer",
+      "2826.18998",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer"
+    ],
+    "nombre": "Ingrid Rodriguez",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2826,
+      7,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18989",
+    "id_candidatura": "2826.18989",
+    "id_umv": 1591,
+    "imagenes": [
+      "2826.18989"
+    ],
+    "nombre": "Ruben Martinez",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2826,
+      7,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Richer Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18990",
+    "id_candidatura": "2826.18990",
+    "id_umv": 1592,
+    "imagenes": [
+      "2826.18990"
+    ],
+    "nombre": "Richer Benitez",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2826,
+      7,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ana Salazar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18991",
+    "id_candidatura": "2826.18991",
+    "id_umv": 1593,
+    "imagenes": [
+      "2826.18991"
+    ],
+    "nombre": "Ana Salazar",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2826,
+      7,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Maria Luisa Aguilar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18992",
+    "id_candidatura": "2826.18992",
+    "id_umv": 1594,
+    "imagenes": [
+      "2826.18992"
+    ],
+    "nombre": "Maria Luisa Aguilar",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2826,
+      7,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirna Rodriguez Paredes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18993",
+    "id_candidatura": "2826.18993",
+    "id_umv": 1595,
+    "imagenes": [
+      "2826.18993"
+    ],
+    "nombre": "Mirna Rodriguez Paredes",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2826,
+      7,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Blas Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18994",
+    "id_candidatura": "2826.18994",
+    "id_umv": 1596,
+    "imagenes": [
+      "2826.18994"
+    ],
+    "nombre": "Blas Martinez",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2826,
+      7,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Nazario Ozuna",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18995",
+    "id_candidatura": "2826.18995",
+    "id_umv": 1597,
+    "imagenes": [
+      "2826.18995"
+    ],
+    "nombre": "Nazario Ozuna",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2826,
+      7,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Victor Villasboa Gomez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18996",
+    "id_candidatura": "2826.18996",
+    "id_umv": 1598,
+    "imagenes": [
+      "2826.18996"
+    ],
+    "nombre": "Victor Villasboa Gomez",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2826,
+      7,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ronald Ramon Escobar Icassatti",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18997",
+    "id_candidatura": "2826.18997",
+    "id_umv": 1599,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Ronald Ramon Escobar Icassatti",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2826,
+      7,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Arevalos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18998",
+    "id_candidatura": "2826.18998",
+    "id_umv": 1600,
+    "imagenes": [
+      "2826.18998"
+    ],
+    "nombre": "Oscar Arevalos",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2826,
+      7,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Derlis Monges Rojas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.18999",
+    "id_candidatura": "2826.18999",
+    "id_umv": 1601,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Derlis Monges Rojas",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2826,
+      7,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Isidora Gomez Segobia",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.19000",
+    "id_candidatura": "2826.19000",
+    "id_umv": 1602,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Isidora Gomez Segobia",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      2826,
+      7,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Felipe Daniel Abbate Pedrozo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "CNV",
+    "cod_lista": "2826",
+    "codigo": "2826.19001",
+    "id_candidatura": "2826.19001",
+    "id_umv": 1603,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Felipe Daniel Abbate Pedrozo",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      2826,
+      7,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gerardo Arguello",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19031",
+    "id_candidatura": "2830.19031",
+    "id_umv": 9292,
+    "imagenes": [
+      "2830.19031",
+      "2830.19032",
+      "2830.19033",
+      "2830.19034",
+      "2830.19035",
+      "2830.19036",
+      "2830.19037",
+      "2830.19038",
+      "2830.19039",
+      "2830.19040",
+      "2830.19041",
+      "2830.19042",
+      "2830.19043"
+    ],
+    "nombre": "Gerardo Arguello",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2830,
+      6,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Martin Pocho",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19032",
+    "id_candidatura": "2830.19032",
+    "id_umv": 9293,
+    "imagenes": [
+      "2830.19032"
+    ],
+    "nombre": "Martin Pocho",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2830,
+      6,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alejandro Rojas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19033",
+    "id_candidatura": "2830.19033",
+    "id_umv": 9294,
+    "imagenes": [
+      "2830.19033"
+    ],
+    "nombre": "Alejandro Rojas",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2830,
+      6,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carlos Jara",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19034",
+    "id_candidatura": "2830.19034",
+    "id_umv": 9295,
+    "imagenes": [
+      "2830.19034"
+    ],
+    "nombre": "Carlos Jara",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2830,
+      6,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Abog. Carolina Fernandez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19035",
+    "id_candidatura": "2830.19035",
+    "id_umv": 9296,
+    "imagenes": [
+      "2830.19035"
+    ],
+    "nombre": "Abog. Carolina Fernandez",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2830,
+      6,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Edgar Lopez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19036",
+    "id_candidatura": "2830.19036",
+    "id_umv": 9297,
+    "imagenes": [
+      "2830.19036"
+    ],
+    "nombre": "Edgar Lopez",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2830,
+      6,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Anselmo Feliu",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19037",
+    "id_candidatura": "2830.19037",
+    "id_umv": 9298,
+    "imagenes": [
+      "2830.19037"
+    ],
+    "nombre": "Anselmo Feliu",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2830,
+      6,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fernando Olmedo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19038",
+    "id_candidatura": "2830.19038",
+    "id_umv": 9299,
+    "imagenes": [
+      "2830.19038"
+    ],
+    "nombre": "Fernando Olmedo",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2830,
+      6,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rita Perez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19039",
+    "id_candidatura": "2830.19039",
+    "id_umv": 9300,
+    "imagenes": [
+      "2830.19039"
+    ],
+    "nombre": "Rita Perez",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2830,
+      6,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Emigdio Vera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19040",
+    "id_candidatura": "2830.19040",
+    "id_umv": 9301,
+    "imagenes": [
+      "2830.19040"
+    ],
+    "nombre": "Emigdio Vera",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2830,
+      6,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dario Ovelar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19041",
+    "id_candidatura": "2830.19041",
+    "id_umv": 9302,
+    "imagenes": [
+      "2830.19041"
+    ],
+    "nombre": "Dario Ovelar",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2830,
+      6,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19042",
+    "id_candidatura": "2830.19042",
+    "id_umv": 9303,
+    "imagenes": [
+      "2830.19042"
+    ],
+    "nombre": "Oscar Martinez",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2830,
+      6,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gerardo Resquin",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2830",
+    "codigo": "2830.19043",
+    "id_candidatura": "2830.19043",
+    "id_umv": 9304,
+    "imagenes": [
+      "2830.19043"
+    ],
+    "nombre": "Gerardo Resquin",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      2830,
+      6,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dario Manuel Benitez Mendoza",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19044",
+    "id_candidatura": "2831.19044",
+    "id_umv": 9305,
+    "imagenes": [
+      "2831.19044",
+      "2831.19045",
+      "2831.19046",
+      "2831.19047",
+      "2831.19048",
+      "2831.19049",
+      "2831.19050",
+      "2831.19051",
+      "2831.19052",
+      "2831.19053",
+      "2831.19054",
+      "2831.19055",
+      "2831.19056"
+    ],
+    "nombre": "Dario Manuel Benitez Mendoza",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2831,
+      6,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Graciela Mereles Britez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19045",
+    "id_candidatura": "2831.19045",
+    "id_umv": 9306,
+    "imagenes": [
+      "2831.19045"
+    ],
+    "nombre": "Graciela Mereles Britez",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2831,
+      6,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Reina Hermelinda Sosa",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19046",
+    "id_candidatura": "2831.19046",
+    "id_umv": 9307,
+    "imagenes": [
+      "2831.19046"
+    ],
+    "nombre": "Reina Hermelinda Sosa",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2831,
+      6,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "David Cecilio Ocampos Perez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19047",
+    "id_candidatura": "2831.19047",
+    "id_umv": 9308,
+    "imagenes": [
+      "2831.19047"
+    ],
+    "nombre": "David Cecilio Ocampos Perez",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2831,
+      6,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Simeon Gimenez Nuñez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19048",
+    "id_candidatura": "2831.19048",
+    "id_umv": 9309,
+    "imagenes": [
+      "2831.19048"
+    ],
+    "nombre": "Simeon Gimenez Nuñez",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2831,
+      6,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Guillermina Rodriguez Gomez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19049",
+    "id_candidatura": "2831.19049",
+    "id_umv": 9310,
+    "imagenes": [
+      "2831.19049"
+    ],
+    "nombre": "Guillermina Rodriguez Gomez",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2831,
+      6,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirian Lucia Jara De Noguera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19050",
+    "id_candidatura": "2831.19050",
+    "id_umv": 9311,
+    "imagenes": [
+      "2831.19050"
+    ],
+    "nombre": "Mirian Lucia Jara De Noguera",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2831,
+      6,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rossmary Raquel Villalba Centurion",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19051",
+    "id_candidatura": "2831.19051",
+    "id_umv": 9312,
+    "imagenes": [
+      "2831.19051"
+    ],
+    "nombre": "Rossmary Raquel Villalba Centurion",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2831,
+      6,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Teodoro Salinas Britez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19052",
+    "id_candidatura": "2831.19052",
+    "id_umv": 9313,
+    "imagenes": [
+      "2831.19052"
+    ],
+    "nombre": "Teodoro Salinas Britez",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2831,
+      6,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Hermenegilda Erenia Benitez Mareco",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19053",
+    "id_candidatura": "2831.19053",
+    "id_umv": 9314,
+    "imagenes": [
+      "2831.19053"
+    ],
+    "nombre": "Hermenegilda Erenia Benitez Mareco",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2831,
+      6,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "German Casanova Lugo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19054",
+    "id_candidatura": "2831.19054",
+    "id_umv": 9315,
+    "imagenes": [
+      "2831.19054"
+    ],
+    "nombre": "German Casanova Lugo",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2831,
+      6,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cynthia Mabel Benitez Cabañas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19055",
+    "id_candidatura": "2831.19055",
+    "id_umv": 9316,
+    "imagenes": [
+      "2831.19055"
+    ],
+    "nombre": "Cynthia Mabel Benitez Cabañas",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2831,
+      6,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sonia Mabel Vargas Bernal",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2831",
+    "codigo": "2831.19056",
+    "id_candidatura": "2831.19056",
+    "id_umv": 9317,
+    "imagenes": [
+      "2831.19056"
+    ],
+    "nombre": "Sonia Mabel Vargas Bernal",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      2831,
+      6,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Arevalos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19057",
+    "id_candidatura": "2832.19057",
+    "id_umv": 9318,
+    "imagenes": [
+      "2832.19057",
+      "2832.19058",
+      "2832.19059",
+      "2832.19060",
+      "2832.19061",
+      "default_mujer",
+      "default_mujer",
+      "2832.19064",
+      "2832.19065",
+      "2832.19066",
+      "2832.19067",
+      "2832.19068",
+      "2832.19069"
+    ],
+    "nombre": "Oscar Arevalos",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2832,
+      6,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Eduardo Bedoya",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19058",
+    "id_candidatura": "2832.19058",
+    "id_umv": 9319,
+    "imagenes": [
+      "2832.19058"
+    ],
+    "nombre": "Eduardo Bedoya",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2832,
+      6,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ingrid Rodriguez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19059",
+    "id_candidatura": "2832.19059",
+    "id_umv": 9320,
+    "imagenes": [
+      "2832.19059"
+    ],
+    "nombre": "Ingrid Rodriguez",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2832,
+      6,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19060",
+    "id_candidatura": "2832.19060",
+    "id_umv": 9321,
+    "imagenes": [
+      "2832.19060"
+    ],
+    "nombre": "Ruben Martinez",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2832,
+      6,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Richer Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19061",
+    "id_candidatura": "2832.19061",
+    "id_umv": 9322,
+    "imagenes": [
+      "2832.19061"
+    ],
+    "nombre": "Richer Benitez",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2832,
+      6,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rodrigo Javier Medina Abbate",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19062",
+    "id_candidatura": "2832.19062",
+    "id_umv": 9323,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Rodrigo Javier Medina Abbate",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2832,
+      6,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ronald Ramon Escobar Icassatti",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19063",
+    "id_candidatura": "2832.19063",
+    "id_umv": 9324,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Ronald Ramon Escobar Icassatti",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2832,
+      6,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Maria Luisa Aguilar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19064",
+    "id_candidatura": "2832.19064",
+    "id_umv": 9325,
+    "imagenes": [
+      "2832.19064"
+    ],
+    "nombre": "Maria Luisa Aguilar",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2832,
+      6,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirna Rodriguez Paredes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19065",
+    "id_candidatura": "2832.19065",
+    "id_umv": 9326,
+    "imagenes": [
+      "2832.19065"
+    ],
+    "nombre": "Mirna Rodriguez Paredes",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2832,
+      6,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Blas Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19066",
+    "id_candidatura": "2832.19066",
+    "id_umv": 9327,
+    "imagenes": [
+      "2832.19066"
+    ],
+    "nombre": "Blas Martinez",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2832,
+      6,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Nazario Ozuna",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19067",
+    "id_candidatura": "2832.19067",
+    "id_umv": 9328,
+    "imagenes": [
+      "2832.19067"
+    ],
+    "nombre": "Nazario Ozuna",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2832,
+      6,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Victor Villasboa Gomez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19068",
+    "id_candidatura": "2832.19068",
+    "id_umv": 9329,
+    "imagenes": [
+      "2832.19068"
+    ],
+    "nombre": "Victor Villasboa Gomez",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2832,
+      6,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ana Salazar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "COM",
+    "cod_lista": "2832",
+    "codigo": "2832.19069",
+    "id_candidatura": "2832.19069",
+    "id_umv": 9330,
+    "imagenes": [
+      "2832.19069"
+    ],
+    "nombre": "Ana Salazar",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      2832,
+      6,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Arq. Miguel Rojas Leon",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "INT",
+    "cod_lista": "2833",
+    "codigo": "2833.19070",
+    "id_candidatura": "2833.19070",
+    "id_umv": 15399,
+    "imagenes": [
+      "2833.19070"
+    ],
+    "nombre": "Arq. Miguel Rojas Leon",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2833,
+      1,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ronald Acevedo",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "INT",
+    "cod_lista": "2834",
+    "codigo": "2834.19071",
+    "id_candidatura": "2834.19071",
+    "id_umv": 15400,
+    "imagenes": [
+      "2834.19071"
+    ],
+    "nombre": "Ronald Acevedo",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2834,
+      1,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rodrigo Medina Abbate",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "INT",
+    "cod_lista": "2835",
+    "codigo": "2835.19072",
+    "id_candidatura": "2835.19072",
+    "id_umv": 15401,
+    "imagenes": [
+      "2835.19072"
+    ],
+    "nombre": "Rodrigo Medina Abbate",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2835,
+      1,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Martin Pocho",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19073",
+    "id_candidatura": "2836.19073",
+    "id_umv": 20793,
+    "imagenes": [
+      "2836.19073",
+      "2836.19074",
+      "2836.19075",
+      "2836.19076",
+      "2836.19077",
+      "2836.19078",
+      "2836.19079",
+      "2836.19080",
+      "2836.19081",
+      "2836.19082",
+      "2836.19083",
+      "2836.19084"
+    ],
+    "nombre": "Martin Pocho",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2836,
+      2,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Abg. Ronaldo Morinigo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19074",
+    "id_candidatura": "2836.19074",
+    "id_umv": 20794,
+    "imagenes": [
+      "2836.19074"
+    ],
+    "nombre": "Abg. Ronaldo Morinigo",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2836,
+      2,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lourdes Amarilla",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19075",
+    "id_candidatura": "2836.19075",
+    "id_umv": 20795,
+    "imagenes": [
+      "2836.19075"
+    ],
+    "nombre": "Lourdes Amarilla",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2836,
+      2,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lucas Chavez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19076",
+    "id_candidatura": "2836.19076",
+    "id_umv": 20796,
+    "imagenes": [
+      "2836.19076"
+    ],
+    "nombre": "Lucas Chavez",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2836,
+      2,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Korochire",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19077",
+    "id_candidatura": "2836.19077",
+    "id_umv": 20797,
+    "imagenes": [
+      "2836.19077"
+    ],
+    "nombre": "Korochire",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2836,
+      2,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dolly Villalba",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19078",
+    "id_candidatura": "2836.19078",
+    "id_umv": 20798,
+    "imagenes": [
+      "2836.19078"
+    ],
+    "nombre": "Dolly Villalba",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2836,
+      2,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Prof. Sulma Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19079",
+    "id_candidatura": "2836.19079",
+    "id_umv": 20799,
+    "imagenes": [
+      "2836.19079"
+    ],
+    "nombre": "Prof. Sulma Benitez",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2836,
+      2,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Bebeto",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19080",
+    "id_candidatura": "2836.19080",
+    "id_umv": 20800,
+    "imagenes": [
+      "2836.19080"
+    ],
+    "nombre": "Bebeto",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2836,
+      2,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rita Perez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19081",
+    "id_candidatura": "2836.19081",
+    "id_umv": 20801,
+    "imagenes": [
+      "2836.19081"
+    ],
+    "nombre": "Rita Perez",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2836,
+      2,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Prof. Hugo Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19082",
+    "id_candidatura": "2836.19082",
+    "id_umv": 20802,
+    "imagenes": [
+      "2836.19082"
+    ],
+    "nombre": "Prof. Hugo Benitez",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2836,
+      2,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Hermes Gomez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19083",
+    "id_candidatura": "2836.19083",
+    "id_umv": 20803,
+    "imagenes": [
+      "2836.19083"
+    ],
+    "nombre": "Hermes Gomez",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2836,
+      2,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Catalino Salinas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2836",
+    "codigo": "2836.19084",
+    "id_candidatura": "2836.19084",
+    "id_umv": 20804,
+    "imagenes": [
+      "2836.19084"
+    ],
+    "nombre": "Catalino Salinas",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2836,
+      2,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carolina Yunis",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19085",
+    "id_candidatura": "2837.19085",
+    "id_umv": 20805,
+    "imagenes": [
+      "2837.19085",
+      "2837.19086",
+      "2837.19087",
+      "2837.19088",
+      "2837.19089",
+      "2837.19090",
+      "2837.19091",
+      "2837.19092",
+      "2837.19093",
+      "2837.19094",
+      "2837.19095",
+      "2837.19096"
+    ],
+    "nombre": "Carolina Yunis",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2837,
+      2,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cezar Lesme",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19086",
+    "id_candidatura": "2837.19086",
+    "id_umv": 20806,
+    "imagenes": [
+      "2837.19086"
+    ],
+    "nombre": "Cezar Lesme",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2837,
+      2,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ignacio Cantero",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19087",
+    "id_candidatura": "2837.19087",
+    "id_umv": 20807,
+    "imagenes": [
+      "2837.19087"
+    ],
+    "nombre": "Ignacio Cantero",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2837,
+      2,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Abg. German Casanova",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19088",
+    "id_candidatura": "2837.19088",
+    "id_umv": 20808,
+    "imagenes": [
+      "2837.19088"
+    ],
+    "nombre": "Abg. German Casanova",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2837,
+      2,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Angelica Valdez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19089",
+    "id_candidatura": "2837.19089",
+    "id_umv": 20809,
+    "imagenes": [
+      "2837.19089"
+    ],
+    "nombre": "Angelica Valdez",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2837,
+      2,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Prof. Mirian Jara De Noguera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19090",
+    "id_candidatura": "2837.19090",
+    "id_umv": 20810,
+    "imagenes": [
+      "2837.19090"
+    ],
+    "nombre": "Prof. Mirian Jara De Noguera",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2837,
+      2,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Prof. Sonia Vargas Bernal",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19091",
+    "id_candidatura": "2837.19091",
+    "id_umv": 20811,
+    "imagenes": [
+      "2837.19091"
+    ],
+    "nombre": "Prof. Sonia Vargas Bernal",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2837,
+      2,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Manuel Ovelar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19092",
+    "id_candidatura": "2837.19092",
+    "id_umv": 20812,
+    "imagenes": [
+      "2837.19092"
+    ],
+    "nombre": "Manuel Ovelar",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2837,
+      2,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Zulma Ycassatti",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19093",
+    "id_candidatura": "2837.19093",
+    "id_umv": 20813,
+    "imagenes": [
+      "2837.19093"
+    ],
+    "nombre": "Zulma Ycassatti",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2837,
+      2,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fabiano Saavedra",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19094",
+    "id_candidatura": "2837.19094",
+    "id_umv": 20814,
+    "imagenes": [
+      "2837.19094"
+    ],
+    "nombre": "Fabiano Saavedra",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2837,
+      2,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Antonio Cabañas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19095",
+    "id_candidatura": "2837.19095",
+    "id_umv": 20815,
+    "imagenes": [
+      "2837.19095"
+    ],
+    "nombre": "Antonio Cabañas",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2837,
+      2,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Robert Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2837",
+    "codigo": "2837.19096",
+    "id_candidatura": "2837.19096",
+    "id_umv": 20816,
+    "imagenes": [
+      "2837.19096"
+    ],
+    "nombre": "Robert Benitez",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2837,
+      2,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gabriel Insaurralde Escobar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19097",
+    "id_candidatura": "2838.19097",
+    "id_umv": 20817,
+    "imagenes": [
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer"
+    ],
+    "nombre": "Gabriel Insaurralde Escobar",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2838,
+      2,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cinthia Mabel Esquivel",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19098",
+    "id_candidatura": "2838.19098",
+    "id_umv": 20818,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Cinthia Mabel Esquivel",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2838,
+      2,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rosa Insaurralde Escobar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19099",
+    "id_candidatura": "2838.19099",
+    "id_umv": 20819,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Rosa Insaurralde Escobar",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2838,
+      2,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Vitalino Miguel Espinola Cazanova",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19100",
+    "id_candidatura": "2838.19100",
+    "id_umv": 20820,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Vitalino Miguel Espinola Cazanova",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2838,
+      2,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Emigdia Olmedo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19101",
+    "id_candidatura": "2838.19101",
+    "id_umv": 20821,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Emigdia Olmedo",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2838,
+      2,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Nancy Dionisio Maidana Olmedo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19102",
+    "id_candidatura": "2838.19102",
+    "id_umv": 20822,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Nancy Dionisio Maidana Olmedo",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2838,
+      2,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Pedro Paulo Verdun Gamarra",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19103",
+    "id_candidatura": "2838.19103",
+    "id_umv": 20823,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Pedro Paulo Verdun Gamarra",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2838,
+      2,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Selfiria Chamorro Acosta",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19104",
+    "id_candidatura": "2838.19104",
+    "id_umv": 20824,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Selfiria Chamorro Acosta",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2838,
+      2,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Pedro Verdun Silva",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19105",
+    "id_candidatura": "2838.19105",
+    "id_umv": 20825,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Pedro Verdun Silva",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2838,
+      2,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cecilia Acosta",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19106",
+    "id_candidatura": "2838.19106",
+    "id_umv": 20826,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Cecilia Acosta",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2838,
+      2,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirian Graciela Fleitas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2838",
+    "codigo": "2838.19107",
+    "id_candidatura": "2838.19107",
+    "id_umv": 20827,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Mirian Graciela Fleitas",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2838,
+      2,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Roberto Abbate",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19108",
+    "id_candidatura": "2839.19108",
+    "id_umv": 20828,
+    "imagenes": [
+      "2839.19108",
+      "2839.19109",
+      "2839.19110",
+      "2839.19111",
+      "2839.19112",
+      "2839.19113",
+      "2839.19114",
+      "2839.19115",
+      "2839.19116",
+      "2839.19117",
+      "2839.19118",
+      "2839.19119"
+    ],
+    "nombre": "Roberto Abbate",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2839,
+      2,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Eduardo Bedoya",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19109",
+    "id_candidatura": "2839.19109",
+    "id_umv": 20829,
+    "imagenes": [
+      "2839.19109"
+    ],
+    "nombre": "Eduardo Bedoya",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      2839,
+      2,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ingrid Rodriguez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19110",
+    "id_candidatura": "2839.19110",
+    "id_umv": 20830,
+    "imagenes": [
+      "2839.19110"
+    ],
+    "nombre": "Ingrid Rodriguez",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      2839,
+      2,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19111",
+    "id_candidatura": "2839.19111",
+    "id_umv": 20831,
+    "imagenes": [
+      "2839.19111"
+    ],
+    "nombre": "Ruben Martinez",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      2839,
+      2,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Richer Andres Benitez Gonzalez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19112",
+    "id_candidatura": "2839.19112",
+    "id_umv": 20832,
+    "imagenes": [
+      "2839.19112"
+    ],
+    "nombre": "Richer Andres Benitez Gonzalez",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      2839,
+      2,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ana Salazar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19113",
+    "id_candidatura": "2839.19113",
+    "id_umv": 20833,
+    "imagenes": [
+      "2839.19113"
+    ],
+    "nombre": "Ana Salazar",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      2839,
+      2,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirna Rodriguez Lesme",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19114",
+    "id_candidatura": "2839.19114",
+    "id_umv": 20834,
+    "imagenes": [
+      "2839.19114"
+    ],
+    "nombre": "Mirna Rodriguez Lesme",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      2839,
+      2,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Maria Luisa Aguilar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19115",
+    "id_candidatura": "2839.19115",
+    "id_umv": 20835,
+    "imagenes": [
+      "2839.19115"
+    ],
+    "nombre": "Maria Luisa Aguilar",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      2839,
+      2,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirna Rodriguez Paredes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19116",
+    "id_candidatura": "2839.19116",
+    "id_umv": 20836,
+    "imagenes": [
+      "2839.19116"
+    ],
+    "nombre": "Mirna Rodriguez Paredes",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      2839,
+      2,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Blas Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19117",
+    "id_candidatura": "2839.19117",
+    "id_umv": 20837,
+    "imagenes": [
+      "2839.19117"
+    ],
+    "nombre": "Blas Martinez",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      2839,
+      2,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Nazario Ozuna",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19118",
+    "id_candidatura": "2839.19118",
+    "id_umv": 20838,
+    "imagenes": [
+      "2839.19118"
+    ],
+    "nombre": "Nazario Ozuna",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      2839,
+      2,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Victor Villasboa Gomez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "JUN",
+    "cod_lista": "2839",
+    "codigo": "2839.19119",
+    "id_candidatura": "2839.19119",
+    "id_umv": 20839,
+    "imagenes": [
+      "2839.19119"
+    ],
+    "nombre": "Victor Villasboa Gomez",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      2839,
+      2,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Arq. Miguel Rojas Leon",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCD",
+    "cod_lista": "2881",
+    "codigo": "2881.19395",
+    "id_candidatura": "2881.19395",
+    "id_umv": 14591,
+    "imagenes": [
+      "2881.19395"
+    ],
+    "nombre": "Arq. Miguel Rojas Leon",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2881,
+      5,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ever Ramon Salinas Cueto",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCD",
+    "cod_lista": "2882",
+    "codigo": "2882.19396",
+    "id_candidatura": "2882.19396",
+    "id_umv": 14592,
+    "imagenes": [
+      "2882.19396"
+    ],
+    "nombre": "Ever Ramon Salinas Cueto",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2882,
+      5,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Roberto Abbate",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCD",
+    "cod_lista": "2883",
+    "codigo": "2883.19397",
+    "id_candidatura": "2883.19397",
+    "id_umv": 14593,
+    "imagenes": [
+      "2883.19397"
+    ],
+    "nombre": "Roberto Abbate",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      2883,
+      5,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Olga Paredes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21204",
+    "id_candidatura": "3172.21204",
+    "id_umv": 14689,
+    "imagenes": [
+      "3172.21204",
+      "3172.21205",
+      "3172.21206",
+      "3172.21207",
+      "3172.21208",
+      "3172.21209",
+      "3172.21210",
+      "3172.21211",
+      "3172.21212",
+      "3172.21213",
+      "3172.21214",
+      "3172.21215",
+      "3172.21216",
+      "3172.21217",
+      "3172.21218",
+      "3172.21219",
+      "3172.21220",
+      "3172.21221",
+      "3172.21222",
+      "3172.21223",
+      "3172.21224",
+      "3172.21225",
+      "3172.21226",
+      "3172.21227",
+      "3172.21228",
+      "3172.21229",
+      "3172.21230",
+      "3172.21231",
+      "3172.21232"
+    ],
+    "nombre": "Olga Paredes",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3172,
+      4,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fabian Marti",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21205",
+    "id_candidatura": "3172.21205",
+    "id_umv": 14690,
+    "imagenes": [
+      "3172.21205"
+    ],
+    "nombre": "Fabian Marti",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      3172,
+      4,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Celsa Amada Acosta Lugo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21206",
+    "id_candidatura": "3172.21206",
+    "id_umv": 14691,
+    "imagenes": [
+      "3172.21206"
+    ],
+    "nombre": "Celsa Amada Acosta Lugo",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      3172,
+      4,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Diego Lopez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21207",
+    "id_candidatura": "3172.21207",
+    "id_umv": 14692,
+    "imagenes": [
+      "3172.21207"
+    ],
+    "nombre": "Diego Lopez",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      3172,
+      4,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alma Segovia",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21208",
+    "id_candidatura": "3172.21208",
+    "id_umv": 14693,
+    "imagenes": [
+      "3172.21208"
+    ],
+    "nombre": "Alma Segovia",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      3172,
+      4,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dr. Gustavo Guggiari",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21209",
+    "id_candidatura": "3172.21209",
+    "id_umv": 14694,
+    "imagenes": [
+      "3172.21209"
+    ],
+    "nombre": "Dr. Gustavo Guggiari",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      3172,
+      4,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dra. Jessica Vergara",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21210",
+    "id_candidatura": "3172.21210",
+    "id_umv": 14695,
+    "imagenes": [
+      "3172.21210"
+    ],
+    "nombre": "Dra. Jessica Vergara",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      3172,
+      4,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Taguide Picanerai Etacore",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21211",
+    "id_candidatura": "3172.21211",
+    "id_umv": 14696,
+    "imagenes": [
+      "3172.21211"
+    ],
+    "nombre": "Taguide Picanerai Etacore",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      3172,
+      4,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carina Cañete Torres",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21212",
+    "id_candidatura": "3172.21212",
+    "id_umv": 14697,
+    "imagenes": [
+      "3172.21212"
+    ],
+    "nombre": "Carina Cañete Torres",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      3172,
+      4,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alba Ozuna",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21213",
+    "id_candidatura": "3172.21213",
+    "id_umv": 14698,
+    "imagenes": [
+      "3172.21213"
+    ],
+    "nombre": "Alba Ozuna",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      3172,
+      4,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Armando Sosa Traverzzi",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21214",
+    "id_candidatura": "3172.21214",
+    "id_umv": 14699,
+    "imagenes": [
+      "3172.21214"
+    ],
+    "nombre": "Armando Sosa Traverzzi",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      3172,
+      4,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carmen Mendoza",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21215",
+    "id_candidatura": "3172.21215",
+    "id_umv": 14700,
+    "imagenes": [
+      "3172.21215"
+    ],
+    "nombre": "Carmen Mendoza",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      3172,
+      4,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Nery Peña",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21216",
+    "id_candidatura": "3172.21216",
+    "id_umv": 14701,
+    "imagenes": [
+      "3172.21216"
+    ],
+    "nombre": "Nery Peña",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      3172,
+      4,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Abog. Mirta Rios Chiuzano",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21217",
+    "id_candidatura": "3172.21217",
+    "id_umv": 14702,
+    "imagenes": [
+      "3172.21217"
+    ],
+    "nombre": "Abog. Mirta Rios Chiuzano",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      3172,
+      4,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Martin Gonzalez Osorio",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21218",
+    "id_candidatura": "3172.21218",
+    "id_umv": 14703,
+    "imagenes": [
+      "3172.21218"
+    ],
+    "nombre": "Martin Gonzalez Osorio",
+    "nro_orden": 15,
+    "orden_absoluto": [
+      3172,
+      4,
+      15
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Johana Cuenca",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21219",
+    "id_candidatura": "3172.21219",
+    "id_umv": 14704,
+    "imagenes": [
+      "3172.21219"
+    ],
+    "nombre": "Johana Cuenca",
+    "nro_orden": 16,
+    "orden_absoluto": [
+      3172,
+      4,
+      16
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Diego Bazan",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21220",
+    "id_candidatura": "3172.21220",
+    "id_umv": 14705,
+    "imagenes": [
+      "3172.21220"
+    ],
+    "nombre": "Diego Bazan",
+    "nro_orden": 17,
+    "orden_absoluto": [
+      3172,
+      4,
+      17
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lic. Alicia Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21221",
+    "id_candidatura": "3172.21221",
+    "id_umv": 14706,
+    "imagenes": [
+      "3172.21221"
+    ],
+    "nombre": "Lic. Alicia Benitez",
+    "nro_orden": 18,
+    "orden_absoluto": [
+      3172,
+      4,
+      18
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jessica Lopez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21222",
+    "id_candidatura": "3172.21222",
+    "id_umv": 14707,
+    "imagenes": [
+      "3172.21222"
+    ],
+    "nombre": "Jessica Lopez",
+    "nro_orden": 20,
+    "orden_absoluto": [
+      3172,
+      4,
+      20
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dr. Guido Cuevas Almando",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21223",
+    "id_candidatura": "3172.21223",
+    "id_umv": 14708,
+    "imagenes": [
+      "3172.21223"
+    ],
+    "nombre": "Dr. Guido Cuevas Almando",
+    "nro_orden": 21,
+    "orden_absoluto": [
+      3172,
+      4,
+      21
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Natalia Belen Aguilar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21224",
+    "id_candidatura": "3172.21224",
+    "id_umv": 14709,
+    "imagenes": [
+      "3172.21224"
+    ],
+    "nombre": "Natalia Belen Aguilar",
+    "nro_orden": 22,
+    "orden_absoluto": [
+      3172,
+      4,
+      22
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mgtr. Victor Sosa Traverzzi",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21225",
+    "id_candidatura": "3172.21225",
+    "id_umv": 14710,
+    "imagenes": [
+      "3172.21225"
+    ],
+    "nombre": "Mgtr. Victor Sosa Traverzzi",
+    "nro_orden": 23,
+    "orden_absoluto": [
+      3172,
+      4,
+      23
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lic. Angelica Escurra",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21226",
+    "id_candidatura": "3172.21226",
+    "id_umv": 14711,
+    "imagenes": [
+      "3172.21226"
+    ],
+    "nombre": "Lic. Angelica Escurra",
+    "nro_orden": 24,
+    "orden_absoluto": [
+      3172,
+      4,
+      24
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Prof. Danny Cabrera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21227",
+    "id_candidatura": "3172.21227",
+    "id_umv": 14712,
+    "imagenes": [
+      "3172.21227"
+    ],
+    "nombre": "Prof. Danny Cabrera",
+    "nro_orden": 25,
+    "orden_absoluto": [
+      3172,
+      4,
+      25
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Eloisa Ibarra Oviedo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21228",
+    "id_candidatura": "3172.21228",
+    "id_umv": 14713,
+    "imagenes": [
+      "3172.21228"
+    ],
+    "nombre": "Eloisa Ibarra Oviedo",
+    "nro_orden": 26,
+    "orden_absoluto": [
+      3172,
+      4,
+      26
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jesus Maria Cardozo Baudry",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21229",
+    "id_candidatura": "3172.21229",
+    "id_umv": 14714,
+    "imagenes": [
+      "3172.21229"
+    ],
+    "nombre": "Jesus Maria Cardozo Baudry",
+    "nro_orden": 27,
+    "orden_absoluto": [
+      3172,
+      4,
+      27
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gladys Mabel Acosta Franco",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21230",
+    "id_candidatura": "3172.21230",
+    "id_umv": 14715,
+    "imagenes": [
+      "3172.21230"
+    ],
+    "nombre": "Gladys Mabel Acosta Franco",
+    "nro_orden": 28,
+    "orden_absoluto": [
+      3172,
+      4,
+      28
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Abog. Juan Chamorro",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21231",
+    "id_candidatura": "3172.21231",
+    "id_umv": 14716,
+    "imagenes": [
+      "3172.21231"
+    ],
+    "nombre": "Abog. Juan Chamorro",
+    "nro_orden": 29,
+    "orden_absoluto": [
+      3172,
+      4,
+      29
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jorge Ariel Riveros Garcia",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3172",
+    "codigo": "3172.21232",
+    "id_candidatura": "3172.21232",
+    "id_umv": 14717,
+    "imagenes": [
+      "3172.21232"
+    ],
+    "nombre": "Jorge Ariel Riveros Garcia",
+    "nro_orden": 30,
+    "orden_absoluto": [
+      3172,
+      4,
+      30
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Javier Pereira",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21233",
+    "id_candidatura": "3173.21233",
+    "id_umv": 14718,
+    "imagenes": [
+      "3173.21233",
+      "3173.21234",
+      "3173.21235",
+      "3173.21236",
+      "3173.21237",
+      "3173.21238",
+      "3173.21239",
+      "3173.21240",
+      "3173.21241",
+      "3173.21242",
+      "3173.21243",
+      "3173.21244",
+      "3173.21245",
+      "3173.21246",
+      "3173.21247",
+      "3173.21248",
+      "3173.21249",
+      "3173.21250",
+      "3173.21251",
+      "3173.21252",
+      "3173.21253",
+      "3173.21254",
+      "3173.21255",
+      "3173.21256",
+      "3173.21257",
+      "3173.21258",
+      "3173.21259",
+      "3173.21260",
+      "3173.21261",
+      "3173.21262"
+    ],
+    "nombre": "Javier Pereira",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3173,
+      4,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Agustin Saguier",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21234",
+    "id_candidatura": "3173.21234",
+    "id_umv": 14719,
+    "imagenes": [
+      "3173.21234"
+    ],
+    "nombre": "Agustin Saguier",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      3173,
+      4,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sonia Fleitas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21235",
+    "id_candidatura": "3173.21235",
+    "id_umv": 14720,
+    "imagenes": [
+      "3173.21235"
+    ],
+    "nombre": "Sonia Fleitas",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      3173,
+      4,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Papu Rios",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21236",
+    "id_candidatura": "3173.21236",
+    "id_umv": 14721,
+    "imagenes": [
+      "3173.21236"
+    ],
+    "nombre": "Papu Rios",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      3173,
+      4,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Horacio Carisimo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21237",
+    "id_candidatura": "3173.21237",
+    "id_umv": 14722,
+    "imagenes": [
+      "3173.21237"
+    ],
+    "nombre": "Horacio Carisimo",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      3173,
+      4,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dalia Estigarribia",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21238",
+    "id_candidatura": "3173.21238",
+    "id_umv": 14723,
+    "imagenes": [
+      "3173.21238"
+    ],
+    "nombre": "Dalia Estigarribia",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      3173,
+      4,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ariel Villagra",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21239",
+    "id_candidatura": "3173.21239",
+    "id_umv": 14724,
+    "imagenes": [
+      "3173.21239"
+    ],
+    "nombre": "Ariel Villagra",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      3173,
+      4,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Diego Riveros",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21240",
+    "id_candidatura": "3173.21240",
+    "id_umv": 14725,
+    "imagenes": [
+      "3173.21240"
+    ],
+    "nombre": "Diego Riveros",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      3173,
+      4,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Horacio Ortiz",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21241",
+    "id_candidatura": "3173.21241",
+    "id_umv": 14726,
+    "imagenes": [
+      "3173.21241"
+    ],
+    "nombre": "Horacio Ortiz",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      3173,
+      4,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rodrigo Blanco Amarilla",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21242",
+    "id_candidatura": "3173.21242",
+    "id_umv": 14727,
+    "imagenes": [
+      "3173.21242"
+    ],
+    "nombre": "Rodrigo Blanco Amarilla",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      3173,
+      4,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Gonzalez Drakeford",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21243",
+    "id_candidatura": "3173.21243",
+    "id_umv": 14728,
+    "imagenes": [
+      "3173.21243"
+    ],
+    "nombre": "Oscar Gonzalez Drakeford",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      3173,
+      4,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gustavo Cano",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21244",
+    "id_candidatura": "3173.21244",
+    "id_umv": 14729,
+    "imagenes": [
+      "3173.21244"
+    ],
+    "nombre": "Gustavo Cano",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      3173,
+      4,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Pedro Gonzalez Ramirez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21245",
+    "id_candidatura": "3173.21245",
+    "id_umv": 14730,
+    "imagenes": [
+      "3173.21245"
+    ],
+    "nombre": "Pedro Gonzalez Ramirez",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      3173,
+      4,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fabiola Galeano Chamorro",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21246",
+    "id_candidatura": "3173.21246",
+    "id_umv": 14731,
+    "imagenes": [
+      "3173.21246"
+    ],
+    "nombre": "Fabiola Galeano Chamorro",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      3173,
+      4,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Osvaldo Gomez Ojeda",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21247",
+    "id_candidatura": "3173.21247",
+    "id_umv": 14732,
+    "imagenes": [
+      "3173.21247"
+    ],
+    "nombre": "Osvaldo Gomez Ojeda",
+    "nro_orden": 15,
+    "orden_absoluto": [
+      3173,
+      4,
+      15
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Holder Kennedy",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21248",
+    "id_candidatura": "3173.21248",
+    "id_umv": 14733,
+    "imagenes": [
+      "3173.21248"
+    ],
+    "nombre": "Holder Kennedy",
+    "nro_orden": 16,
+    "orden_absoluto": [
+      3173,
+      4,
+      16
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Waldino Monte De Oca",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21249",
+    "id_candidatura": "3173.21249",
+    "id_umv": 14734,
+    "imagenes": [
+      "3173.21249"
+    ],
+    "nombre": "Waldino Monte De Oca",
+    "nro_orden": 17,
+    "orden_absoluto": [
+      3173,
+      4,
+      17
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Juliana Boccia Amarilla",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21250",
+    "id_candidatura": "3173.21250",
+    "id_umv": 14735,
+    "imagenes": [
+      "3173.21250"
+    ],
+    "nombre": "Juliana Boccia Amarilla",
+    "nro_orden": 18,
+    "orden_absoluto": [
+      3173,
+      4,
+      18
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Regina Rios",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21251",
+    "id_candidatura": "3173.21251",
+    "id_umv": 14736,
+    "imagenes": [
+      "3173.21251"
+    ],
+    "nombre": "Regina Rios",
+    "nro_orden": 19,
+    "orden_absoluto": [
+      3173,
+      4,
+      19
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Silvio Peña",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21252",
+    "id_candidatura": "3173.21252",
+    "id_umv": 14737,
+    "imagenes": [
+      "3173.21252"
+    ],
+    "nombre": "Silvio Peña",
+    "nro_orden": 20,
+    "orden_absoluto": [
+      3173,
+      4,
+      20
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sonia Medina",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21253",
+    "id_candidatura": "3173.21253",
+    "id_umv": 14738,
+    "imagenes": [
+      "3173.21253"
+    ],
+    "nombre": "Sonia Medina",
+    "nro_orden": 21,
+    "orden_absoluto": [
+      3173,
+      4,
+      21
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Miguel Martinez Nuñez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21254",
+    "id_candidatura": "3173.21254",
+    "id_umv": 14739,
+    "imagenes": [
+      "3173.21254"
+    ],
+    "nombre": "Miguel Martinez Nuñez",
+    "nro_orden": 22,
+    "orden_absoluto": [
+      3173,
+      4,
+      22
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Daniel Rojas Lopez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21255",
+    "id_candidatura": "3173.21255",
+    "id_umv": 14740,
+    "imagenes": [
+      "3173.21255"
+    ],
+    "nombre": "Daniel Rojas Lopez",
+    "nro_orden": 23,
+    "orden_absoluto": [
+      3173,
+      4,
+      23
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Daniel Pereira",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21256",
+    "id_candidatura": "3173.21256",
+    "id_umv": 14741,
+    "imagenes": [
+      "3173.21256"
+    ],
+    "nombre": "Daniel Pereira",
+    "nro_orden": 24,
+    "orden_absoluto": [
+      3173,
+      4,
+      24
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Rotela",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21257",
+    "id_candidatura": "3173.21257",
+    "id_umv": 14742,
+    "imagenes": [
+      "3173.21257"
+    ],
+    "nombre": "Oscar Rotela",
+    "nro_orden": 25,
+    "orden_absoluto": [
+      3173,
+      4,
+      25
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "David Llano",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21258",
+    "id_candidatura": "3173.21258",
+    "id_umv": 14743,
+    "imagenes": [
+      "3173.21258"
+    ],
+    "nombre": "David Llano",
+    "nro_orden": 26,
+    "orden_absoluto": [
+      3173,
+      4,
+      26
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dra. Nilsa Sanchez V.",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21259",
+    "id_candidatura": "3173.21259",
+    "id_umv": 14744,
+    "imagenes": [
+      "3173.21259"
+    ],
+    "nombre": "Dra. Nilsa Sanchez V.",
+    "nro_orden": 27,
+    "orden_absoluto": [
+      3173,
+      4,
+      27
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fabio Almada Duarte",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21260",
+    "id_candidatura": "3173.21260",
+    "id_umv": 14745,
+    "imagenes": [
+      "3173.21260"
+    ],
+    "nombre": "Fabio Almada Duarte",
+    "nro_orden": 28,
+    "orden_absoluto": [
+      3173,
+      4,
+      28
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Pedro Ricardo Arias",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21261",
+    "id_candidatura": "3173.21261",
+    "id_umv": 14746,
+    "imagenes": [
+      "3173.21261"
+    ],
+    "nombre": "Pedro Ricardo Arias",
+    "nro_orden": 29,
+    "orden_absoluto": [
+      3173,
+      4,
+      29
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "David Gonzalez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3173",
+    "codigo": "3173.21262",
+    "id_candidatura": "3173.21262",
+    "id_umv": 14747,
+    "imagenes": [
+      "3173.21262"
+    ],
+    "nombre": "David Gonzalez",
+    "nro_orden": 30,
+    "orden_absoluto": [
+      3173,
+      4,
+      30
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lider Amarilla",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21263",
+    "id_candidatura": "3174.21263",
+    "id_umv": 14748,
+    "imagenes": [
+      "3174.21263",
+      "3174.21264",
+      "3174.21265",
+      "3174.21266",
+      "3174.21267",
+      "3174.21268",
+      "3174.21269",
+      "3174.21270",
+      "3174.21271",
+      "3174.21272",
+      "3174.21273",
+      "3174.21274",
+      "3174.21275",
+      "3174.21276",
+      "3174.21277",
+      "3174.21278",
+      "3174.21279",
+      "3174.21280",
+      "3174.21281",
+      "3174.21282",
+      "3174.21283",
+      "3174.21284",
+      "3174.21285",
+      "3174.21286",
+      "3174.21287",
+      "3174.21288",
+      "3174.21289",
+      "3174.21290",
+      "3174.21291",
+      "3174.21292"
+    ],
+    "nombre": "Lider Amarilla",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3174,
+      4,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Vidala Franco",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21264",
+    "id_candidatura": "3174.21264",
+    "id_umv": 14749,
+    "imagenes": [
+      "3174.21264"
+    ],
+    "nombre": "Vidala Franco",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      3174,
+      4,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Diosnel Aguilera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21265",
+    "id_candidatura": "3174.21265",
+    "id_umv": 14750,
+    "imagenes": [
+      "3174.21265"
+    ],
+    "nombre": "Diosnel Aguilera",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      3174,
+      4,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alba Talavera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21266",
+    "id_candidatura": "3174.21266",
+    "id_umv": 14751,
+    "imagenes": [
+      "3174.21266"
+    ],
+    "nombre": "Alba Talavera",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      3174,
+      4,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Celso Maldonado Duarte",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21267",
+    "id_candidatura": "3174.21267",
+    "id_umv": 14752,
+    "imagenes": [
+      "3174.21267"
+    ],
+    "nombre": "Celso Maldonado Duarte",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      3174,
+      4,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Maria Lorena Segovia Azucas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21268",
+    "id_candidatura": "3174.21268",
+    "id_umv": 14753,
+    "imagenes": [
+      "3174.21268"
+    ],
+    "nombre": "Maria Lorena Segovia Azucas",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      3174,
+      4,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lilian Zayas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21269",
+    "id_candidatura": "3174.21269",
+    "id_umv": 14754,
+    "imagenes": [
+      "3174.21269"
+    ],
+    "nombre": "Lilian Zayas",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      3174,
+      4,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Luis A. Wagner",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21270",
+    "id_candidatura": "3174.21270",
+    "id_umv": 14755,
+    "imagenes": [
+      "3174.21270"
+    ],
+    "nombre": "Luis A. Wagner",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      3174,
+      4,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirna Estela Rios Ojeda",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21271",
+    "id_candidatura": "3174.21271",
+    "id_umv": 14756,
+    "imagenes": [
+      "3174.21271"
+    ],
+    "nombre": "Mirna Estela Rios Ojeda",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      3174,
+      4,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Neri Olmedo Rolon",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21272",
+    "id_candidatura": "3174.21272",
+    "id_umv": 14757,
+    "imagenes": [
+      "3174.21272"
+    ],
+    "nombre": "Neri Olmedo Rolon",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      3174,
+      4,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sergio Ortega",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21273",
+    "id_candidatura": "3174.21273",
+    "id_umv": 14758,
+    "imagenes": [
+      "3174.21273"
+    ],
+    "nombre": "Sergio Ortega",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      3174,
+      4,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Juan Ramon Cohene Acuña",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21274",
+    "id_candidatura": "3174.21274",
+    "id_umv": 14759,
+    "imagenes": [
+      "3174.21274"
+    ],
+    "nombre": "Juan Ramon Cohene Acuña",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      3174,
+      4,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Yanina Duarte",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21275",
+    "id_candidatura": "3174.21275",
+    "id_umv": 14760,
+    "imagenes": [
+      "3174.21275"
+    ],
+    "nombre": "Yanina Duarte",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      3174,
+      4,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ancho Ramírez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21276",
+    "id_candidatura": "3174.21276",
+    "id_umv": 14761,
+    "imagenes": [
+      "3174.21276"
+    ],
+    "nombre": "Ancho Ramírez",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      3174,
+      4,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rossana Rojas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21277",
+    "id_candidatura": "3174.21277",
+    "id_umv": 14762,
+    "imagenes": [
+      "3174.21277"
+    ],
+    "nombre": "Rossana Rojas",
+    "nro_orden": 15,
+    "orden_absoluto": [
+      3174,
+      4,
+      15
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Regina Barrios",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21278",
+    "id_candidatura": "3174.21278",
+    "id_umv": 14763,
+    "imagenes": [
+      "3174.21278"
+    ],
+    "nombre": "Regina Barrios",
+    "nro_orden": 16,
+    "orden_absoluto": [
+      3174,
+      4,
+      16
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ailsa Yambay",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21279",
+    "id_candidatura": "3174.21279",
+    "id_umv": 14764,
+    "imagenes": [
+      "3174.21279"
+    ],
+    "nombre": "Ailsa Yambay",
+    "nro_orden": 17,
+    "orden_absoluto": [
+      3174,
+      4,
+      17
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gustavo Arturo Ojeda",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21280",
+    "id_candidatura": "3174.21280",
+    "id_umv": 14765,
+    "imagenes": [
+      "3174.21280"
+    ],
+    "nombre": "Gustavo Arturo Ojeda",
+    "nro_orden": 18,
+    "orden_absoluto": [
+      3174,
+      4,
+      18
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Victor Jose Risso Medina",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21281",
+    "id_candidatura": "3174.21281",
+    "id_umv": 14766,
+    "imagenes": [
+      "3174.21281"
+    ],
+    "nombre": "Victor Jose Risso Medina",
+    "nro_orden": 19,
+    "orden_absoluto": [
+      3174,
+      4,
+      19
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carlos Nuñez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21282",
+    "id_candidatura": "3174.21282",
+    "id_umv": 14767,
+    "imagenes": [
+      "3174.21282"
+    ],
+    "nombre": "Carlos Nuñez",
+    "nro_orden": 20,
+    "orden_absoluto": [
+      3174,
+      4,
+      20
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lider Fabian Almada",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21283",
+    "id_candidatura": "3174.21283",
+    "id_umv": 14768,
+    "imagenes": [
+      "3174.21283"
+    ],
+    "nombre": "Lider Fabian Almada",
+    "nro_orden": 21,
+    "orden_absoluto": [
+      3174,
+      4,
+      21
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rosa Daniela Acosta Denis",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21284",
+    "id_candidatura": "3174.21284",
+    "id_umv": 14769,
+    "imagenes": [
+      "3174.21284"
+    ],
+    "nombre": "Rosa Daniela Acosta Denis",
+    "nro_orden": 22,
+    "orden_absoluto": [
+      3174,
+      4,
+      22
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Felix Arrua",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21285",
+    "id_candidatura": "3174.21285",
+    "id_umv": 14770,
+    "imagenes": [
+      "3174.21285"
+    ],
+    "nombre": "Felix Arrua",
+    "nro_orden": 23,
+    "orden_absoluto": [
+      3174,
+      4,
+      23
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carlos Alberto Cantero Aquino",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21286",
+    "id_candidatura": "3174.21286",
+    "id_umv": 14771,
+    "imagenes": [
+      "3174.21286"
+    ],
+    "nombre": "Carlos Alberto Cantero Aquino",
+    "nro_orden": 24,
+    "orden_absoluto": [
+      3174,
+      4,
+      24
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jazmín Girala",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21287",
+    "id_candidatura": "3174.21287",
+    "id_umv": 14772,
+    "imagenes": [
+      "3174.21287"
+    ],
+    "nombre": "Jazmín Girala",
+    "nro_orden": 25,
+    "orden_absoluto": [
+      3174,
+      4,
+      25
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Benita Jara Cañiza",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21288",
+    "id_candidatura": "3174.21288",
+    "id_umv": 14773,
+    "imagenes": [
+      "3174.21288"
+    ],
+    "nombre": "Benita Jara Cañiza",
+    "nro_orden": 26,
+    "orden_absoluto": [
+      3174,
+      4,
+      26
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Juanma Benítez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21289",
+    "id_candidatura": "3174.21289",
+    "id_umv": 14774,
+    "imagenes": [
+      "3174.21289"
+    ],
+    "nombre": "Juanma Benítez",
+    "nro_orden": 27,
+    "orden_absoluto": [
+      3174,
+      4,
+      27
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alba Invernizzi",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21290",
+    "id_candidatura": "3174.21290",
+    "id_umv": 14775,
+    "imagenes": [
+      "3174.21290"
+    ],
+    "nombre": "Alba Invernizzi",
+    "nro_orden": 28,
+    "orden_absoluto": [
+      3174,
+      4,
+      28
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Robert Bento",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21291",
+    "id_candidatura": "3174.21291",
+    "id_umv": 14776,
+    "imagenes": [
+      "3174.21291"
+    ],
+    "nombre": "Robert Bento",
+    "nro_orden": 29,
+    "orden_absoluto": [
+      3174,
+      4,
+      29
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Maricel Ortega",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3174",
+    "codigo": "3174.21292",
+    "id_candidatura": "3174.21292",
+    "id_umv": 14777,
+    "imagenes": [
+      "3174.21292"
+    ],
+    "nombre": "Maricel Ortega",
+    "nro_orden": 30,
+    "orden_absoluto": [
+      3174,
+      4,
+      30
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Pedro Regalado Riveros",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21293",
+    "id_candidatura": "3175.21293",
+    "id_umv": 14778,
+    "imagenes": [
+      "3175.21293",
+      "3175.21294",
+      "3175.21295",
+      "3175.21296",
+      "default_mujer",
+      "3175.21298",
+      "3175.21299",
+      "3175.21300",
+      "3175.21301",
+      "default_mujer",
+      "3175.21303",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "3175.21309",
+      "3175.21310",
+      "3175.21311",
+      "3175.21312",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer"
+    ],
+    "nombre": "Pedro Regalado Riveros",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3175,
+      4,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Guanes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21294",
+    "id_candidatura": "3175.21294",
+    "id_umv": 14779,
+    "imagenes": [
+      "3175.21294"
+    ],
+    "nombre": "Oscar Guanes",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      3175,
+      4,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alfredo Sebastian Jaeggli Valdes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21295",
+    "id_candidatura": "3175.21295",
+    "id_umv": 14780,
+    "imagenes": [
+      "3175.21295"
+    ],
+    "nombre": "Alfredo Sebastian Jaeggli Valdes",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      3175,
+      4,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cesar Ruben Cristaldo Avalos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21296",
+    "id_candidatura": "3175.21296",
+    "id_umv": 14781,
+    "imagenes": [
+      "3175.21296"
+    ],
+    "nombre": "Cesar Ruben Cristaldo Avalos",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      3175,
+      4,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Adahia Saray Echague Zaracho",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21297",
+    "id_candidatura": "3175.21297",
+    "id_umv": 14782,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Adahia Saray Echague Zaracho",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      3175,
+      4,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Naoki Shirosawa Shirosawa",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21298",
+    "id_candidatura": "3175.21298",
+    "id_umv": 14783,
+    "imagenes": [
+      "3175.21298"
+    ],
+    "nombre": "Naoki Shirosawa Shirosawa",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      3175,
+      4,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Miguel Angel Guillen Gomez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21299",
+    "id_candidatura": "3175.21299",
+    "id_umv": 14784,
+    "imagenes": [
+      "3175.21299"
+    ],
+    "nombre": "Miguel Angel Guillen Gomez",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      3175,
+      4,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Nicolas Rojas Adorno",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21300",
+    "id_candidatura": "3175.21300",
+    "id_umv": 14785,
+    "imagenes": [
+      "3175.21300"
+    ],
+    "nombre": "Ruben Nicolas Rojas Adorno",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      3175,
+      4,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rodrigo Arza De Sousa",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21301",
+    "id_candidatura": "3175.21301",
+    "id_umv": 14786,
+    "imagenes": [
+      "3175.21301"
+    ],
+    "nombre": "Rodrigo Arza De Sousa",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      3175,
+      4,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Teresa Marina Aranda De Hidalgo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21302",
+    "id_candidatura": "3175.21302",
+    "id_umv": 14787,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Teresa Marina Aranda De Hidalgo",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      3175,
+      4,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Blas Roberto Cabañas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21303",
+    "id_candidatura": "3175.21303",
+    "id_umv": 14788,
+    "imagenes": [
+      "3175.21303"
+    ],
+    "nombre": "Blas Roberto Cabañas",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      3175,
+      4,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jorge Daniel Ferreira",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21304",
+    "id_candidatura": "3175.21304",
+    "id_umv": 14789,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Jorge Daniel Ferreira",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      3175,
+      4,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Walter Ivan Echague Figueredo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21305",
+    "id_candidatura": "3175.21305",
+    "id_umv": 14790,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Walter Ivan Echague Figueredo",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      3175,
+      4,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Valentin Galeano Osorio",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21306",
+    "id_candidatura": "3175.21306",
+    "id_umv": 14791,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Valentin Galeano Osorio",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      3175,
+      4,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lucila Vazquez Miranda",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21307",
+    "id_candidatura": "3175.21307",
+    "id_umv": 14792,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Lucila Vazquez Miranda",
+    "nro_orden": 15,
+    "orden_absoluto": [
+      3175,
+      4,
+      15
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "David Emilio Hidalgo Aranda",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21308",
+    "id_candidatura": "3175.21308",
+    "id_umv": 14793,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "David Emilio Hidalgo Aranda",
+    "nro_orden": 16,
+    "orden_absoluto": [
+      3175,
+      4,
+      16
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gerardo Dario Causarano Caceres",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21309",
+    "id_candidatura": "3175.21309",
+    "id_umv": 14794,
+    "imagenes": [
+      "3175.21309"
+    ],
+    "nombre": "Gerardo Dario Causarano Caceres",
+    "nro_orden": 17,
+    "orden_absoluto": [
+      3175,
+      4,
+      17
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alfredo Manuel Rojas Dos Santos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21310",
+    "id_candidatura": "3175.21310",
+    "id_umv": 14795,
+    "imagenes": [
+      "3175.21310"
+    ],
+    "nombre": "Alfredo Manuel Rojas Dos Santos",
+    "nro_orden": 18,
+    "orden_absoluto": [
+      3175,
+      4,
+      18
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Juan Antonio Ramirez Dittrich",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21311",
+    "id_candidatura": "3175.21311",
+    "id_umv": 14796,
+    "imagenes": [
+      "3175.21311"
+    ],
+    "nombre": "Juan Antonio Ramirez Dittrich",
+    "nro_orden": 19,
+    "orden_absoluto": [
+      3175,
+      4,
+      19
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mercedes Gonzalez Zelaya",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21312",
+    "id_candidatura": "3175.21312",
+    "id_umv": 14797,
+    "imagenes": [
+      "3175.21312"
+    ],
+    "nombre": "Mercedes Gonzalez Zelaya",
+    "nro_orden": 20,
+    "orden_absoluto": [
+      3175,
+      4,
+      20
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jorge Ivan Arias Fretes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21313",
+    "id_candidatura": "3175.21313",
+    "id_umv": 14798,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Jorge Ivan Arias Fretes",
+    "nro_orden": 21,
+    "orden_absoluto": [
+      3175,
+      4,
+      21
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Celso Gustavo Gamarra Pacua",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21314",
+    "id_candidatura": "3175.21314",
+    "id_umv": 14799,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Celso Gustavo Gamarra Pacua",
+    "nro_orden": 23,
+    "orden_absoluto": [
+      3175,
+      4,
+      23
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Celso Ivan Garicox Vera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21315",
+    "id_candidatura": "3175.21315",
+    "id_umv": 14800,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Celso Ivan Garicox Vera",
+    "nro_orden": 24,
+    "orden_absoluto": [
+      3175,
+      4,
+      24
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Macarena Iglesias Arza",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21316",
+    "id_candidatura": "3175.21316",
+    "id_umv": 14801,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Macarena Iglesias Arza",
+    "nro_orden": 25,
+    "orden_absoluto": [
+      3175,
+      4,
+      25
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Felix Mendez Vergara",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21317",
+    "id_candidatura": "3175.21317",
+    "id_umv": 14802,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Felix Mendez Vergara",
+    "nro_orden": 26,
+    "orden_absoluto": [
+      3175,
+      4,
+      26
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Osmar David Ocampos Peralta",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21318",
+    "id_candidatura": "3175.21318",
+    "id_umv": 14803,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Osmar David Ocampos Peralta",
+    "nro_orden": 27,
+    "orden_absoluto": [
+      3175,
+      4,
+      27
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Isabelino Cañete Viñales",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21319",
+    "id_candidatura": "3175.21319",
+    "id_umv": 14804,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Isabelino Cañete Viñales",
+    "nro_orden": 28,
+    "orden_absoluto": [
+      3175,
+      4,
+      28
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jose David Vazquez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21320",
+    "id_candidatura": "3175.21320",
+    "id_umv": 14805,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Jose David Vazquez",
+    "nro_orden": 29,
+    "orden_absoluto": [
+      3175,
+      4,
+      29
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Patricia Giselli Vera De Gonzalez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3175",
+    "codigo": "3175.21321",
+    "id_candidatura": "3175.21321",
+    "id_umv": 14806,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Patricia Giselli Vera De Gonzalez",
+    "nro_orden": 30,
+    "orden_absoluto": [
+      3175,
+      4,
+      30
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Eugenio Dure Gimenez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21322",
+    "id_candidatura": "3176.21322",
+    "id_umv": 14807,
+    "imagenes": [
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "3176.21329",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer",
+      "default_mujer"
+    ],
+    "nombre": "Eugenio Dure Gimenez",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3176,
+      4,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Derliz Antonio Valdez Ponillaux",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21323",
+    "id_candidatura": "3176.21323",
+    "id_umv": 14808,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Derliz Antonio Valdez Ponillaux",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      3176,
+      4,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Miguel Sabino Fernandez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21324",
+    "id_candidatura": "3176.21324",
+    "id_umv": 14809,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Miguel Sabino Fernandez",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      3176,
+      4,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dario Ovando Gonzalez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21325",
+    "id_candidatura": "3176.21325",
+    "id_umv": 14810,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Dario Ovando Gonzalez",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      3176,
+      4,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ramon Manuel Guerrero Caballero",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21326",
+    "id_candidatura": "3176.21326",
+    "id_umv": 14811,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Ramon Manuel Guerrero Caballero",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      3176,
+      4,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Wilma Carlita Becvort De Nuñez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21327",
+    "id_candidatura": "3176.21327",
+    "id_umv": 14812,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Wilma Carlita Becvort De Nuñez",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      3176,
+      4,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Hugo Narciso Ruiz Diaz Rivas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21328",
+    "id_candidatura": "3176.21328",
+    "id_umv": 14813,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Hugo Narciso Ruiz Diaz Rivas",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      3176,
+      4,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Freddy Ferreira",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21329",
+    "id_candidatura": "3176.21329",
+    "id_umv": 14814,
+    "imagenes": [
+      "3176.21329"
+    ],
+    "nombre": "Freddy Ferreira",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      3176,
+      4,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alfredo Domingo Dominguez Davalos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21330",
+    "id_candidatura": "3176.21330",
+    "id_umv": 14815,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Alfredo Domingo Dominguez Davalos",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      3176,
+      4,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Antonia Del Pilar Rodriguez Vera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21331",
+    "id_candidatura": "3176.21331",
+    "id_umv": 14816,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Antonia Del Pilar Rodriguez Vera",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      3176,
+      4,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Amancio Ruiz Diaz Rivas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21332",
+    "id_candidatura": "3176.21332",
+    "id_umv": 14817,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Amancio Ruiz Diaz Rivas",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      3176,
+      4,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Hipolito Felipe Rodriguez Paniagua",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21333",
+    "id_candidatura": "3176.21333",
+    "id_umv": 14818,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Hipolito Felipe Rodriguez Paniagua",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      3176,
+      4,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Juan Jose Flores Esquivel",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21334",
+    "id_candidatura": "3176.21334",
+    "id_umv": 14819,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Juan Jose Flores Esquivel",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      3176,
+      4,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Oscar Ramon Martinez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21335",
+    "id_candidatura": "3176.21335",
+    "id_umv": 14820,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Oscar Ramon Martinez",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      3176,
+      4,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dora Anicia Ovelar Velazquez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21336",
+    "id_candidatura": "3176.21336",
+    "id_umv": 14821,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Dora Anicia Ovelar Velazquez",
+    "nro_orden": 15,
+    "orden_absoluto": [
+      3176,
+      4,
+      15
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Francisco Castro Ocampo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21337",
+    "id_candidatura": "3176.21337",
+    "id_umv": 14822,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Francisco Castro Ocampo",
+    "nro_orden": 16,
+    "orden_absoluto": [
+      3176,
+      4,
+      16
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Jose Adrian Martinez Delgado",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21338",
+    "id_candidatura": "3176.21338",
+    "id_umv": 14823,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Jose Adrian Martinez Delgado",
+    "nro_orden": 17,
+    "orden_absoluto": [
+      3176,
+      4,
+      17
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Benjamin Manuel Benitez Ruiz Diaz",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21339",
+    "id_candidatura": "3176.21339",
+    "id_umv": 14824,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Benjamin Manuel Benitez Ruiz Diaz",
+    "nro_orden": 18,
+    "orden_absoluto": [
+      3176,
+      4,
+      18
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Albino Ocampos Andino",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21340",
+    "id_candidatura": "3176.21340",
+    "id_umv": 14825,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Albino Ocampos Andino",
+    "nro_orden": 19,
+    "orden_absoluto": [
+      3176,
+      4,
+      19
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rosa Estela Escobar Ocampos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21341",
+    "id_candidatura": "3176.21341",
+    "id_umv": 14826,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Rosa Estela Escobar Ocampos",
+    "nro_orden": 20,
+    "orden_absoluto": [
+      3176,
+      4,
+      20
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Juan Dominciano Cardozo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21342",
+    "id_candidatura": "3176.21342",
+    "id_umv": 14827,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Juan Dominciano Cardozo",
+    "nro_orden": 21,
+    "orden_absoluto": [
+      3176,
+      4,
+      21
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "David Fernando Ruiz Diaz Silva",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21343",
+    "id_candidatura": "3176.21343",
+    "id_umv": 14828,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "David Fernando Ruiz Diaz Silva",
+    "nro_orden": 22,
+    "orden_absoluto": [
+      3176,
+      4,
+      22
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cayo Cantero Ortiz",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21344",
+    "id_candidatura": "3176.21344",
+    "id_umv": 14829,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Cayo Cantero Ortiz",
+    "nro_orden": 23,
+    "orden_absoluto": [
+      3176,
+      4,
+      23
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Juan Bautista Miranda",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21345",
+    "id_candidatura": "3176.21345",
+    "id_umv": 14830,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Juan Bautista Miranda",
+    "nro_orden": 24,
+    "orden_absoluto": [
+      3176,
+      4,
+      24
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Karina Gissell Lopez Escobar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21346",
+    "id_candidatura": "3176.21346",
+    "id_umv": 14831,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Karina Gissell Lopez Escobar",
+    "nro_orden": 25,
+    "orden_absoluto": [
+      3176,
+      4,
+      25
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cesar Ojeda Cañete",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21347",
+    "id_candidatura": "3176.21347",
+    "id_umv": 14832,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Cesar Ojeda Cañete",
+    "nro_orden": 26,
+    "orden_absoluto": [
+      3176,
+      4,
+      26
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Delio Ramon Ruiz Diaz Barrios",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21348",
+    "id_candidatura": "3176.21348",
+    "id_umv": 14833,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Delio Ramon Ruiz Diaz Barrios",
+    "nro_orden": 27,
+    "orden_absoluto": [
+      3176,
+      4,
+      27
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Marcos Emilio Molinas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21349",
+    "id_candidatura": "3176.21349",
+    "id_umv": 14834,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Marcos Emilio Molinas",
+    "nro_orden": 28,
+    "orden_absoluto": [
+      3176,
+      4,
+      28
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dionicio Sanabria Esteche",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21350",
+    "id_candidatura": "3176.21350",
+    "id_umv": 14835,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Dionicio Sanabria Esteche",
+    "nro_orden": 29,
+    "orden_absoluto": [
+      3176,
+      4,
+      29
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Francisca Ruiz Diaz Barrios",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3176",
+    "codigo": "3176.21351",
+    "id_candidatura": "3176.21351",
+    "id_umv": 14836,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Francisca Ruiz Diaz Barrios",
+    "nro_orden": 30,
+    "orden_absoluto": [
+      3176,
+      4,
+      30
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ariel Perfecto Fonseca Legal",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21352",
+    "id_candidatura": "3177.21352",
+    "id_umv": 14837,
+    "imagenes": [
+      "3177.21352",
+      "3177.21353",
+      "3177.21354",
+      "3177.21355",
+      "3177.21356",
+      "3177.21357",
+      "3177.21358",
+      "3177.21359",
+      "3177.21360",
+      "3177.21361",
+      "3177.21362",
+      "3177.21363",
+      "3177.21364",
+      "3177.21365",
+      "3177.21366",
+      "3177.21367",
+      "3177.21368",
+      "3177.21369",
+      "3177.21370",
+      "3177.21371",
+      "3177.21372",
+      "3177.21373",
+      "3177.21374",
+      "3177.21375",
+      "3177.21376",
+      "3177.21377",
+      "3177.21378",
+      "3177.21379",
+      "3177.21380",
+      "3177.21381"
+    ],
+    "nombre": "Ariel Perfecto Fonseca Legal",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3177,
+      4,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Luis Alberto Rivarola Paredes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21353",
+    "id_candidatura": "3177.21353",
+    "id_umv": 14838,
+    "imagenes": [
+      "3177.21353"
+    ],
+    "nombre": "Luis Alberto Rivarola Paredes",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      3177,
+      4,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mario Cristaldo Amaro",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21354",
+    "id_candidatura": "3177.21354",
+    "id_umv": 14839,
+    "imagenes": [
+      "3177.21354"
+    ],
+    "nombre": "Mario Cristaldo Amaro",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      3177,
+      4,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Rose Margaret Brandt Duarte",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21355",
+    "id_candidatura": "3177.21355",
+    "id_umv": 14840,
+    "imagenes": [
+      "3177.21355"
+    ],
+    "nombre": "Rose Margaret Brandt Duarte",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      3177,
+      4,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gustavo Flecha",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21356",
+    "id_candidatura": "3177.21356",
+    "id_umv": 14841,
+    "imagenes": [
+      "3177.21356"
+    ],
+    "nombre": "Gustavo Flecha",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      3177,
+      4,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Marco Aguilera Figueroa",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21357",
+    "id_candidatura": "3177.21357",
+    "id_umv": 14842,
+    "imagenes": [
+      "3177.21357"
+    ],
+    "nombre": "Marco Aguilera Figueroa",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      3177,
+      4,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Johanna Osmilda Cubas Paniagua",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21358",
+    "id_candidatura": "3177.21358",
+    "id_umv": 14843,
+    "imagenes": [
+      "3177.21358"
+    ],
+    "nombre": "Johanna Osmilda Cubas Paniagua",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      3177,
+      4,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Carlos Antonio Zarate",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21359",
+    "id_candidatura": "3177.21359",
+    "id_umv": 14844,
+    "imagenes": [
+      "3177.21359"
+    ],
+    "nombre": "Carlos Antonio Zarate",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      3177,
+      4,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ilda Fonseca Legal",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21360",
+    "id_candidatura": "3177.21360",
+    "id_umv": 14845,
+    "imagenes": [
+      "3177.21360"
+    ],
+    "nombre": "Ilda Fonseca Legal",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      3177,
+      4,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruth Alcira Sosa Burgos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21361",
+    "id_candidatura": "3177.21361",
+    "id_umv": 14846,
+    "imagenes": [
+      "3177.21361"
+    ],
+    "nombre": "Ruth Alcira Sosa Burgos",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      3177,
+      4,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Dario Medina Candia",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21362",
+    "id_candidatura": "3177.21362",
+    "id_umv": 14847,
+    "imagenes": [
+      "3177.21362"
+    ],
+    "nombre": "Ruben Dario Medina Candia",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      3177,
+      4,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Crishtian Villalba Arce",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21363",
+    "id_candidatura": "3177.21363",
+    "id_umv": 14848,
+    "imagenes": [
+      "3177.21363"
+    ],
+    "nombre": "Crishtian Villalba Arce",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      3177,
+      4,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Francisco Antonio Silvero Venialvos",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21364",
+    "id_candidatura": "3177.21364",
+    "id_umv": 14849,
+    "imagenes": [
+      "3177.21364"
+    ],
+    "nombre": "Francisco Antonio Silvero Venialvos",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      3177,
+      4,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ruben Dario Rojas Garay",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21365",
+    "id_candidatura": "3177.21365",
+    "id_umv": 14850,
+    "imagenes": [
+      "3177.21365"
+    ],
+    "nombre": "Ruben Dario Rojas Garay",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      3177,
+      4,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Basilio Chamoro Garcete",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21366",
+    "id_candidatura": "3177.21366",
+    "id_umv": 14851,
+    "imagenes": [
+      "3177.21366"
+    ],
+    "nombre": "Basilio Chamoro Garcete",
+    "nro_orden": 15,
+    "orden_absoluto": [
+      3177,
+      4,
+      15
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cesar Silvino Nuñez Farias",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21367",
+    "id_candidatura": "3177.21367",
+    "id_umv": 14852,
+    "imagenes": [
+      "3177.21367"
+    ],
+    "nombre": "Cesar Silvino Nuñez Farias",
+    "nro_orden": 16,
+    "orden_absoluto": [
+      3177,
+      4,
+      16
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Liz Rocio Estigarribia Denis",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21368",
+    "id_candidatura": "3177.21368",
+    "id_umv": 14853,
+    "imagenes": [
+      "3177.21368"
+    ],
+    "nombre": "Liz Rocio Estigarribia Denis",
+    "nro_orden": 17,
+    "orden_absoluto": [
+      3177,
+      4,
+      17
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Esteban Aguilar Aguilera",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21369",
+    "id_candidatura": "3177.21369",
+    "id_umv": 14854,
+    "imagenes": [
+      "3177.21369"
+    ],
+    "nombre": "Esteban Aguilar Aguilera",
+    "nro_orden": 18,
+    "orden_absoluto": [
+      3177,
+      4,
+      18
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cesar Ojeda Cañete",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21370",
+    "id_candidatura": "3177.21370",
+    "id_umv": 14855,
+    "imagenes": [
+      "3177.21370"
+    ],
+    "nombre": "Cesar Ojeda Cañete",
+    "nro_orden": 19,
+    "orden_absoluto": [
+      3177,
+      4,
+      19
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Viviana Concepcion Espinoza Quintana",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21371",
+    "id_candidatura": "3177.21371",
+    "id_umv": 14856,
+    "imagenes": [
+      "3177.21371"
+    ],
+    "nombre": "Viviana Concepcion Espinoza Quintana",
+    "nro_orden": 20,
+    "orden_absoluto": [
+      3177,
+      4,
+      20
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Gloria Leonida Martinez Silva",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21372",
+    "id_candidatura": "3177.21372",
+    "id_umv": 14857,
+    "imagenes": [
+      "3177.21372"
+    ],
+    "nombre": "Gloria Leonida Martinez Silva",
+    "nro_orden": 21,
+    "orden_absoluto": [
+      3177,
+      4,
+      21
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirtha Soledad Aleman Gonzalez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21373",
+    "id_candidatura": "3177.21373",
+    "id_umv": 14858,
+    "imagenes": [
+      "3177.21373"
+    ],
+    "nombre": "Mirtha Soledad Aleman Gonzalez",
+    "nro_orden": 22,
+    "orden_absoluto": [
+      3177,
+      4,
+      22
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cesar Mendoza Acosta",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21374",
+    "id_candidatura": "3177.21374",
+    "id_umv": 14859,
+    "imagenes": [
+      "3177.21374"
+    ],
+    "nombre": "Cesar Mendoza Acosta",
+    "nro_orden": 23,
+    "orden_absoluto": [
+      3177,
+      4,
+      23
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Roque Acosta Machuca",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21375",
+    "id_candidatura": "3177.21375",
+    "id_umv": 14860,
+    "imagenes": [
+      "3177.21375"
+    ],
+    "nombre": "Roque Acosta Machuca",
+    "nro_orden": 24,
+    "orden_absoluto": [
+      3177,
+      4,
+      24
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Lidia Beatriz Godoy Quintana",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21376",
+    "id_candidatura": "3177.21376",
+    "id_umv": 14861,
+    "imagenes": [
+      "3177.21376"
+    ],
+    "nombre": "Lidia Beatriz Godoy Quintana",
+    "nro_orden": 25,
+    "orden_absoluto": [
+      3177,
+      4,
+      25
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ever Quintana Lezcano",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21377",
+    "id_candidatura": "3177.21377",
+    "id_umv": 14862,
+    "imagenes": [
+      "3177.21377"
+    ],
+    "nombre": "Ever Quintana Lezcano",
+    "nro_orden": 26,
+    "orden_absoluto": [
+      3177,
+      4,
+      26
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Yicela Romina Ovelar Noe",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21378",
+    "id_candidatura": "3177.21378",
+    "id_umv": 14863,
+    "imagenes": [
+      "3177.21378"
+    ],
+    "nombre": "Yicela Romina Ovelar Noe",
+    "nro_orden": 27,
+    "orden_absoluto": [
+      3177,
+      4,
+      27
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fidel Antonio Salinas Mereles",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21379",
+    "id_candidatura": "3177.21379",
+    "id_umv": 14864,
+    "imagenes": [
+      "3177.21379"
+    ],
+    "nombre": "Fidel Antonio Salinas Mereles",
+    "nro_orden": 28,
+    "orden_absoluto": [
+      3177,
+      4,
+      28
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Maria Guadalupe Ramirez Peralta",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21380",
+    "id_candidatura": "3177.21380",
+    "id_umv": 14865,
+    "imagenes": [
+      "3177.21380"
+    ],
+    "nombre": "Maria Guadalupe Ramirez Peralta",
+    "nro_orden": 29,
+    "orden_absoluto": [
+      3177,
+      4,
+      29
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Luana Mabel Torres Quintana",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3177",
+    "codigo": "3177.21381",
+    "id_candidatura": "3177.21381",
+    "id_umv": 14866,
+    "imagenes": [
+      "3177.21381"
+    ],
+    "nombre": "Luana Mabel Torres Quintana",
+    "nro_orden": 30,
+    "orden_absoluto": [
+      3177,
+      4,
+      30
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dra. Nuria Isnardi",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21382",
+    "id_candidatura": "3178.21382",
+    "id_umv": 14867,
+    "imagenes": [
+      "3178.21382",
+      "3178.21383",
+      "3178.21384",
+      "3178.21385",
+      "3178.21386",
+      "3178.21387",
+      "3178.21388",
+      "3178.21389",
+      "3178.21390",
+      "3178.21391",
+      "3178.21392",
+      "3178.21393",
+      "3178.21394",
+      "3178.21395",
+      "default_mujer",
+      "3178.21397",
+      "3178.21398",
+      "3178.21399",
+      "3178.21400",
+      "3178.21401",
+      "3178.21402",
+      "3178.21403",
+      "3178.21404",
+      "3178.21405",
+      "3178.21406",
+      "3178.21407",
+      "3178.21408",
+      "3178.21409",
+      "3178.21410",
+      "3178.21411"
+    ],
+    "nombre": "Dra. Nuria Isnardi",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3178,
+      4,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Hector Cespedes Flores",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21383",
+    "id_candidatura": "3178.21383",
+    "id_umv": 14868,
+    "imagenes": [
+      "3178.21383"
+    ],
+    "nombre": "Hector Cespedes Flores",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      3178,
+      4,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Blanca Lila Mignarro",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21384",
+    "id_candidatura": "3178.21384",
+    "id_umv": 14869,
+    "imagenes": [
+      "3178.21384"
+    ],
+    "nombre": "Blanca Lila Mignarro",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      3178,
+      4,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Roque Godoy",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21385",
+    "id_candidatura": "3178.21385",
+    "id_umv": 14870,
+    "imagenes": [
+      "3178.21385"
+    ],
+    "nombre": "Roque Godoy",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      3178,
+      4,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Andres Rojas",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21386",
+    "id_candidatura": "3178.21386",
+    "id_umv": 14871,
+    "imagenes": [
+      "3178.21386"
+    ],
+    "nombre": "Andres Rojas",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      3178,
+      4,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Octavio Schatp",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21387",
+    "id_candidatura": "3178.21387",
+    "id_umv": 14872,
+    "imagenes": [
+      "3178.21387"
+    ],
+    "nombre": "Octavio Schatp",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      3178,
+      4,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Basilisa Vazquez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21388",
+    "id_candidatura": "3178.21388",
+    "id_umv": 14873,
+    "imagenes": [
+      "3178.21388"
+    ],
+    "nombre": "Basilisa Vazquez",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      3178,
+      4,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Cesar Ferreira",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21389",
+    "id_candidatura": "3178.21389",
+    "id_umv": 14874,
+    "imagenes": [
+      "3178.21389"
+    ],
+    "nombre": "Cesar Ferreira",
+    "nro_orden": 8,
+    "orden_absoluto": [
+      3178,
+      4,
+      8
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Julio Villalba",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21390",
+    "id_candidatura": "3178.21390",
+    "id_umv": 14875,
+    "imagenes": [
+      "3178.21390"
+    ],
+    "nombre": "Julio Villalba",
+    "nro_orden": 9,
+    "orden_absoluto": [
+      3178,
+      4,
+      9
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dario Cabral",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21391",
+    "id_candidatura": "3178.21391",
+    "id_umv": 14876,
+    "imagenes": [
+      "3178.21391"
+    ],
+    "nombre": "Dario Cabral",
+    "nro_orden": 10,
+    "orden_absoluto": [
+      3178,
+      4,
+      10
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Eutilio Riveros",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21392",
+    "id_candidatura": "3178.21392",
+    "id_umv": 14877,
+    "imagenes": [
+      "3178.21392"
+    ],
+    "nombre": "Eutilio Riveros",
+    "nro_orden": 11,
+    "orden_absoluto": [
+      3178,
+      4,
+      11
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Edu Gimenez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21393",
+    "id_candidatura": "3178.21393",
+    "id_umv": 14878,
+    "imagenes": [
+      "3178.21393"
+    ],
+    "nombre": "Edu Gimenez",
+    "nro_orden": 12,
+    "orden_absoluto": [
+      3178,
+      4,
+      12
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Eva De Witte",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21394",
+    "id_candidatura": "3178.21394",
+    "id_umv": 14879,
+    "imagenes": [
+      "3178.21394"
+    ],
+    "nombre": "Eva De Witte",
+    "nro_orden": 13,
+    "orden_absoluto": [
+      3178,
+      4,
+      13
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Daniel Villordo",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21395",
+    "id_candidatura": "3178.21395",
+    "id_umv": 14880,
+    "imagenes": [
+      "3178.21395"
+    ],
+    "nombre": "Daniel Villordo",
+    "nro_orden": 14,
+    "orden_absoluto": [
+      3178,
+      4,
+      14
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Pedro A Chih Lin",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21396",
+    "id_candidatura": "3178.21396",
+    "id_umv": 14881,
+    "imagenes": [
+      "default_mujer"
+    ],
+    "nombre": "Pedro A Chih Lin",
+    "nro_orden": 15,
+    "orden_absoluto": [
+      3178,
+      4,
+      15
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Stella Rolon",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21397",
+    "id_candidatura": "3178.21397",
+    "id_umv": 14882,
+    "imagenes": [
+      "3178.21397"
+    ],
+    "nombre": "Stella Rolon",
+    "nro_orden": 16,
+    "orden_absoluto": [
+      3178,
+      4,
+      16
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sannie Ibarrola",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21398",
+    "id_candidatura": "3178.21398",
+    "id_umv": 14883,
+    "imagenes": [
+      "3178.21398"
+    ],
+    "nombre": "Sannie Ibarrola",
+    "nro_orden": 17,
+    "orden_absoluto": [
+      3178,
+      4,
+      17
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Kike Julio",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21399",
+    "id_candidatura": "3178.21399",
+    "id_umv": 14884,
+    "imagenes": [
+      "3178.21399"
+    ],
+    "nombre": "Kike Julio",
+    "nro_orden": 18,
+    "orden_absoluto": [
+      3178,
+      4,
+      18
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Delio Saldivar",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21400",
+    "id_candidatura": "3178.21400",
+    "id_umv": 14885,
+    "imagenes": [
+      "3178.21400"
+    ],
+    "nombre": "Delio Saldivar",
+    "nro_orden": 19,
+    "orden_absoluto": [
+      3178,
+      4,
+      19
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Fidel Leon",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21401",
+    "id_candidatura": "3178.21401",
+    "id_umv": 14886,
+    "imagenes": [
+      "3178.21401"
+    ],
+    "nombre": "Fidel Leon",
+    "nro_orden": 20,
+    "orden_absoluto": [
+      3178,
+      4,
+      20
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Naty Fretes",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21402",
+    "id_candidatura": "3178.21402",
+    "id_umv": 14887,
+    "imagenes": [
+      "3178.21402"
+    ],
+    "nombre": "Naty Fretes",
+    "nro_orden": 21,
+    "orden_absoluto": [
+      3178,
+      4,
+      21
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Sinfo Benitez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21403",
+    "id_candidatura": "3178.21403",
+    "id_umv": 14888,
+    "imagenes": [
+      "3178.21403"
+    ],
+    "nombre": "Sinfo Benitez",
+    "nro_orden": 22,
+    "orden_absoluto": [
+      3178,
+      4,
+      22
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dani Baez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21404",
+    "id_candidatura": "3178.21404",
+    "id_umv": 14889,
+    "imagenes": [
+      "3178.21404"
+    ],
+    "nombre": "Dani Baez",
+    "nro_orden": 23,
+    "orden_absoluto": [
+      3178,
+      4,
+      23
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Adejaime Pavei",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21405",
+    "id_candidatura": "3178.21405",
+    "id_umv": 14890,
+    "imagenes": [
+      "3178.21405"
+    ],
+    "nombre": "Adejaime Pavei",
+    "nro_orden": 24,
+    "orden_absoluto": [
+      3178,
+      4,
+      24
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Vicente Denis",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21406",
+    "id_candidatura": "3178.21406",
+    "id_umv": 14891,
+    "imagenes": [
+      "3178.21406"
+    ],
+    "nombre": "Vicente Denis",
+    "nro_orden": 25,
+    "orden_absoluto": [
+      3178,
+      4,
+      25
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Laly Parra",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21407",
+    "id_candidatura": "3178.21407",
+    "id_umv": 14892,
+    "imagenes": [
+      "3178.21407"
+    ],
+    "nombre": "Laly Parra",
+    "nro_orden": 26,
+    "orden_absoluto": [
+      3178,
+      4,
+      26
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Tapi Enciso",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21408",
+    "id_candidatura": "3178.21408",
+    "id_umv": 14893,
+    "imagenes": [
+      "3178.21408"
+    ],
+    "nombre": "Tapi Enciso",
+    "nro_orden": 27,
+    "orden_absoluto": [
+      3178,
+      4,
+      27
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Wilma Bareiro",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21409",
+    "id_candidatura": "3178.21409",
+    "id_umv": 14894,
+    "imagenes": [
+      "3178.21409"
+    ],
+    "nombre": "Wilma Bareiro",
+    "nro_orden": 28,
+    "orden_absoluto": [
+      3178,
+      4,
+      28
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Mirna Ortiz De Goldner",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21410",
+    "id_candidatura": "3178.21410",
+    "id_umv": 14895,
+    "imagenes": [
+      "3178.21410"
+    ],
+    "nombre": "Mirna Ortiz De Goldner",
+    "nro_orden": 29,
+    "orden_absoluto": [
+      3178,
+      4,
+      29
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Felix Ibañez",
+    "cargo_ejecutivo": false,
+    "clase": "Candidato",
+    "cod_categoria": "DCN",
+    "cod_lista": "3178",
+    "codigo": "3178.21411",
+    "id_candidatura": "3178.21411",
+    "id_umv": 14896,
+    "imagenes": [
+      "3178.21411"
+    ],
+    "nombre": "Felix Ibañez",
+    "nro_orden": 30,
+    "orden_absoluto": [
+      3178,
+      4,
+      30
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Marlene “Chispita” Orué",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "PRP",
+    "cod_lista": "3179",
+    "codigo": "3179.21412",
+    "id_candidatura": "3179.21412",
+    "id_umv": 47334,
+    "imagenes": [
+      "3179.21412",
+      "3179.21413",
+      "3179.21414"
+    ],
+    "nombre": "Marlene “Chispita” Orué",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3179,
+      3,
+      1
+    ],
+    "secundarios": [
+      "Luz Borja",
+      "Fernando Pfannl"
+    ],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alcides Riveros",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "PRP",
+    "cod_lista": "3180",
+    "codigo": "3180.21415",
+    "id_candidatura": "3180.21415",
+    "id_umv": 47335,
+    "imagenes": [
+      "3180.21415",
+      "3180.21416",
+      "3180.21417"
+    ],
+    "nombre": "Alcides Riveros",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3180,
+      3,
+      1
+    ],
+    "secundarios": [
+      "Antonio Buzarquis",
+      "Julia Rivas"
+    ],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Ever Villalba",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "PRP",
+    "cod_lista": "3181",
+    "codigo": "3181.21418",
+    "id_candidatura": "3181.21418",
+    "id_umv": 47336,
+    "imagenes": [
+      "3181.21418",
+      "3181.21419",
+      "3181.21420"
+    ],
+    "nombre": "Ever Villalba",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3181,
+      3,
+      1
+    ],
+    "secundarios": [
+      "Efrain Alegre",
+      "Zulma Maria Ycassatti Vda De Acevedo"
+    ],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Alfredo Jaeggli",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "PRP",
+    "cod_lista": "3182",
+    "codigo": "3182.21421",
+    "id_candidatura": "3182.21421",
+    "id_umv": 47337,
+    "imagenes": [
+      "3182.21421",
+      "3182.21422",
+      "3182.21423"
+    ],
+    "nombre": "Alfredo Jaeggli",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3182,
+      3,
+      1
+    ],
+    "secundarios": [
+      "Victor Pavon",
+      "Giselle Vazquez"
+    ],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Dr. Sevoi",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "PRP",
+    "cod_lista": "3183",
+    "codigo": "3183.21424",
+    "id_candidatura": "3183.21424",
+    "id_umv": 47338,
+    "imagenes": [
+      "3183.21424",
+      "3183.21425",
+      "3183.21426"
+    ],
+    "nombre": "Dr. Sevoi",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3183,
+      3,
+      1
+    ],
+    "secundarios": [
+      "Felipe Fernandez",
+      "Carmen Salinas"
+    ],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Abel Villalba",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "PRP",
+    "cod_lista": "3184",
+    "codigo": "3184.21427",
+    "id_candidatura": "3184.21427",
+    "id_umv": 47339,
+    "imagenes": [
+      "3184.21427",
+      "3184.21428",
+      "default_mujer"
+    ],
+    "nombre": "Abel Villalba",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3184,
+      3,
+      1
+    ],
+    "secundarios": [
+      "Eduardo Villalba",
+      "Derlis Sanchiz"
+    ],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Senador Dionisio Amarilla",
+    "cargo_ejecutivo": true,
+    "clase": "Candidato",
+    "cod_categoria": "PRP",
+    "cod_lista": "3185",
+    "codigo": "3185.21430",
+    "id_candidatura": "3185.21430",
+    "id_umv": 47340,
+    "imagenes": [
+      "3185.21430",
+      "3185.21431",
+      "3185.21432"
+    ],
+    "nombre": "Senador Dionisio Amarilla",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      3185,
+      3,
+      1
+    ],
+    "secundarios": [
+      "Noelia Cabrera Petters",
+      "Clementino Portillo"
+    ],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "VOTO EN BLANCO",
+    "cargo_ejecutivo": false,
+    "clase": "Blanco",
+    "cod_categoria": "CNV",
+    "cod_lista": "",
+    "codigo": "BLC",
+    "id_candidatura": "BLC",
+    "id_umv": 2140,
+    "imagenes": [
+      "BLC"
+    ],
+    "nombre": "VOTO EN BLANCO",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      994,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "VOTO EN BLANCO",
+    "cargo_ejecutivo": false,
+    "clase": "Blanco",
+    "cod_categoria": "COM",
+    "cod_lista": "",
+    "codigo": "BLC",
+    "id_candidatura": "BLC",
+    "id_umv": 13206,
+    "imagenes": [
+      "BLC"
+    ],
+    "nombre": "VOTO EN BLANCO",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      994,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "VOTO EN BLANCO",
+    "cargo_ejecutivo": false,
+    "clase": "Blanco",
+    "cod_categoria": "DCD",
+    "cod_lista": "",
+    "codigo": "BLC",
+    "id_candidatura": "BLC",
+    "id_umv": 14637,
+    "imagenes": [
+      "BLC"
+    ],
+    "nombre": "VOTO EN BLANCO",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      994,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "VOTO EN BLANCO",
+    "cargo_ejecutivo": false,
+    "clase": "Blanco",
+    "cod_categoria": "DCN",
+    "cod_lista": "",
+    "codigo": "BLC",
+    "id_candidatura": "BLC",
+    "id_umv": 14897,
+    "imagenes": [
+      "BLC"
+    ],
+    "nombre": "VOTO EN BLANCO",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      994,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "VOTO EN BLANCO",
+    "cargo_ejecutivo": true,
+    "clase": "Blanco",
+    "cod_categoria": "INT",
+    "cod_lista": "",
+    "codigo": "BLC",
+    "id_candidatura": "BLC",
+    "id_umv": 16432,
+    "imagenes": [
+      "BLC"
+    ],
+    "nombre": "VOTO EN BLANCO",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      994,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "VOTO EN BLANCO",
+    "cargo_ejecutivo": false,
+    "clase": "Blanco",
+    "cod_categoria": "JUN",
+    "cod_lista": "",
+    "codigo": "BLC",
+    "id_candidatura": "BLC",
+    "id_umv": 35908,
+    "imagenes": [
+      "BLC"
+    ],
+    "nombre": "VOTO EN BLANCO",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      994,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "VOTO EN BLANCO",
+    "cargo_ejecutivo": true,
+    "clase": "Blanco",
+    "cod_categoria": "PRP",
+    "cod_lista": "",
+    "codigo": "BLC",
+    "id_candidatura": "BLC",
+    "id_umv": 47341,
+    "imagenes": [
+      "BLC"
+    ],
+    "nombre": "VOTO EN BLANCO",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      994,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NULOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "CNV",
+    "cod_lista": "",
+    "codigo": "NUL",
+    "id_candidatura": "NUL",
+    "id_umv": 2573,
+    "nombre": "Votos NULOS",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      998,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NULOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "COM",
+    "cod_lista": "",
+    "codigo": "NUL",
+    "id_candidatura": "NUL",
+    "id_umv": 13638,
+    "nombre": "Votos NULOS",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      998,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NULOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "DCD",
+    "cod_lista": "",
+    "codigo": "NUL",
+    "id_candidatura": "NUL",
+    "id_umv": 14656,
+    "nombre": "Votos NULOS",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      998,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NULOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "DCN",
+    "cod_lista": "",
+    "codigo": "NUL",
+    "id_candidatura": "NUL",
+    "id_umv": 14898,
+    "nombre": "Votos NULOS",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      998,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NULOS",
+    "cargo_ejecutivo": true,
+    "clase": "Especial",
+    "cod_categoria": "INT",
+    "cod_lista": "",
+    "codigo": "NUL",
+    "id_candidatura": "NUL",
+    "id_umv": 17113,
+    "nombre": "Votos NULOS",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      998,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NULOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "JUN",
+    "cod_lista": "",
+    "codigo": "NUL",
+    "id_candidatura": "NUL",
+    "id_umv": 37261,
+    "nombre": "Votos NULOS",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      998,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NULOS",
+    "cargo_ejecutivo": true,
+    "clase": "Especial",
+    "cod_categoria": "PRP",
+    "cod_lista": "",
+    "codigo": "NUL",
+    "id_candidatura": "NUL",
+    "id_umv": 47342,
+    "nombre": "Votos NULOS",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      998,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NO COMPUTADOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "CNV",
+    "cod_lista": "",
+    "codigo": "VAC",
+    "id_candidatura": "VAC",
+    "id_umv": 3006,
+    "nombre": "Votos a Computar",
+    "nro_orden": 7,
+    "orden_absoluto": [
+      1000,
+      7
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NO COMPUTADOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "COM",
+    "cod_lista": "",
+    "codigo": "VAC",
+    "id_candidatura": "VAC",
+    "id_umv": 14070,
+    "nombre": "Votos a Computar",
+    "nro_orden": 6,
+    "orden_absoluto": [
+      1000,
+      6
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NO COMPUTADOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "DCD",
+    "cod_lista": "",
+    "codigo": "VAC",
+    "id_candidatura": "VAC",
+    "id_umv": 14675,
+    "nombre": "Votos a Computar",
+    "nro_orden": 5,
+    "orden_absoluto": [
+      1000,
+      5
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NO COMPUTADOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "DCN",
+    "cod_lista": "",
+    "codigo": "VAC",
+    "id_candidatura": "VAC",
+    "id_umv": 14899,
+    "nombre": "Votos a Computar",
+    "nro_orden": 4,
+    "orden_absoluto": [
+      1000,
+      4
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NO COMPUTADOS",
+    "cargo_ejecutivo": true,
+    "clase": "Especial",
+    "cod_categoria": "INT",
+    "cod_lista": "",
+    "codigo": "VAC",
+    "id_candidatura": "VAC",
+    "id_umv": 17794,
+    "nombre": "Votos a Computar",
+    "nro_orden": 1,
+    "orden_absoluto": [
+      1000,
+      1
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NO COMPUTADOS",
+    "cargo_ejecutivo": false,
+    "clase": "Especial",
+    "cod_categoria": "JUN",
+    "cod_lista": "",
+    "codigo": "VAC",
+    "id_candidatura": "VAC",
+    "id_umv": 38614,
+    "nombre": "Votos a Computar",
+    "nro_orden": 2,
+    "orden_absoluto": [
+      1000,
+      2
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  },
+  {
+    "asistida": "Votos NO COMPUTADOS",
+    "cargo_ejecutivo": true,
+    "clase": "Especial",
+    "cod_categoria": "PRP",
+    "cod_lista": "",
+    "codigo": "VAC",
+    "id_candidatura": "VAC",
+    "id_umv": 47343,
+    "nombre": "Votos a Computar",
+    "nro_orden": 3,
+    "orden_absoluto": [
+      1000,
+      3
+    ],
+    "secundarios": [],
+    "sexo": null,
+    "suplentes": []
+  }
+]

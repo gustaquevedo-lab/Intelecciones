@@ -4,6 +4,7 @@ import {
   Users, RefreshCw, X, AlertOctagon, HelpCircle, QrCode, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import { Skeleton } from '../components/Skeleton';
@@ -718,53 +719,80 @@ const ActaFinalTab = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [scannerPasteData, setScannerPasteData] = useState('');
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
-  const handleParseQRData = (rawText: string) => {
+  const handleParseQRData = async (rawText: string) => {
     try {
-      let data: any;
-      if (rawText.trim().startsWith('{')) {
-        data = JSON.parse(rawText);
-      } else {
-        // Parse format like: TSJE|mesa:5|blancos:8|nulos:4|1:15|2:28
-        const parts = rawText.split('|');
-        const votosMap: Record<number, number> = {};
-        let blancos = 0;
-        let nulos = 0;
-        parts.forEach(part => {
-          const pair = part.split(':');
-          if (pair.length === 2) {
-            const key = pair[0].trim();
-            const val = pair[1].trim();
-            if (key === 'blancos') blancos = parseInt(val) || 0;
-            else if (key === 'nulos') nulos = parseInt(val) || 0;
-            else {
-              const listId = parseInt(key);
-              if (!isNaN(listId)) {
-                votosMap[listId] = parseInt(val) || 0;
-              }
-            }
-          }
+      const res = await api.post('/veedor/parse-qr', { qrData: rawText });
+      const data = res.data;
+      if (data && data.success) {
+        // 1. Reload the lists from backend so any auto-created adversary lists show up in the UI
+        const listasRes = await api.get('/diad/listas');
+        const updatedListas = listasRes.data.map((l: any) => {
+          const voteCount = data.votos[l.id] ?? data.votos[String(l.id)] ?? data.votos[l.list_number] ?? data.votos[String(l.list_number)] ?? 0;
+          return {
+            lista_id: l.id,
+            nombre: l.nombre,
+            color: l.color || '#5AACFF',
+            votos: voteCount
+          };
         });
-        data = { blancos, nulos, votos: votosMap };
-      }
+        setListas(updatedListas);
 
-      if (data) {
         if (data.blancos !== undefined) setVotosEnBlanco(data.blancos);
         if (data.nulos !== undefined) setVotosNulos(data.nulos);
-        if (data.votos) {
-          setListas(prev => prev.map(l => ({
-            ...l,
-            votos: data.votos[l.lista_id] !== undefined ? data.votos[l.lista_id] : l.votos
-          })));
-        }
         setShowQRScanner(false);
         setError('');
-        alert('✅ Datos del QR TSJE importados correctamente. Verifique los campos antes de enviar.');
+        alert(`✅ Datos del QR TSJE importados correctamente (Mesa ${data.mesa || tableInfo.mesa}). Verifique los campos antes de enviar.`);
+      } else {
+        alert('⚠️ No se pudieron extraer los resultados de este QR. Cargue manualmente.');
       }
-    } catch (e) {
-      alert('⚠️ Error al decodificar el formato del QR. Ingrese el texto correcto o digite manualmente.');
+    } catch (e: any) {
+      alert('⚠️ Error al decodificar el formato del QR: ' + (e.response?.data?.error || e.message));
     }
   };
+
+  useEffect(() => {
+    if (showQRScanner) {
+      setTimeout(() => {
+        try {
+          const scanner = new Html5QrcodeScanner(
+            'veedor-qr-reader',
+            {
+              fps: 10,
+              qrbox: { width: 220, height: 220 },
+              rememberLastUsedCamera: true
+            },
+            false
+          );
+          scanner.render(
+            (decodedText) => {
+              handleParseQRData(decodedText);
+              scanner.clear().catch(console.error);
+              setShowQRScanner(false);
+            },
+            (err) => {
+              // silent warning logs
+            }
+          );
+          scannerRef.current = scanner;
+        } catch (err) {
+          console.error('Failed to start scanner:', err);
+          alert('No se pudo acceder a la cámara o inicializar el escáner.');
+        }
+      }, 300);
+    } else {
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(err => console.error(err));
+        scannerRef.current = null;
+      }
+    }
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(err => console.error(err));
+      }
+    };
+  }, [showQRScanner]);
 
   useEffect(() => { loadActaData(); }, []);
 
@@ -1070,26 +1098,14 @@ const ActaFinalTab = () => {
               </button>
             </div>
 
-            {/* Viewfinder simulation */}
+            {/* Viewfinder simulation / Real Camera stream */}
             <div style={{
-              width: '280px', height: '280px', border: '3px solid var(--plra-400)', borderRadius: '24px',
+              width: '300px', minHeight: '250px', border: '3px solid var(--plra-400)', borderRadius: '24px',
               position: 'relative', overflow: 'hidden', background: '#080d16',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem',
-              boxShadow: '0 0 30px rgba(0,71,171,0.4)'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem',
+              boxShadow: '0 0 30px rgba(0,71,171,0.4)', padding: '10px'
             }}>
-              {/* Laser line animation */}
-              <motion.div
-                animate={{ y: [-130, 130, -130] }}
-                transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-                style={{
-                  position: 'absolute', left: 0, right: 0, height: '4px', background: 'var(--plra-400)',
-                  boxShadow: '0 0 15px var(--plra-400)', zIndex: 2
-                }}
-              />
-              <QrCode size={120} style={{ opacity: 0.15, color: 'white' }} />
-              <p style={{ position: 'absolute', bottom: '20px', fontSize: '0.75rem', color: 'var(--text-3)', textAlign: 'center', width: '80%', zIndex: 3 }}>
-                Apunta al código QR impreso en el ticket
-              </p>
+              <div id="veedor-qr-reader" style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }} />
             </div>
 
             {/* Manual input / Simulation trigger */}

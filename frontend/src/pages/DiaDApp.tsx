@@ -727,6 +727,7 @@ const DiaDApp: React.FC = () => {
   // D'Hondt data memoized for performance
   const concejales = resultados.filter(r => r.type === 'CONCEJAL');
   const intendentes = resultados.filter(r => r.type === 'INTENDENTE');
+  const autoridades = resultados.filter(r => r.type === 'AUTORIDADES');
   const dhondtResult = React.useMemo(() => {
     const dhondtInput = concejales.map(r => ({ id: r.id, nombre: r.candidate_alias || r.list_number, votos: r.votos }));
     return calcularDHondt(dhondtInput, bancasConcejal);
@@ -1806,6 +1807,65 @@ const DiaDApp: React.FC = () => {
                                 animate={{ width: `${pct}%` }}
                                 transition={{ duration: 0.8, ease: 'easeOut' }}
                                 style={{ height: '100%', background: color, borderRadius: 2 }}
+                              />
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Autoridades Partidarias */}
+                {autoridades.length > 0 && (
+                  <div style={{ marginTop: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <div style={{ width: 4, height: 18, background: '#EAB308', borderRadius: 2 }} />
+                      <h3 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                        Autoridades Partidarias
+                      </h3>
+                      <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', fontWeight: 600 }}>— mayoría simple</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {[...autoridades].sort((a, b) => b.votos - a.votos).map((r, i) => {
+                        const maxA = Math.max(...autoridades.map(x => x.votos), 1);
+                        const pct = (r.votos / maxA) * 100;
+                        const isWinning = i === 0 && r.votos > 0;
+                        return (
+                          <motion.div
+                            key={r.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.04 }}
+                            style={{
+                              background: isWinning ? 'rgba(234,179,8,0.06)' : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${isWinning ? 'rgba(234,179,8,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                              borderRadius: '12px', padding: '0.8rem 1rem',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-3)', width: 20 }}>#{i + 1}</span>
+                              <span style={{ flex: 1, fontWeight: 700, color: 'var(--text)', fontSize: '0.85rem' }}>
+                                {r.list_number} — {r.candidate_alias || ''}
+                              </span>
+                              {isWinning && (
+                                <span style={{ background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.3)', color: '#EAB308', fontSize: '0.55rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '6px', letterSpacing: '0.1em' }}>
+                                  ▲ GANANDO
+                                </span>
+                              )}
+                              <span style={{ fontFamily: 'Space Grotesk', fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>
+                                {(r.votos || 0).toLocaleString('es-PY')}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-3)', width: 44, textAlign: 'right' }}>
+                                {(r.porcentaje || 0).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.8, ease: 'easeOut' }}
+                                style={{ height: '100%', background: 'linear-gradient(90deg,#EAB308,#CA8A04)', borderRadius: 2 }}
                               />
                             </div>
                           </motion.div>
