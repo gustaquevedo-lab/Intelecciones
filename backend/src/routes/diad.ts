@@ -237,21 +237,64 @@ export default function diadRoutes(upload: multer.Multer) {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+
   router.post('/listas', (req, res) => {
-    const { list_number, candidate_alias, type, is_adversary } = req.body;
+    const { list_number, candidate_alias, candidate_nombre, candidate_ci, option_number, type, is_adversary, ciudad, campaign_id, goal, photo_url } = req.body;
     if (list_number === undefined || isNaN(Number(list_number))) return res.status(400).json({ error: 'list_number debe ser un número' });
     if (candidate_alias && typeof candidate_alias !== 'string') return res.status(400).json({ error: 'candidate_alias debe ser un texto' });
     const allowedTypes = ['INTENDENTE', 'CONCEJAL', 'DIPUTADO', 'SENADOR', 'LISTA_COMPLETA', 'AUTORIDADES'];
     if (!type || !allowedTypes.includes(type)) return res.status(400).json({ error: 'type debe ser uno de: ' + allowedTypes.join(', ') });
     try {
       const result = db.prepare(`
-        INSERT INTO lists (list_number, candidate_alias, type, is_adversary, campaign_id) VALUES (?, ?, ?, ?, 1)
-      `).run(list_number, candidate_alias, type, is_adversary ? 1 : 0);
+        INSERT INTO lists (list_number, candidate_alias, candidate_nombre, candidate_ci, option_number, type, is_adversary, ciudad, campaign_id, goal, photo_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        list_number,
+        candidate_alias || null,
+        candidate_nombre || null,
+        candidate_ci || null,
+        option_number || null,
+        type,
+        is_adversary ? 1 : 0,
+        ciudad || '',
+        campaign_id || 1,
+        goal || 1000,
+        photo_url || null
+      );
       res.json({ success: true, id: result.lastInsertRowid });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // Bulk sync endpoint: replaces ALL lists with the provided array (SUPERUSUARIO only)
+  router.post('/admin/sync-lists', (req, res) => {
+    const role = getRole(req);
+    if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Forbidden' });
+    const { lists: incoming } = req.body;
+    if (!Array.isArray(incoming) || incoming.length === 0) return res.status(400).json({ error: 'lists array is required' });
+    try {
+      const deleteAll = db.prepare('DELETE FROM lists');
+      const insert = db.prepare(`
+        INSERT INTO lists (list_number, candidate_alias, candidate_nombre, candidate_ci, option_number, type, is_adversary, ciudad, campaign_id, goal, photo_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const txn = db.transaction((items: any[]) => {
+        deleteAll.run();
+        for (const l of items) {
+          insert.run(
+            l.list_number, l.candidate_alias || null, l.candidate_nombre || null,
+            l.candidate_ci || null, l.option_number || null, l.type,
+            l.is_adversary ? 1 : 0, l.ciudad || '', l.campaign_id || 1,
+            l.goal || 1000, l.photo_url || null
+          );
+        }
+      });
+      txn(incoming);
+      res.json({ success: true, count: incoming.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   router.post('/acta', upload.single('foto_acta'), (req, res) => {
+
     const { mesa_id, votos_blanco, votos_nulos, listas, foto_acta_base64, category } = req.body;
     const userId = req.headers['x-user-id'];
     if (!mesa_id) return res.status(400).json({ error: 'mesa_id es requerido' });
