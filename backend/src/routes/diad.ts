@@ -76,7 +76,7 @@ export default function diadRoutes(upload: multer.Multer) {
         SELECT
           (SELECT COALESCE(SUM(ar.votos), 0) FROM acta_results ar JOIN results r2 ON ar.acta_id = r2.id JOIN voting_locations vl ON r2.local_votacion = vl.nombre WHERE 1=1 ${vlClause} ${listClause ? `AND r2.tenant_id = ?` : ''}) +
           (SELECT COALESCE(SUM(r3.votos_blancos + r3.votos_nulos), 0) FROM results r3 JOIN voting_locations vl ON r3.local_votacion = vl.nombre WHERE 1=1 ${vlClause} ${listClause ? `AND r3.tenant_id = ?` : ''}) as total
-      `, [...vlParams, ...(listClause ? [list_id, list_id] : [])]);
+      `, listClause ? [...vlParams, list_id, ...vlParams, list_id] : [...vlParams, ...vlParams]);
 
       const mesas = await dbQueryAsync<any>(`
         SELECT
@@ -88,7 +88,7 @@ export default function diadRoutes(upload: multer.Multer) {
         LEFT JOIN (SELECT id, local_votacion, mesa FROM results GROUP BY local_votacion, mesa) r ON r.local_votacion = e.local_votacion AND r.mesa = e.mesa
         LEFT JOIN (SELECT id, assigned_local, assigned_mesa FROM users WHERE (role = 'VEEDOR' OR role = 'MIEMBRO_MESA') GROUP BY assigned_local, assigned_mesa) u ON u.assigned_local = e.local_votacion AND u.assigned_mesa = e.mesa
         WHERE 1=1 ${vlClause}
-      `, vlParams);
+      `, [...distritoParams, ...vlParams]);
 
       const coordRow = await dbGetAsync<any>(`
         SELECT COUNT(*) as total_coordinadores FROM users u
