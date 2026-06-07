@@ -910,10 +910,18 @@ app.post('/api/login', loginLimiter, (req, res) => {
       distrito: user.distrito,
       enabled_modules: (() => {
         if (user.role === 'SUPERUSUARIO') return ['COMMAND_CENTER', 'REGISTRY', 'LOGISTICS', 'WHATSAPP', 'DAY_D', 'COMMUNICATIONS', 'SUPER_ADMIN'];
-        
+
+        // SUBJEFE and JEFE_CAMPANA always get DAY_D access
+        if (user.role === 'SUBJEFE' || user.role === 'JEFE_CAMPANA') {
+          const baseMods = ['COMMAND_CENTER', 'REGISTRY', 'DAY_D'];
+          const campMods = user.campaign_modules ? user.campaign_modules.split(',') : baseMods;
+          const userMods = user.enabled_modules ? user.enabled_modules.split(',') : campMods;
+          return [...new Set([...baseMods, ...userMods])].filter((m: string) => campMods.includes(m) || ['DAY_D'].includes(m));
+        }
+
         const campMods = user.campaign_modules ? user.campaign_modules.split(',') : ['COMMAND_CENTER', 'REGISTRY'];
         const userMods = user.enabled_modules ? user.enabled_modules.split(',') : campMods;
-        
+
         return userMods.filter((m: string) => campMods.includes(m));
       })(),
       needs_password_change: !!user.needs_password_change,
