@@ -4,6 +4,7 @@ import db from '../db';
 import { dbQueryAsync, dbGetAsync } from '../db-async';
 import { getCachedUserInfo, getRole, getListId, getDistrict } from './helpers';
 import { diadCoverageCache } from '../server';
+import { getParaguayTimestamp } from '../utils/timezone';
 
 export default function diadRoutes(upload: multer.Multer) {
   const router = Router();
