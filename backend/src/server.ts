@@ -217,15 +217,8 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (native mobile apps, Postman)
-    if (!origin) return callback(null, true);
-    // In development: allow all origins (covers LAN IPs for phone testing)
-    if (process.env.NODE_ENV !== 'production') return callback(null, true);
-    // In production: allow listed origins + any *.vercel.app subdomain
-    if (ALLOWED_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'), false);
+    // Allow absolutely everything to rule out CORS issues
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
