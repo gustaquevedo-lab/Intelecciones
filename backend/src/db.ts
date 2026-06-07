@@ -879,7 +879,11 @@ export const runBootstrapChecks = () => {
         const concepcionUsersCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE distrito = 'CONCEPCION' AND role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')").get() as any;
         console.log(`[BOOTSTRAP IMPORT] Concepcion staff count: ${concepcionUsersCount?.c || 0}`);
         
-        // Always run import (INSERT OR REPLACE is idempotent) to ensure data integrity
+        if ((concepcionUsersCount?.c || 0) > 0) {
+          console.log('[BOOTSTRAP IMPORT] Concepcion staff already imported. Skipping to preserve manual changes.');
+          return;
+        }
+        
         const XLSX = require('xlsx');
         const { normalizePhone } = require('./utils/phone');
         
