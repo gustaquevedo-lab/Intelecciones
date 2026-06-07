@@ -370,8 +370,6 @@ const DiaDApp: React.FC = () => {
   const isLoadingActas = actasLoading;
 
   const [bancasConcejal, setBancasConcejal] = useState(15);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedMesa, setSelectedMesa] = useState<{local: string, numero: number} | null>(null);
   const [usersToAssign, setUsersToAssign] = useState<any[]>([]);
   const [assigningLoading, setAssigningLoading] = useState(false);
   const [expandedLocales, setExpandedLocales] = useState<Record<string, boolean>>({});
@@ -384,7 +382,6 @@ const DiaDApp: React.FC = () => {
   const [globalRegRole, setGlobalRegRole] = useState('VOCAL');
   const [memberFilter, setMemberFilter] = useState('');
   const [selectedMesaForSwap, setSelectedMesaForSwap] = useState<{ local: string; numero: number } | null>(null);
-  const [showListModal, setShowListModal] = useState(false);
   const [newListNumber, setNewListNumber] = useState('');
   const [newListAlias, setNewListAlias] = useState('');
   const [newListType, setNewListType] = useState('CONCEJAL');
