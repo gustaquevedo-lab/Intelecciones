@@ -336,18 +336,20 @@ export default function diadRoutes(upload: multer.Multer) {
       `;
       const params: any[] = [];
       if (districtName) {
-        let baseDistrict = districtName.replace('Ó', 'O').replace('ó', 'o').replace('ô', 'o');
+        let baseDistrict = districtName.replace('Ó', 'O').replace('ó', 'o').replace('ô', 'o').replace('á', 'a').replace('é', 'e').replace('í', 'i');
         // Include users that:
         // 1) Their user.distrito matches this district (primary - most reliable)
         // 2) Their assigned_local's district matches this district (via subquery lookup)
+        // 3) Their assigned_local name contains the district (fallback for typos/variations)
         sql += ` AND (
           UPPER(u.distrito) LIKE UPPER(?)
           OR u.assigned_local IN (
             SELECT nombre FROM voting_locations
             WHERE UPPER(distrito) LIKE UPPER(?) OR UPPER(ciudad) LIKE UPPER(?)
           )
+          OR UPPER(u.assigned_local) LIKE UPPER(?)
         )`;
-        params.push(`%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`);
+        params.push(`%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`);
       }
       const members = db.prepare(sql).all(...params);
       res.json(members);
