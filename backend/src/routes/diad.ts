@@ -265,23 +265,33 @@ export default function diadRoutes(upload: multer.Multer) {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // Bulk sync endpoint: replaces ALL lists with the provided array (SUPERUSUARIO only)
+  // Bulk sync endpoint: upserts lists with the provided array (SUPERUSUARIO only)
   router.post('/admin/sync-lists', (req, res) => {
     const role = getRole(req);
     if (role !== 'SUPERUSUARIO') return res.status(403).json({ error: 'Forbidden' });
     const { lists: incoming } = req.body;
     if (!Array.isArray(incoming) || incoming.length === 0) return res.status(400).json({ error: 'lists array is required' });
     try {
-      const deleteAll = db.prepare('DELETE FROM lists');
-      const insert = db.prepare(`
-        INSERT INTO lists (list_number, candidate_alias, candidate_nombre, candidate_ci, option_number, type, is_adversary, ciudad, campaign_id, goal, photo_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      const upsert = db.prepare(`
+        INSERT INTO lists (id, list_number, candidate_alias, candidate_nombre, candidate_ci, option_number, type, is_adversary, ciudad, campaign_id, goal, photo_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          list_number=excluded.list_number,
+          candidate_alias=excluded.candidate_alias,
+          candidate_nombre=excluded.candidate_nombre,
+          candidate_ci=excluded.candidate_ci,
+          option_number=excluded.option_number,
+          type=excluded.type,
+          is_adversary=excluded.is_adversary,
+          ciudad=excluded.ciudad,
+          campaign_id=excluded.campaign_id,
+          goal=excluded.goal,
+          photo_url=excluded.photo_url
       `);
       const txn = db.transaction((items: any[]) => {
-        deleteAll.run();
         for (const l of items) {
-          insert.run(
-            l.list_number, l.candidate_alias || null, l.candidate_nombre || null,
+          upsert.run(
+            l.id, l.list_number, l.candidate_alias || null, l.candidate_nombre || null,
             l.candidate_ci || null, l.option_number || null, l.type,
             l.is_adversary ? 1 : 0, l.ciudad || '', l.campaign_id || 1,
             l.goal || 1000, l.photo_url || null
