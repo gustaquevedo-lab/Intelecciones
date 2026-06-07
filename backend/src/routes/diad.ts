@@ -349,10 +349,7 @@ export default function diadRoutes(upload: multer.Multer) {
       }
       if (!targetId) return res.status(400).json({ error: 'No se pudo identificar al usuario' });
       
-      // If we are assigning to a specific table (not just liberating), clear any previous member first
-      if (local && mesa !== null) {
-        db.prepare(`UPDATE users SET assigned_local = NULL, assigned_mesa = NULL WHERE assigned_local = ? AND assigned_mesa = ? AND role != 'APODERADO'`).run(local, mesa);
-      }
+      // Allow multiple members per table — do NOT clear previous members.
       
       if (telefono) {
         db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?, telefono = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, telefono, targetId);

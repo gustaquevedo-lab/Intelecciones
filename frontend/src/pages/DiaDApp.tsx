@@ -1044,8 +1044,8 @@ const DiaDApp: React.FC = () => {
                             {/* Mesas Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.8rem' }}>
                               {mesasInLoc.map(mesa => {
-                                const assignedMember = membersList.find(m => m.role !== 'APODERADO' && m.assigned_local === loc.nombre && m.assigned_mesa === mesa.numero);
-                                const isDesignada = !!assignedMember;
+                                const assignedMembers = membersList.filter(m => m.role !== 'APODERADO' && m.assigned_local === loc.nombre && m.assigned_mesa === mesa.numero);
+                                const isDesignada = assignedMembers.length > 0;
                                 const isSelectedForSwap = selectedMesaForSwap?.local === loc.nombre && selectedMesaForSwap?.numero === mesa.numero;
 
                                 return (
@@ -1066,39 +1066,63 @@ const DiaDApp: React.FC = () => {
                                         background: mesa.confirmada ? 'rgba(34,197,94,0.12)' : isDesignada ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
                                         color: mesa.confirmada ? '#4ADE80' : isDesignada ? '#F59E0B' : 'var(--red)'
                                       }}>
-                                        {mesa.confirmada ? 'CONFIRMADA' : isDesignada ? 'DESIGNADA' : 'VACANTE'}
+                                        {mesa.confirmada ? 'CONFIRMADA' : isDesignada ? `${assignedMembers.length} MIEMBRO${assignedMembers.length > 1 ? 'S' : ''}` : 'VACANTE'}
                                       </span>
                                     </div>
 
-                                    {/* Member info */}
+                                    {/* Member info - list all */}
                                     {isDesignada ? (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)' }}>
-                                          {assignedMember.nombre}
-                                        </span>
-                                        <span style={{ fontSize: '0.62rem', color: 'var(--text-3)' }}>
-                                          CI: {assignedMember.ci || '—'} · {assignedMember.role}
-                                        </span>
-                                        {assignedMember.telefono && (
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-                                            <span style={{ fontSize: '0.62rem', color: 'var(--text-3)' }}>
-                                              📞 {assignedMember.telefono}
-                                            </span>
-                                            <a 
-                                              href={`https://wa.me/${assignedMember.telefono.replace(/\D/g, '')}`} 
-                                              target="_blank" 
-                                              rel="noopener noreferrer"
-                                              style={{ 
-                                                display: 'flex', alignItems: 'center', gap: '0.2rem', 
-                                                background: '#25D366', color: '#fff', 
-                                                padding: '2px 6px', borderRadius: '4px', 
-                                                fontSize: '0.55rem', fontWeight: 700, textDecoration: 'none'
-                                              }}
-                                            >
-                                              WhatsApp
-                                            </a>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {assignedMembers.map((assignedMember, idx) => (
+                                          <div key={assignedMember.id} style={{ borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none', paddingTop: idx > 0 ? '0.4rem' : 0 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                              <div>
+                                                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)' }}>
+                                                  {assignedMember.nombre}
+                                                </span>
+                                                <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', display: 'block' }}>
+                                                  CI: {assignedMember.ci || '—'} · {assignedMember.role}
+                                                </span>
+                                              </div>
+                                              <button
+                                                onClick={async () => {
+                                                  if (!confirm(`¿Liberar a ${assignedMember.nombre} de la Mesa ${mesa.numero}?`)) return;
+                                                  try {
+                                                    await api.post('/diad/members/assign', { user_id: assignedMember.id, local: null, mesa: null });
+                                                    fetchData();
+                                                  } catch (e: any) { alert('Error al liberar miembro: ' + (e.response?.data?.error || e.message)); }
+                                                }}
+                                                style={{
+                                                  padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.2)',
+                                                  background: 'rgba(239,68,68,0.05)', color: 'var(--red)', fontSize: '0.55rem',
+                                                  fontWeight: 800, cursor: 'pointer'
+                                                }}
+                                              >
+                                                LIBERAR
+                                              </button>
+                                            </div>
+                                            {assignedMember.telefono && (
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                                                <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>
+                                                  📞 {assignedMember.telefono}
+                                                </span>
+                                                <a
+                                                  href={`https://wa.me/${assignedMember.telefono.replace(/\D/g, '')}`}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  style={{
+                                                    display: 'flex', alignItems: 'center', gap: '0.2rem',
+                                                    background: '#25D366', color: '#fff',
+                                                    padding: '2px 6px', borderRadius: '4px',
+                                                    fontSize: '0.55rem', fontWeight: 700, textDecoration: 'none'
+                                                  }}
+                                                >
+                                                  WhatsApp
+                                                </a>
+                                              </div>
+                                            )}
                                           </div>
-                                        )}
+                                        ))}
                                       </div>
                                     ) : (
                                       <div style={{ padding: '0.4rem 0', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
@@ -1111,51 +1135,19 @@ const DiaDApp: React.FC = () => {
                                       </div>
                                     )}
 
-                                    {/* Card Quick Actions */}
+                                    {/* Card Quick Actions — always allow adding more members */}
                                     <div style={{ display: 'flex', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.6rem', marginTop: '0.2rem' }}>
-                                      {isDesignada ? (
-                                        <>
-                                          <button
-                                            onClick={() => setSelectedMesaForSwap({ local: loc.nombre, numero: mesa.numero })}
-                                            style={{
-                                              flex: 1, padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border)',
-                                              background: 'rgba(255,255,255,0.02)', color: 'var(--text-2)', fontSize: '0.65rem',
-                                              fontWeight: 800, cursor: 'pointer'
-                                            }}
-                                          >
-                                            REEMPLAZAR
-                                          </button>
-                                          <button
-                                            onClick={async () => {
-                                              if (!confirm(`¿Liberar a ${assignedMember.nombre} de la Mesa ${mesa.numero}?`)) return;
-                                              try {
-                                                await api.post('/diad/members/assign', { user_id: assignedMember.id, local: null, mesa: null });
-                                                fetchData();
-                                              } catch (e) { alert('Error al liberar miembro: ' + (e.response?.data?.error || e.message)); }
-                                            }}
-                                            style={{
-                                              padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.15)',
-                                              background: 'rgba(239,68,68,0.05)', color: 'var(--red)', fontSize: '0.65rem',
-                                              fontWeight: 800, cursor: 'pointer'
-                                            }}
-                                          >
-                                            LIBERAR
-                                          </button>
-                                        </>
-                                      ) : (
-                                        <button
-                                          onClick={() => setSelectedMesaForSwap({ local: loc.nombre, numero: mesa.numero })}
-                                          style={{
-                                            width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--green)',
-                                            background: isSelectedForSwap ? 'var(--green)' : 'rgba(34,197,94,0.1)',
-                                            color: isSelectedForSwap ? 'white' : '#4ADE80',
-                                            fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer',
-                                            animation: !isDesignada && !isSelectedForSwap ? 'pulseBorder 2s infinite' : 'none'
-                                          }}
-                                        >
-                                          {isSelectedForSwap ? 'SELECCIONANDO SUPLENTE...' : '🟢 ASIGNAR SUPLENTE'}
-                                        </button>
-                                      )}
+                                      <button
+                                        onClick={() => setSelectedMesaForSwap({ local: loc.nombre, numero: mesa.numero })}
+                                        style={{
+                                          width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--green)',
+                                          background: isSelectedForSwap ? 'var(--green)' : 'rgba(34,197,94,0.1)',
+                                          color: isSelectedForSwap ? 'white' : '#4ADE80',
+                                          fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer',
+                                        }}
+                                      >
+                                        {isSelectedForSwap ? 'SELECCIONANDO...' : isDesignada ? '➕ AGREGAR MIEMBRO' : '🟢 ASIGNAR SUPLENTE'}
+                                      </button>
                                     </div>
                                   </div>
                                 );
