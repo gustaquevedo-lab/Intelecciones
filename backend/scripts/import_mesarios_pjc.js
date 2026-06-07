@@ -143,22 +143,10 @@ function runImport(db, excelPath) {
       let finalMesa = p.mesa;
       let finalTableRole = p.tableRole;
 
-      // Check discrepancia (sólo para miembros de mesa, apoderados no tienen mesa asignada al votar)
-      if (p.role === 'MIEMBRO_MESA') {
-        const padronLocal = elector.local_votacion;
-        const padronMesa = elector.mesa;
-        
-        // Si el local del padrón NO es igual al local mapeado del excel, o la mesa no coincide
-        const isLocalMatch = padronLocal && padronLocal.toUpperCase().includes(p.local.toUpperCase().split(' ')[0]);
-        const isMesaMatch = padronMesa === p.mesa;
+      // Según el usuario, "vale la designacion del excel", por tanto no hacemos
+      // el chequeo de enviar al banco de suplentes por discrepancia de local/mesa.
+      // Respetamos la mesa y el local que dice el excel (p.local y p.mesa).
 
-        if (!isLocalMatch || !isMesaMatch) {
-          // Discrepancia! Mandar a banco de suplentes de ese local (el local del Excel)
-          finalMesa = null;
-          finalTableRole = null;
-          sentToSuplentes++;
-        }
-      }
 
       const username = `mesario_${p.ci}`;
       const password = `pass_${p.ci}`;
