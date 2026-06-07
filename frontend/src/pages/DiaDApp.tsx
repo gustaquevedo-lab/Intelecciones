@@ -1033,6 +1033,16 @@ const DiaDApp: React.FC = () => {
                                     const telf = window.prompt('Ingrese el número de WhatsApp para este mesario (Opcional, ej: 0981...):');
                                     if (telf === null) return; // Cancelled
                                     
+                                    let formattedPhone = undefined;
+                                    if (telf.trim()) {
+                                      let clean = telf.replace(/\D/g, '');
+                                      if (clean.startsWith('0')) clean = clean.substring(1);
+                                      if (clean && !clean.startsWith('595') && !clean.startsWith('55')) {
+                                        clean = '595' + clean;
+                                      }
+                                      formattedPhone = '+' + clean;
+                                    }
+                                    
                                     setAssigningLoading(true);
                                     try {
                                       await api.post('/diad/members/assign', { 
@@ -1040,7 +1050,7 @@ const DiaDApp: React.FC = () => {
                                         local: selectedMesaForSwap.local, 
                                         mesa: selectedMesaForSwap.numero,
                                         role: 'MIEMBRO_MESA',
-                                        telefono: telf.trim() || undefined
+                                        telefono: formattedPhone
                                       });
                                       setSelectedMesaForSwap(null);
                                       setMemberFilter('');
