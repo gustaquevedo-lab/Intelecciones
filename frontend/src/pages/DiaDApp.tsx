@@ -365,7 +365,7 @@ const DiaDApp: React.FC = () => {
   const handleCreateApo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/admin/users', {
+      await api.post('/users', {
         nombre: newApoNombre,
         ci: newApoCI,
         username: newApoCI,
@@ -435,7 +435,7 @@ const DiaDApp: React.FC = () => {
     e.preventDefault();
     if (!editingApoderado) return;
     try {
-      await api.put(`/admin/users/${editingApoderado.id}`, {
+      await api.put(`/users/${editingApoderado.id}`, {
         nombre: editApoNombre,
         ci: editApoCI,
         telefono: editApoPhone,
