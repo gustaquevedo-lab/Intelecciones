@@ -892,7 +892,7 @@ const DiaDApp: React.FC = () => {
 
                                     {/* Card Quick Actions */}
                                     <div style={{ display: 'flex', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.6rem', marginTop: '0.2rem' }}>
-                                      {isConstituida ? (
+                                      {isDesignada ? (
                                         <>
                                           <button
                                             onClick={() => setSelectedMesaForSwap({ local: loc.nombre, numero: mesa.numero })}
