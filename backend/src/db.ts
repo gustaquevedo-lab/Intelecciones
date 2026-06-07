@@ -881,11 +881,11 @@ export const runBootstrapChecks = () => {
     // ── CONCEPCION STAFF IMPORT SELF-HEALING ──
     (() => {
       try {
-        const concepcionUsersCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE distrito = 'CONCEPCION' AND role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')").get() as any;
+        const concepcionUsersCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE distrito = 'CONCEPCION' AND role IN ('VEEDOR', 'MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'APODERADO', 'PRESIDENTE', 'VOCAL')").get() as any;
         console.log(`[BOOTSTRAP IMPORT] Concepcion staff count: ${concepcionUsersCount?.c || 0}`);
         
-        if ((concepcionUsersCount?.c || 0) > 50) {
-          console.log('[BOOTSTRAP IMPORT] Concepcion staff already imported. Skipping to preserve manual changes.');
+        if ((concepcionUsersCount?.c || 0) > 0) {
+          console.log('[BOOTSTRAP IMPORT] Concepcion staff already exists. Skipping to preserve ALL manual changes.');
           // PJC Import EVERY BOOT
           try {
             let pjcExcelPath = '';
