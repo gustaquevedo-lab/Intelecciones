@@ -275,7 +275,7 @@ export default function diadRoutes(upload: multer.Multer) {
       db.pragma('foreign_keys = OFF');
       const upsert = db.prepare(`
         INSERT INTO lists (id, list_number, candidate_alias, candidate_nombre, candidate_ci, option_number, type, is_adversary, ciudad, campaign_id, goal, photo_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT id FROM campaigns LIMIT 1), 1), ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT id FROM campaigns LIMIT 1), 1), ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           list_number=excluded.list_number,
           candidate_alias=excluded.candidate_alias,
