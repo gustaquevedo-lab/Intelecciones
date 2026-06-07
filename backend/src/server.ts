@@ -211,6 +211,8 @@ const ALLOWED_ORIGINS = [
   'https://intelecciones.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost',
+  'capacitor://localhost',
 ];
 
 app.use(cors({
