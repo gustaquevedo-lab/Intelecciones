@@ -80,6 +80,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setUser(parsed);
                 if (parsed.role !== 'SUPERUSUARIO') {
                     setActiveListId(parsed.assigned_list_id ?? null);
+                    // Set district for non-superusers if they have one
+                    if (parsed.distrito) {
+                        setActiveDistrict(parsed.distrito);
+                    } else if (savedDistrict) {
+                        setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);
+                    }
                 } else {
                     if (savedListId) setActiveListId(savedListId === 'null' ? null : parseInt(savedListId));
                     if (savedDistrict) setActiveDistrict(savedDistrict === 'null' ? null : savedDistrict);

@@ -126,13 +126,34 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   router.get('/debug_db', (req, res) => {
-  try {
-    const counts = db.prepare("SELECT role, assigned_local, assigned_mesa, COUNT(*) as count FROM users GROUP BY role, assigned_local, assigned_mesa").all();
-    res.json({ counts });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    try {
+      const counts = db.prepare("SELECT role, assigned_local, assigned_mesa, COUNT(*) as count FROM users GROUP BY role, assigned_local, assigned_mesa").all();
+
+      // Check for assigned_local values that don't match voting_locations
+      const mismatches = db.prepare(`
+        SELECT u.id, u.nombre, u.ci, u.assigned_local, u.assigned_mesa, u.role, u.distrito
+        FROM users u
+        WHERE u.assigned_local IS NOT NULL
+          AND u.assigned_local != ''
+          AND u.assigned_mesa IS NOT NULL
+          AND u.role IN ('MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'VEEDOR', 'APODERADO', 'PRESIDENTE', 'VOCAL')
+          AND u.assigned_local NOT IN (SELECT nombre FROM voting_locations)
+        LIMIT 20
+      `).all();
+
+      // Get a sample of voting_locations names
+      const votingLocNames = db.prepare('SELECT DISTINCT nombre FROM voting_locations LIMIT 10').all();
+
+      res.json({
+        counts,
+        mismatches,
+        votingLocSample: votingLocNames,
+        mismatchCount: (db.prepare("SELECT COUNT(*) as cnt FROM users u WHERE u.assigned_local IS NOT NULL AND u.assigned_local != '' AND u.assigned_local NOT IN (SELECT nombre FROM voting_locations)").get() as any).cnt
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   router.get('/results', async (req, res) => {
     const list_id = getListId(req);
@@ -317,17 +338,16 @@ export default function diadRoutes(upload: multer.Multer) {
       if (districtName) {
         let baseDistrict = districtName.replace('Ó', 'O').replace('ó', 'o').replace('ô', 'o');
         // Include users that:
-        // 1) Their assigned_local belongs to a voting_location in this district
-        // 2) Their user.distrito matches this district
-        // This correctly handles member_XXXXX users who have assigned_local but no distrito set
+        // 1) Their user.distrito matches this district (primary - most reliable)
+        // 2) Their assigned_local's district matches this district (via subquery lookup)
         sql += ` AND (
-          UPPER(vl.distrito) LIKE UPPER(?) OR UPPER(vl.ciudad) LIKE UPPER(?) OR UPPER(u.distrito) LIKE UPPER(?)
+          UPPER(u.distrito) LIKE UPPER(?)
           OR u.assigned_local IN (
-            SELECT nombre FROM voting_locations 
+            SELECT nombre FROM voting_locations
             WHERE UPPER(distrito) LIKE UPPER(?) OR UPPER(ciudad) LIKE UPPER(?)
           )
         )`;
-        params.push(`%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`);
+        params.push(`%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`);
       }
       const members = db.prepare(sql).all(...params);
       res.json(members);
@@ -360,25 +380,46 @@ export default function diadRoutes(upload: multer.Multer) {
           const username = `member_${ci}`;
           const password = `pass_${ci}`;
           const fullName = `${elector.nombre} ${elector.apellido}`;
-          const result = db.prepare(`INSERT INTO users (username, password, role, nombre, ci, telefono) VALUES (?, ?, ?, ?, ?, ?)`).run(username, password, targetRole, fullName, ci, telefono || null);
+          // Get district from the voting location if local is provided
+          let userDistrict = null;
+          if (local) {
+            const votingLoc = db.prepare('SELECT distrito, ciudad FROM voting_locations WHERE nombre = ?').get(local) as any;
+            userDistrict = votingLoc?.distrito || votingLoc?.ciudad || null;
+          }
+          const result = db.prepare(`INSERT INTO users (username, password, role, nombre, ci, telefono, distrito) VALUES (?, ?, ?, ?, ?, ?, ?)`).run(username, password, targetRole, fullName, ci, telefono || null, userDistrict);
           targetId = result.lastInsertRowid;
         }
       }
       if (!targetId) return res.status(400).json({ error: 'No se pudo identificar al usuario' });
-      
+
       // If liberating (local is null/empty), clear assignment
       const isLiberating = local === null || local === undefined || local === '';
       if (isLiberating) {
         db.prepare(`UPDATE users SET assigned_local = NULL, assigned_mesa = NULL WHERE id = ?`).run(targetId);
-      } else if (telefono) {
-        db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?, telefono = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, telefono, targetId);
       } else {
-        db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
+        // Also update distrito if not already set (in case of existing user)
+        const user = db.prepare('SELECT distrito FROM users WHERE id = ?').get(targetId) as any;
+        if (!user?.distrito) {
+          const votingLoc = db.prepare('SELECT distrito, ciudad FROM voting_locations WHERE nombre = ?').get(local) as any;
+          const userDistrict = votingLoc?.distrito || votingLoc?.ciudad || null;
+          if (telefono) {
+            db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?, telefono = ?, distrito = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, telefono, userDistrict, targetId);
+          } else {
+            db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?, distrito = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, userDistrict, targetId);
+          }
+        } else {
+          // User already has a distrito, just update assignment
+          if (telefono) {
+            db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?, telefono = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, telefono, targetId);
+          } else {
+            db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
+          }
+        }
       }
-      
+
       // Clear cache explicitly after modification
       await diadCoverageCache.invalidate();
-      
+
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -789,6 +830,149 @@ export default function diadRoutes(upload: multer.Multer) {
     } catch (e: any) {
       res.status(500).json({ error: e.message });
 
+    }
+  });
+
+  router.get('/debug-members-consistency', (req, res) => {
+    try {
+      const districtFilter = getDistrict(req);
+
+      // Get all members with assignments
+      const allMembers = db.prepare(`
+        SELECT id, nombre, ci, role, assigned_local, assigned_mesa, distrito
+        FROM users
+        WHERE role IN ('VEEDOR', 'MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'APODERADO', 'PRESIDENTE', 'VOCAL')
+        AND assigned_local IS NOT NULL
+        AND assigned_local != ''
+        LIMIT 50
+      `).all();
+
+      // Check which ones would pass the district filter
+      const districtFilter_normalized = districtFilter ? districtFilter.replace('Ó', 'O').replace('ó', 'o').replace('ô', 'o') : null;
+      const members_with_filter_check = allMembers.map((m: any) => {
+        let passes_filter = false;
+        if (!districtFilter_normalized) {
+          passes_filter = true;
+        } else {
+          // Check if would pass the district filter
+          if (m.distrito && m.distrito.toUpperCase().includes(districtFilter_normalized.toUpperCase())) {
+            passes_filter = true;
+          } else {
+            const votingLocMatch = db.prepare(`
+              SELECT COUNT(*) as cnt FROM voting_locations
+              WHERE nombre = ? AND (UPPER(distrito) LIKE UPPER(?) OR UPPER(ciudad) LIKE UPPER(?))
+            `).get(m.assigned_local, `%${districtFilter_normalized}%`, `%${districtFilter_normalized}%`) as any;
+            passes_filter = votingLocMatch.cnt > 0;
+          }
+        }
+        return { ...m, passes_filter };
+      });
+
+      // Also check voting_locations structure
+      const votingLocs_sample = db.prepare(`
+        SELECT DISTINCT nombre, distrito, ciudad FROM voting_locations LIMIT 10
+      `).all();
+
+      res.json({
+        district_filter: districtFilter,
+        all_members_count: allMembers.length,
+        members_with_filter: members_with_filter_check,
+        voting_locations_sample: votingLocs_sample
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.post('/test-member-assignment', (req, res) => {
+    try {
+      console.log('[TEST] Starting test member assignment...');
+
+      // Get an elector from padrón
+      const elector = db.prepare(`
+        SELECT ci, nombre, apellido FROM electors
+        WHERE local_votacion IS NOT NULL AND mesa IS NOT NULL
+        LIMIT 1
+      `).get() as any;
+
+      if (!elector) return res.status(404).json({ error: 'No electors found in padrón' });
+
+      // Get a voting location
+      const votingLoc = db.prepare(`
+        SELECT nombre, distrito, ciudad FROM voting_locations LIMIT 1
+      `).get() as any;
+
+      if (!votingLoc) return res.status(404).json({ error: 'No voting locations found' });
+
+      console.log(`[TEST] Using elector: ${elector.ci} - ${elector.nombre}`);
+      console.log(`[TEST] Using location: ${votingLoc.nombre} (${votingLoc.distrito || votingLoc.ciudad})`);
+
+      // Clean up previous test user
+      db.prepare('DELETE FROM users WHERE ci = ?').run(elector.ci);
+
+      // Create user (simulating the assignment endpoint)
+      const username = `member_${elector.ci}`;
+      const userDistrict = votingLoc.distrito || votingLoc.ciudad;
+      const result = db.prepare(`
+        INSERT INTO users (username, password, role, nombre, ci, telefono, distrito)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        username,
+        `pass_${elector.ci}`,
+        'MIEMBRO_MESA',
+        `${elector.nombre} ${elector.apellido}`,
+        elector.ci,
+        null,
+        userDistrict
+      );
+
+      const userId = result.lastInsertRowid as number;
+
+      // Assign to mesa
+      const mesa = 1;
+      db.prepare(`
+        UPDATE users
+        SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?
+        WHERE id = ?
+      `).run(votingLoc.nombre, mesa, 'MIEMBRO_MESA', null, userId);
+
+      console.log(`[TEST] User created and assigned: ID=${userId}, Mesa=${mesa}`);
+
+      // Check if member appears in members list with district filter
+      const district = votingLoc.distrito || votingLoc.ciudad;
+      const members = db.prepare(`
+        SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.distrito
+        FROM users u
+        WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'APODERADO', 'PRESIDENTE', 'VOCAL')
+        AND (
+          UPPER(u.distrito) LIKE UPPER(?)
+          OR u.assigned_local IN (
+            SELECT nombre FROM voting_locations
+            WHERE UPPER(distrito) LIKE UPPER(?) OR UPPER(ciudad) LIKE UPPER(?)
+          )
+        )
+      `).all(`%${district}%`, `%${district}%`, `%${district}%`) as any[];
+
+      const found = members.find(m => m.id === userId);
+
+      // Cleanup
+      db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+
+      res.json({
+        success: true,
+        test: {
+          elector: elector.ci,
+          location: votingLoc.nombre,
+          district: district,
+          user_created: { id: userId, nombre: `${elector.nombre} ${elector.apellido}`, distrito: userDistrict },
+          assigned_to_mesa: mesa,
+          appears_in_members_list: !!found,
+          total_members_in_district: members.length,
+          message: found ? '✅ TEST PASSED: User appears in members list' : '❌ TEST FAILED: User NOT in members list'
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

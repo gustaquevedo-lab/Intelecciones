@@ -858,7 +858,7 @@ app.post('/api/login', loginLimiter, (req, res) => {
 
   // Buscar usuario en DB directamente
   user = db.prepare(`
-    SELECT u.*, c.enabled_modules as campaign_modules, c.distrito, COALESCE(u.assigned_campaign_id, l.campaign_id) as final_campaign_id, c.status as campaign_status
+    SELECT u.*, c.enabled_modules as campaign_modules, COALESCE(u.distrito, c.distrito) as distrito, COALESCE(u.assigned_campaign_id, l.campaign_id) as final_campaign_id, c.status as campaign_status
     FROM users u
     LEFT JOIN lists l ON u.assigned_list_id = l.id
     LEFT JOIN campaigns c ON (u.assigned_campaign_id = c.id OR l.campaign_id = c.id)
