@@ -844,6 +844,12 @@ export const runBootstrapChecks = () => {
     // ── CONCEPCION DATABASE CLEANUP ──
     (() => {
       try {
+        // Ensure local exists
+        db.prepare(`
+          INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, direccion, icon, distrito, ciudad)
+          VALUES ('LOC_CONCEPCION', 'INSTITUTO SALESIANO SAN JOSE', -23.408, -57.438, 'Concepción', 'Landmark', 'CONCEPCION', 'CONCEPCION')
+        `).run();
+
         const delElectors = db.prepare("DELETE FROM electors WHERE distrito = 'CONCEPCION' AND local_votacion != 'INSTITUTO SALESIANO SAN JOSE'").run();
         if (delElectors.changes > 0) {
           console.log(`[BOOTSTRAP CLEANUP] Deleted ${delElectors.changes} incorrect electors from CONCEPCION`);
