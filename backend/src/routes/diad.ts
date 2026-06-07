@@ -191,14 +191,15 @@ export default function diadRoutes(upload: multer.Multer) {
         WHERE 1=1
       `;
       if (districtName) {
-        sql += ` AND (UPPER(l.ciudad) = UPPER(?) OR l.ciudad = '' OR l.ciudad IS NULL)`;
+        sql += ` AND (UPPER(l.ciudad) = UPPER(?) OR l.ciudad = '' OR l.ciudad IS NULL OR UPPER(l.ciudad) = 'AUTO')`;
         params.push(districtName);
       }
       if (list_id && !isNaN(list_id)) {
+        // Allow list comparison across the entire campaign rather than restricting to just our campaign_id
         sql += ` AND l.campaign_id = (SELECT campaign_id FROM lists WHERE id = ?)`;
         params.push(list_id);
       }
-      sql += ` ORDER BY votos DESC`;
+      sql += ` ORDER BY votos DESC, l.list_number ASC`;
 
       const formatted = await dbQueryAsync<any>(sql, params);
       const totalVotos = formatted.reduce((acc, curr) => acc + curr.votos, 0);
@@ -206,6 +207,7 @@ export default function diadRoutes(upload: multer.Multer) {
       res.json(formatted);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
+
 
   router.get('/listas', (req, res) => {
     const districtFilter = getDistrict(req);
