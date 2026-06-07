@@ -609,9 +609,9 @@ const DiaDApp: React.FC = () => {
                         icon={<Activity size={12} />}
                       />
                       <StatCard
-                        label="Mesas Cubiertas"
+                        label="Mesas Designadas"
                         value={coverage.mesas_operativas}
-                        color="var(--green)"
+                        color="#F59E0B"
                         icon={<Users size={12} />}
                       />
                       <StatCard
@@ -627,10 +627,10 @@ const DiaDApp: React.FC = () => {
                         icon={<Users size={12} />}
                       />
                       <StatCard
-                        label="Cobertura"
+                        label="Designación"
                         value={`${coverage.op_porcentaje.toFixed(1)}%`}
-                        color={coverage.op_porcentaje >= 90 ? 'var(--green)' : coverage.op_porcentaje >= 50 ? '#F59E0B' : 'var(--red)'}
-                        sub="Disponibilidad personal"
+                        color={coverage.op_porcentaje >= 90 ? '#F59E0B' : coverage.op_porcentaje >= 50 ? '#F59E0B' : 'var(--red)'}
+                        sub="Personal asignado"
                         icon={<TrendingUp size={12} />}
                       />
                       <StatCard
@@ -780,15 +780,43 @@ const DiaDApp: React.FC = () => {
 
                             {/* Apoderados List */}
                             {apoderadosInLoc.length > 0 && (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', rowGap: '0.3rem', alignItems: 'center', marginBottom: '1rem', padding: '0.5rem 0.75rem', background: 'rgba(59,130,246,0.03)', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.1)' }}>
-                                <span style={{ fontSize: '0.62rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.3rem', marginRight: '0.2rem' }}>
-                                  <Shield size={10} /> Apoderados ({apoderadosInLoc.length}):
+                              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(59,130,246,0.05)', borderRadius: '12px', border: '1px solid rgba(59,130,246,0.15)' }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                                  <Shield size={12} /> Apoderados ({apoderadosInLoc.length})
                                 </span>
-                                {apoderadosInLoc.map((ap, i) => (
-                                  <span key={ap.id} style={{ fontSize: '0.65rem', fontWeight: 700, color: 'white' }}>
-                                    {ap.nombre}{ap.telefono ? ` (📞 ${ap.telefono})` : ''}{i < apoderadosInLoc.length - 1 ? ' • ' : ''}
-                                  </span>
-                                ))}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                  {apoderadosInLoc.map((ap) => (
+                                    <div key={ap.id} style={{ 
+                                      display: 'flex', alignItems: 'center', gap: '0.4rem', 
+                                      background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.5rem', 
+                                      borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)'
+                                    }}>
+                                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
+                                        {ap.nombre}
+                                      </span>
+                                      {ap.telefono && (
+                                        <>
+                                          <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>
+                                            📞 {ap.telefono}
+                                          </span>
+                                          <a 
+                                            href={`https://wa.me/${ap.telefono.replace(/\D/g, '')}`} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            style={{ 
+                                              display: 'flex', alignItems: 'center', gap: '0.2rem', 
+                                              background: '#25D366', color: '#fff', 
+                                              padding: '2px 6px', borderRadius: '4px', 
+                                              fontSize: '0.55rem', fontWeight: 700, textDecoration: 'none'
+                                            }}
+                                          >
+                                            WhatsApp
+                                          </a>
+                                        </>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
 
@@ -796,15 +824,15 @@ const DiaDApp: React.FC = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.8rem' }}>
                               {mesasInLoc.map(mesa => {
                                 const assignedMember = membersList.find(m => m.role !== 'APODERADO' && m.assigned_local === loc.nombre && m.assigned_mesa === mesa.numero);
-                                const isConstituida = !!assignedMember;
+                                const isDesignada = !!assignedMember;
                                 const isSelectedForSwap = selectedMesaForSwap?.local === loc.nombre && selectedMesaForSwap?.numero === mesa.numero;
 
                                 return (
                                   <div
                                     key={mesa.numero}
                                     style={{
-                                      background: isConstituida ? 'rgba(255,255,255,0.02)' : 'rgba(239,68,68,0.02)',
-                                      border: isConstituida ? '1px solid var(--border)' : '1px dashed rgba(239,68,68,0.2)',
+                                      background: isDesignada ? 'rgba(255,255,255,0.02)' : 'rgba(239,68,68,0.02)',
+                                      border: isDesignada ? '1px solid var(--border)' : '1px dashed rgba(239,68,68,0.2)',
                                       borderRadius: '12px', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem'
                                     }}
                                   >
@@ -814,15 +842,15 @@ const DiaDApp: React.FC = () => {
                                       </span>
                                       <span style={{
                                         fontSize: '0.58rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px',
-                                        background: isConstituida ? 'rgba(37,200,130,0.12)' : 'rgba(239,68,68,0.12)',
-                                        color: isConstituida ? '#25C882' : 'var(--red)'
+                                        background: isDesignada ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                                        color: isDesignada ? '#F59E0B' : 'var(--red)'
                                       }}>
-                                        {isConstituida ? 'CONSTITUIDA' : 'VACANTE'}
+                                        {isDesignada ? 'DESIGNADA' : 'VACANTE'}
                                       </span>
                                     </div>
 
                                     {/* Member info */}
-                                    {isConstituida ? (
+                                    {isDesignada ? (
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                                         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)' }}>
                                           {assignedMember.nombre}
@@ -831,9 +859,24 @@ const DiaDApp: React.FC = () => {
                                           CI: {assignedMember.ci || '—'} · {assignedMember.role}
                                         </span>
                                         {assignedMember.telefono && (
-                                          <span style={{ fontSize: '0.62rem', color: 'var(--text-3)' }}>
-                                            📞 {assignedMember.telefono}
-                                          </span>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                                            <span style={{ fontSize: '0.62rem', color: 'var(--text-3)' }}>
+                                              📞 {assignedMember.telefono}
+                                            </span>
+                                            <a 
+                                              href={`https://wa.me/${assignedMember.telefono.replace(/\D/g, '')}`} 
+                                              target="_blank" 
+                                              rel="noopener noreferrer"
+                                              style={{ 
+                                                display: 'flex', alignItems: 'center', gap: '0.2rem', 
+                                                background: '#25D366', color: '#fff', 
+                                                padding: '2px 6px', borderRadius: '4px', 
+                                                fontSize: '0.55rem', fontWeight: 700, textDecoration: 'none'
+                                              }}
+                                            >
+                                              WhatsApp
+                                            </a>
+                                          </div>
                                         )}
                                       </div>
                                     ) : (
@@ -976,10 +1019,45 @@ const DiaDApp: React.FC = () => {
                         const filtered = standby.filter(m => !memberFilter || m.nombre.toLowerCase().includes(memberFilter.toLowerCase()) || m.ci?.includes(memberFilter));
 
                         if (filtered.length === 0) {
+                          const isNumeric = /^\d+$/.test(memberFilter.trim());
                           return (
-                            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', textAlign: 'center', padding: '2rem' }}>
-                              No hay suplentes disponibles.
-                            </p>
+                            <div style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                              <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                                No se encontraron suplentes{memberFilter ? ` para "${memberFilter}"` : ''}.
+                              </p>
+                              {isNumeric && memberFilter.length >= 5 && selectedMesaForSwap && (
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={async () => {
+                                    setAssigningLoading(true);
+                                    try {
+                                      await api.post('/diad/members/assign', { 
+                                        ci: memberFilter.trim(),
+                                        local: selectedMesaForSwap.local, 
+                                        mesa: selectedMesaForSwap.numero,
+                                        role: 'MIEMBRO_MESA'
+                                      });
+                                      setSelectedMesaForSwap(null);
+                                      setMemberFilter('');
+                                      fetchData();
+                                    } catch (e: any) { 
+                                      alert('Error al asignar del padrón: ' + (e.response?.data?.error || e.message)); 
+                                    } finally { 
+                                      setAssigningLoading(false); 
+                                    }
+                                  }}
+                                  style={{
+                                    width: '100%', padding: '0.6rem', borderRadius: '8px', border: 'none',
+                                    background: 'linear-gradient(135deg, #3B82F6, #2563EB)', color: 'white',
+                                    fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+                                  }}
+                                >
+                                  🔍 EXTRAER CI DEL PADRÓN Y ASIGNAR
+                                </motion.button>
+                              )}
+                            </div>
                           );
                         }
 
