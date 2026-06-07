@@ -12,9 +12,8 @@ export default function diadRoutes(upload: multer.Multer) {
     const list_id = getListId(req);
     const role = getRole(req);
     const user_id = req.headers['x-user-id'];
-    const districtFilter = getDistrict(req);
 
-    const cacheKey = `${user_id || 'global'}_${list_id || ''}_${districtFilter || 'ALL'}`;
+    const cacheKey = `${user_id || 'global'}_${list_id || ''}`;
     const cached = await diadCoverageCache.get(cacheKey);
     if (cached) return res.json(cached);
 
@@ -30,6 +29,8 @@ export default function diadRoutes(upload: multer.Multer) {
       listClause = `AND u.assigned_list_id = ?`;
       listParams = [list_id];
     }
+
+    const districtFilter = getDistrict(req);
 
     if (districtFilter) {
       districtName = districtFilter;
@@ -122,15 +123,6 @@ export default function diadRoutes(upload: multer.Multer) {
       res.status(500).json({ error: err.message });
     }
   });
-
-  router.get('/debug_db', (req, res) => {
-  try {
-    const counts = db.prepare("SELECT role, assigned_local, assigned_mesa, COUNT(*) as count FROM users GROUP BY role, assigned_local, assigned_mesa").all();
-    res.json({ counts });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
   router.get('/results', async (req, res) => {
     const list_id = getListId(req);
@@ -321,7 +313,7 @@ export default function diadRoutes(upload: multer.Multer) {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  router.post('/members/assign', async (req, res) => {
+  router.post('/members/assign', (req, res) => {
     const { ci, local, mesa, user_id, role, table_role, telefono } = req.body;
     if (!ci && !user_id) return res.status(400).json({ error: 'ci o user_id es requerido' });
     if (local === undefined) return res.status(400).json({ error: 'local es requerido' });
@@ -356,9 +348,6 @@ export default function diadRoutes(upload: multer.Multer) {
       } else {
         db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
       }
-      
-      // Clear cache explicitly after modification
-      await diadCoverageCache.invalidate();
       
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }

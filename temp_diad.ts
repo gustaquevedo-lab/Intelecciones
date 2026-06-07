@@ -132,6 +132,12 @@ export default function diadRoutes(upload: multer.Multer) {
   }
 });
 
+router.get('/data', async (req, res) => {
+    const list_id = getListId(req);
+    const districtFilter = getDistrict(req);
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+
   router.get('/results', async (req, res) => {
     const list_id = getListId(req);
     const districtFilter = getDistrict(req);
@@ -321,7 +327,7 @@ export default function diadRoutes(upload: multer.Multer) {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  router.post('/members/assign', async (req, res) => {
+  router.post('/members/assign', (req, res) => {
     const { ci, local, mesa, user_id, role, table_role, telefono } = req.body;
     if (!ci && !user_id) return res.status(400).json({ error: 'ci o user_id es requerido' });
     if (local === undefined) return res.status(400).json({ error: 'local es requerido' });
