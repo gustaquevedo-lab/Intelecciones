@@ -190,8 +190,8 @@ export default function diadRoutes(upload: multer.Multer) {
         ) v ON l.id = v.lista_id
         WHERE 1=1
       `;
-      if (districtName) {
-        sql += ` AND (UPPER(l.ciudad) = UPPER(?) OR l.ciudad = '' OR l.ciudad IS NULL OR UPPER(l.ciudad) = 'AUTO')`;
+      if (districtName && districtName !== 'GLOBAL') {
+        sql += ` AND (UPPER(l.ciudad) = UPPER(?) OR ((l.ciudad = '' OR l.ciudad IS NULL OR UPPER(l.ciudad) = 'AUTO') AND l.type = 'AUTORIDADES'))`;
         params.push(districtName);
       }
       if (list_id && !isNaN(list_id)) {
@@ -227,8 +227,8 @@ export default function diadRoutes(upload: multer.Multer) {
         WHERE 1=1
       `;
       const params: any[] = [];
-      if (districtName) {
-        sql += ` AND (UPPER(ciudad) = UPPER(?) OR ciudad = '' OR ciudad IS NULL)`;
+      if (districtName && districtName !== 'GLOBAL') {
+        sql += ` AND (UPPER(ciudad) = UPPER(?) OR ((ciudad = '' OR ciudad IS NULL OR UPPER(ciudad) = 'AUTO') AND type = 'AUTORIDADES'))`;
         params.push(districtName);
       }
       sql += ` ORDER BY is_adversary ASC, list_number ASC`;
