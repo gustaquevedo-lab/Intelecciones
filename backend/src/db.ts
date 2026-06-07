@@ -883,6 +883,17 @@ export const runBootstrapChecks = () => {
         const XLSX = require('xlsx');
         const { normalizePhone } = require('./utils/phone');
         
+        // List directory contents for debugging
+        try {
+          const cwdFiles = fs.readdirSync(process.cwd());
+          console.log(`[BOOTSTRAP IMPORT] Files in cwd (${process.cwd()}): ${cwdFiles.filter(f => f.includes('CONCEPCION') || f.endsWith('.xlsx')).join(', ') || 'NO XLSX FILES'}`);
+          console.log(`[BOOTSTRAP IMPORT] All files in cwd: ${cwdFiles.join(', ')}`);
+        } catch (e: any) { console.log(`[BOOTSTRAP IMPORT] Cannot read cwd: ${e.message}`); }
+        try {
+          const dirFiles = fs.readdirSync(__dirname);
+          console.log(`[BOOTSTRAP IMPORT] Files in __dirname (${__dirname}): ${dirFiles.filter(f => f.includes('CONCEPCION') || f.endsWith('.xlsx')).join(', ') || 'NO XLSX FILES'}`);
+        } catch (e: any) { console.log(`[BOOTSTRAP IMPORT] Cannot read __dirname: ${e.message}`); }
+        
         const candidates = [
           path.resolve(dbDir, 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx'),
           path.resolve(process.cwd(), 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx'),
@@ -978,10 +989,11 @@ export const runBootstrapChecks = () => {
           const count = insertTransaction(usersToImport);
           console.log(`[BOOTSTRAP IMPORT] Successfully imported/updated ${count} users for CONCEPCION.`);
         } else {
-          console.warn(`[BOOTSTRAP IMPORT] Concepcion Excel file NOT FOUND in any candidate path.`);
+          console.log(`[BOOTSTRAP IMPORT] Concepcion Excel file NOT FOUND in any candidate path.`);
         }
       } catch (err: any) {
-        console.error("[BOOTSTRAP IMPORT ERROR] Failed to import Concepcion users:", err.message);
+        console.log(`[BOOTSTRAP IMPORT ERROR] Failed to import Concepcion users: ${err.message}`);
+        console.log(`[BOOTSTRAP IMPORT ERROR] Stack: ${err.stack}`);
       }
     })();
     console.log("DATABASE: Bootstrap checks complete.");
