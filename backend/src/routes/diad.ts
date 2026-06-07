@@ -784,26 +784,26 @@ export function veedorRoutes() {
   });
 
   router.post('/mark-vote', (req, res) => {
-    const { order } = req.body;
+    const { order, local: bodyLocal, mesa: bodyMesa } = req.body;
     const userId = req.headers['x-user-id'];
     if (!userId) return res.status(401).json({ error: 'No user ID provided' });
     try {
       const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
-      const local = user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
-      const mesa = user?.assigned_mesa || 1;
+      const local = bodyLocal || user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
+      const mesa = bodyMesa || user?.assigned_mesa || 1;
       db.prepare(`INSERT OR IGNORE INTO participation_logs (local_votacion, mesa, orden, veedor_id) VALUES (?, ?, ?, ?)`).run(local, mesa, order, userId);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
   router.post('/unmark-vote', (req, res) => {
-    const { order } = req.body;
+    const { order, local: bodyLocal, mesa: bodyMesa } = req.body;
     const userId = req.headers['x-user-id'];
     if (!userId) return res.status(401).json({ error: 'No user ID provided' });
     try {
       const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
-      const local = user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
-      const mesa = user?.assigned_mesa || 1;
+      const local = bodyLocal || user?.assigned_local || 'ESC. BAS. CARLOS ANTONIO LOPEZ';
+      const mesa = bodyMesa || user?.assigned_mesa || 1;
       db.prepare(`DELETE FROM participation_logs WHERE local_votacion = ? AND mesa = ? AND orden = ?`).run(local, mesa, order);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
