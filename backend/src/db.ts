@@ -1072,7 +1072,7 @@ export const runBootstrapChecks = () => {
     if (pjcExcelPath) {
         console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx en ' + pjcExcelPath);
         const { runImport } = require('../scripts/import_mesarios_pjc');
-        runImport(db, pjcExcelPath);
+        // runImport(db, pjcExcelPath); // DESACTIVADO para no pisar la UI
     } else {
         console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado en ninguna ruta, omitiendo.');
     }
@@ -1083,7 +1083,7 @@ export const runBootstrapChecks = () => {
   // Insercion Manual de Apoderados
   try {
     const { runInsertApoderados } = require('../scripts/insert_apoderados');
-    runInsertApoderados(db);
+    // runInsertApoderados(db); // DESACTIVADO para no pisar la UI
   } catch (err: any) {
     console.log(`[BOOTSTRAP IMPORT APODERADOS ERROR] Error: ${err.message}`);
   }
