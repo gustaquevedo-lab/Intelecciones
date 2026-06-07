@@ -311,7 +311,7 @@ export default function diadRoutes(upload: multer.Multer) {
         SELECT u.id, u.nombre, u.assigned_local, u.assigned_mesa, u.role, u.ci, u.telefono, u.assigned_table_role
         FROM users u
         LEFT JOIN voting_locations vl ON u.assigned_local = vl.nombre
-        WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')
+        WHERE u.role IN ('VEEDOR', 'MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'APODERADO', 'PRESIDENTE', 'VOCAL')
       `;
       const params: any[] = [];
       if (districtName) {

@@ -587,7 +587,7 @@ const DiaDApp: React.FC = () => {
     try {
       const res = await api.get('/users');
       // Only users that can be members
-      setUsersToAssign(res.data.filter((u: any) => ['COORDINADOR', 'VEEDOR', 'MIEMBRO_MESA'].includes(u.role)));
+      setUsersToAssign(res.data.filter((u: any) => ['COORDINADOR', 'VEEDOR', 'MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'PRESIDENTE', 'VOCAL'].includes(u.role)));
     } catch (err) { /* empty state handles this */ }
   };
 
