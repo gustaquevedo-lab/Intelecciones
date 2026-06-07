@@ -355,7 +355,7 @@ const DiaDApp: React.FC = () => {
   const handleDeleteApoderado = async (id: number) => {
     if (!confirm('¿Estás seguro de que quieres eliminar a esta persona de la lista? Esto le revocará el acceso al sistema.')) return;
     try {
-      await api.delete('/admin/users/' + id);
+      await api.delete('/users/' + id);
       fetchUsers();
     } catch (err: any) {
       alert('Error al eliminar: ' + (err.response?.data?.error || err.message));
