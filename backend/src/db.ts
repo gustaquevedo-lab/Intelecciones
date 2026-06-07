@@ -90,6 +90,9 @@ if (dbVersion < currentSchemaVersion) {
     // Drop incorrect duplicate index to force recreation on correct column
     db.exec("DROP INDEX IF EXISTS idx_electors_distrito;");
 
+    try { db.exec("ALTER TABLE users ADD COLUMN enabled_modules TEXT"); } catch (e) { /* ignore */ }
+    try { db.exec("ALTER TABLE users ADD COLUMN assigned_table_role TEXT"); } catch (e) { /* ignore */ }
+
     db.exec(`
       CREATE TABLE IF NOT EXISTS campaigns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,6 +130,7 @@ if (dbVersion < currentSchemaVersion) {
         assigned_campaign_id INTEGER,
         assigned_local TEXT,
         assigned_mesa INTEGER,
+        assigned_table_role TEXT,
         nombre TEXT,
         photo_url TEXT,
         needs_password_change INTEGER DEFAULT 0,
