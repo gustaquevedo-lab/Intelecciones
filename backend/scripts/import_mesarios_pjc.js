@@ -123,14 +123,14 @@ function runImport(db, excelPath) {
     // Limpiar tabla users para PJC antes de arrancar, para no dejar sucios
     db.prepare("DELETE FROM users WHERE distrito = 'PEDRO JUAN CABALLERO' AND role IN ('MIEMBRO_MESA', 'APODERADO')").run();
 
-    const getElectorStmt = db.prepare("SELECT nombre, apellido, local_votacion, mesa FROM electors WHERE REPLACE(ci, '.', '') = ?");
+    const getElectorStmt = db.prepare("SELECT nombre, apellido, local_votacion, mesa FROM electors WHERE TRIM(REPLACE(CAST(ci AS TEXT), '.', '')) = ? OR LTRIM(TRIM(REPLACE(CAST(ci AS TEXT), '.', '')), '0') = ?");
     const insertStmt = db.prepare(`
       INSERT INTO users (username, password, role, nombre, ci, telefono, distrito, assigned_local, assigned_mesa, assigned_table_role)
       VALUES (?, ?, ?, ?, ?, ?, 'PEDRO JUAN CABALLERO', ?, ?, ?)
     `);
 
     for (const p of allData) {
-      const elector = getElectorStmt.get(p.ci);
+      const elector = getElectorStmt.get(p.ci, p.ci);
       
       if (!elector) {
         // No está en el padrón, rollback a padrón implica que lo ignoramos porque no hay nombre oficial
