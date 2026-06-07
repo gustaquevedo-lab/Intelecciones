@@ -167,7 +167,7 @@ async function run() {
             });
             count++;
           } else if (cand.cod_categoria === 'JUN') {
-            // CONCEJAL
+            // CONCEJAL option
             insertListStmt.run({
               type: 'CONCEJAL',
               list_number,
@@ -179,6 +179,23 @@ async function run() {
               is_adversary
             });
             count++;
+
+            // Insert list-level record if not already added
+            const keyConcejal = `${dist.name}_${list_number}`;
+            if (!authoritiesAdded.has(keyConcejal)) {
+              insertListStmt.run({
+                type: 'CONCEJAL',
+                list_number,
+                option_number: null,
+                candidate_ci: null,
+                candidate_nombre: agInfo.nombre,
+                candidate_alias: `${agInfo.nombre} (L${list_number})`,
+                ciudad: dist.name,
+                is_adversary
+              });
+              authoritiesAdded.add(keyConcejal);
+              count++;
+            }
           } else if (['PRP', 'DCN', 'DCD', 'COM', 'CNV'].includes(cand.cod_categoria)) {
             // AUTORIDADES
             // Group authorities by list_number so we have exactly one row per movement/list
