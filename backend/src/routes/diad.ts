@@ -124,6 +124,21 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  router.get('/debug_db', (req, res) => {
+  try {
+    const counts = db.prepare("SELECT role, assigned_local, assigned_mesa, COUNT(*) as count FROM users GROUP BY role, assigned_local, assigned_mesa").all();
+    res.json({ counts });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/data', async (req, res) => {
+    const list_id = getListId(req);
+    const districtFilter = getDistrict(req);
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+
   router.get('/results', async (req, res) => {
     const list_id = getListId(req);
     const districtFilter = getDistrict(req);
