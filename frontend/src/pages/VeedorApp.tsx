@@ -1234,18 +1234,11 @@ const ActaFinalTab = () => {
               >
                 ⚡ SIMULAR ESCANEO QR TSJE
               </button>
-          borderRadius: '20px', border: 'none',
-          background: submitting ? 'var(--text-3)' : 'linear-gradient(135deg, #22C47E 0%, #16a34a 100%)',
-          color: 'white', fontWeight: 900, fontSize: '1.25rem',
-          textTransform: 'uppercase', letterSpacing: '0.12em',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.85rem',
-          boxShadow: '0 8px 30px rgba(22, 163, 74, 0.4)',
-          marginBottom: '3.5rem'
-        }}
-      >
-        {submitting ? 'Enviando...' : <><Send size={22} /> ENVIAR RESULTADOS</>}
-      </motion.button>
-    </form>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
