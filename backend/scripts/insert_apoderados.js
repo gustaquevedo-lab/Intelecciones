@@ -17,7 +17,14 @@ function runInsertApoderados(db) {
     { local: 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', ci: '3825190', phone: '71-470082' },
     { local: 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', ci: '3659149', phone: '71-677050' },
     { local: 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', ci: '3023896', phone: '71.810.550' },
-    { local: 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', ci: '1537850', phone: '82-261909' }
+    { local: 'ESC. BASICA NRO. 1951 JUAN EMILIANO OLEARY', ci: '1537850', phone: '82-261909' },
+    
+    // FACULTAD DE CIENCIAS AGRARIAS
+    { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '1836179', phone: '72-957779' },
+    { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '2019816', phone: '83-567740' },
+    { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '3540580', phone: '82-502018' },
+    { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '3179559', phone: '75-171088' },
+    { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '5100327', phone: '' }
   ];
 
   const getElectorStmt = db.prepare("SELECT nombre, apellido FROM electors WHERE TRIM(REPLACE(CAST(ci AS TEXT), '.', '')) = ? OR LTRIM(TRIM(REPLACE(CAST(ci AS TEXT), '.', '')), '0') = ?");
