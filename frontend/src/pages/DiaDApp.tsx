@@ -21,6 +21,18 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 import { Skeleton, SkeletonTable } from '../components/Skeleton';
 import { CIUDADES_PARAGUAY } from '../constants/cities';
 
+const AVAILABLE_DISTRICTS = [
+  'PEDRO JUAN CABALLERO',
+  'ASUNCION',
+  'CIUDAD DEL ESTE',
+  'ENCARNACION',
+  'CONCEPCION',
+  'CAPITAN BADO',
+  'BELLA VISTA NORTE',
+  'ZANJA PYTA',
+  'KARAPAI'
+];
+
 // ─── D'Hondt Algorithm ──────────────────────────────────────────────────────
 const MapHandler = ({ activeDistrict, locales }: { activeDistrict?: string, locales?: any[] }) => {
   const map = useMap();
@@ -137,7 +149,7 @@ const StatCard: React.FC<{ label: string; value: string | number; color?: string
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const DiaDApp: React.FC = () => {
-  const { user, activeDistrict } = useAuth();
+  const { user, activeDistrict, setActiveDistrict } = useAuth();
   const { settings } = useSettings();
 
   const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros'>('cobertura');
@@ -755,6 +767,24 @@ const DiaDApp: React.FC = () => {
             >
               <UserPlus size={11} /> CREAR STAFF
             </button>
+            {user?.role === 'SUPERUSUARIO' && (
+              <select
+                value={activeDistrict || ''}
+                onChange={(e) => setActiveDistrict(e.target.value || null)}
+                style={{
+                  padding: '0.3rem 0.65rem', borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.04)',
+                  color: 'var(--text)', cursor: 'pointer',
+                  fontSize: '0.65rem', fontWeight: 700
+                }}
+              >
+                <option value="">-- TODOS LOS DISTRITOS --</option>
+                {AVAILABLE_DISTRICTS.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
