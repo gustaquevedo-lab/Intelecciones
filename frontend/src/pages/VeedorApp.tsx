@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   MapPin, CheckSquare, Check, Minus, Plus, Camera, Upload, Send, FileText,
   Users, RefreshCw, X, AlertOctagon, HelpCircle, QrCode, AlertTriangle
@@ -69,19 +69,35 @@ const VeedorApp = () => {
             const savedLocal = localStorage.getItem('veedor_selected_local');
             const savedMesa = localStorage.getItem('veedor_selected_mesa');
             
-            let currentLocal = savedLocal || res.data[0].nombre;
-            let localObj = res.data.find((l: any) => l.nombre === currentLocal) || res.data[0];
-            let currentMesa = savedMesa ? parseInt(savedMesa) : localObj.mesas[0] || 1;
+            // Try to match saved or user assignment, case-insensitive
+            let initialLocal = savedLocal || user?.assigned_local || '';
+            let matched = res.data.find((l: any) => l.nombre.trim().toUpperCase() === initialLocal.trim().toUpperCase());
+            
+            let finalLocal = matched ? matched.nombre : res.data[0].nombre;
+            let finalMesa = 1;
+            
+            if (matched) {
+              const parsedMesa = parseInt(savedMesa || '');
+              if (!isNaN(parsedMesa) && matched.mesas.includes(parsedMesa)) {
+                finalMesa = parsedMesa;
+              } else if (user?.assigned_mesa && matched.mesas.includes(user.assigned_mesa)) {
+                finalMesa = user.assigned_mesa;
+              } else {
+                finalMesa = matched.mesas[0] || 1;
+              }
+            } else {
+              finalMesa = res.data[0].mesas[0] || 1;
+            }
 
-            setSelectedLocal(localObj.nombre);
-            setSelectedMesa(currentMesa);
-            localStorage.setItem('veedor_selected_local', localObj.nombre);
-            localStorage.setItem('veedor_selected_mesa', String(currentMesa));
+            setSelectedLocal(finalLocal);
+            setSelectedMesa(finalMesa);
+            localStorage.setItem('veedor_selected_local', finalLocal);
+            localStorage.setItem('veedor_selected_mesa', String(finalMesa));
           }
         })
         .catch(err => console.error(err));
     }
-  }, [isSupervisor]);
+  }, [isSupervisor, user]);
 
   if (isApoderado) {
     return <ApoderadoPanel user={user} />;
@@ -258,15 +274,18 @@ const VeeduriaTab = ({ user, onFinish, selectedLocal, selectedMesa }: {
   const loadTableData = async () => {
     try {
       setLoading(true);
-      const url = (selectedLocal && selectedMesa)
-        ? `/veedor/table-status?local=${encodeURIComponent(selectedLocal)}&mesa=${selectedMesa}`
+      const activeLocal = selectedLocal || user?.assigned_local;
+      const activeMesa = selectedMesa || user?.assigned_mesa || 1;
+      
+      const url = activeLocal
+        ? `/veedor/table-status?local=${encodeURIComponent(activeLocal)}&mesa=${activeMesa}`
         : '/veedor/table-status';
       const res = await api.get(url);
       setTableInfo(res.data.info);
       const voted = new Set<number>(res.data.votedOrders);
       setVotedOrders(voted);
 
-      const storageKey = `veedor_total_${selectedLocal || res.data.info.local}_${selectedMesa || res.data.info.mesa}`;
+      const storageKey = `veedor_total_${activeLocal || res.data.info.local}_${activeMesa || res.data.info.mesa}`;
       const savedTotal = localStorage.getItem(storageKey);
       const initialTotal = savedTotal ? parseInt(savedTotal) : (res.data.info.total || 400);
       setCustomTotal(initialTotal);

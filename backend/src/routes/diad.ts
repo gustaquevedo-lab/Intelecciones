@@ -1290,12 +1290,28 @@ export function veedorRoutes() {
 
   router.get('/locales-mesas', (req, res) => {
     try {
-      const rows = db.prepare(`
+      const userId = req.headers['x-user-id'];
+      const role = req.headers['x-user-role'] as string;
+      let userDistrito = '';
+      
+      if (userId && role !== 'SUPERUSUARIO' && role !== 'JEFE_CAMPANA') {
+        const u = db.prepare('SELECT distrito FROM users WHERE id = ?').get(userId) as any;
+        userDistrito = u?.distrito || '';
+      }
+
+      let query = `
         SELECT DISTINCT local_votacion, mesa 
         FROM electors 
         WHERE local_votacion IS NOT NULL AND local_votacion != '' AND mesa IS NOT NULL AND mesa > 0
-        ORDER BY local_votacion, mesa
-      `).all() as any[];
+      `;
+      const params: any[] = [];
+      if (userDistrito) {
+        query += ` AND UPPER(TRIM(distrito)) = UPPER(TRIM(?))`;
+        params.push(userDistrito);
+      }
+      query += ` ORDER BY local_votacion, mesa`;
+
+      const rows = db.prepare(query).all(...params) as any[];
 
       const localesMap: Record<string, number[]> = {};
       rows.forEach(r => {
@@ -1314,7 +1330,14 @@ export function veedorRoutes() {
       }));
 
       // Fallback: check if there are voting_locations that don't have electors yet
-      const allLocales = db.prepare("SELECT nombre FROM voting_locations").all() as any[];
+      let fallbackQuery = "SELECT nombre FROM voting_locations";
+      const fallbackParams: any[] = [];
+      if (userDistrito) {
+        fallbackQuery += " WHERE UPPER(TRIM(distrito)) = UPPER(TRIM(?))";
+        fallbackParams.push(userDistrito);
+      }
+      
+      const allLocales = db.prepare(fallbackQuery).all(...fallbackParams) as any[];
       allLocales.forEach(l => {
         const name = l.nombre.trim();
         if (!localesMap[name]) {
