@@ -707,13 +707,17 @@ const VeeduriaTab = ({ user, onFinish, selectedLocal, selectedMesa }: {
    ───────────────────────────────────────────── */
 const ActaFinalTab = () => {
   const [listas, setListas] = useState<ListaVotos[]>([]);
-  const [votosEnBlanco, setVotosEnBlanco] = useState(0);
-  const [votosNulos, setVotosNulos] = useState(0);
+  const [votosEnBlanco, setVotosEnBlanco] = useState<Record<string, number>>({});
+  const [votosNulos, setVotosNulos] = useState<Record<string, number>>({});
   const [totalElectores, setTotalElectores] = useState(0);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<Record<string, File | null>>({});
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreviews, setPhotoPreviews] = useState<Record<string, string | null>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedCategories, setSubmittedCategories] = useState<Record<string, boolean>>({});
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [tableInfo, setTableInfo] = useState({ local: '', mesa: '', mesa_id: null as number | null });
@@ -721,6 +725,7 @@ const ActaFinalTab = () => {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [scannerPasteData, setScannerPasteData] = useState('');
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+
 
   const handleParseQRData = async (rawText: string) => {
     try {
