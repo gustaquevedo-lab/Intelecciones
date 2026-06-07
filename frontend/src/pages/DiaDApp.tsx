@@ -242,7 +242,7 @@ const DiaDApp: React.FC = () => {
     try {
       let allVoters: any[] = [];
       for (const loc of participationData) {
-        const res = await api.get(`/api/diad/participation-detail?local=${encodeURIComponent(loc.local)}`, { headers: { 'x-district': activeDistrict } });
+        const res = await api.get(`/diad/participation-detail?local=${encodeURIComponent(loc.local)}`, { headers: { 'x-district': activeDistrict } });
         allVoters = allVoters.concat(res.data);
       }
       if (format === 'txt') {
@@ -1422,7 +1422,7 @@ const DiaDApp: React.FC = () => {
               <motion.div key="participacion" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 
                 {/* KPIs Globales */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Electores Totales (Padrón)</div>
                     <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text)' }}>
@@ -1436,6 +1436,27 @@ const DiaDApp: React.FC = () => {
                     </div>
                   </div>
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>% Participación Global</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--green)' }}>
+                      {(() => {
+                        const totalElectors = participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 0;
+                        const totalVotos = participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0;
+                        return totalElectors > 0 ? ((totalVotos / totalElectors) * 100).toFixed(1) : '0.0';
+                      })()}%
+                    </div>
+                    <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginTop: '0.5rem', overflow: 'hidden' }}>
+                      <motion.div 
+                        initial={{ width: 0 }} 
+                        animate={{ width: `${(() => {
+                          const totalElectors = participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 0;
+                          const totalVotos = participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0;
+                          return totalElectors > 0 ? (totalVotos / totalElectors) * 100 : 0;
+                        })()}%` }} 
+                        style={{ height: '100%', background: 'var(--green)' }} 
+                      />
+                    </div>
+                  </div>
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Votos Capturados (Sistema)</div>
                     <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--purple)' }}>
                       {(participationData?.reduce((acc: number, l: any) => acc + (l.registered_votos || 0), 0) || 0).toLocaleString('es-PY')}
@@ -1443,7 +1464,7 @@ const DiaDApp: React.FC = () => {
                   </div>
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>% Captura / Efectividad</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--green)' }}>
+                    <div style={{ fontSize: '2.0rem', fontWeight: 900, color: 'var(--plra-300, #3B82F6)' }}>
                       {(() => {
                         const totalVotos = participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0;
                         const totalCapturados = participationData?.reduce((acc: number, l: any) => acc + (l.registered_votos || 0), 0) || 0;
@@ -1458,7 +1479,7 @@ const DiaDApp: React.FC = () => {
                           const totalCapturados = participationData?.reduce((acc: number, l: any) => acc + (l.registered_votos || 0), 0) || 0;
                           return totalVotos > 0 ? (totalCapturados / totalVotos) * 100 : 0;
                         })()}%` }} 
-                        style={{ height: '100%', background: 'var(--green)' }} 
+                        style={{ height: '100%', background: 'var(--plra-500, #3B82F6)' }} 
                       />
                     </div>
                   </div>
@@ -1534,7 +1555,7 @@ const DiaDApp: React.FC = () => {
                                           setSelectedMesaDetail({ local: local.local, mesa: m.mesa });
                                           setMesaVoters([]);
                                           setMesaVotersLoading(true);
-                                          api.get(`/api/diad/participation-detail?local=${encodeURIComponent(local.local)}&mesa=${m.mesa}`, { headers: { 'x-district': activeDistrict } })
+                                          api.get(`/diad/participation-detail?local=${encodeURIComponent(local.local)}&mesa=${m.mesa}`, { headers: { 'x-district': activeDistrict } })
                                             .then(res => setMesaVoters(res.data))
                                             .catch(err => console.error(err))
                                             .finally(() => setMesaVotersLoading(false));
