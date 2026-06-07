@@ -867,6 +867,99 @@ export const runBootstrapChecks = () => {
         console.error("[BOOTSTRAP CLEANUP ERROR] Failed to clean Concepcion data:", err.message);
       }
     })();
+    // ── CONCEPCION STAFF IMPORT SELF-HEALING ──
+    (() => {
+      try {
+        const concepcionUsersCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE distrito = 'CONCEPCION' AND role IN ('VEEDOR', 'MIEMBRO_MESA', 'APODERADO')").get() as any;
+        if (concepcionUsersCount && concepcionUsersCount.c === 0) {
+          console.log("[BOOTSTRAP IMPORT] No users found for CONCEPCION. Running automatic staff import...");
+          const XLSX = require('xlsx');
+          const { normalizePhone } = require('./utils/phone');
+          
+          const excelPath = path.resolve(dbDir, 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          if (fs.existsSync(excelPath)) {
+            const workbook = XLSX.readFile(excelPath);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet) as any[];
+            
+            const usersToImport: any[] = [];
+            let currentCargo = '';
+            
+            for (const row of rows) {
+              const cargoCol = row['APODERADOS Y MIEMBROS DE MESAS CONCEPCION- LOCAL SALESIANO SAN JOSE'];
+              const nameCol = row['__EMPTY'];
+              const ciCol = row['__EMPTY_1'];
+              const phoneCol = row['__EMPTY_2'];
+              
+              if (!nameCol || nameCol === 'NOMBRES Y APELLIDOS') continue;
+              if (cargoCol) currentCargo = String(cargoCol).trim();
+              
+              const cleanCI = String(ciCol).replace(/\D/g, '');
+              if (!cleanCI) continue;
+              
+              const phoneStr = phoneCol ? String(phoneCol) : '';
+              const normalizedPhoneVal = normalizePhone(phoneStr);
+              
+              let role = 'MIEMBRO_MESA';
+              let mesaNum: number | null = null;
+              
+              if (currentCargo.includes('APODERADO')) {
+                role = 'APODERADO';
+              } else if (!isNaN(Number(currentCargo))) {
+                role = 'MIEMBRO_MESA';
+                mesaNum = Number(currentCargo);
+              } else if (currentCargo === 'MESA') {
+                role = 'MIEMBRO_MESA';
+              }
+              
+              let dbName = String(nameCol).trim();
+              const elector = db.prepare('SELECT nombre, apellido FROM electors WHERE ci = ?').get(cleanCI) as any;
+              if (elector) {
+                dbName = `${elector.nombre} ${elector.apellido || ''}`.trim().toUpperCase();
+              }
+              
+              usersToImport.push({
+                username: cleanCI,
+                password: cleanCI,
+                role,
+                nombre: dbName,
+                telefono: normalizedPhoneVal || null,
+                ci: cleanCI,
+                assigned_local: 'INSTITUTO SALESIANO SAN JOSE',
+                assigned_mesa: mesaNum,
+                distrito: 'CONCEPCION'
+              });
+            }
+            
+            const insertStmt = db.prepare(`
+              INSERT OR REPLACE INTO users (
+                username, password, role, nombre, telefono, ci, 
+                assigned_local, assigned_mesa, distrito, status, needs_password_change
+              ) VALUES (
+                @username, @password, @role, @nombre, @telefono, @ci,
+                @assigned_local, @assigned_mesa, @distrito, 'ACTIVE', 0
+              )
+            `);
+            
+            const insertTransaction = db.transaction((users) => {
+              let count = 0;
+              for (const u of users) {
+                insertStmt.run(u);
+                count++;
+              }
+              return count;
+            });
+            
+            const count = insertTransaction(usersToImport);
+            console.log(`[BOOTSTRAP IMPORT] Successfully imported/updated ${count} users for CONCEPCION.`);
+          } else {
+            console.warn(`[BOOTSTRAP IMPORT] Concepcion Excel file not found at: ${excelPath}`);
+          }
+        }
+      } catch (err: any) {
+        console.error("[BOOTSTRAP IMPORT ERROR] Failed to import Concepcion users:", err.message);
+      }
+    })();
     console.log("DATABASE: Bootstrap checks complete.");
 
   } catch (e: any) {
