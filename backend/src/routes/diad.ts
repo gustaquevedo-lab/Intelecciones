@@ -756,11 +756,27 @@ export default function diadRoutes(upload: multer.Multer) {
 
   router.post('/wipe-test-data', (req, res) => {
     try {
-      // Clear all test data for Dia D
+      // Clear only participation and constitution data — NOT member assignments
       db.prepare('DELETE FROM mesa_constitutions').run();
       db.prepare('DELETE FROM participation_logs').run();
-      db.prepare('UPDATE users SET assigned_mesa = 0, assigned_table_role = NULL').run();
       res.json({ success: true, message: 'Base de datos limpia de pruebas.' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Fix users assigned to mesa=0 (invalid) — reset their mesa to NULL so they can be properly reassigned via UI
+  router.post('/fix-mesa-zero', (req, res) => {
+    try {
+      const result = db.prepare(`
+        UPDATE users 
+        SET assigned_mesa = NULL 
+        WHERE (assigned_mesa = 0 OR assigned_mesa IS NULL) 
+          AND assigned_local IS NOT NULL 
+          AND assigned_local != ''
+          AND role IN ('MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'PRESIDENTE', 'VOCAL', 'VEEDOR')
+      `).run();
+      res.json({ success: true, fixed: result.changes, message: `${result.changes} miembros liberados de mesa=0` });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -772,6 +788,7 @@ export default function diadRoutes(upload: multer.Multer) {
       res.json({ users });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
+
     }
   });
 
