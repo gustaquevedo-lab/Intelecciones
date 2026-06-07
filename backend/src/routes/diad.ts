@@ -667,6 +667,56 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  // ── GET /api/diad/participation-detail (Query Param version) ──────────────
+  router.get('/participation-detail', async (req, res) => {
+    const local = req.query.local as string;
+    const mesaStr = req.query.mesa as string;
+    if (!local) return res.status(400).json({ error: 'Local es requerido' });
+
+    try {
+      if (mesaStr) {
+        const mesaNum = parseInt(mesaStr);
+        if (isNaN(mesaNum)) return res.status(400).json({ error: 'Mesa inválida' });
+        
+        const voters = await dbQueryAsync<any>(`
+          SELECT
+            e.nombre,
+            e.apellido,
+            e.ci,
+            e.orden,
+            pl.timestamp as voted_at,
+            (CASE WHEN ec.id IS NOT NULL THEN 1 ELSE 0 END) as registrado
+          FROM participation_logs pl
+          JOIN electors e ON pl.local_votacion = e.local_votacion AND pl.mesa = e.mesa AND pl.orden = e.orden
+          LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
+          WHERE pl.local_votacion = ? AND pl.mesa = ?
+          ORDER BY pl.timestamp DESC
+        `, [local, mesaNum]);
+        return res.json(voters);
+      } else {
+        const voters = await dbQueryAsync<any>(`
+          SELECT
+            e.nombre,
+            e.apellido,
+            e.ci,
+            e.orden,
+            e.mesa,
+            pl.timestamp as voted_at,
+            (CASE WHEN ec.id IS NOT NULL THEN 1 ELSE 0 END) as registrado
+          FROM participation_logs pl
+          JOIN electors e ON pl.local_votacion = e.local_votacion AND pl.mesa = e.mesa AND pl.orden = e.orden
+          LEFT JOIN elector_captures ec ON e.ci = ec.elector_ci
+          WHERE pl.local_votacion = ?
+          ORDER BY e.mesa ASC, pl.timestamp DESC
+        `, [local]);
+        return res.json(voters);
+      }
+    } catch (err: any) {
+      console.error('[DIAD PARTICIPATION DETAIL QUERY ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── GET /api/diad/participation-detail/:local/:mesa ───────────────────────
   router.get('/participation-detail/:local/:mesa', async (req, res) => {
     const { local, mesa } = req.params;

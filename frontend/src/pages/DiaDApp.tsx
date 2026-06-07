@@ -242,7 +242,7 @@ const DiaDApp: React.FC = () => {
     try {
       let allVoters: any[] = [];
       for (const loc of participationData) {
-        const res = await api.get(`/api/diad/participation-detail/${encodeURIComponent(loc.local)}`, { headers: { 'x-district': activeDistrict } });
+        const res = await api.get(`/api/diad/participation-detail?local=${encodeURIComponent(loc.local)}`, { headers: { 'x-district': activeDistrict } });
         allVoters = allVoters.concat(res.data);
       }
       if (format === 'txt') {
@@ -1534,7 +1534,7 @@ const DiaDApp: React.FC = () => {
                                           setSelectedMesaDetail({ local: local.local, mesa: m.mesa });
                                           setMesaVoters([]);
                                           setMesaVotersLoading(true);
-                                          api.get(`/api/diad/participation-detail/${encodeURIComponent(local.local)}/${m.mesa}`, { headers: { 'x-district': activeDistrict } })
+                                          api.get(`/api/diad/participation-detail?local=${encodeURIComponent(local.local)}&mesa=${m.mesa}`, { headers: { 'x-district': activeDistrict } })
                                             .then(res => setMesaVoters(res.data))
                                             .catch(err => console.error(err))
                                             .finally(() => setMesaVotersLoading(false));

@@ -1,8 +1,8 @@
 const Database = require('better-sqlite3');
-const db = new Database('intellecciones.db');
+const db = new Database('../intellecciones.db');
 
 try {
-  const local = 'INSTITUTO SALESIANO SAN JOSE'; // example local
+  const local = 'INSTITUTO SALESIANO SAN JOSE';
   const voters = db.prepare(`
     SELECT
       e.nombre,
