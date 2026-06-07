@@ -882,7 +882,22 @@ export const runBootstrapChecks = () => {
           const XLSX = require('xlsx');
           const { normalizePhone } = require('./utils/phone');
           
-          const excelPath = path.resolve(dbDir, 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          let excelPath = path.resolve(dbDir, 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          if (!fs.existsSync(excelPath)) {
+            excelPath = path.resolve(process.cwd(), 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          }
+          if (!fs.existsSync(excelPath)) {
+            excelPath = path.resolve(process.cwd(), 'backend', 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          }
+          if (!fs.existsSync(excelPath)) {
+            excelPath = path.resolve(__dirname, 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          }
+          if (!fs.existsSync(excelPath)) {
+            excelPath = path.resolve(__dirname, '..', 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          }
+          if (!fs.existsSync(excelPath)) {
+            excelPath = path.resolve(__dirname, '../..', 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx');
+          }
           if (fs.existsSync(excelPath)) {
             const workbook = XLSX.readFile(excelPath);
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
