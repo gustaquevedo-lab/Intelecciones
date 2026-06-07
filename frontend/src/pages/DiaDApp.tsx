@@ -596,12 +596,12 @@ const DiaDApp: React.FC = () => {
 
                   {/* KPIs Operativos */}
                   {isLoadingCoverage ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
-                      {[0,1,2,3,4].map(i => <Skeleton key={i} height={100} borderRadius={16} />)}
-                      <Skeleton height={200} borderRadius={16} style={{ gridColumn: 'span 3' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.75rem' }}>
+                      {[0,1,2,3].map(i => <Skeleton key={i} height={100} borderRadius={16} />)}
+                      <Skeleton height={200} borderRadius={16} style={{ gridColumn: 'span 4' }} />
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.75rem' }}>
                       <StatCard
                         label="Total Mesas"
                         value={coverage.total_mesas}
@@ -617,27 +617,20 @@ const DiaDApp: React.FC = () => {
                       <StatCard
                         label="Cobertura Operativa"
                         value={`${coverage.op_porcentaje.toFixed(1)}%`}
-                      color={coverage.op_porcentaje >= 90 ? 'var(--green)' : coverage.op_porcentaje >= 50 ? '#F59E0B' : 'var(--red)'}
-                      sub="Disponibilidad de personal"
-                      icon={<TrendingUp size={12} />}
-                    />
-                    <StatCard
-                      label="Coordinadores"
-                      value={coverage.total_coordinadores}
-                      color="var(--blue-lt)"
-                      icon={<Users size={12} />}
-                      sub="En campo"
-                    />
-                    <StatCard
-                      label="Móviles Activos"
-                      value={coverage.total_vehiculos}
-                      color="var(--plra-300)"
-                      icon={<Truck size={12} />}
-                      sub="Flota logística"
-                    />
-                    
-                    {/* Territorial Distribution - Main View */}
-                    <div className="card-premium-styled" style={{ gridColumn: 'span 3', padding: '1.25rem' }}>
+                        color={coverage.op_porcentaje >= 90 ? 'var(--green)' : coverage.op_porcentaje >= 50 ? '#F59E0B' : 'var(--red)'}
+                        sub="Disponibilidad de personal"
+                        icon={<TrendingUp size={12} />}
+                      />
+                      <StatCard
+                        label="Apoderados"
+                        value={membersList.filter(m => m.role === 'APODERADO').length}
+                        color="var(--plra-300)"
+                        icon={<Shield size={12} />}
+                        sub="Asignados al distrito"
+                      />
+                      
+                      {/* Territorial Distribution - Main View */}
+                      <div className="card-premium-styled" style={{ gridColumn: 'span 4', padding: '1.25rem' }}>
                       <h4 style={{ fontSize: '0.85rem', marginBottom: '1.25rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>
                         <Map size={16} style={{ color: 'var(--blue-lt)' }} /> Distribución Territorial & Presencia
                       </h4>
