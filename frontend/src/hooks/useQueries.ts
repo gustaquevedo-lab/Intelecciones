@@ -137,7 +137,7 @@ export function useDiadMembers(district?: string | null) {
       });
       return res.data;
     },
-    staleTime: 60 * 1000,
+    staleTime: 0, // Always refetch — members change in real time during Dia D
   });
 }
 

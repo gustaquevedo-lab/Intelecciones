@@ -316,7 +316,11 @@ export default function diadRoutes(upload: multer.Multer) {
       const params: any[] = [];
       if (districtName) {
         let baseDistrict = districtName.replace('Ó', 'O').replace('ó', 'o');
-        sql += ` AND (UPPER(vl.distrito) LIKE UPPER(?) OR UPPER(vl.ciudad) LIKE UPPER(?) OR UPPER(u.distrito) LIKE UPPER(?))`;
+        // Include users that match the district OR that have an assigned_local (they belong to this session)
+        sql += ` AND (
+          UPPER(vl.distrito) LIKE UPPER(?) OR UPPER(vl.ciudad) LIKE UPPER(?) OR UPPER(u.distrito) LIKE UPPER(?)
+          OR (u.assigned_local IS NOT NULL AND u.assigned_local != '' AND u.assigned_local != 'SIN ASIGNACIÓN' AND u.assigned_local != '---')
+        )`;
         params.push(`%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`);
       }
       const members = db.prepare(sql).all(...params);
