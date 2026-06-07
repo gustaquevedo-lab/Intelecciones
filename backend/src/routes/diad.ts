@@ -272,9 +272,10 @@ export default function diadRoutes(upload: multer.Multer) {
     const { lists: incoming } = req.body;
     if (!Array.isArray(incoming) || incoming.length === 0) return res.status(400).json({ error: 'lists array is required' });
     try {
+      db.pragma('foreign_keys = OFF');
       const upsert = db.prepare(`
         INSERT INTO lists (id, list_number, candidate_alias, candidate_nombre, candidate_ci, option_number, type, is_adversary, ciudad, campaign_id, goal, photo_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT id FROM campaigns LIMIT 1), 1), ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           list_number=excluded.list_number,
           candidate_alias=excluded.candidate_alias,
@@ -284,7 +285,7 @@ export default function diadRoutes(upload: multer.Multer) {
           type=excluded.type,
           is_adversary=excluded.is_adversary,
           ciudad=excluded.ciudad,
-          campaign_id=excluded.campaign_id,
+          campaign_id=COALESCE((SELECT id FROM campaigns LIMIT 1), 1),
           goal=excluded.goal,
           photo_url=excluded.photo_url
       `);
@@ -293,14 +294,18 @@ export default function diadRoutes(upload: multer.Multer) {
           upsert.run(
             l.id, l.list_number, l.candidate_alias || null, l.candidate_nombre || null,
             l.candidate_ci || null, l.option_number || null, l.type,
-            l.is_adversary ? 1 : 0, l.ciudad || '', l.campaign_id || 1,
+            l.is_adversary ? 1 : 0, l.ciudad || '', 
             l.goal || 1000, l.photo_url || null
           );
         }
       });
       txn(incoming);
+      db.pragma('foreign_keys = ON');
       res.json({ success: true, count: incoming.length });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: any) { 
+      db.pragma('foreign_keys = ON');
+      res.status(500).json({ error: err.message }); 
+    }
   });
 
   router.post('/acta', upload.single('foto_acta'), (req, res) => {
