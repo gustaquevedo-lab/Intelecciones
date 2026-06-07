@@ -80,6 +80,7 @@ function runImport(db, excelPath) {
         let phone = null;
         let roleDesc = '';
         let mesa = null;
+        let name = null;
 
         for (let i = 0; i < 10; i++) {
           const cell = row[i];
@@ -99,6 +100,8 @@ function runImport(db, excelPath) {
             if (ci) {
               mesa = parseInt(s);
             }
+          } else if (s.includes(' ') && s.length > 5 && !upper.includes('LISTA')) {
+            if (!name) name = s;
           }
         }
 
@@ -107,7 +110,7 @@ function runImport(db, excelPath) {
           if (roleDesc.includes('PTE') || roleDesc.includes('PRESIDENT')) tableRole = 'PRESIDENTE';
           
           if (!mapByCi.has(ci)) {
-            mapByCi.set(ci, { role: 'MIEMBRO_MESA', local: currentLocal, ci, mesa, tableRole, phone: normalizePhone(phone) });
+            mapByCi.set(ci, { role: 'MIEMBRO_MESA', local: currentLocal, ci, mesa, tableRole, phone: normalizePhone(phone), name });
           }
         }
       }
@@ -132,13 +135,11 @@ function runImport(db, excelPath) {
     for (const p of allData) {
       const elector = getElectorStmt.get(p.ci, p.ci);
       
-      if (!elector) {
-        // No está en el padrón, rollback a padrón implica que lo ignoramos porque no hay nombre oficial
-        skipped++;
-        continue;
+      // Fallback: si no esta en el padron, usamos el nombre del excel para no dejarlos afuera (ya que el usuario se queja de que no hay nada)
+      let nombreReal = p.name || 'SIN NOMBRE';
+      if (elector) {
+        nombreReal = `${elector.nombre} ${elector.apellido}`.trim();
       }
-
-      const nombreReal = `${elector.nombre} ${elector.apellido}`.trim();
 
       let finalMesa = p.mesa;
       let finalTableRole = p.tableRole;
