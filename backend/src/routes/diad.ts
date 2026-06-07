@@ -315,11 +315,11 @@ export default function diadRoutes(upload: multer.Multer) {
       `;
       const params: any[] = [];
       if (districtName) {
-        let baseDistrict = districtName.replace('Ó', 'O').replace('ó', 'o');
-        // Include users that match the district OR that have an assigned_local (they belong to this session)
+        let baseDistrict = districtName.replace('Ó', 'O').replace('ó', 'o').replace('ô', 'o');
+        // Strict filter: user must belong to this district (via voting_location OR user.distrito)
+        // OR they have an assigned_local that belongs to a voting_location in this district
         sql += ` AND (
           UPPER(vl.distrito) LIKE UPPER(?) OR UPPER(vl.ciudad) LIKE UPPER(?) OR UPPER(u.distrito) LIKE UPPER(?)
-          OR (u.assigned_local IS NOT NULL AND u.assigned_local != '' AND u.assigned_local != 'SIN ASIGNACIÓN' AND u.assigned_local != '---')
         )`;
         params.push(`%${baseDistrict}%`, `%${baseDistrict}%`, `%${baseDistrict}%`);
       }
@@ -331,10 +331,17 @@ export default function diadRoutes(upload: multer.Multer) {
   router.post('/members/assign', async (req, res) => {
     const { ci, local, mesa, user_id, role, table_role, telefono } = req.body;
     if (!ci && !user_id) return res.status(400).json({ error: 'ci o user_id es requerido' });
-    if (local === undefined) return res.status(400).json({ error: 'local es requerido' });
-    if (mesa === undefined) return res.status(400).json({ error: 'mesa es requerido' });
-    if (role && !['MIEMBRO_MESA', 'VEEDOR', 'APODERADO'].includes(role)) return res.status(400).json({ error: 'role inválido' });
+    // local and mesa can be null/undefined when LIBERATING a member
+    const VALID_ROLES = ['MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'VEEDOR', 'APODERADO', 'PRESIDENTE', 'VOCAL'];
+    if (role && !VALID_ROLES.includes(role)) return res.status(400).json({ error: 'role inválido' });
     const targetRole = role || 'MIEMBRO_MESA';
+    // Require mesa to be a valid number (>= 1) when assigning (not liberating)
+    if (local !== null && local !== undefined && local !== '') {
+      const mesaNum = parseInt(mesa);
+      if (isNaN(mesaNum) || mesaNum < 1) {
+        return res.status(400).json({ error: 'El número de mesa debe ser un número válido >= 1' });
+      }
+    }
     try {
       let targetId = user_id;
       if (ci && !targetId) {
@@ -353,9 +360,11 @@ export default function diadRoutes(upload: multer.Multer) {
       }
       if (!targetId) return res.status(400).json({ error: 'No se pudo identificar al usuario' });
       
-      // Allow multiple members per table — do NOT clear previous members.
-      
-      if (telefono) {
+      // If liberating (local is null/empty), clear assignment
+      const isLiberating = local === null || local === undefined || local === '';
+      if (isLiberating) {
+        db.prepare(`UPDATE users SET assigned_local = NULL, assigned_mesa = NULL WHERE id = ?`).run(targetId);
+      } else if (telefono) {
         db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ?, telefono = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, telefono, targetId);
       } else {
         db.prepare(`UPDATE users SET assigned_local = ?, assigned_mesa = ?, role = ?, assigned_table_role = ? WHERE id = ?`).run(local, mesa, targetRole, table_role || null, targetId);
