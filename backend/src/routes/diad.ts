@@ -1620,21 +1620,6 @@ export function veedorRoutes() {
     const { qrData } = req.body;
     if (!qrData) return res.status(400).json({ error: 'qrData es requerido' });
 
-    // Helper to get or auto-create lists by list_number
-    const getOrCreateList = (listNum: string): number => {
-      let list = db.prepare('SELECT id FROM lists WHERE list_number = ?').get(listNum) as any;
-      if (!list) {
-        const candidateAlias = `Lista ${listNum} (Oposición - Autocreada)`;
-        const result = db.prepare(`
-          INSERT INTO lists (campaign_id, type, list_number, candidate_alias, is_adversary, ciudad)
-          VALUES (1, 'AUTORIDADES', ?, ?, 1, 'AUTO')
-        `).run(listNum, candidateAlias);
-        list = { id: result.lastInsertRowid };
-        console.log(`[QR AUTO-CREATE] Created list_number ${listNum} with ID ${list.id}`);
-      }
-      return list.id;
-    };
-
     try {
       let parsedData: any = { success: false, blancos: 0, nulos: 0, votos: {}, mesa: null };
 
@@ -1651,17 +1636,16 @@ export function veedorRoutes() {
           parsedData.blancos = decompressed[8] !== undefined ? (decompressed[8] & 0x0F) : 0;
           parsedData.nulos = decompressed[13] !== undefined ? (decompressed[13] & 0x0F) : 0;
           
-          // Auto-create standard PLRA lists if they are not in the DB, and assign votes
-          const plraListNumbers = ['9', '22', '100', '4', '15'];
-          plraListNumbers.forEach((listNum, idx) => {
-            const listId = getOrCreateList(listNum);
+          // Asignar votos de prueba a las listas principales usando el list_number
+          const mockListNumbers = ['2', '3', '4', '9', '15', '22', '100'];
+          mockListNumbers.forEach((listNum, idx) => {
             const val = decompressed[idx % decompressed.length] || 0;
-            parsedData.votos[listId] = 10 + (idx * 5) + (val % 20);
+            parsedData.votos[listNum] = 10 + (idx * 5) + (val % 20);
           });
         }
       } else if (qrData.startsWith('TSJE|')) {
         const parts = qrData.split('|');
-        const votosMap: Record<number, number> = {};
+        const votosMap: Record<string, number> = {};
         let blancos = 0;
         let nulos = 0;
         let mesa = null;
@@ -1674,9 +1658,7 @@ export function veedorRoutes() {
             else if (key === 'nulos') nulos = parseInt(val) || 0;
             else if (key === 'mesa') mesa = parseInt(val) || null;
             else {
-              const listNum = key;
-              const listId = getOrCreateList(listNum);
-              votosMap[listId] = parseInt(val) || 0;
+              votosMap[key] = parseInt(val) || 0;
             }
           }
         });
@@ -1687,13 +1669,12 @@ export function veedorRoutes() {
         const blancos = url.searchParams.get('blancos') || url.searchParams.get('b') || 0;
         const nulos = url.searchParams.get('nulos') || url.searchParams.get('n') || 0;
         
-        const votosMap: Record<number, number> = {};
+        const votosMap: Record<string, number> = {};
         url.searchParams.forEach((value, key) => {
           if (key.startsWith('l') || key.startsWith('list')) {
             const listNum = key.replace(/\D/g, '');
             if (listNum) {
-              const listId = getOrCreateList(listNum);
-              votosMap[listId] = parseInt(value) || 0;
+              votosMap[listNum] = parseInt(value) || 0;
             }
           }
         });
