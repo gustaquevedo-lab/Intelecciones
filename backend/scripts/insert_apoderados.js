@@ -61,7 +61,7 @@ function runInsertApoderados(db) {
       insertStmt.run(username, username, nombre, apo.ci, phone, apo.local);
       console.log(`[APODERADOS] Insertado ${apo.ci} - ${nombre} en ${apo.local}`);
     } else {
-      db.prepare('UPDATE users SET role = \'APODERADO\', assigned_local = ?, telefono = ?, nombre = COALESCE(?, nombre) WHERE id = ?')
+      db.prepare('UPDATE users SET role = \'APODERADO\', assigned_local = ?, telefono = ?, nombre = COALESCE(?, nombre), distrito = \'PEDRO JUAN CABALLERO\' WHERE id = ?')
         .run(apo.local, phone, nombre !== 'SIN NOMBRE OFICIAL' ? nombre : null, existingUser.id);
       console.log(`[APODERADOS] Actualizado ${apo.ci} a ${apo.local} (Antes ya existia)`);
     }
