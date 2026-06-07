@@ -909,6 +909,20 @@ export const runBootstrapChecks = () => {
           path.resolve(__dirname, '../..', 'CONCEPCION APODERADOS Y MIEMBROS DE MESAS - APP.xlsx'),
         ];
         
+        // PJC Import
+        try {
+          const pjcExcelPath = path.resolve(process.cwd(), 'MESARIOS 2026.xlsx');
+          if (fs.existsSync(pjcExcelPath)) {
+             console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx, iniciando importación...');
+             const { runImport } = require('../scripts/import_mesarios_pjc');
+             runImport(db, pjcExcelPath);
+          } else {
+             console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado, omitiendo.');
+          }
+        } catch (err: any) {
+           console.log(`[BOOTSTRAP IMPORT PJC ERROR] Error importando PJC: ${err.message}`);
+        }
+        
         console.log(`[BOOTSTRAP IMPORT] dbDir=${dbDir}, cwd=${process.cwd()}, __dirname=${__dirname}`);
         
         let excelPath = '';
