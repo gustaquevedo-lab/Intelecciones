@@ -1083,7 +1083,7 @@ export const runBootstrapChecks = () => {
   // Insercion Manual de Apoderados
   try {
     const { runInsertApoderados } = require('../scripts/insert_apoderados');
-    // runInsertApoderados(db); // DESACTIVADO para no pisar la UI
+    runInsertApoderados(db); // REACTIVADO para forzar el fix del distrito
   } catch (err: any) {
     console.log(`[BOOTSTRAP IMPORT APODERADOS ERROR] Error: ${err.message}`);
   }
