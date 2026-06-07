@@ -317,6 +317,14 @@ const DiaDApp: React.FC = () => {
     mesas: []
   };
   const locations = locationsData || [];
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedMesa, setSelectedMesa] = useState<{local: string, numero: number} | null>(null);
+  const [selectedLocalForMembers, setSelectedLocalForMembers] = useState<string | null>(null);
+  const [showListModal, setShowListModal] = useState(false);
+  const [editingApoderado, setEditingApoderado] = useState<any>(null);
+  const [editApoNombre, setEditApoNombre] = useState('');
+  const [editApoCI, setEditApoCI] = useState('');
+  const [editApoPhone, setEditApoPhone] = useState('');
   const fleetLocations = fleetLocationsData || [];
   const resultados = resultadosData || [];
   const actas = actasData || [];
@@ -351,6 +359,36 @@ const DiaDApp: React.FC = () => {
   const [isCandidateVerified, setIsCandidateVerified] = useState(false);
   const [newListOption, setNewListOption] = useState('');
   const [newListGoal, setNewListGoal] = useState(1000);
+   const handleWipeTestData = async () => {
+    if (!confirm('¿Estás seguro de que quieres limpiar todos los datos de prueba? Esto reiniciará todas las mesas y borrará todos los registros de participación.')) return;
+    try {
+      const res = await api.post('/diad/wipe-test-data', {});
+      if (res.data.success) {
+        alert(res.data.message);
+        fetchData(); // Recargar todo
+      }
+    } catch (err: any) {
+      alert('Error al limpiar datos: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleSaveApoderadoEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingApoderado) return;
+    try {
+      await api.put(`/admin/users/${editingApoderado.id}`, {
+        nombre: editApoNombre,
+        ci: editApoCI,
+        telefono: editApoPhone,
+        username: editApoCI, // Actualizar username tambien para mantener consistencia
+        role: editingApoderado.role, // Mantener rol original
+      });
+      fetchUsers();
+      setEditingApoderado(null);
+    } catch (err: any) {
+      alert('Error al guardar cambios: ' + (err.response?.data?.error || err.message));
+    }
+  };
   const [takenOptions, setTakenOptions] = useState<number[]>([]);
   const [cropperData, setCropperData] = useState<{ image: string, type: string } | null>(null);
   const [expandedActa, setExpandedActa] = useState<number | null>(null);
@@ -880,6 +918,22 @@ const DiaDApp: React.FC = () => {
                                       <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
                                         {ap.nombre}
                                       </span>
+                                      <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 800, background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                                        C.I. {ap.ci || ap.username}
+                                      </span>
+                                      <button 
+                                        className="icon-btn" 
+                                        style={{ padding: '2px', background: 'rgba(255,255,255,0.1)', marginLeft: '0.2rem' }}
+                                        onClick={() => {
+                                          setEditingApoderado(ap);
+                                          setEditApoNombre(ap.nombre || '');
+                                          setEditApoCI(ap.ci || ap.username || '');
+                                          setEditApoPhone(ap.telefono || '');
+                                        }}
+                                        title="Editar Apoderado"
+                                      >
+                                        <Edit2 size={12} color="var(--yellow)" />
+                                      </button>
                                       {ap.telefono && (
                                         <>
                                           <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>
@@ -2288,6 +2342,57 @@ const DiaDApp: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* --- APODERADO EDIT MODAL --- */}
+      {editingApoderado && (
+        <div className="modal-overlay" onClick={() => setEditingApoderado(null)}>
+          <div 
+            className="modal-content" 
+            style={{ width: '400px', maxWidth: '90vw' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header-premium">
+              <h2>Editar {editingApoderado.role === 'MIEMBRO_MESA' ? 'Miembro de Mesa' : 'Apoderado'}</h2>
+              <button className="icon-btn" onClick={() => setEditingApoderado(null)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveApoderadoEdit}>
+              <div className="modal-body-premium">
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Nombre Completo</label>
+                  <input 
+                    className="modern-input-premium-styled" 
+                    value={editApoNombre} 
+                    onChange={e => setEditApoNombre(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Cédula de Identidad (Sin puntos)</label>
+                  <input 
+                    className="modern-input-premium-styled" 
+                    value={editApoCI} 
+                    onChange={e => setEditApoCI(e.target.value.replace(/\D/g, ''))} 
+                    required 
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label>Teléfono (WhatsApp, con código de país)</label>
+                  <input 
+                    className="modern-input-premium-styled" 
+                    value={editApoPhone} 
+                    onChange={e => setEditApoPhone(e.target.value)} 
+                    placeholder="Ej: +595981..." 
+                  />
+                </div>
+              </div>
+              <div className="modal-footer-premium-styled">
+                <button type="button" onClick={() => setEditingApoderado(null)} className="btn-cancel-styled">Cancelar</button>
+                <button type="submit" className="btn-confirm-styled">Guardar Cambios <Save size={18} /></button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Real-time Vote Confirmation Toasts */}
       <div style={{

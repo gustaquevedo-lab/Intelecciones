@@ -1680,6 +1680,8 @@ Status: ${error.response?.status || 'N/A'}
                             <option value="PADRINO">Padrino</option>
                             <option value="SUBJEFE">Sub-Jefe (Líder de Lista)</option>
                             <option value="JEFE_CAMPANA">Jefe de Campaña</option>
+                            <option value="APODERADO">Apoderado de Local</option>
+                            <option value="MIEMBRO_MESA">Miembro de Mesa</option>
                             <option value="SUPERUSUARIO">Súper Admin</option>
                           </select>
                         </div>
@@ -1744,6 +1746,24 @@ Status: ${error.response?.status || 'N/A'}
                               Obligatorio: Todos los operadores deben pertenecer a una lista.
                             </p>
                           </div>
+                        )}
+
+                        {(newUserRole === 'APODERADO' || newUserRole === 'MIEMBRO_MESA') && (
+                          <>
+                            <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                              <label>Local Asignado</label>
+                              <select className="modern-input-premium-styled" value={newUserLocal} onChange={e => setNewUserLocal(e.target.value)} required>
+                                <option value="">Seleccione Local...</option>
+                                {locales.map((l: any) => <option key={l.cod_local} value={l.nombre}>{l.nombre}</option>)}
+                              </select>
+                            </div>
+                            {newUserRole === 'MIEMBRO_MESA' && (
+                              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                                <label>Mesa Nro.</label>
+                                <input type="number" className="modern-input-premium-styled" value={newUserMesa || ''} onChange={e => setNewUserMesa(parseInt(e.target.value) || null)} required />
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
