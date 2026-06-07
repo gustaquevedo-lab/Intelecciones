@@ -17,6 +17,7 @@ interface ListaVotos {
   nombre: string;
   color: string;
   votos: number;
+  type?: string;
 }
 
 const TabBtn = ({ active, icon: Icon, label, onClick }: any) => (
@@ -771,14 +772,11 @@ const ActaFinalTab = () => {
               scanner.clear().catch(console.error);
               setShowQRScanner(false);
             },
-            (err) => {
-              // silent warning logs
-            }
+            (err) => {}
           );
           scannerRef.current = scanner;
         } catch (err) {
           console.error('Failed to start scanner:', err);
-          alert('No se pudo acceder a la cámara o inicializar el escáner.');
         }
       }, 300);
     } else {
@@ -811,7 +809,8 @@ const ActaFinalTab = () => {
         lista_id: l.id,
         nombre: l.nombre,
         color: l.color || '#5AACFF',
-        votos: 0
+        votos: 0,
+        type: l.type || 'AUTORIDADES'
       })));
     } catch (err) {
       setError('No se pudieron cargar los datos del acta.');
@@ -835,61 +834,63 @@ const ActaFinalTab = () => {
     ));
   };
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>, cat: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhotoFile(file);
+    setPhotoFiles(prev => ({ ...prev, [cat]: file }));
     const reader = new FileReader();
-    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.onloadend = () => setPhotoPreviews(prev => ({ ...prev, [cat]: reader.result as string }));
     reader.readAsDataURL(file);
   };
 
-  const totalVotos = listas.reduce((s, l) => s + l.votos, 0) + votosEnBlanco + votosNulos;
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCategorySubmit = async (e: React.FormEvent, cat: string) => {
     e.preventDefault();
-    if (!photoFile) { setError('Debes adjuntar la foto del acta.'); return; }
-    if (totalVotos === 0) { setError('Ingresa al menos un voto para continuar.'); return; }
+    const catPhoto = photoFiles[cat];
+    if (!catPhoto) { setError('Debes adjuntar la foto del acta para continuar.'); return; }
+    
+    const catListas = listas.filter(l => l.type === cat);
+    const catListasPayload = catListas.map(l => ({ lista_id: l.lista_id, votos: l.votos }));
 
     setSubmitting(true);
     setError('');
-    
-    const listsPayload = listas.map(l => ({ lista_id: l.lista_id, votos: l.votos }));
 
     try {
       if (navigator.onLine) {
         const formData = new FormData();
         formData.append('mesa_id', String(tableInfo.mesa_id ?? ''));
-        formData.append('votos_blanco', String(votosEnBlanco));
-        formData.append('votos_nulos', String(votosNulos));
+        formData.append('votos_blanco', String(votosEnBlanco[cat] || 0));
+        formData.append('votos_nulos', String(votosNulos[cat] || 0));
         formData.append('total_electores', String(totalElectores));
-        formData.append('listas', JSON.stringify(listsPayload));
-        formData.append('foto_acta', photoFile);
+        formData.append('listas', JSON.stringify(catListasPayload));
+        formData.append('foto_acta', catPhoto);
+        formData.append('category', cat);
 
         await api.post('/diad/acta', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        setSubmitted(true);
+        setSubmittedCategories(prev => ({ ...prev, [cat]: true }));
+        setSelectedCategory(null);
       } else {
         throw new Error('OFFLINE_FALLBACK');
       }
     } catch (err: any) {
       if (!navigator.onLine || err.message === 'OFFLINE_FALLBACK' || !err.response) {
-        // Safe offline mode: convert photo to Base64 and enqueue
         try {
           const reader = new FileReader();
-          reader.readAsDataURL(photoFile);
+          reader.readAsDataURL(catPhoto);
           reader.onloadend = async () => {
             const base64Data = reader.result;
             const { safePost } = await import('../services/syncService');
             await safePost('SUBMIT_ACTA', '/diad/acta', {
               mesa_id: tableInfo.mesa_id,
-              votos_blanco: votosEnBlanco,
-              votos_nulos: votosNulos,
-              listas: JSON.stringify(listsPayload),
-              foto_acta_base64: base64Data
+              votos_blanco: votosEnBlanco[cat] || 0,
+              votos_nulos: votosNulos[cat] || 0,
+              listas: JSON.stringify(catListasPayload),
+              foto_acta_base64: base64Data,
+              category: cat
             });
-            setSubmitted(true);
+            setSubmittedCategories(prev => ({ ...prev, [cat]: true }));
+            setSelectedCategory(null);
           };
         } catch (readErr) {
           setError('Error al procesar la imagen del acta en modo offline.');
@@ -902,6 +903,17 @@ const ActaFinalTab = () => {
     }
   };
 
+  const uniqueCategories = Array.from(new Set(listas.map(l => l.type || 'AUTORIDADES')));
+
+  const getCategoryLabel = (type: string) => {
+    switch (type) {
+      case 'INTENDENTE': return 'Intendente Municipal';
+      case 'CONCEJAL': return 'Junta Municipal (Concejales)';
+      case 'AUTORIDADES': return 'Autoridades Partidarias (Directorio/Comité)';
+      default: return type.replace(/_/g, ' ');
+    }
+  };
+
   if (loading) return (
     <div style={{ padding: '1rem' }}>
       <Skeleton height={80} borderRadius={16} style={{ marginBottom: '1rem' }} />
@@ -910,47 +922,12 @@ const ActaFinalTab = () => {
           <Skeleton key={i} height={60} borderRadius={16} />
         ))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-        <Skeleton height={80} borderRadius={16} />
-        <Skeleton height={80} borderRadius={16} />
-      </div>
     </div>
   );
 
-  if (submitted) return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="card-premium-styled"
-      style={{ padding: '3.5rem 2rem', textAlign: 'center', marginTop: '2rem' }}
-    >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.1 }}
-        style={{
-          width: '80px', height: '80px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, #22C47E, #1aab6d)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 1.5rem',
-          boxShadow: '0 0 30px rgba(34,196,126,0.35)'
-        }}
-      >
-        <Check size={40} color="var(--white)" strokeWidth={3} />
-      </motion.div>
-      <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.75rem' }}>
-        Acta Enviada
-      </h2>
-      <p style={{ color: 'var(--text-3)', fontSize: '1rem', maxWidth: '300px', margin: '0 auto', lineHeight: 1.4 }}>
-        Los resultados de la mesa <strong style={{ color: 'var(--plra-200)' }}>{tableInfo.mesa}</strong> fueron
-        registrados correctamente. El sistema Día D ya los está procesando.
-      </p>
-    </motion.div>
-  );
-
   return (
-    <form onSubmit={handleSubmit}>
-      {/* Mesa header */}
+    <div>
+      {/* Mesa Header */}
       <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
         <MapPin size={24} style={{ color: 'var(--plra-300)', flexShrink: 0 }} />
         <div>
@@ -961,124 +938,256 @@ const ActaFinalTab = () => {
         </div>
       </div>
 
-      {/* Votos por lista */}
-      <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
-        <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>
-          Votos por lista
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {listas.map(l => (
-            <div key={l.lista_id} style={{
-              display: 'flex', alignItems: 'center', gap: '0.85rem',
-              padding: '1.1rem 1.25rem',
-              background: 'rgba(255,255,255,0.02)',
-              borderRadius: '18px',
-              border: '1px solid var(--border)'
-            }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: l.color }} />
-                  <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white' }}>{l.nombre}</span>
+      {selectedCategory === null ? (
+        <>
+          {/* QR Scan trigger */}
+          <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem', border: '1px dashed var(--plra-400)', background: 'rgba(0,71,171,0.05)' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <QrCode size={18} /> Escaneo de Actas TREP / TSJE
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.1rem' }}>
+              Escanee el código QR del acta oficial para cargar todos los votos automáticamente y luego adjunte las fotos.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowQRScanner(true)}
+              style={{
+                width: '100%', padding: '0.9rem', borderRadius: '14px', border: 'none',
+                background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.9rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer'
+              }}
+            >
+              <Camera size={18} /> ESCANEAR QR TSJE
+            </button>
+          </div>
+
+          {/* Grid of Categories */}
+          <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', marginTop: '1.5rem' }}>
+            Actas por Candidatura / Categorías ({uniqueCategories.length})
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+            {uniqueCategories.map(cat => {
+              const isDone = submittedCategories[cat];
+              const listsInCat = listas.filter(l => l.type === cat);
+              const totalVotosCat = listsInCat.reduce((s, l) => s + l.votos, 0) + (votosEnBlanco[cat] || 0) + (votosNulos[cat] || 0);
+              const hasPhoto = !!photoFiles[cat];
+
+              return (
+                <motion.div
+                  key={cat}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => setSelectedCategory(cat)}
+                  className="card-premium-styled"
+                  style={{
+                    padding: '1.5rem',
+                    cursor: 'pointer',
+                    border: `1px solid ${isDone ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
+                    background: isDone ? 'rgba(34,197,94,0.03)' : 'var(--surface)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    justifyContent: 'space-between',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', maxWidth: '80%' }}>
+                      {getCategoryLabel(cat)}
+                    </h4>
+                    <span style={{
+                      padding: '3px 8px', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
+                      background: isDone ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.1)',
+                      color: isDone ? '#22C47E' : '#EF4444',
+                      border: `1px solid ${isDone ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`
+                    }}>
+                      {isDone ? 'COMPLETO' : 'PENDIENTE'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                    <span>Votos: <strong>{totalVotosCat}</strong></span>
+                    <span>Foto: <strong>{hasPhoto ? '✓ Cargada' : '✗ Faltante'}</strong></span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        /* Detailed View for Selected Category */
+        <form onSubmit={(e) => handleCategorySubmit(e, selectedCategory)}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <button
+              type="button"
+              onClick={() => { setSelectedCategory(null); setError(''); }}
+              style={{
+                padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid var(--border)',
+                background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer'
+              }}
+            >
+              ← Volver
+            </button>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, alignSelf: 'center' }}>
+              Carga de {getCategoryLabel(selectedCategory)}
+            </h3>
+          </div>
+
+          {/* Votos list */}
+          <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>
+              Votos por lista
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {listas.filter(l => l.type === selectedCategory).map(l => (
+                <div key={l.lista_id} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.85rem',
+                  padding: '1.1rem 1.25rem',
+                  background: 'rgba(255,255,255,0.02)',
+                  borderRadius: '18px',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: l.color }} />
+                      <span style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white' }}>{l.nombre}</span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700 }}>LISTA {l.lista_id}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <motion.button
+                      type="button" whileTap={{ scale: 0.85 }}
+                      onClick={() => updateVotos(l.lista_id, -1)}
+                      style={{
+                        width: '46px', height: '46px', borderRadius: '14px',
+                        border: '1px solid var(--border)',
+                        background: 'rgba(255,255,255,0.05)', color: 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Minus size={20} strokeWidth={3} />
+                    </motion.button>
+                    <input
+                      type="number"
+                      min={0}
+                      value={l.votos}
+                      onChange={e => setVotosDirecto(l.lista_id, e.target.value)}
+                      style={{
+                        width: '75px', textAlign: 'center',
+                        background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px', color: 'white',
+                        fontSize: '1.7rem', fontWeight: 900, padding: '0.5rem 0.25rem',
+                        outline: 'none'
+                      }}
+                    />
+                    <motion.button
+                      type="button" whileTap={{ scale: 0.85 }}
+                      onClick={() => updateVotos(l.lista_id, 1)}
+                      style={{
+                        width: '46px', height: '46px', borderRadius: '14px',
+                        border: 'none',
+                        background: 'var(--plra-500)', color: 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,71,171,0.3)'
+                      }}
+                    >
+                      <Plus size={20} strokeWidth={3} />
+                    </motion.button>
+                  </div>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700 }}>LISTA {l.lista_id}</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <motion.button
-                  type="button" whileTap={{ scale: 0.85 }}
-                  onClick={() => updateVotos(l.lista_id, -1)}
-                  style={{
-                    width: '46px', height: '46px', borderRadius: '14px',
-                    border: '1px solid var(--border)',
-                    background: 'rgba(255,255,255,0.05)', color: 'white',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Minus size={20} strokeWidth={3} />
-                </motion.button>
-                <input
-                  type="number"
-                  min={0}
-                  value={l.votos}
-                  onChange={e => setVotosDirecto(l.lista_id, e.target.value)}
-                  style={{
-                    width: '75px', textAlign: 'center',
-                    background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px', color: 'white',
-                    fontSize: '1.7rem', fontWeight: 900, padding: '0.5rem 0.25rem',
-                    outline: 'none'
-                  }}
-                />
-                <motion.button
-                  type="button" whileTap={{ scale: 0.85 }}
-                  onClick={() => updateVotos(l.lista_id, 1)}
-                  style={{
-                    width: '46px', height: '46px', borderRadius: '14px',
-                    border: 'none',
-                    background: 'var(--plra-500)', color: 'white',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,71,171,0.3)'
-                  }}
-                >
-                  <Plus size={20} strokeWidth={3} />
-                </motion.button>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Otros resultados - BLANCOS Y NULOS - Gigantes */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
-          {[
-            { label: 'Blancos', value: votosEnBlanco, setter: setVotosEnBlanco, color: '#94A3B8' },
-            { label: 'Nulos', value: votosNulos, setter: setVotosNulos, color: '#EF4444' },
-          ].map(({ label, value, setter, color }) => (
-            <div key={label} className="card-premium-styled" style={{ padding: '1.25rem 1rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.85rem' }}>{label}</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
-                <motion.button
-                  type="button" whileTap={{ scale: 0.8 }}
-                  onClick={() => setter(v => Math.max(0, v - 1))}
-                  style={{ width: '40px', height: '40px', borderRadius: '12px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Minus size={16} strokeWidth={3} />
-                </motion.button>
-                <span style={{ fontSize: '2.2rem', fontWeight: 900, color, minWidth: '45px' }}>{value}</span>
-                <motion.button
-                  type="button" whileTap={{ scale: 0.8 }}
-                  onClick={() => setter(v => v + 1)}
-                  style={{ width: '40px', height: '40px', borderRadius: '12px', border: 'none', background: 'rgba(255,255,255,0.1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Plus size={16} strokeWidth={3} />
+          {/* Blancos y Nulos */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+            {[
+              { label: 'Blancos', key: 'blancos', value: votosEnBlanco[selectedCategory] || 0, color: '#94A3B8', setter: (v: number) => setVotosEnBlanco(p => ({ ...p, [selectedCategory]: v })) },
+              { label: 'Nulos', key: 'nulos', value: votosNulos[selectedCategory] || 0, color: '#EF4444', setter: (v: number) => setVotosNulos(p => ({ ...p, [selectedCategory]: v })) },
+            ].map(({ label, value, color, setter }) => (
+              <div key={label} className="card-premium-styled" style={{ padding: '1.25rem 1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '0.85rem' }}>{label}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+                  <motion.button
+                    type="button" whileTap={{ scale: 0.8 }}
+                    onClick={() => setter(Math.max(0, value - 1))}
+                    style={{ width: '40px', height: '40px', borderRadius: '12px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Minus size={16} strokeWidth={3} />
+                  </motion.button>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 900, color, minWidth: '45px' }}>{value}</span>
+                  <motion.button
+                    type="button" whileTap={{ scale: 0.8 }}
+                    onClick={() => setter(value + 1)}
+                    style={{ width: '40px', height: '40px', borderRadius: '12px', border: 'none', background: 'rgba(255,255,255,0.1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Plus size={16} strokeWidth={3} />
+                  </motion.button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Photo upload for this category */}
+          <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.75rem' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Camera size={18} /> Foto del Acta de esta Categoría (Física)
+            </h3>
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={(e) => handlePhotoSelect(e, selectedCategory)} style={{ display: 'none' }} />
+            {photoPreviews[selectedCategory] ? (
+              <div style={{ position: 'relative' }}>
+                <img src={photoPreviews[selectedCategory] || undefined} alt="Vista previa" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '16px', border: '2px solid var(--green)' }} />
+                <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => {
+                  setPhotoFiles(p => ({ ...p, [selectedCategory]: null }));
+                  setPhotoPreviews(p => ({ ...p, [selectedCategory]: null }));
+                }}
+                  style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '8px', color: 'white', padding: '8px 12px', fontSize: '0.8rem', fontWeight: 800 }}>
+                  CAMBIAR FOTO
                 </motion.button>
               </div>
+            ) : (
+              <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => fileRef.current?.click()}
+                style={{ width: '100%', padding: '3rem 1rem', border: '2px dashed var(--border)', borderRadius: '20px', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+                <Upload size={40} style={{ color: 'var(--plra-300)' }} />
+                <p style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white' }}>CAPTURAR ACTA</p>
+              </motion.button>
+            )}
+          </div>
+
+          {error && (
+            <div style={{
+              padding: '1.1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: '14px', color: '#F87171', fontSize: '0.95rem', fontWeight: 700,
+              marginBottom: '1.75rem', textAlign: 'center'
+            }}>
+              {error}
             </div>
-          ))}
-      </div>
+          )}
 
-      {/* Escanear QR TSJE (Urna Electrónica) */}
-      <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem', border: '1px dashed var(--plra-400)', background: 'rgba(0,71,171,0.05)' }}>
-        <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <QrCode size={18} /> Escaneo de Urna Electrónica TSJE
-        </h3>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.1rem' }}>
-          Escanee el código QR impreso por la urna para autocompletar todos los votos al instante.
-        </p>
-        <button
-          type="button"
-          onClick={() => setShowQRScanner(true)}
-          style={{
-            width: '100%', padding: '0.9rem', borderRadius: '14px', border: 'none',
-            background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.9rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer'
-          }}
-        >
-          <Camera size={18} /> ESCANEAR QR TSJE
-        </button>
-      </div>
+          {/* Submit Button */}
+          <motion.button
+            type="submit"
+            disabled={submitting}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              width: '100%', padding: '1.4rem',
+              borderRadius: '20px', border: 'none',
+              background: submitting ? 'var(--text-3)' : 'linear-gradient(135deg, #22C47E 0%, #16a34a 100%)',
+              color: 'white', fontWeight: 900, fontSize: '1.25rem',
+              textTransform: 'uppercase', letterSpacing: '0.12em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.85rem',
+              boxShadow: '0 8px 30px rgba(22, 163, 74, 0.4)',
+              marginBottom: '3.5rem'
+            }}
+          >
+            {submitting ? 'Enviando...' : <><Send size={22} /> GUARDAR ACTA DE {selectedCategory}</>}
+          </motion.button>
+        </form>
+      )}
 
-      {/* QR SCANNER SIMULATION MODAL */}
+      {/* QR SCANNER MODAL */}
       <AnimatePresence>
         {showQRScanner && (
           <div style={{
@@ -1098,7 +1207,7 @@ const ActaFinalTab = () => {
               </button>
             </div>
 
-            {/* Viewfinder simulation / Real Camera stream */}
+            {/* Viewfinder / Camera stream */}
             <div style={{
               width: '300px', minHeight: '250px', border: '3px solid var(--plra-400)', borderRadius: '24px',
               position: 'relative', overflow: 'hidden', background: '#080d16',
@@ -1108,7 +1217,7 @@ const ActaFinalTab = () => {
               <div id="veedor-qr-reader" style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }} />
             </div>
 
-            {/* Manual input / Simulation trigger */}
+            {/* Simulation trigger */}
             <div style={{ width: '100%', maxWidth: '300px', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <button
                 type="button"
@@ -1125,84 +1234,6 @@ const ActaFinalTab = () => {
               >
                 ⚡ SIMULAR ESCANEO QR TSJE
               </button>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.5rem 0' }}>
-                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 800 }}>O COPIAR CÓDIGO</span>
-                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-              </div>
-
-              <input
-                type="text"
-                placeholder="Pegue aquí el string del QR..."
-                value={scannerPasteData}
-                onChange={e => setScannerPasteData(e.target.value)}
-                style={{
-                  width: '100%', padding: '0.85rem', borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'white', fontSize: '0.85rem', outline: 'none'
-                }}
-              />
-              {scannerPasteData && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleParseQRData(scannerPasteData);
-                    setScannerPasteData('');
-                  }}
-                  style={{
-                    width: '100%', padding: '0.75rem', borderRadius: '10px', border: 'none',
-                    background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer'
-                  }}
-                >
-                  PROCESAR CÓDIGO PEGADO
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Foto del acta */}
-      <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.75rem' }}>
-        <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Camera size={18} /> Foto del Acta Oficial (Física)
-        </h3>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} style={{ display: 'none' }} />
-        {photoPreview ? (
-          <div style={{ position: 'relative' }}>
-            <img src={photoPreview} alt="Vista previa" style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', borderRadius: '16px', border: '2px solid var(--green)' }} />
-            <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-              style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '8px', color: 'white', padding: '8px 12px', fontSize: '0.8rem', fontWeight: 800 }}>
-               CAMBIAR FOTO
-             </motion.button>
-          </div>
-        ) : (
-          <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={() => fileRef.current?.click()}
-            style={{ width: '100%', padding: '3rem 1rem', border: '2px dashed var(--border)', borderRadius: '20px', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
-            <Upload size={40} style={{ color: 'var(--plra-300)' }} />
-            <p style={{ fontSize: '1.15rem', fontWeight: 900, color: 'white' }}>CAPTURAR ACTA</p>
-          </motion.button>
-        )}
-      </div>
-      
-      {error && (
-        <div style={{ 
-          padding: '1.1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', 
-          borderRadius: '14px', color: '#F87171', fontSize: '0.95rem', fontWeight: 700, 
-          marginBottom: '1.75rem', textAlign: 'center' 
-        }}>
-          {error}
-        </div>
-      )}
-
-      {/* Submit Button - GIGANTE */}
-      <motion.button
-        type="submit"
-        disabled={submitting}
-        whileTap={{ scale: 0.95 }}
-        style={{
-          width: '100%', padding: '1.4rem',
           borderRadius: '20px', border: 'none',
           background: submitting ? 'var(--text-3)' : 'linear-gradient(135deg, #22C47E 0%, #16a34a 100%)',
           color: 'white', fontWeight: 900, fontSize: '1.25rem',

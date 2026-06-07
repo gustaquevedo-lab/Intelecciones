@@ -73,6 +73,7 @@ addColumnIfNotExists("whatsapp_terminals", "phone_number", "TEXT");
 addColumnIfNotExists("whatsapp_terminals", "warmup_enabled", "INTEGER DEFAULT 0");
 addColumnIfNotExists("attendance", "photo_url", "TEXT");
 addColumnIfNotExists("users", "assigned_table_role", "TEXT");
+addColumnIfNotExists("results", "category", "TEXT DEFAULT 'INTENDENTE'");
 
 // Create index optimizations on startup
 try {

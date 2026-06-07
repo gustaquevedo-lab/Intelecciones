@@ -190,6 +190,10 @@ export default function diadRoutes(upload: multer.Multer) {
         ) v ON l.id = v.lista_id
         WHERE 1=1
       `;
+      if (districtName) {
+        sql += ` AND (UPPER(l.ciudad) = UPPER(?) OR l.ciudad = '' OR l.ciudad IS NULL)`;
+        params.push(districtName);
+      }
       if (list_id && !isNaN(list_id)) {
         sql += ` AND l.campaign_id = (SELECT campaign_id FROM lists WHERE id = ?)`;
         params.push(list_id);
@@ -204,11 +208,29 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   router.get('/listas', (req, res) => {
+    const districtFilter = getDistrict(req);
+    const role = getRole(req);
+    const user_id = req.headers['x-user-id'];
+
+    let districtName = districtFilter || '';
+    if (!districtName && role !== 'SUPERUSUARIO' && user_id) {
+      const user = getCachedUserInfo(user_id as string);
+      if (user?.distrito) districtName = user.distrito;
+    }
+
     try {
-      const lists = db.prepare(`
+      let sql = `
         SELECT id, candidate_alias as nombre, list_number, type, is_adversary
-        FROM lists ORDER BY is_adversary ASC, list_number ASC
-      `).all();
+        FROM lists 
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      if (districtName) {
+        sql += ` AND (UPPER(ciudad) = UPPER(?) OR ciudad = '' OR ciudad IS NULL)`;
+        params.push(districtName);
+      }
+      sql += ` ORDER BY is_adversary ASC, list_number ASC`;
+      const lists = db.prepare(sql).all(...params);
       res.json(lists);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -228,7 +250,7 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   router.post('/acta', upload.single('foto_acta'), (req, res) => {
-    const { mesa_id, votos_blanco, votos_nulos, listas, foto_acta_base64 } = req.body;
+    const { mesa_id, votos_blanco, votos_nulos, listas, foto_acta_base64, category } = req.body;
     const userId = req.headers['x-user-id'];
     if (!mesa_id) return res.status(400).json({ error: 'mesa_id es requerido' });
     if (votos_blanco === undefined || votos_blanco === null) return res.status(400).json({ error: 'votos_blanco es requerido' });
@@ -268,11 +290,22 @@ export default function diadRoutes(upload: multer.Multer) {
         const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
         const local = user?.assigned_local || 'PENDIENTE';
         const mesa = user?.assigned_mesa || 0;
+        const activeCategory = category || 'INTENDENTE';
 
+        // 1. Delete previous results and details for this specific mesa and category
+        const existingResults = db.prepare('SELECT id FROM results WHERE local_votacion = ? AND mesa = ? AND category = ?').all(local, mesa, activeCategory) as any[];
+        if (existingResults.length > 0) {
+          const ids = existingResults.map(r => r.id);
+          const placeholders = ids.map(() => '?').join(',');
+          db.prepare(`DELETE FROM acta_results WHERE acta_id IN (${placeholders})`).run(...ids);
+          db.prepare(`DELETE FROM results WHERE id IN (${placeholders})`).run(...ids);
+        }
+
+        // 2. Insert new result
         const result = db.prepare(`
-          INSERT INTO results (tenant_id, mesa, local_votacion, votos_blancos, votos_nulos, foto_acta_url, veedor_id)
-          VALUES (1, ?, ?, ?, ?, ?, ?)
-        `).run(mesa, local, votos_blanco || 0, votos_nulos || 0, photoUrl, userId);
+          INSERT INTO results (tenant_id, mesa, local_votacion, votos_blancos, votos_nulos, foto_acta_url, veedor_id, category)
+          VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+        `).run(mesa, local, votos_blanco || 0, votos_nulos || 0, photoUrl, userId, activeCategory);
 
         const actaId = result.lastInsertRowid;
         const insertResult = db.prepare(`INSERT INTO acta_results (acta_id, lista_id, votos) VALUES (?, ?, ?)`);
