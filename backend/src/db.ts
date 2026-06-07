@@ -841,6 +841,32 @@ export const runBootstrapChecks = () => {
         }
       }
     })();
+    // ── CONCEPCION DATABASE CLEANUP ──
+    (() => {
+      try {
+        const delElectors = db.prepare("DELETE FROM electors WHERE distrito = 'CONCEPCION' AND local_votacion != 'INSTITUTO SALESIANO SAN JOSE'").run();
+        if (delElectors.changes > 0) {
+          console.log(`[BOOTSTRAP CLEANUP] Deleted ${delElectors.changes} incorrect electors from CONCEPCION`);
+        }
+
+        const delLocs = db.prepare("DELETE FROM voting_locations WHERE distrito = 'CONCEPCION' AND nombre != 'INSTITUTO SALESIANO SAN JOSE'").run();
+        if (delLocs.changes > 0) {
+          console.log(`[BOOTSTRAP CLEANUP] Deleted ${delLocs.changes} incorrect voting locations from CONCEPCION`);
+        }
+
+        const delDupLoc = db.prepare("DELETE FROM voting_locations WHERE distrito = 'CONCEPCION' AND nombre = 'INSTITUTO SALESIANO SAN JOSE' AND cod_local != 'LOC_CONCEPCION'").run();
+        if (delDupLoc.changes > 0) {
+          console.log(`[BOOTSTRAP CLEANUP] Deleted duplicate voting location for INSTITUTO SALESIANO SAN JOSE`);
+        }
+
+        const updateElectors = db.prepare("UPDATE electors SET cod_local = 'LOC_CONCEPCION' WHERE distrito = 'CONCEPCION' AND local_votacion = 'INSTITUTO SALESIANO SAN JOSE' AND (cod_local IS NULL OR cod_local != 'LOC_CONCEPCION')").run();
+        if (updateElectors.changes > 0) {
+          console.log(`[BOOTSTRAP CLEANUP] Mapped ${updateElectors.changes} electors to LOC_CONCEPCION`);
+        }
+      } catch (err: any) {
+        console.error("[BOOTSTRAP CLEANUP ERROR] Failed to clean Concepcion data:", err.message);
+      }
+    })();
     console.log("DATABASE: Bootstrap checks complete.");
 
   } catch (e: any) {
