@@ -1422,37 +1422,51 @@ const DiaDApp: React.FC = () => {
               <motion.div key="participacion" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 
                 {/* KPIs Globales */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Electores Totales</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Electores Totales (Padrón)</div>
                     <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text)' }}>
                       {(participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 0).toLocaleString('es-PY')}
                     </div>
                   </div>
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sufragios Registrados</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Total Sufragios (Votaron)</div>
                     <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--blue)' }}>
                       {(participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0).toLocaleString('es-PY')}
                     </div>
                   </div>
                   <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>% Participación Global</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Votos Capturados (Sistema)</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--purple)' }}>
+                      {(participationData?.reduce((acc: number, l: any) => acc + (l.registered_votos || 0), 0) || 0).toLocaleString('es-PY')}
+                    </div>
+                  </div>
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>% Captura / Efectividad</div>
                     <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--green)' }}>
-                      {((participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0) / (participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 1) * 100).toFixed(1)}%
+                      {(() => {
+                        const totalVotos = participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0;
+                        const totalCapturados = participationData?.reduce((acc: number, l: any) => acc + (l.registered_votos || 0), 0) || 0;
+                        return totalVotos > 0 ? ((totalCapturados / totalVotos) * 100).toFixed(1) : '0.0';
+                      })()}%
                     </div>
                     <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, marginTop: '0.5rem', overflow: 'hidden' }}>
                       <motion.div 
                         initial={{ width: 0 }} 
-                        animate={{ width: `${((participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0) / (participationData?.reduce((acc: number, l: any) => acc + l.total_electors, 0) || 1) * 100)}%` }} 
+                        animate={{ width: `${(() => {
+                          const totalVotos = participationData?.reduce((acc: number, l: any) => acc + l.total_votos, 0) || 0;
+                          const totalCapturados = participationData?.reduce((acc: number, l: any) => acc + (l.registered_votos || 0), 0) || 0;
+                          return totalVotos > 0 ? (totalCapturados / totalVotos) * 100 : 0;
+                        })()}%` }} 
                         style={{ height: '100%', background: 'var(--green)' }} 
                       />
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Desglose por Local de Votación</h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button 
                       onClick={() => exportGlobalParticipation('txt')}
                       style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
@@ -1480,6 +1494,7 @@ const DiaDApp: React.FC = () => {
                   <div style={{ display: 'grid', gap: '1rem' }}>
                     {participationData?.map((local: any) => {
                       const pct = local.total_electors > 0 ? (local.total_votos / local.total_electors) * 100 : 0;
+                      const capPct = local.total_votos > 0 ? ((local.registered_votos || 0) / local.total_votos) * 100 : 0;
                       const isExpanded = expandedLocales[local.local];
                       return (
                         <div key={local.local} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
@@ -1489,12 +1504,14 @@ const DiaDApp: React.FC = () => {
                           >
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text)' }}>{local.local}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem', color: 'var(--text-2)' }}>
-                                <span><strong style={{color:'var(--text)'}}>{local.total_votos.toLocaleString('es-PY')}</strong> / {local.total_electors.toLocaleString('es-PY')} electores</span>
-                                <div style={{ width: 120, height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', fontSize: '0.75rem', color: 'var(--text-2)', flexWrap: 'wrap' }}>
+                                <span><strong style={{color:'var(--text)'}}>{local.total_votos.toLocaleString('es-PY')}</strong> / {local.total_electors.toLocaleString('es-PY')} sufragios ({pct.toFixed(1)}%)</span>
+                                <div style={{ width: 100, height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
                                   <div style={{ width: `${pct}%`, height: '100%', background: pct > 40 ? 'var(--green)' : pct > 20 ? 'var(--blue)' : 'var(--text-3)' }} />
                                 </div>
-                                <span>{pct.toFixed(1)}%</span>
+                                <span style={{ color: 'var(--purple-text, #A855F7)', fontWeight: 800 }}>
+                                  Capturados: <strong>{(local.registered_votos || 0).toLocaleString('es-PY')}</strong> ({capPct.toFixed(1)}%)
+                                </span>
                               </div>
                             </div>
                             <div style={{ color: 'var(--text-3)' }}>
@@ -1509,6 +1526,7 @@ const DiaDApp: React.FC = () => {
                                 <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                                   {local.mesas.map((m: any) => {
                                     const mPct = m.total_electors > 0 ? (m.total_votos / m.total_electors) * 100 : 0;
+                                    const mCapPct = m.total_votos > 0 ? ((m.registered_votos || 0) / m.total_votos) * 100 : 0;
                                     return (
                                       <div 
                                         key={m.mesa} 
@@ -1525,6 +1543,7 @@ const DiaDApp: React.FC = () => {
                                       >
                                         <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.4rem' }}>Mesa {m.mesa}</div>
                                         <div style={{ fontSize: '1.25rem', fontWeight: 900, color: mPct > 40 ? 'var(--green)' : 'var(--blue)', marginBottom: '0.2rem' }}>{m.total_votos} <span style={{fontSize:'0.65rem', color:'var(--text-3)', fontWeight:600}}>/ {m.total_electors}</span></div>
+                                        <div style={{ fontSize: '0.7rem', color: '#A855F7', marginBottom: '0.4rem', fontWeight: 800 }}>Capturados: {m.registered_votos || 0} ({mCapPct.toFixed(0)}%)</div>
                                         <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
                                           <div style={{ width: `${mPct}%`, height: '100%', background: mPct > 40 ? 'var(--green)' : 'var(--blue)' }} />
                                         </div>
