@@ -929,7 +929,7 @@ const DiaDApp: React.FC = () => {
                                             background: isSelectedForSwap ? 'var(--green)' : 'rgba(34,197,94,0.1)',
                                             color: isSelectedForSwap ? 'white' : '#4ADE80',
                                             fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer',
-                                            animation: !isConstituida && !isSelectedForSwap ? 'pulseBorder 2s infinite' : 'none'
+                                            animation: !isDesignada && !isSelectedForSwap ? 'pulseBorder 2s infinite' : 'none'
                                           }}
                                         >
                                           {isSelectedForSwap ? 'SELECCIONANDO SUPLENTE...' : '🟢 ASIGNAR SUPLENTE'}
