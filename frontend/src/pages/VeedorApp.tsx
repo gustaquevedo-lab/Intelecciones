@@ -51,6 +51,37 @@ const VeedorApp = () => {
   const [activeTab, setActiveTab] = useState<'veeduria' | 'acta'>('veeduria');
   const isMiembroMesa = user?.role === 'MIEMBRO_DE_MESA';
   const isApoderado = user?.role === 'APODERADO';
+  const isSupervisor = true;
+
+  const [localesMesas, setLocalesMesas] = useState<{ nombre: string; mesas: number[] }[]>([]);
+  const [selectedLocal, setSelectedLocal] = useState<string>(() => localStorage.getItem('veedor_selected_local') || user?.assigned_local || '');
+  const [selectedMesa, setSelectedMesa] = useState<number>(() => {
+    const saved = localStorage.getItem('veedor_selected_mesa');
+    return saved ? parseInt(saved) : (user?.assigned_mesa || 0);
+  });
+
+  useEffect(() => {
+    if (isSupervisor) {
+      api.get('/veedor/locales-mesas')
+        .then(res => {
+          setLocalesMesas(res.data);
+          if (res.data.length > 0) {
+            const savedLocal = localStorage.getItem('veedor_selected_local');
+            const savedMesa = localStorage.getItem('veedor_selected_mesa');
+            
+            let currentLocal = savedLocal || res.data[0].nombre;
+            let localObj = res.data.find((l: any) => l.nombre === currentLocal) || res.data[0];
+            let currentMesa = savedMesa ? parseInt(savedMesa) : localObj.mesas[0] || 1;
+
+            setSelectedLocal(localObj.nombre);
+            setSelectedMesa(currentMesa);
+            localStorage.setItem('veedor_selected_local', localObj.nombre);
+            localStorage.setItem('veedor_selected_mesa', String(currentMesa));
+          }
+        })
+        .catch(err => console.error(err));
+    }
+  }, [isSupervisor]);
 
   if (isApoderado) {
     return <ApoderadoPanel user={user} />;
@@ -60,12 +91,68 @@ const VeedorApp = () => {
     <MainLayout title="Panel de Mesa" userName={user?.nombre || 'Veedor'}>
       <div style={{ 
         padding: '1rem', 
-        maxWidth: '500px', 
+        maxWidth: '800px', 
         margin: '0 auto', 
         minHeight: 'calc(100vh - 70px)',
         display: 'flex',
         flexDirection: 'column'
       }}>
+
+        {/* Supervisor Selectors */}
+        {isSupervisor && localesMesas.length > 0 && (
+          <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--plra-300)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Selector de Local y Mesa (Supervisión)
+            </h3>
+            <div style={{ display: 'flex', gap: '1rem', flexDirection: 'row', flexWrap: 'wrap' }}>
+              <div style={{ flex: '2 1 250px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '0.4rem', fontWeight: 700 }}>LOCAL DE VOTACIÓN</label>
+                <select
+                  value={selectedLocal}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedLocal(val);
+                    localStorage.setItem('veedor_selected_local', val);
+                    const locObj = localesMesas.find(l => l.nombre === val);
+                    if (locObj && locObj.mesas.length > 0) {
+                      setSelectedMesa(locObj.mesas[0]);
+                      localStorage.setItem('veedor_selected_mesa', String(locObj.mesas[0]));
+                    }
+                  }}
+                  style={{
+                    width: '100%', padding: '0.75rem', borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                    color: 'white', fontWeight: 700, outline: 'none'
+                  }}
+                >
+                  {localesMesas.map(l => (
+                    <option key={l.nombre} value={l.nombre} style={{ background: 'var(--bg-card)', color: 'white' }}>{l.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: '1 1 120px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '0.4rem', fontWeight: 700 }}>MESA</label>
+                <select
+                  value={selectedMesa}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setSelectedMesa(val);
+                    localStorage.setItem('veedor_selected_mesa', String(val));
+                  }}
+                  style={{
+                    width: '100%', padding: '0.75rem', borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                    color: 'white', fontWeight: 700, outline: 'none'
+                  }}
+                >
+                  {(localesMesas.find(l => l.nombre === selectedLocal)?.mesas || [1]).map(m => (
+                    <option key={m} value={m} style={{ background: 'var(--bg-card)', color: 'white' }}>Mesa {m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab selector - HIDDEN for Miembro de Mesa if they haven't finished */}
         {!isMiembroMesa && (
@@ -86,6 +173,8 @@ const VeedorApp = () => {
               <VeeduriaTab 
                 user={user} 
                 onFinish={() => setActiveTab('acta')} 
+                selectedLocal={selectedLocal}
+                selectedMesa={selectedMesa}
               />
             </motion.div>
           ) : (
@@ -111,21 +200,21 @@ const ElectorGridItem = React.memo(({ order, isVoted, onClick }: {
   return (
     <button
       type="button"
-      onClick={() => !isVoted && onClick(order)}
+      onClick={() => onClick(order)}
       style={{
-        height: '95px',
+        height: '80px',
         display: 'flex', 
         flexDirection: 'column',
         alignItems: 'center', 
         justifyContent: 'center',
-        borderRadius: '18px', 
+        borderRadius: '14px', 
         border: '2px solid',
-        cursor: isVoted ? 'default' : 'pointer',
+        cursor: 'pointer',
         background: isVoted ? 'var(--plra-600)' : 'rgba(255,255,255,0.03)',
         borderColor: isVoted ? 'var(--plra-400)' : 'rgba(255,255,255,0.08)',
         position: 'relative', 
         transition: 'transform 0.1s ease-in-out, background-color 0.15s, border-color 0.15s',
-        boxShadow: isVoted ? 'none' : '0 4px 14px rgba(0,0,0,0.15)',
+        boxShadow: isVoted ? 'none' : '0 4px 10px rgba(0,0,0,0.15)',
         width: '100%',
         color: 'white',
         outline: 'none'
@@ -133,55 +222,81 @@ const ElectorGridItem = React.memo(({ order, isVoted, onClick }: {
       className="elector-grid-item"
     >
       {isVoted ? (
-        <Check size={38} style={{ color: 'var(--white)' }} strokeWidth={3.5} />
+        <Check size={28} style={{ color: 'var(--white)' }} strokeWidth={3.5} />
       ) : (
-        <span style={{ fontSize: '2.3rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>{order}</span>
+        <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>{order}</span>
       )}
     </button>
   );
 });
 
 /* ─────────────────────────────────────────────
-   VEEDURÍA TAB (optimized for mobile)
+   VEEDURÍA TAB (optimized for mobile & desktop)
    ───────────────────────────────────────────── */
-const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) => {
+const VeeduriaTab = ({ user, onFinish, selectedLocal, selectedMesa }: { 
+  user: any; 
+  onFinish?: () => void;
+  selectedLocal?: string;
+  selectedMesa?: number;
+}) => {
   const [electors, setElectors] = useState<number[]>([]);
   const [votedOrders, setVotedOrders] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState<number | null>(null);
   const [confirmingOrder, setConfirmingOrder] = useState<number | null>(null);
+  const [unconfirmingOrder, setUnconfirmingOrder] = useState<number | null>(null);
   const [tableInfo, setTableInfo] = useState({ local: '', mesa: '', total: 0 });
+  const [customTotal, setCustomTotal] = useState<number>(400);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isMiembroMesa = user?.role === 'MIEMBRO_DE_MESA';
 
   useEffect(() => {
     if (user) loadTableData();
-  }, [user]);
+  }, [user, selectedLocal, selectedMesa]);
 
   const loadTableData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/veedor/table-status');
+      const url = (selectedLocal && selectedMesa)
+        ? `/veedor/table-status?local=${encodeURIComponent(selectedLocal)}&mesa=${selectedMesa}`
+        : '/veedor/table-status';
+      const res = await api.get(url);
       setTableInfo(res.data.info);
       const voted = new Set<number>(res.data.votedOrders);
       setVotedOrders(voted);
-      setElectors(Array.from({ length: res.data.info.total }, (_, i) => i + 1));
+
+      const storageKey = `veedor_total_${selectedLocal || res.data.info.local}_${selectedMesa || res.data.info.mesa}`;
+      const savedTotal = localStorage.getItem(storageKey);
+      const initialTotal = savedTotal ? parseInt(savedTotal) : (res.data.info.total || 400);
+      setCustomTotal(initialTotal);
+      setElectors(Array.from({ length: initialTotal }, (_, i) => i + 1));
     } catch (err) {
     } finally {
       setLoading(false);
     }
   };
 
+  const handleUpdateTotal = (newTotal: number) => {
+    const val = Math.max(1, newTotal);
+    setCustomTotal(val);
+    setElectors(Array.from({ length: val }, (_, i) => i + 1));
+    const storageKey = `veedor_total_${selectedLocal || tableInfo.local}_${selectedMesa || tableInfo.mesa}`;
+    localStorage.setItem(storageKey, String(val));
+  };
+
   const handleMarkRequest = (order: number) => {
-    if (votedOrders.has(order)) return;
-    setConfirmingOrder(order);
+    if (votedOrders.has(order)) {
+      setUnconfirmingOrder(order);
+    } else {
+      setConfirmingOrder(order);
+    }
   };
 
   const confirmMarkVote = async () => {
     if (!confirmingOrder) return;
     const order = confirmingOrder;
     
-    // UI Feedback immediate
     setShowSuccess(order);
     setVotedOrders(prev => new Set(prev).add(order));
     setConfirmingOrder(null);
@@ -190,7 +305,33 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
 
     try {
       const { safePost } = await import('../services/syncService');
-      await safePost('MARK_VOTE', '/veedor/mark-vote', { order });
+      await safePost('MARK_VOTE', '/veedor/mark-vote', { 
+        order,
+        local: selectedLocal || tableInfo.local,
+        mesa: selectedMesa || tableInfo.mesa
+      });
+    } catch (err) {
+    }
+  };
+
+  const confirmUnmarkVote = async () => {
+    if (!unconfirmingOrder) return;
+    const order = unconfirmingOrder;
+    
+    setVotedOrders(prev => {
+      const next = new Set(prev);
+      next.delete(order);
+      return next;
+    });
+    setUnconfirmingOrder(null);
+
+    try {
+      const { safePost } = await import('../services/syncService');
+      await safePost('UNMARK_VOTE', '/veedor/unmark-vote', { 
+        order,
+        local: selectedLocal || tableInfo.local,
+        mesa: selectedMesa || tableInfo.mesa
+      });
     } catch (err) {
     }
   };
@@ -210,6 +351,12 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
     );
   }
 
+  // Filter grid by search query
+  const filteredElectors = electors.filter(e => {
+    if (!searchQuery) return true;
+    return String(e).includes(searchQuery);
+  });
+
   return (
     <>
       {/* Header táctico optimizado */}
@@ -220,7 +367,7 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
         flexDirection: 'column',
         gap: '1.25rem'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
               <MapPin size={18} style={{ color: tableInfo.local === 'SIN ASIGNACIÓN' ? 'var(--red)' : 'var(--plra-300)' }} />
@@ -228,17 +375,40 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
                 {tableInfo.local || 'Cargando...'}
               </h2>
             </div>
-            <div style={{ display: 'flex', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <p style={{ fontSize: '1rem', color: 'var(--text-3)', fontWeight: 800 }}>
                 MESA: <span style={{ color: 'var(--plra-200)', fontSize: '1.2rem', fontWeight: 900 }}>{tableInfo.mesa || '—'}</span>
               </p>
-              <p style={{ fontSize: '1rem', color: 'var(--text-3)', fontWeight: 800 }}>
-                TOTAL: <span style={{ color: 'var(--text)', fontSize: '1.2rem', fontWeight: 900 }}>{tableInfo.total}</span>
-              </p>
+              <div style={{ fontSize: '1.0rem', color: 'var(--text-3)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                TOTAL: 
+                <button 
+                  type="button" 
+                  onClick={() => handleUpdateTotal(customTotal - 10)}
+                  style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '0.75rem' }}
+                >
+                  -10
+                </button>
+                <input
+                  type="number"
+                  value={customTotal}
+                  onChange={(e) => handleUpdateTotal(parseInt(e.target.value) || 0)}
+                  style={{
+                    width: '65px', textAlign: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '8px', color: 'white', fontWeight: 900, fontSize: '1.1rem', padding: '0.2rem 0', outline: 'none'
+                  }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => handleUpdateTotal(customTotal + 10)}
+                  style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '0.75rem' }}
+                >
+                  +10
+                </button>
+              </div>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '2.4rem', fontWeight: 900, color: 'var(--green)', lineHeight: 1 }}>
+            <p style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--green)', lineHeight: 1 }}>
               {votedOrders.size}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Presentes</p>
@@ -277,23 +447,66 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
         )}
       </header>
 
+      {/* Quick Search / Marker Bar */}
+      <div className="card-premium-styled" style={{ padding: '1rem', marginBottom: '1.25rem', display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 200px', position: 'relative' }}>
+          <input
+            type="number"
+            placeholder="Buscar o Marcar Nº de Orden..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%', padding: '0.75rem 1rem', borderRadius: '12px',
+              background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)',
+              color: 'white', fontWeight: 700, outline: 'none'
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        
+        {/^\d+$/.test(searchQuery) && parseInt(searchQuery) > 0 && parseInt(searchQuery) <= customTotal && (
+          <button
+            type="button"
+            onClick={() => {
+              const orderNum = parseInt(searchQuery);
+              handleMarkRequest(orderNum);
+              setSearchQuery('');
+            }}
+            style={{
+              padding: '0.75rem 1.25rem', borderRadius: '12px', border: 'none',
+              background: votedOrders.has(parseInt(searchQuery)) ? 'var(--red)' : 'var(--green)',
+              color: 'white', fontWeight: 900, cursor: 'pointer', whiteSpace: 'nowrap'
+            }}
+          >
+            {votedOrders.has(parseInt(searchQuery)) ? 'DESMARCAR' : 'MARCAR'} #{searchQuery}
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div style={{ padding: '1rem' }}>
           <Skeleton height={110} borderRadius={18} style={{ marginBottom: '1rem' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.8rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(75px, 1fr))', gap: '0.6rem' }}>
             {Array.from({ length: 12 }).map((_, i) => (
-              <Skeleton key={i} height={95} borderRadius={18} />
+              <Skeleton key={i} height={80} borderRadius={14} />
             ))}
           </div>
         </div>
       ) : (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
-          gap: '0.8rem',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(75px, 1fr))',
+          gap: '0.6rem',
           paddingBottom: '2.5rem'
         }}>
-          {electors.map((order) => {
+          {filteredElectors.map((order) => {
             const isVoted = votedOrders.has(order);
             return (
               <div key={order} style={{ position: 'relative' }}>
@@ -312,16 +525,16 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
                       style={{
                         position: 'absolute', 
                         zIndex: 10,
-                        top: '25px', 
-                        left: '25px',
+                        top: '15px', 
+                        left: '15px',
                         background: 'var(--green)', 
                         borderRadius: '50%',
-                        padding: '8px', 
+                        padding: '6px', 
                         boxShadow: '0 8px 25px rgba(34,197,94,0.6)',
                         pointerEvents: 'none'
                       }}
                     >
-                      <Check size={22} color="var(--white)" strokeWidth={3} />
+                      <Check size={18} color="var(--white)" strokeWidth={3} />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -385,6 +598,73 @@ const VeeduriaTab = ({ user, onFinish }: { user: any; onFinish?: () => void }) =
                 
                 <button
                   onClick={() => setConfirmingOrder(null)}
+                  style={{
+                    padding: '1rem', background: 'transparent', border: 'none',
+                    color: 'var(--text-3)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer'
+                  }}
+                >
+                  CANCELAR
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE CONFIRMACIÓN DE QUITAR VOTO */}
+      <AnimatePresence>
+        {unconfirmingOrder && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: '2rem'
+          }}>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              style={{
+                width: '100%', maxWidth: '340px',
+                background: 'var(--surface-light)', borderRadius: '24px',
+                padding: '2.2rem', textAlign: 'center',
+                border: '1px solid var(--border)',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+              }}
+            >
+              <div style={{ 
+                width: '90px', height: '90px', borderRadius: '50%', 
+                background: 'rgba(239,68,68,0.1)', color: '#EF4444',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 1.5rem'
+              }}>
+                <span style={{ fontSize: '2.8rem', fontWeight: 900 }}>{unconfirmingOrder}</span>
+              </div>
+              
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', marginBottom: '0.6rem' }}>
+                Quitar Voto
+              </h3>
+              <p style={{ color: 'var(--text-2)', fontSize: '1rem', marginBottom: '2.2rem' }}>
+                ¿Desea desmarcar (quitar) al elector número <strong style={{ color: 'white' }}>#{unconfirmingOrder}</strong>?
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={confirmUnmarkVote}
+                  style={{
+                    padding: '1.35rem', borderRadius: '18px', border: 'none',
+                    background: 'var(--red)', color: 'white',
+                    fontWeight: 900, fontSize: '1.2rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem'
+                  }}
+                >
+                  <Check size={26} strokeWidth={3.5} />
+                  SÍ, QUITAR
+                </motion.button>
+                
+                <button
+                  onClick={() => setUnconfirmingOrder(null)}
                   style={{
                     padding: '1rem', background: 'transparent', border: 'none',
                     color: 'var(--text-3)', fontWeight: 800, fontSize: '1rem', cursor: 'pointer'

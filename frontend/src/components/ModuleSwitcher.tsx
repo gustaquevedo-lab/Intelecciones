@@ -9,7 +9,7 @@ const MODULES = [
   { id: 'coordinador',    label: 'Coordinador', short: 'Coord',  path: '/coordinador',   icon: Users,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'REGISTRY' },
   { id: 'comando',        label: 'Comando',     short: 'Cmd',    path: '/comando',        icon: Map,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMAND_CENTER' },
   { id: 'logistics',      label: 'Logística',   short: 'Log',    path: '/logistica',      icon: Truck,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'LOGISTICS' },
-  { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA','SUBJEFE'], moduleKey: 'DAY_D' },
+  { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA','SUBJEFE','COORDINADOR','VEEDOR','APODERADO','DRIVER','LOGISTICA','CATERING'], moduleKey: 'DAY_D' },
   { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMUNICATIONS' },
   { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
   { id: 'asistencia',     label: 'Reunión General',  short: 'Reunión',  path: '/asistencia',    icon: CheckCircle,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'], moduleKey: 'REGISTRY' },
@@ -24,18 +24,12 @@ export const ModuleSwitcher: React.FC = () => {
   const { prefetchRoute, cancelPrefetch } = usePrefetchOnHover();
 
   if (!user) return null;
-  const canSeeAny =
-    user.role === 'SUPERUSUARIO' ||
-    user.role === 'JEFE_CAMPANA' ||
-    user.role === 'PADRINO' ||
-    user.role === 'SUBJEFE' ||
-    user.role === 'COORDINADOR' ||
-    user.role === 'MIEMBRO_DE_MESA';
-  if (!canSeeAny) return null;
+  // Allow all roles to access the menu switcher if logged in
+  const canSeeAny = true;
 
   const available = MODULES.filter(m => {
     if (user.role === 'SUPERUSUARIO') return true;
-    if (user.role === 'MIEMBRO_DE_MESA') return m.id === 'veedor';
+    if (m.id === 'veedor') return true; // Veedor visible to everyone
     return m.roles.includes(user.role) && !!user.enabled_modules?.includes(m.moduleKey);
   });
 

@@ -726,7 +726,7 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   // ── MESA CONSTITUTION ENDPOINTS ──────────────────────────────────────────
-  router.post('/mesa/confirm', (req, res) => {
+  router.post('/mesa/confirm', async (req, res) => {
     const { local_votacion, mesa } = req.body;
     if (!local_votacion || mesa === undefined) {
       return res.status(400).json({ error: 'local_votacion y mesa son requeridos' });
@@ -740,13 +740,15 @@ export default function diadRoutes(upload: multer.Multer) {
           confirmed_at = CURRENT_TIMESTAMP
       `).run(local_votacion, mesa);
 
+      await diadCoverageCache.invalidate();
+
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  router.post('/sync-confirmations', (req, res) => {
+  router.post('/sync-confirmations', async (req, res) => {
     const { confirmations } = req.body;
     if (!confirmations || !Array.isArray(confirmations)) {
       return res.status(400).json({ error: 'confirmations debe ser un array' });
@@ -766,6 +768,8 @@ export default function diadRoutes(upload: multer.Multer) {
           stmt.run(conf.local_votacion, conf.mesa, isConfirmed, conf.confirmed_at || new Date().toISOString());
         }
       })();
+
+      await diadCoverageCache.invalidate();
 
       res.json({ success: true, count: confirmations.length });
     } catch (err: any) {
@@ -1284,18 +1288,64 @@ export default function diadRoutes(upload: multer.Multer) {
 export function veedorRoutes() {
   const router = Router();
 
+  router.get('/locales-mesas', (req, res) => {
+    try {
+      const rows = db.prepare(`
+        SELECT DISTINCT local_votacion, mesa 
+        FROM electors 
+        WHERE local_votacion IS NOT NULL AND local_votacion != '' AND mesa IS NOT NULL AND mesa > 0
+        ORDER BY local_votacion, mesa
+      `).all() as any[];
+
+      const localesMap: Record<string, number[]> = {};
+      rows.forEach(r => {
+        const locName = r.local_votacion.trim();
+        if (!localesMap[locName]) {
+          localesMap[locName] = [];
+        }
+        if (!localesMap[locName].includes(r.mesa)) {
+          localesMap[locName].push(r.mesa);
+        }
+      });
+
+      const result = Object.entries(localesMap).map(([nombre, mesas]) => ({
+        nombre,
+        mesas: mesas.sort((a, b) => a - b)
+      }));
+
+      // Fallback: check if there are voting_locations that don't have electors yet
+      const allLocales = db.prepare("SELECT nombre FROM voting_locations").all() as any[];
+      allLocales.forEach(l => {
+        const name = l.nombre.trim();
+        if (!localesMap[name]) {
+          result.push({ nombre: name, mesas: [1] });
+        }
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.get('/table-status', (req, res) => {
     try {
       const userId = req.headers['x-user-id'];
       if (!userId) return res.status(401).json({ error: 'No user ID provided' });
 
-      const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
-      if (!user?.assigned_local) {
-        return res.json({ info: { local: 'SIN ASIGNACIÓN', mesa: 0, total: 400 }, votedOrders: [] });
+      let local = req.query.local as string;
+      let mesaStr = req.query.mesa as string;
+      let mesa = parseInt(mesaStr);
+
+      if (!local || isNaN(mesa)) {
+        const user = db.prepare('SELECT assigned_local, assigned_mesa FROM users WHERE id = ?').get(userId) as any;
+        if (!user?.assigned_local) {
+          return res.json({ info: { local: 'SIN ASIGNACIÓN', mesa: 0, total: 400 }, votedOrders: [] });
+        }
+        local = user.assigned_local;
+        mesa = user.assigned_mesa || 1;
       }
 
-      const local = user.assigned_local;
-      const mesa = user.assigned_mesa || 1;
       const stats = db.prepare('SELECT MAX(orden) as total FROM electors WHERE local_votacion = ? AND mesa = ?').get(local, mesa) as any;
       const voted = db.prepare('SELECT orden FROM participation_logs WHERE local_votacion = ? AND mesa = ?').all(local, mesa) as any[];
       res.json({ info: { local, mesa, total: stats?.total || 400 }, votedOrders: voted.map(v => v.orden) });
@@ -1326,6 +1376,70 @@ export function veedorRoutes() {
       db.prepare(`DELETE FROM participation_logs WHERE local_votacion = ? AND mesa = ? AND orden = ?`).run(local, mesa, order);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Diagnose mesa integrity issues: GET /diad/diagnose-mesa?distrito=PEDRO JUAN CABALLERO&local=Carlos Antonio López&mesa=1
+  router.get('/diagnose-mesa', (req, res) => {
+    const { distrito, local, mesa } = req.query;
+    const mesaNum = parseInt(mesa as string);
+
+    if (!distrito || !local || !mesa || isNaN(mesaNum)) {
+      return res.status(400).json({ error: 'Required params: distrito, local, mesa' });
+    }
+
+    try {
+      // Get elector count for this mesa
+      const electoresCount = db.prepare(`
+        SELECT COUNT(*) as count FROM electors
+        WHERE UPPER(local_votacion) LIKE UPPER(?)
+          AND mesa = ?
+          AND UPPER(distrito) = UPPER(?)
+      `).get(`%${local}%`, mesaNum, distrito) as any;
+
+      // Get vote count for this mesa
+      const votosCount = db.prepare(`
+        SELECT COUNT(*) as count FROM participation_logs
+        WHERE UPPER(local_votacion) LIKE UPPER(?)
+          AND mesa = ?
+          AND UPPER(distrito) = UPPER(?)
+      `).get(`%${local}%`, mesaNum, distrito) as any;
+
+      // List all electors assigned to this mesa
+      const electores = db.prepare(`
+        SELECT id, ci, nombre, apellido, orden, local_votacion, mesa, distrito
+        FROM electors
+        WHERE UPPER(local_votacion) LIKE UPPER(?)
+          AND mesa = ?
+          AND UPPER(distrito) = UPPER(?)
+        ORDER BY orden
+      `).all(`%${local}%`, mesaNum, distrito) as any[];
+
+      // List all votes cast from this mesa
+      const votos = db.prepare(`
+        SELECT orden, elector_ci, voted_at, local_votacion, mesa, distrito
+        FROM participation_logs
+        WHERE UPPER(local_votacion) LIKE UPPER(?)
+          AND mesa = ?
+          AND UPPER(distrito) = UPPER(?)
+        ORDER BY voted_at
+      `).all(`%${local}%`, mesaNum, distrito) as any[];
+
+      res.json({
+        mesa_info: { distrito, local, mesa: mesaNum },
+        counts: {
+          electores_habilitados: electoresCount?.count || 0,
+          votos_registrados: votosCount?.count || 0,
+          diferencia: (votosCount?.count || 0) - (electoresCount?.count || 0)
+        },
+        electores,
+        votos,
+        warning: (votosCount?.count || 0) > (electoresCount?.count || 0)
+          ? `⚠️ MÁS VOTOS (${votosCount?.count}) QUE ELECTORES (${electoresCount?.count})`
+          : ''
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   return router;
