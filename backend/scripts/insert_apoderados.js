@@ -24,7 +24,14 @@ function runInsertApoderados(db) {
     { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '2019816', phone: '83-567740' },
     { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '3540580', phone: '82-502018' },
     { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '3179559', phone: '75-171088' },
-    { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '5100327', phone: '' }
+    { local: 'FACULTAD DE CIENCIAS AGRARIAS', ci: '5100327', phone: '' },
+    
+    // CARLOS ANTONIO LOPEZ
+    { local: 'ESC. BAS. CARLOS ANTONIO LOPEZ', ci: '935490', phone: '71-655928' },
+    { local: 'ESC. BAS. CARLOS ANTONIO LOPEZ', ci: '2620465', phone: '73-823455' },
+    { local: 'ESC. BAS. CARLOS ANTONIO LOPEZ', ci: '2262807', phone: '84-789244' },
+    { local: 'ESC. BAS. CARLOS ANTONIO LOPEZ', ci: '3808943', phone: '94-589581' },
+    { local: 'ESC. BAS. CARLOS ANTONIO LOPEZ', ci: '883599', phone: '71-801735' }
   ];
 
   const getElectorStmt = db.prepare("SELECT nombre, apellido FROM electors WHERE TRIM(REPLACE(CAST(ci AS TEXT), '.', '')) = ? OR LTRIM(TRIM(REPLACE(CAST(ci AS TEXT), '.', '')), '0') = ?");
