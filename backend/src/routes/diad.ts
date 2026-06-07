@@ -743,6 +743,34 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  router.post('/sync-confirmations', (req, res) => {
+    const { confirmations } = req.body;
+    if (!confirmations || !Array.isArray(confirmations)) {
+      return res.status(400).json({ error: 'confirmations debe ser un array' });
+    }
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO mesa_constitutions (local_votacion, mesa, is_confirmed, confirmed_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(local_votacion, mesa) DO UPDATE SET
+          is_confirmed = excluded.is_confirmed,
+          confirmed_at = excluded.confirmed_at
+      `);
+
+      db.transaction(() => {
+        for (const conf of confirmations) {
+          const isConfirmed = conf.is_confirmed ? 1 : 0;
+          stmt.run(conf.local_votacion, conf.mesa, isConfirmed, conf.confirmed_at || new Date().toISOString());
+        }
+      })();
+
+      res.json({ success: true, count: confirmations.length });
+    } catch (err: any) {
+      console.error('[SYNC CONFIRMATIONS ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.post('/mesa/upload-acta', upload.single('photo'), (req, res) => {
     const { local_votacion, mesa } = req.body;
     if (!local_votacion || mesa === undefined) {
@@ -878,6 +906,217 @@ export default function diadRoutes(upload: multer.Multer) {
         all_members_count: allMembers.length,
         members_with_filter: members_with_filter_check,
         voting_locations_sample: votingLocs_sample
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.get('/diagnose-critical', (req, res) => {
+    try {
+      // 1. Check Concepcion members
+      const concepcionMembers = db.prepare(`
+        SELECT id, nombre, ci, role, assigned_local, assigned_mesa, distrito
+        FROM users
+        WHERE (distrito LIKE '%CONCEPCION%' OR assigned_local LIKE '%CONCEPCION%')
+        AND role IN ('MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'VEEDOR', 'APODERADO', 'PRESIDENTE', 'VOCAL')
+        LIMIT 50
+      `).all();
+
+      // 2. Check SUBJEFE role users
+      const subjefes = db.prepare(`
+        SELECT id, nombre, username, role, distrito, assigned_local, enabled_modules
+        FROM users
+        WHERE role = 'SUBJEFE'
+        LIMIT 20
+      `).all();
+
+      // 3. Check participation issues
+      const participationIssues = db.prepare(`
+        SELECT
+          COUNT(*) as total_participation_logs,
+          COUNT(DISTINCT local_votacion) as distinct_locals,
+          COUNT(DISTINCT mesa) as distinct_mesas
+        FROM participation_logs
+      `).get();
+
+      // 4. Check for orphan users (created but not in locations)
+      const orphanUsers = db.prepare(`
+        SELECT u.id, u.nombre, u.ci, u.role, u.assigned_local, u.assigned_mesa, u.distrito
+        FROM users u
+        LEFT JOIN voting_locations vl ON u.assigned_local = vl.nombre
+        WHERE u.assigned_local IS NOT NULL
+        AND u.assigned_local != ''
+        AND vl.nombre IS NULL
+        AND u.role IN ('MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'VEEDOR')
+        LIMIT 30
+      `).all();
+
+      // 5. Check Concepcion voting locations
+      const concepcionLocations = db.prepare(`
+        SELECT nombre, distrito, ciudad
+        FROM voting_locations
+        WHERE distrito LIKE '%CONCEPCION%' OR ciudad LIKE '%CONCEPCION%'
+        LIMIT 20
+      `).all();
+
+      // 6. Check total users by district
+      const usersByDistrict = db.prepare(`
+        SELECT distrito, COUNT(*) as count
+        FROM users
+        WHERE role IN ('MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'VEEDOR', 'APODERADO')
+        GROUP BY distrito
+        ORDER BY count DESC
+        LIMIT 10
+      `).all();
+
+      res.json({
+        concepcionMembers: { count: (concepcionMembers as any[]).length, data: concepcionMembers },
+        subjefes: { count: (subjefes as any[]).length, data: subjefes },
+        participationIssues,
+        orphanUsers: { count: (orphanUsers as any[]).length, data: orphanUsers },
+        concepcionLocations: { count: (concepcionLocations as any[]).length, data: concepcionLocations },
+        usersByDistrict,
+        summary: {
+          problem_concepcion_lost: (concepcionMembers as any[]).length === 0,
+          problem_subjefe_missing: (subjefes as any[]).length === 0,
+          problem_participation_empty: (participationIssues as any).total_participation_logs === 0,
+          problem_orphan_users: (orphanUsers as any[]).length > 0
+        }
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.get('/audit-data-sync', (req, res) => {
+    try {
+      console.log('[AUDIT] Starting data sync audit...');
+
+      // 1. Check mesa_constitutions vs participation_logs
+      const constitutions = db.prepare(`
+        SELECT local_votacion, mesa, is_confirmed, confirmed_at, foto_acta_url, constituted_at
+        FROM mesa_constitutions
+        LIMIT 20
+      `).all();
+
+      // 2. Check for votos registered without constitution confirmed
+      const votos_without_constitution = db.prepare(`
+        SELECT DISTINCT pl.local_votacion, pl.mesa, COUNT(*) as votos_count
+        FROM participation_logs pl
+        LEFT JOIN mesa_constitutions mc ON pl.local_votacion = mc.local_votacion AND pl.mesa = mc.mesa
+        WHERE mc.local_votacion IS NULL
+        GROUP BY pl.local_votacion, pl.mesa
+        LIMIT 20
+      `).all();
+
+      // 3. Check participacion_logs structure
+      const participation_sample = db.prepare(`
+        SELECT local_votacion, mesa, COUNT(*) as votos
+        FROM participation_logs
+        GROUP BY local_votacion, mesa
+        LIMIT 10
+      `).all();
+
+      // 4. Check if there are results without corresponding participation
+      const results_structure = db.prepare(`
+        SELECT r.id, r.local_votacion, r.mesa, r.veedor_id,
+               COUNT(ar.id) as acta_results_count,
+               (SELECT COUNT(*) FROM participation_logs
+                WHERE local_votacion = r.local_votacion AND mesa = r.mesa) as participation_count
+        FROM results r
+        LEFT JOIN acta_results ar ON r.id = ar.acta_id
+        GROUP BY r.local_votacion, r.mesa
+        LIMIT 20
+      `).all();
+
+      // 5. Check audit logs for apoderado confirmations
+      const audit_logs = db.prepare(`
+        SELECT id, user_id, action, entity, entity_id, details, timestamp
+        FROM audit_logs
+        WHERE action LIKE '%confirm%' OR action LIKE '%mesa%' OR entity = 'MESA'
+        ORDER BY timestamp DESC
+        LIMIT 20
+      `).all();
+
+      res.json({
+        mesa_constitutions: constitutions,
+        votos_without_constitution: votos_without_constitution,
+        participation_sample: participation_sample,
+        results_structure: results_structure,
+        audit_logs: audit_logs,
+        summary: {
+          total_constitutions: db.prepare('SELECT COUNT(*) as cnt FROM mesa_constitutions').get(),
+          total_participation_logs: db.prepare('SELECT COUNT(*) as cnt FROM participation_logs').get(),
+          total_results: db.prepare('SELECT COUNT(*) as cnt FROM results').get(),
+          confirmed_mesas: db.prepare('SELECT COUNT(*) as cnt FROM mesa_constitutions WHERE is_confirmed = 1').get()
+        }
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.post('/fix-orphan-users', async (req, res) => {
+    try {
+      console.log('[FIX] Fixing orphan users with non-existent voting locations...');
+
+      // Find all users assigned to voting locations that don't exist
+      const orphans = db.prepare(`
+        SELECT u.id, u.assigned_local, u.distrito
+        FROM users u
+        LEFT JOIN voting_locations vl ON u.assigned_local = vl.nombre
+        WHERE u.assigned_local IS NOT NULL
+        AND u.assigned_local != ''
+        AND vl.nombre IS NULL
+        AND u.role IN ('MIEMBRO_MESA', 'MIEMBRO_DE_MESA', 'VEEDOR')
+      `).all() as any[];
+
+      console.log(`[FIX] Found ${orphans.length} orphan users`);
+
+      if (orphans.length === 0) {
+        return res.json({ success: true, fixed: 0, message: 'No orphan users found' });
+      }
+
+      // Group by assigned_local to find the correct voting location
+      const orphansByLocal = new Map<string, any[]>();
+      orphans.forEach(u => {
+        if (!orphansByLocal.has(u.assigned_local)) {
+          orphansByLocal.set(u.assigned_local, []);
+        }
+        orphansByLocal.get(u.assigned_local)!.push(u);
+      });
+
+      // For each orphan local, try to find a match in voting_locations
+      const fixes: any[] = [];
+      orphansByLocal.forEach((users, orphanLocal) => {
+        // Try fuzzy matching
+        const candidates = db.prepare(`
+          SELECT nombre, distrito, ciudad
+          FROM voting_locations
+          WHERE UPPER(nombre) LIKE UPPER(?)
+          OR UPPER(ciudad) LIKE UPPER(?)
+          LIMIT 3
+        `).all(`%${orphanLocal.substring(0, 10)}%`, `%${orphanLocal.substring(0, 10)}%`) as any[];
+
+        if (candidates.length > 0) {
+          const correctLocal = candidates[0];
+          users.forEach(u => {
+            db.prepare('UPDATE users SET assigned_local = ? WHERE id = ?')
+              .run(correctLocal.nombre, u.id);
+            fixes.push({ id: u.id, from: orphanLocal, to: correctLocal.nombre });
+          });
+        }
+      });
+
+      // Clear cache
+      await diadCoverageCache.invalidate();
+
+      res.json({
+        success: true,
+        fixed: fixes.length,
+        fixes: fixes.slice(0, 10),
+        message: `Fixed ${fixes.length} users by matching voting locations`
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
