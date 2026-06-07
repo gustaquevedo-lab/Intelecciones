@@ -1079,5 +1079,13 @@ export const runBootstrapChecks = () => {
       console.log(`[BOOTSTRAP IMPORT PJC ERROR] Error importando PJC: ${err.message}`);
   }
 
+  // Insercion Manual de Apoderados
+  try {
+    const { runInsertApoderados } = require('../scripts/insert_apoderados');
+    runInsertApoderados(db);
+  } catch (err: any) {
+    console.log(`[BOOTSTRAP IMPORT APODERADOS ERROR] Error: ${err.message}`);
+  }
+
 export default db;
 
