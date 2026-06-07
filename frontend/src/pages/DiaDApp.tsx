@@ -4,7 +4,7 @@ import {
   Activity, Map, MapPin, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
   Image, ChevronDown, ChevronUp, ChevronRight, Zap, Shield, Truck, UserPlus,
-  Plus, X, Download, Edit2, Save
+  Plus, X, Download, Edit2, Save, Trash2, Search
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -333,6 +333,34 @@ const DiaDApp: React.FC = () => {
   const [newApoPhone, setNewApoPhone] = useState('');
   const [newApoLocal, setNewApoLocal] = useState('');
   const [newApoMesa, setNewApoMesa] = useState<number | null>(null);
+  const [isVerifyingApo, setIsVerifyingApo] = useState(false);
+
+  const handleLookupApoCI = async () => {
+    if (!newApoCI) return;
+    setIsVerifyingApo(true);
+    try {
+      const res = await api.get(`/electors/${newApoCI}`);
+      if (res.data) {
+        setNewApoNombre(`${res.data.nombre} ${res.data.apellido}`);
+      } else {
+        alert('Cédula no encontrada en el padrón nacional');
+      }
+    } catch (err: any) { 
+      alert('Error al consultar el padrón: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setIsVerifyingApo(false);
+    }
+  };
+
+  const handleDeleteApoderado = async (id: number) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar a esta persona de la lista? Esto le revocará el acceso al sistema.')) return;
+    try {
+      await api.delete('/admin/users/' + id);
+      fetchUsers();
+    } catch (err: any) {
+      alert('Error al eliminar: ' + (err.response?.data?.error || err.message));
+    }
+  };
 
   const handleCreateApo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -978,6 +1006,14 @@ const DiaDApp: React.FC = () => {
                                         title="Editar Apoderado"
                                       >
                                         <Edit2 size={12} color="var(--yellow)" />
+                                      </button>
+                                      <button 
+                                        className="icon-btn" 
+                                        style={{ padding: '2px', background: 'rgba(255,255,255,0.1)', marginLeft: '0.1rem' }}
+                                        onClick={() => handleDeleteApoderado(ap.id)}
+                                        title="Eliminar Apoderado"
+                                      >
+                                        <Trash2 size={12} color="var(--red)" />
                                       </button>
                                       {ap.telefono && (
                                         <>
@@ -2483,12 +2519,32 @@ const DiaDApp: React.FC = () => {
                     </div>
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Nombre Completo</label>
-                    <input className="modern-input-premium-styled" value={newApoNombre} onChange={e => setNewApoNombre(e.target.value)} required />
+                    <label>Cédula de Identidad</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input 
+                        className="modern-input-premium-styled" 
+                        value={newApoCI} 
+                        onChange={e => setNewApoCI(e.target.value.replace(/\D/g, ''))} 
+                        required 
+                        style={{ flex: 1 }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={handleLookupApoCI}
+                        disabled={isVerifyingApo || !newApoCI}
+                        style={{
+                          padding: '0 1rem', borderRadius: '8px', border: 'none',
+                          background: 'var(--blue)', color: 'white', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                      >
+                        {isVerifyingApo ? <RefreshCw size={16} className="spin" /> : <Search size={16} />}
+                      </button>
+                    </div>
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Cédula de Identidad</label>
-                    <input className="modern-input-premium-styled" value={newApoCI} onChange={e => setNewApoCI(e.target.value.replace(/\D/g, ''))} required />
+                    <label>Nombre Completo</label>
+                    <input className="modern-input-premium-styled" value={newApoNombre} onChange={e => setNewApoNombre(e.target.value)} required />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>Teléfono (WhatsApp)</label>
