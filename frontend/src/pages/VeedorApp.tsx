@@ -765,9 +765,11 @@ const ActaFinalTab = () => {
           const scanner = new Html5QrcodeScanner(
             'veedor-qr-reader',
             {
-              fps: 10,
-              qrbox: { width: 220, height: 220 },
-              rememberLastUsedCamera: true
+              fps: 15,
+              qrbox: { width: 300, height: 300 },
+              rememberLastUsedCamera: true,
+              aspectRatio: 1.0,
+              videoConstraints: { facingMode: "environment" }
             },
             false
           );
@@ -1214,31 +1216,12 @@ const ActaFinalTab = () => {
 
             {/* Viewfinder / Camera stream */}
             <div style={{
-              width: '300px', minHeight: '250px', border: '3px solid var(--plra-400)', borderRadius: '24px',
+              width: '100%', maxWidth: '400px', minHeight: '300px', border: '3px solid var(--plra-400)', borderRadius: '24px',
               position: 'relative', overflow: 'hidden', background: '#080d16',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem',
               boxShadow: '0 0 30px rgba(0,71,171,0.4)', padding: '10px'
             }}>
               <div id="veedor-qr-reader" style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }} />
-            </div>
-
-            {/* Simulation trigger */}
-            <div style={{ width: '100%', maxWidth: '300px', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const mockData = `TSJE|mesa:${tableInfo.mesa}|blancos:5|nulos:2|${listas.map((l, idx) => `${l.lista_id}:${10 + idx * 8}`).join('|')}`;
-                  handleParseQRData(mockData);
-                }}
-                style={{
-                  width: '100%', padding: '0.95rem', borderRadius: '14px', border: 'none',
-                  background: 'linear-gradient(135deg, #22C47E, #16a34a)', color: 'white',
-                  fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
-                  boxShadow: '0 4px 15px rgba(34,196,126,0.3)'
-                }}
-              >
-                ⚡ SIMULAR ESCANEO QR TSJE
-              </button>
             </div>
           </div>
         )}
