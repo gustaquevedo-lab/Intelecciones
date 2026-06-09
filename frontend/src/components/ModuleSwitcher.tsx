@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap, CheckCircle } from 'lucide-react';
+import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap, CheckCircle, UserCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { usePrefetchOnHover } from '../hooks/usePrefetch';
@@ -10,6 +10,7 @@ const MODULES = [
   { id: 'comando',        label: 'Comando',     short: 'Cmd',    path: '/comando',        icon: Map,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMAND_CENTER' },
   { id: 'logistics',      label: 'Logística',   short: 'Log',    path: '/logistica',      icon: Truck,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'LOGISTICS' },
   { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA','SUBJEFE','COORDINADOR','VEEDOR','APODERADO','DRIVER','LOGISTICA','CATERING'], moduleKey: 'DAY_D' },
+  { id: 'verificacion',  label: 'Verificación', short: 'Verif', path: '/verificacion',   icon: UserCheck,    roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE','COORDINADOR'], moduleKey: 'DAY_D' },
   { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMUNICATIONS' },
   { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
   { id: 'asistencia',     label: 'Reunión General',  short: 'Reunión',  path: '/asistencia',    icon: CheckCircle,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'], moduleKey: 'REGISTRY' },
@@ -30,6 +31,7 @@ export const ModuleSwitcher: React.FC = () => {
   const available = MODULES.filter(m => {
     if (user.role === 'SUPERUSUARIO') return true;
     if (m.id === 'veedor') return true; // Veedor visible to everyone
+    if (m.id === 'verificacion' && m.roles.includes(user.role)) return true; // Verificación visible to coordinadores with DAY_D
     return m.roles.includes(user.role) && !!user.enabled_modules?.includes(m.moduleKey);
   });
 

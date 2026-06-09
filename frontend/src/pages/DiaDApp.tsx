@@ -4,7 +4,7 @@ import {
   Activity, Map, MapPin, BarChart3, FileText, RefreshCw, Clock,
   CheckCircle2, AlertCircle, TrendingUp, Users, Award,
   Image, ChevronDown, ChevronUp, ChevronRight, Zap, Shield, Truck, UserPlus,
-  Plus, X, Download, Edit2, Save, Trash2, Search
+  Plus, X, Download, Edit2, Save, Trash2, Search, XCircle
 } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
@@ -216,12 +216,139 @@ const CountdownBanner = () => {
   );
 };
 
+// ─── Verificación Tab Component ─────────────────────────────────────────────
+const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDistrict }) => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'voted' | 'notvoted'>('all');
+  const [search, setSearch] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/voter-check/compare', {
+        params: { district: activeDistrict || undefined }
+      });
+      setData(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [activeDistrict]);
+
+  const records = data?.records || [];
+  const summary = data?.summary || { totalConfirmed: 0, totalVoted: 0, confirmedButNotVoted: 0, pct: 0 };
+
+  const filtered = records.filter((r: any) => {
+    if (filter === 'voted' && !r.voted) return false;
+    if (filter === 'notvoted' && r.voted) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        r.nombre?.toLowerCase().includes(q) ||
+        r.apellido?.toLowerCase().includes(q) ||
+        r.elector_ci?.includes(q)
+      );
+    }
+    return true;
+  });
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        {[
+          { label: 'Confirmados', value: summary.totalConfirmed, color: 'var(--plra-300)' },
+          { label: 'Confirmados que Votaron', value: summary.totalVoted, color: 'var(--green)' },
+          { label: 'Confirmados que NO votaron', value: summary.confirmedButNotVoted, color: 'var(--red)' },
+          { label: 'Tasa de Sufragio', value: `${summary.pct}%`, color: summary.pct >= 80 ? 'var(--green)' : summary.pct >= 50 ? '#F59E0B' : 'var(--red)' },
+        ].map(s => (
+          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '1rem 1.25rem' }}>
+            <p style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: '0.4rem' }}>{s.label}</p>
+            <p style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center' }}>
+        <input
+          type="text"
+          placeholder="Buscar por nombre o cédula..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', fontSize: '0.75rem' }}
+        />
+        {(['all', 'voted', 'notvoted'] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding: '0.4rem 0.85rem', borderRadius: '8px', border: '1px solid',
+            borderColor: filter === f ? 'var(--plra-300)' : 'var(--border)',
+            background: filter === f ? 'rgba(21,88,176,0.15)' : 'transparent',
+            color: filter === f ? 'var(--plra-300)' : 'var(--text-3)',
+            fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer'
+          }}>
+            {f === 'all' ? 'Todos' : f === 'voted' ? 'Votaron ✔' : 'No Votaron ✗'}
+          </button>
+        ))}
+        <button onClick={load} style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}>
+          Actualizar
+        </button>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>Cargando datos...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
+          <p style={{ fontWeight: 700 }}>Sin registros de confirmación para este distrito</p>
+          <p style={{ fontSize: '0.7rem', marginTop: '0.35rem' }}>Los coordinadores deben confirmar electores desde el módulo Verificación</p>
+        </div>
+      ) : (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 1fr 1fr', gap: 0, padding: '0.5rem 1rem', borderBottom: '1px solid var(--border)', fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)' }}>
+            <span>Elector</span><span>CI</span><span>Local / Mesa</span><span>Confirmado</span><span>¿Votó?</span>
+          </div>
+          <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+            {filtered.map((r: any, i: number) => (
+              <div key={r.elector_ci} style={{
+                display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 1fr 1fr', gap: 0,
+                padding: '0.55rem 1rem',
+                background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                alignItems: 'center'
+              }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)' }}>{r.nombre} {r.apellido}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{r.elector_ci}</span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-2)' }}>{r.local_votacion} — M{r.mesa}/{r.orden}</span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
+                  {r.confirmed_at ? new Date(r.confirmed_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                </span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                  fontSize: '0.65rem', fontWeight: 800,
+                  color: r.voted ? 'var(--green)' : 'var(--red)'
+                }}>
+                  {r.voted ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                  {r.voted ? 'SÍ' : 'NO'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 const DiaDApp: React.FC = () => {
   const { user, activeDistrict, setActiveDistrict } = useAuth();
   const { settings } = useSettings();
 
-  const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros'>('cobertura');
+  const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros' | 'verificacion'>('cobertura');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
   
@@ -740,6 +867,7 @@ const DiaDApp: React.FC = () => {
     { id: 'resultados', label: 'Resultados', icon: <BarChart3 size={14} /> },
     { id: 'dhondt', label: "D'Hondt", icon: <Award size={14} /> },
     { id: 'actas', label: 'Actas', icon: <FileText size={14} /> },
+    { id: 'verificacion', label: 'Verificación', icon: <CheckCircle2 size={14} /> },
   ] as const;
 
   return (
@@ -2074,6 +2202,13 @@ const DiaDApp: React.FC = () => {
                     ))}
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {/* ══════════ TAB: VERIFICACIÓN ══════════ */}
+            {activeTab === 'verificacion' && (
+              <motion.div key="verificacion" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <VerificacionTab activeDistrict={activeDistrict} />
               </motion.div>
             )}
 

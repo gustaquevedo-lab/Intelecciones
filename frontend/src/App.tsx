@@ -13,6 +13,7 @@ const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const Attendance = React.lazy(() => import('./pages/Attendance'));
 const DriverApp = React.lazy(() => import('./pages/DriverApp'));
 const CateringApp = React.lazy(() => import('./pages/CateringApp'));
+const VoterCheckApp = React.lazy(() => import('./pages/VoterCheckApp'));
 const Logout = () => {
   const { logout } = useAuth();
   React.useEffect(() => { logout(); }, [logout]);
@@ -74,6 +75,7 @@ const AppRoutes = () => {
       <Route path="/asistencia" element={<Attendance />} />
       <Route path="/chofer" element={<DriverApp />} />
       <Route path="/catering" element={<CateringApp />} />
+      <Route path="/verificacion" element={<VoterCheckApp />} />
       <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>
   );
