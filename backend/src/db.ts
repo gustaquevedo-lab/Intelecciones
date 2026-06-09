@@ -182,7 +182,6 @@ if (dbVersion < currentSchemaVersion) {
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(veedor_id) REFERENCES users(id)
       );
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_participation_unique_vote ON participation_logs(local_votacion, mesa, orden);
 
       CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -658,6 +657,15 @@ if (dbVersion < currentSchemaVersion) {
       `);
     } catch (e: any) {
       // Table may already exist (created manually), this is fine
+    }
+
+    // Try to create unique index on participation_logs — wrapped separately
+    // because production may have duplicate (local_votacion, mesa, orden) rows
+    // which would cause an uncaught crash if attempted inside the main exec block.
+    try {
+      db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_participation_unique_vote ON participation_logs(local_votacion, mesa, orden);");
+    } catch (e: any) {
+      console.warn("MIGRATION WARNING: Could not create unique index on participation_logs (duplicate data exists):", e.message);
     }
 
     setDbVersion(currentSchemaVersion);
