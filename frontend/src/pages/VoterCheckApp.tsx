@@ -133,7 +133,7 @@ export default function VoterCheckApp() {
             Cédula de Identidad
           </p>
 
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             <input
               ref={inputRef}
               type="tel"
@@ -143,7 +143,7 @@ export default function VoterCheckApp() {
               placeholder="Ej: 4567890"
               autoComplete="off"
               style={{
-                flex: 1,
+                width: '100%',
                 padding: '0.9rem 1rem',
                 borderRadius: '12px',
                 border: '2px solid var(--border)',
@@ -154,26 +154,27 @@ export default function VoterCheckApp() {
                 letterSpacing: '0.08em',
                 outline: 'none',
                 WebkitAppearance: 'none',
+                boxSizing: 'border-box',
               }}
             />
             <button
               type="submit"
               disabled={loading || !ci.trim()}
               style={{
-                padding: '0.9rem 1.25rem',
+                width: '100%',
+                padding: '0.9rem',
                 borderRadius: '12px',
                 border: 'none',
                 background: 'var(--plra-500)',
                 color: 'white',
                 fontWeight: 900,
-                fontSize: '0.85rem',
+                fontSize: '1rem',
                 cursor: 'pointer',
                 opacity: loading || !ci.trim() ? 0.6 : 1,
-                minWidth: '80px',
-                flexShrink: 0,
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {loading ? '...' : 'Buscar'}
+              {loading ? 'Buscando...' : 'Buscar'}
             </button>
           </form>
           <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginTop: '0.4rem' }}>
