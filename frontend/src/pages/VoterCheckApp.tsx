@@ -104,7 +104,8 @@ export default function VoterCheckApp() {
 
   const formatTime = (dt: string) => {
     try {
-      return new Date(dt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const d = new Date(dt.includes('Z') ? dt : dt + 'Z');
+      return d.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch { return dt; }
   };
 

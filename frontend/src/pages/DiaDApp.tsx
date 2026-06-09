@@ -239,11 +239,34 @@ const PhoneLink: React.FC<{ phone?: string }> = ({ phone }) => {
   );
 };
 
+// SQLite datetime('now') stores UTC without timezone marker.
+// Append 'Z' so JS parses as UTC, then browser localizes to Paraguay (UTC-3).
+const parsePY = (dt: string | null | undefined) => {
+  if (!dt) return null;
+  return new Date(dt.includes('Z') ? dt : dt + 'Z');
+};
+const fmtTime = (dt: string | null | undefined) => {
+  const d = parsePY(dt);
+  if (!d) return '';
+  return d.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+};
+const fmtDate = (dt: string | null | undefined) => {
+  const d = parsePY(dt);
+  if (!d) return '';
+  return d.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' });
+};
+const fmtDateTime = (dt: string | null | undefined) => {
+  const d = parsePY(dt);
+  if (!d) return '';
+  return d.toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+
 const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDistrict }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'voted' | 'notvoted'>('all');
   const [search, setSearch] = useState('');
+  const [coordFilter, setCoordFilter] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -264,9 +287,15 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
   const records = data?.records || [];
   const summary = data?.summary || { totalConfirmed: 0, totalVoted: 0, confirmedButNotVoted: 0, pct: 0 };
 
+  // Unique coordinators for dropdown
+  const coordOptions: string[] = Array.from(
+    new Set(records.map((r: any) => r.coord_nombre).filter(Boolean))
+  ).sort() as string[];
+
   const filtered = records.filter((r: any) => {
     if (filter === 'voted' && !r.voted) return false;
     if (filter === 'notvoted' && r.voted) return false;
+    if (coordFilter && r.coord_nombre !== coordFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -301,8 +330,8 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center' }}>
+      {/* Filters row 1: search + coordinador */}
+      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.6rem', alignItems: 'center' }}>
         <input
           type="text"
           placeholder="Buscar elector, coordinador o padrino..."
@@ -310,6 +339,25 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
           onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', fontSize: '0.75rem' }}
         />
+        <select
+          value={coordFilter}
+          onChange={e => setCoordFilter(e.target.value)}
+          style={{
+            padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)',
+            background: coordFilter ? 'rgba(21,88,176,0.15)' : 'rgba(255,255,255,0.04)',
+            color: coordFilter ? 'var(--plra-300)' : 'var(--text)',
+            fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', minWidth: '160px',
+          }}
+        >
+          <option value="">Todos los coordinadores</option>
+          {coordOptions.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Filters row 2: estado + acciones */}
+      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
         {(['all', 'voted', 'notvoted'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '0.4rem 0.85rem', borderRadius: '8px', border: '1px solid',
@@ -318,12 +366,123 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
             color: filter === f ? 'var(--plra-300)' : 'var(--text-3)',
             fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer'
           }}>
-            {f === 'all' ? `Todos (${records.length})` : f === 'voted' ? `Votaron ✔ (${records.filter((r:any)=>r.voted).length})` : `No Votaron ✗ (${records.filter((r:any)=>!r.voted).length})`}
+            {f === 'all' ? `Todos (${filtered.length})` : f === 'voted' ? `Votaron ✔ (${filtered.filter((r:any)=>r.voted).length})` : `No Votaron ✗ (${filtered.filter((r:any)=>!r.voted).length})`}
           </button>
         ))}
-        <button onClick={load} style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}>
-          ↻ Actualizar
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+          <button onClick={load} style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}>
+            ↻ Actualizar
+          </button>
+          <button
+            onClick={async () => {
+              const { jsPDF } = await import('jspdf');
+              const autoTable = (await import('jspdf-autotable')).default;
+              const doc = new jsPDF({ orientation: filtered.length > 30 ? 'landscape' : 'portrait' });
+              const now = new Date();
+              const titulo = coordFilter
+                ? `Verificación — ${coordFilter}`
+                : `Verificación de Electores Capturados`;
+              const subtitulo = `${activeDistrict || 'Todos los distritos'} · ${now.toLocaleDateString('es-PY')} ${now.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}`;
+
+              doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+              doc.text(titulo, 14, 16);
+              doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
+              doc.text(subtitulo, 14, 22);
+
+              // Summary line
+              const totalF = filtered.length;
+              const votedF = filtered.filter((r: any) => r.voted).length;
+              const pctF = totalF > 0 ? Math.round((votedF / totalF) * 100) : 0;
+              doc.setTextColor(50);
+              doc.text(`Capturados: ${totalF}  |  Votaron: ${votedF}  |  Sin voto: ${totalF - votedF}  |  Efectividad: ${pctF}%`, 14, 28);
+
+              if (coordFilter) {
+                // Single coordinator: flat table
+                autoTable(doc, {
+                  startY: 32,
+                  head: [['Elector', 'CI', 'Mesa', 'Orden', 'Local', 'Tel. Elector', 'Padrino', 'Estado', 'Captura']],
+                  body: filtered.map((r: any) => [
+                    `${r.nombre || ''} ${r.apellido || ''}`.trim(),
+                    r.elector_ci || '',
+                    r.mesa || '',
+                    r.orden || '',
+                    r.local_votacion || '',
+                    r.elector_telefono || '—',
+                    r.padrino_nombre || '—',
+                    r.voted ? 'Votó ✔' : 'No Votó ✗',
+                    fmtDateTime(r.captured_at),
+                  ]),
+                  styles: { fontSize: 7, cellPadding: 2 },
+                  headStyles: { fillColor: [21, 88, 176], fontSize: 7, fontStyle: 'bold' },
+                  alternateRowStyles: { fillColor: [245, 247, 250] },
+                  didParseCell: (data: any) => {
+                    if (data.column.index === 7) {
+                      data.cell.styles.textColor = data.cell.raw?.toString().startsWith('Votó') ? [37, 200, 130] : [239, 68, 68];
+                      data.cell.styles.fontStyle = 'bold';
+                    }
+                  }
+                });
+              } else {
+                // All coordinators: one section per coordinator
+                const groups: Record<string, any[]> = {};
+                for (const r of filtered) {
+                  const key = r.coord_nombre || 'Sin coordinador';
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(r);
+                }
+                let startY = 32;
+                for (const [coord, rows] of Object.entries(groups)) {
+                  const v = rows.filter(r => r.voted).length;
+                  const pct = rows.length > 0 ? Math.round((v / rows.length) * 100) : 0;
+                  const phone = rows[0]?.coord_telefono || '';
+                  const pad = rows[0]?.padrino_nombre || '—';
+                  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(21, 88, 176);
+                  doc.text(`${coord}${phone ? '  📱 ' + phone : ''}  ·  Padrino: ${pad}`, 14, startY);
+                  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
+                  doc.text(`${rows.length} capturados  ·  ${v} votaron  ·  ${rows.length - v} sin voto  ·  ${pct}%`, 14, startY + 5);
+                  autoTable(doc, {
+                    startY: startY + 8,
+                    head: [['Elector', 'CI', 'Mesa', 'Orden', 'Local', 'Tel. Elector', 'Estado']],
+                    body: rows.map((r: any) => [
+                      `${r.nombre || ''} ${r.apellido || ''}`.trim(),
+                      r.elector_ci || '',
+                      r.mesa || '',
+                      r.orden || '',
+                      r.local_votacion || '',
+                      r.elector_telefono || '—',
+                      r.voted ? 'Votó ✔' : 'No Votó ✗',
+                    ]),
+                    styles: { fontSize: 7, cellPadding: 2 },
+                    headStyles: { fillColor: [21, 88, 176], fontSize: 7, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [245, 247, 250] },
+                    didParseCell: (data: any) => {
+                      if (data.column.index === 6) {
+                        data.cell.styles.textColor = data.cell.raw?.toString().startsWith('Votó') ? [37, 200, 130] : [239, 68, 68];
+                        data.cell.styles.fontStyle = 'bold';
+                      }
+                    }
+                  });
+                  startY = (doc as any).lastAutoTable.finalY + 10;
+                  if (startY > 250) { doc.addPage(); startY = 14; }
+                }
+              }
+
+              const fname = coordFilter
+                ? `verificacion-${coordFilter.replace(/\s+/g, '_')}.pdf`
+                : `verificacion-${activeDistrict || 'todos'}.pdf`;
+              doc.save(fname);
+            }}
+            style={{
+              padding: '0.4rem 0.85rem', borderRadius: '8px',
+              border: '1px solid rgba(21,88,176,0.4)',
+              background: 'rgba(21,88,176,0.12)',
+              color: 'var(--plra-300)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '0.35rem'
+            }}
+          >
+            <Download size={13} /> PDF
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -399,7 +558,7 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
                       CI: {r.elector_ci}
                       {r.captured_at && (
                         <span style={{ marginLeft: '0.5rem', color: 'var(--text-3)' }}>
-                          · cap. {new Date(r.captured_at).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' })}
+                          · cap. {fmtDate(r.captured_at)}
                         </span>
                       )}
                     </p>
