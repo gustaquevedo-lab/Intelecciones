@@ -39,6 +39,7 @@ export default function VoterCheckApp() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [history, setHistory] = useState<ConfirmationRecord[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +51,8 @@ export default function VoterCheckApp() {
     setHistoryLoading(true);
     try {
       const res = await api.get('/voter-check/history');
-      setHistory(res.data);
+      setHistory(res.data.rows ?? res.data);
+      setHistoryTotal(res.data.total ?? (res.data.rows ?? res.data).length);
     } catch { /* ignore */ } finally {
       setHistoryLoading(false);
     }
@@ -325,7 +327,7 @@ export default function VoterCheckApp() {
               background: 'rgba(21,88,176,0.2)', color: 'var(--plra-300)',
               padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800
             }}>
-              {history.length}
+              {historyTotal}
             </span>
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

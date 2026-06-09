@@ -103,25 +103,28 @@ export default function voterCheckRoutes() {
 
     try {
       let rows: any[];
+      let total: number;
       if (role === 'SUPERUSUARIO' || !district) {
+        total = (db.prepare(`SELECT COUNT(*) as c FROM voter_confirmations`).get() as any).c;
         rows = db.prepare(`
           SELECT vc.*, u.nombre as coordinator_nombre
           FROM voter_confirmations vc
           LEFT JOIN users u ON vc.confirmed_by = u.id
           ORDER BY vc.confirmed_at DESC
-          LIMIT 500
+          LIMIT 5000
         `).all();
       } else {
+        total = (db.prepare(`SELECT COUNT(*) as c FROM voter_confirmations WHERE UPPER(distrito) = UPPER(?)`).get(district) as any).c;
         rows = db.prepare(`
           SELECT vc.*, u.nombre as coordinator_nombre
           FROM voter_confirmations vc
           LEFT JOIN users u ON vc.confirmed_by = u.id
           WHERE UPPER(vc.distrito) = UPPER(?)
           ORDER BY vc.confirmed_at DESC
-          LIMIT 500
+          LIMIT 5000
         `).all(district);
       }
-      res.json(rows);
+      res.json({ rows, total });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
