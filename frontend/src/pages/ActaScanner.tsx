@@ -458,33 +458,22 @@ const ActaScanner = () => {
     Promise.all([
       api.get('/diad/listas'),
       api.get('/veedor/locales-mesas'),
-      api.get('/veedor/table-status'),
-    ]).then(([listasRes, localesRes, tableRes]) => {
+    ]).then(([listasRes, localesRes]) => {
       setListas(listasRes.data);
       setLocalesMesas(localesRes.data);
-      const info = tableRes.data.info;
-      const savedLocal = localStorage.getItem('veedor_selected_local') || info.local || '';
-      const savedMesa  = parseInt(localStorage.getItem('veedor_selected_mesa') || '') || info.mesa || 0;
-      setSelectedLocal(savedLocal);
-      setSelectedMesa(savedMesa);
-      setMesaId(info.mesa_id ?? null);
+      // Restore saved local selection
+      const savedLocal = localStorage.getItem('veedor_selected_local') || '';
+      const firstLocal = localesRes.data[0]?.nombre || '';
+      setSelectedLocal(savedLocal && localesRes.data.find((l: any) => l.nombre === savedLocal) ? savedLocal : firstLocal);
     }).catch(console.error)
       .finally(() => setLoading(false));
   }, []);
-
-  // When local/mesa changes, refresh mesa_id
-  useEffect(() => {
-    if (!selectedLocal || !selectedMesa) return;
-    api.get(`/veedor/table-status?local=${encodeURIComponent(selectedLocal)}&mesa=${selectedMesa}`)
-      .then(res => setMesaId(res.data.info.mesa_id ?? null))
-      .catch(() => {});
-  }, [selectedLocal, selectedMesa]);
 
   const handleScan = useCallback(async (rawQR: string, cargoKey: string) => {
     setScanningCargo(null);
 
     try {
-      const res = await api.post('/diad/parse-qr', { qrData: rawQR });
+      const res = await api.post('/veedor/parse-qr', { qrData: rawQR });
       const data = res.data;
 
       if (!data.success) {
@@ -494,12 +483,12 @@ const ActaScanner = () => {
         return;
       }
 
-      // Try to detect the cargo from the QR's cargoByte
-      const detectedCargoKey = data.cargo_byte !== undefined ? BYTE_TO_CARGO[data.cargo_byte] : cargoKey;
+      // Detect cargo from the QR cargoByte; fall back to the one user tapped
+      const detectedCargoKey = data.cargo_byte !== undefined ? BYTE_TO_CARGO[data.cargo_byte] : undefined;
       const finalCargoKey = detectedCargoKey ?? cargoKey;
 
       const def = CARGO_DEFINITIONS[finalCargoKey];
-      const autoDecoded = def?.autoDecodable ?? false;
+      const autoDecoded = data.autoDecodable ?? def?.autoDecodable ?? false;
 
       const parsed: ParsedActa = {
         cargo: finalCargoKey,
@@ -512,13 +501,10 @@ const ActaScanner = () => {
         autoDecoded,
       };
 
-      // If the detected cargo differs from expected, update the active cargo
-      const targetKey = finalCargoKey !== cargoKey ? finalCargoKey : cargoKey;
-
-      setActas(prev => prev.map(a => a.cargoKey === targetKey
+      setActas(prev => prev.map(a => a.cargoKey === finalCargoKey
         ? { ...a, status: 'scanned', parsed }
         : a));
-      setActiveCargo(targetKey);
+      setActiveCargo(finalCargoKey);
     } catch (e: any) {
       setActas(prev => prev.map(a => a.cargoKey === cargoKey
         ? { ...a, status: 'error', error: e?.response?.data?.error ?? e.message }
@@ -530,10 +516,11 @@ const ActaScanner = () => {
     cargoKey: string,
     overrides: { blancos: number; nulos: number; votos: Record<string, number> }
   ) => {
-    if (!mesaId) { alert('No hay mesa asignada. Seleccioná un local y mesa primero.'); return; }
+    if (!selectedLocal) { alert('Seleccioná un local de votación primero.'); return; }
     setSubmitting(true);
 
     const def = CARGO_DEFINITIONS[cargoKey];
+    const mesaNum = localesMesas.find(l => l.nombre === selectedLocal)?.mesas[0] ?? 1;
     const listasPayload = listas.map(l => ({
       lista_id: l.id,
       votos: overrides.votos[String(l.list_number)] ?? overrides.votos[String(l.id)] ?? 0
@@ -541,12 +528,13 @@ const ActaScanner = () => {
 
     try {
       const payload = {
-        mesa_id: mesaId,
+        mesa_id: mesaNum, // backend ignores this and uses user's assigned_mesa; kept for compatibility
         votos_blanco: overrides.blancos,
         votos_nulos: overrides.nulos,
         listas: JSON.stringify(listasPayload),
         category: def.category,
-        foto_acta_base64: null,
+        local_votacion: selectedLocal,
+        mesa: mesaNum,
       };
 
       if (isOnline) {
@@ -558,20 +546,12 @@ const ActaScanner = () => {
 
       setActas(prev => prev.map(a => a.cargoKey === cargoKey ? { ...a, status: 'confirmed' } : a));
       setActiveCargo(null);
-
-      // Auto-advance to next pending
-      const nextPending = CARGO_ORDER.find(k => {
-        if (k === cargoKey) return false;
-        const acta = actas.find(a => a.cargoKey === k);
-        return acta?.status === 'pending';
-      });
-      // Don't auto-open scanner – let user decide
     } catch (e: any) {
       alert('Error al guardar el acta: ' + (e?.response?.data?.message ?? e.message));
     } finally {
       setSubmitting(false);
     }
-  }, [mesaId, listas, isOnline, actas]);
+  }, [selectedLocal, localesMesas, listas, isOnline]);
 
   const confirmed = actas.filter(a => a.status === 'confirmed').length;
   const total11   = actas.length;
@@ -634,66 +614,34 @@ const ActaScanner = () => {
           </div>
         </div>
 
-        {/* ── LOCAL / MESA SELECTOR ─────────────────────────── */}
+        {/* ── LOCAL SELECTOR ───────────────────────────────────── */}
         <div className="card-premium-styled" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
             <MapPin size={16} style={{ color: 'var(--plra-300)' }} />
             <h3 style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Local y Mesa
+              Local de Votación
             </h3>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: '2 1 200px' }}>
-              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '0.35rem', fontWeight: 700 }}>LOCAL</label>
-              <select
-                value={selectedLocal}
-                onChange={e => {
-                  const val = e.target.value;
-                  setSelectedLocal(val);
-                  localStorage.setItem('veedor_selected_local', val);
-                  const locObj = localesMesas.find(l => l.nombre === val);
-                  if (locObj?.mesas.length) {
-                    setSelectedMesa(locObj.mesas[0]);
-                    localStorage.setItem('veedor_selected_mesa', String(locObj.mesas[0]));
-                  }
-                }}
-                style={{
-                  width: '100%', padding: '0.65rem 0.85rem', borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                  color: 'white', fontWeight: 700, outline: 'none', fontSize: '0.85rem'
-                }}
-              >
-                {localesMesas.map(l => (
-                  <option key={l.nombre} value={l.nombre} style={{ background: '#1a1a2e' }}>{l.nombre}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ flex: '1 1 90px' }}>
-              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-3)', marginBottom: '0.35rem', fontWeight: 700 }}>MESA</label>
-              <select
-                value={selectedMesa}
-                onChange={e => {
-                  const val = parseInt(e.target.value);
-                  setSelectedMesa(val);
-                  localStorage.setItem('veedor_selected_mesa', String(val));
-                }}
-                style={{
-                  width: '100%', padding: '0.65rem 0.85rem', borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                  color: 'white', fontWeight: 700, outline: 'none', fontSize: '0.85rem'
-                }}
-              >
-                {(localesMesas.find(l => l.nombre === selectedLocal)?.mesas ?? []).map(m => (
-                  <option key={m} value={m} style={{ background: '#1a1a2e' }}>Mesa {m}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {mesaId && (
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.5rem', fontFamily: 'monospace' }}>
-              Mesa ID en sistema: #{mesaId}
-            </p>
-          )}
+          <select
+            value={selectedLocal}
+            onChange={e => {
+              const val = e.target.value;
+              setSelectedLocal(val);
+              localStorage.setItem('veedor_selected_local', val);
+            }}
+            style={{
+              width: '100%', padding: '0.75rem 1rem', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              color: 'white', fontWeight: 700, outline: 'none', fontSize: '0.9rem'
+            }}
+          >
+            {localesMesas.map(l => (
+              <option key={l.nombre} value={l.nombre} style={{ background: '#1a1a2e' }}>{l.nombre}</option>
+            ))}
+          </select>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
+            La mesa se identifica automáticamente desde el código QR de cada acta.
+          </p>
         </div>
 
         {/* ── ACTA LIST ────────────────────────────────────────── */}
