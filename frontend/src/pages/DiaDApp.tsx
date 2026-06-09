@@ -217,6 +217,28 @@ const CountdownBanner = () => {
 };
 
 // ─── Verificación Tab Component ─────────────────────────────────────────────
+const SEMAFORO: Record<string, { bg: string; border: string; dot: string; label: string }> = {
+  green: { bg: 'rgba(37,200,130,0.08)',  border: 'rgba(37,200,130,0.25)', dot: '#25C882', label: 'Votó' },
+  red:   { bg: 'rgba(239,68,68,0.06)',   border: 'rgba(239,68,68,0.2)',   dot: '#EF4444', label: 'No Votó' },
+};
+
+const PhoneLink: React.FC<{ phone?: string }> = ({ phone }) => {
+  if (!phone) return <span style={{ color: 'var(--text-3)', fontSize: '0.6rem' }}>—</span>;
+  const clean = phone.replace(/\D/g, '').replace(/^0/, '');
+  const wa = clean.startsWith('595') ? clean : `595${clean}`;
+  return (
+    <a
+      href={`https://wa.me/${wa}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: '#25D366', fontSize: '0.65rem', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+      title={phone}
+    >
+      📱 {phone}
+    </a>
+  );
+};
+
 const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDistrict }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -250,25 +272,31 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
       return (
         r.nombre?.toLowerCase().includes(q) ||
         r.apellido?.toLowerCase().includes(q) ||
-        r.elector_ci?.includes(q)
+        r.elector_ci?.includes(q) ||
+        r.coord_nombre?.toLowerCase().includes(q) ||
+        r.padrino_nombre?.toLowerCase().includes(q)
       );
     }
     return true;
   });
+
+  const semPct = summary.pct;
+  const semColor = semPct >= 80 ? 'var(--green)' : semPct >= 50 ? '#F59E0B' : 'var(--red)';
 
   return (
     <div>
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
         {[
-          { label: 'Confirmados', value: summary.totalConfirmed, color: 'var(--plra-300)' },
-          { label: 'Confirmados que Votaron', value: summary.totalVoted, color: 'var(--green)' },
-          { label: 'Confirmados que NO votaron', value: summary.confirmedButNotVoted, color: 'var(--red)' },
-          { label: 'Tasa de Sufragio', value: `${summary.pct}%`, color: summary.pct >= 80 ? 'var(--green)' : summary.pct >= 50 ? '#F59E0B' : 'var(--red)' },
+          { label: 'Confirmados', value: summary.totalConfirmed, color: 'var(--plra-300)', sub: 'por coordinadores' },
+          { label: 'Votaron', value: summary.totalVoted, color: 'var(--green)', sub: 'confirmados que sufragaron' },
+          { label: 'Pendientes', value: summary.confirmedButNotVoted, color: 'var(--red)', sub: 'confirmados sin voto' },
+          { label: 'Efectividad', value: `${summary.pct}%`, color: semColor, sub: 'tasa de sufragio' },
         ].map(s => (
           <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '1rem 1.25rem' }}>
             <p style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: '0.4rem' }}>{s.label}</p>
             <p style={{ fontSize: '1.6rem', fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>{s.sub}</p>
           </div>
         ))}
       </div>
@@ -277,7 +305,7 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center' }}>
         <input
           type="text"
-          placeholder="Buscar por nombre o cédula..."
+          placeholder="Buscar elector, coordinador o padrino..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', fontSize: '0.75rem' }}
@@ -290,11 +318,11 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
             color: filter === f ? 'var(--plra-300)' : 'var(--text-3)',
             fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer'
           }}>
-            {f === 'all' ? 'Todos' : f === 'voted' ? 'Votaron ✔' : 'No Votaron ✗'}
+            {f === 'all' ? `Todos (${records.length})` : f === 'voted' ? `Votaron ✔ (${records.filter((r:any)=>r.voted).length})` : `No Votaron ✗ (${records.filter((r:any)=>!r.voted).length})`}
           </button>
         ))}
         <button onClick={load} style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}>
-          Actualizar
+          ↻ Actualizar
         </button>
       </div>
 
@@ -303,39 +331,133 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>Cargando datos...</div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
+          <CheckCircle2 size={36} style={{ opacity: 0.15, marginBottom: '0.75rem' }} />
           <p style={{ fontWeight: 700 }}>Sin registros de confirmación para este distrito</p>
-          <p style={{ fontSize: '0.7rem', marginTop: '0.35rem' }}>Los coordinadores deben confirmar electores desde el módulo Verificación</p>
+          <p style={{ fontSize: '0.7rem', marginTop: '0.35rem' }}>Los coordinadores confirman electores desde el módulo Verificación</p>
         </div>
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 1fr 1fr', gap: 0, padding: '0.5rem 1rem', borderBottom: '1px solid var(--border)', fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)' }}>
-            <span>Elector</span><span>CI</span><span>Local / Mesa</span><span>Confirmado</span><span>¿Votó?</span>
+          {/* Header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '28px 2.5fr 1fr 1.8fr 1.8fr 1.8fr 90px',
+            gap: 0,
+            padding: '0.55rem 1rem',
+            borderBottom: '1px solid var(--border)',
+            fontSize: '0.58rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: 'var(--text-3)',
+            background: 'rgba(255,255,255,0.025)'
+          }}>
+            <span></span>
+            <span>Elector</span>
+            <span>Mesa/Orden</span>
+            <span>Coordinador</span>
+            <span>Padrino</span>
+            <span>Tel. Elector</span>
+            <span>Estado</span>
           </div>
+          {/* Rows */}
           <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
-            {filtered.map((r: any, i: number) => (
-              <div key={r.elector_ci} style={{
-                display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 1fr 1fr', gap: 0,
-                padding: '0.55rem 1rem',
-                background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
-                borderBottom: '1px solid rgba(255,255,255,0.04)',
-                alignItems: 'center'
-              }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)' }}>{r.nombre} {r.apellido}</span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{r.elector_ci}</span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-2)' }}>{r.local_votacion} — M{r.mesa}/{r.orden}</span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
-                  {r.confirmed_at ? new Date(r.confirmed_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                </span>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                  fontSize: '0.65rem', fontWeight: 800,
-                  color: r.voted ? 'var(--green)' : 'var(--red)'
-                }}>
-                  {r.voted ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
-                  {r.voted ? 'SÍ' : 'NO'}
-                </span>
-              </div>
-            ))}
+            {filtered.map((r: any, i: number) => {
+              const s = SEMAFORO[r.semaforo] || SEMAFORO.red;
+              return (
+                <div
+                  key={r.elector_ci}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '28px 2.5fr 1fr 1.8fr 1.8fr 1.8fr 90px',
+                    gap: 0,
+                    padding: '0.6rem 1rem',
+                    background: r.voted
+                      ? (i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)')
+                      : 'rgba(239,68,68,0.03)',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    borderLeft: `3px solid ${s.dot}`,
+                    alignItems: 'center',
+                    transition: 'background 0.1s',
+                  }}
+                >
+                  {/* Semáforo dot */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{
+                      width: 10, height: 10, borderRadius: '50%',
+                      background: s.dot,
+                      boxShadow: `0 0 6px ${s.dot}88`,
+                      flexShrink: 0
+                    }} />
+                  </div>
+
+                  {/* Elector */}
+                  <div>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
+                      {r.nombre} {r.apellido}
+                    </p>
+                    <p style={{ fontSize: '0.62rem', color: 'var(--text-3)', marginTop: '1px' }}>
+                      CI: {r.elector_ci}
+                      {r.confirmed_at && (
+                        <span style={{ marginLeft: '0.5rem', color: 'var(--text-3)' }}>
+                          · {new Date(r.confirmed_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Mesa/Orden */}
+                  <div>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--plra-300)' }}>M{r.mesa}</p>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>#{r.orden}</p>
+                  </div>
+
+                  {/* Coordinador */}
+                  <div>
+                    {r.coord_nombre ? (
+                      <>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-2)', lineHeight: 1.2 }}>{r.coord_nombre}</p>
+                        <PhoneLink phone={r.coord_telefono} />
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-3)' }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Padrino */}
+                  <div>
+                    {r.padrino_nombre ? (
+                      <>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-2)', lineHeight: 1.2 }}>{r.padrino_nombre}</p>
+                        <PhoneLink phone={r.padrino_telefono} />
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-3)' }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Tel. Elector */}
+                  <div>
+                    <PhoneLink phone={r.elector_telefono} />
+                  </div>
+
+                  {/* Estado */}
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                    padding: '0.25rem 0.6rem',
+                    borderRadius: '20px',
+                    background: s.bg,
+                    border: `1px solid ${s.border}`,
+                    fontSize: '0.62rem', fontWeight: 800,
+                    color: s.dot,
+                    whiteSpace: 'nowrap',
+                    justifyContent: 'center'
+                  }}>
+                    {r.voted ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
+                    {s.label}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

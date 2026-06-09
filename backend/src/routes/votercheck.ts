@@ -138,53 +138,84 @@ export default function voterCheckRoutes() {
     }
   });
 
-  // Compare confirmations vs actual votes (for Día D tab)
+  // Compare confirmations vs actual votes — enriched with coordinator, padrino, phones, semáforo
   router.get('/compare', (req, res) => {
     const userId = req.headers['x-user-id'] as string;
-    const role = getRole(req);
     const userInfo = userId ? getCachedUserInfo(userId) : null;
     const districtParam = getDistrict(req);
     const district = districtParam || userInfo?.distrito;
 
     try {
-      // Get confirmed electors
-      const confirmedQuery = district
-        ? `SELECT vc.elector_ci, vc.nombre, vc.apellido, vc.local_votacion, vc.mesa, vc.orden, vc.distrito, vc.confirmed_at
-           FROM voter_confirmations vc WHERE UPPER(vc.distrito) = UPPER('${district.replace(/'/g, "''")}') ORDER BY vc.confirmed_at DESC`
-        : `SELECT vc.elector_ci, vc.nombre, vc.apellido, vc.local_votacion, vc.mesa, vc.orden, vc.distrito, vc.confirmed_at
-           FROM voter_confirmations vc ORDER BY vc.confirmed_at DESC LIMIT 2000`;
+      // Single query: confirmations with coordinator + padrino + elector phone from captures
+      const districtFilter = district ? `AND UPPER(vc.distrito) = UPPER(?)` : '';
+      const params: any[] = district ? [district] : [];
 
-      const confirmed = db.prepare(confirmedQuery).all() as any[];
+      const confirmed = db.prepare(`
+        SELECT
+          vc.elector_ci,
+          vc.nombre,
+          vc.apellido,
+          vc.local_votacion,
+          vc.mesa,
+          vc.orden,
+          vc.distrito,
+          vc.confirmed_at,
+          vc.confirmed_by,
+          -- Coordinator who made the confirmation
+          u_coord.nombre      AS coord_nombre,
+          u_coord.telefono    AS coord_telefono,
+          u_coord.role        AS coord_role,
+          u_coord.id          AS coord_id,
+          -- Padrino = coordinator's parent
+          u_pad.nombre        AS padrino_nombre,
+          u_pad.telefono      AS padrino_telefono,
+          u_pad.role          AS padrino_role,
+          -- Elector's captured phone (from elector_captures, if registered)
+          ec.telefono         AS elector_telefono,
+          ec.traffic_light    AS cap_traffic_light
+        FROM voter_confirmations vc
+        LEFT JOIN users u_coord ON vc.confirmed_by = u_coord.id
+        LEFT JOIN users u_pad   ON u_coord.parent_id = u_pad.id
+        LEFT JOIN elector_captures ec ON ec.elector_ci = vc.elector_ci AND ec.is_disputed = 0
+        ${districtFilter}
+        ORDER BY vc.confirmed_at DESC
+        LIMIT 2000
+      `).all(...params) as any[];
 
-      // For each confirmed, check if they actually voted (via tenant_electors or participation_logs)
+      // Check voted status for each (participation_logs or tenant_electors)
       const results = confirmed.map((c: any) => {
-        // Check participation_logs via orden+mesa+local match
-        const voted = db.prepare(`
+        const votedLog = db.prepare(`
           SELECT 1 FROM participation_logs
           WHERE orden = ? AND mesa = ? AND UPPER(local_votacion) = UPPER(?)
           LIMIT 1
         `).get(c.orden, c.mesa, c.local_votacion) as any;
 
-        // Also check tenant_electors as backup
         const votedTenant = db.prepare(`
-          SELECT status FROM tenant_electors WHERE elector_ci = ? AND status = 'Voto Realizado'
+          SELECT 1 FROM tenant_electors WHERE elector_ci = ? AND status = 'Voto Realizado'
           LIMIT 1
         `).get(c.elector_ci) as any;
 
-        return {
-          ...c,
-          voted: !!(voted || votedTenant)
-        };
+        const voted = !!(votedLog || votedTenant);
+
+        // Semáforo: green=confirmed+voted, red=confirmed+not voted
+        // yellow=confirmed but no vote registered yet (within active voting hours, ~before 16:00)
+        const semaforo = voted ? 'green' : 'red';
+
+        return { ...c, voted, semaforo };
       });
 
-      // Summary stats
+      // Summary
       const totalConfirmed = results.length;
       const totalVoted = results.filter((r: any) => r.voted).length;
-      const confirmedButNotVoted = results.filter((r: any) => !r.voted);
       const pct = totalConfirmed > 0 ? Math.round((totalVoted / totalConfirmed) * 100) : 0;
 
       res.json({
-        summary: { totalConfirmed, totalVoted, confirmedButNotVoted: confirmedButNotVoted.length, pct },
+        summary: {
+          totalConfirmed,
+          totalVoted,
+          confirmedButNotVoted: totalConfirmed - totalVoted,
+          pct
+        },
         records: results
       });
     } catch (err: any) {
