@@ -225,12 +225,21 @@ export default function VoterCheckApp() {
             >
               {elector.already_confirmed && (
                 <div style={{
-                  background: 'rgba(245,158,11,0.15)', borderRadius: '8px', padding: '0.5rem 0.75rem',
-                  marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  fontSize: '0.7rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase'
+                  background: 'rgba(245,158,11,0.12)', borderRadius: '10px', padding: '0.75rem 1rem',
+                  marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
+                  border: '1px solid rgba(245,158,11,0.35)',
                 }}>
-                  <AlertTriangle size={14} />
-                  Ya confirmado — {elector.confirmed_at ? formatTime(elector.confirmed_at) : ''}
+                  <AlertTriangle size={18} style={{ color: '#F59E0B', flexShrink: 0 }} />
+                  <div>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#F59E0B', margin: 0 }}>
+                      Este elector ya fue confirmado
+                    </p>
+                    {elector.confirmed_at && (
+                      <p style={{ fontSize: '0.65rem', color: 'rgba(245,158,11,0.8)', margin: '2px 0 0' }}>
+                        Registrado a las {formatTime(elector.confirmed_at)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -262,31 +271,31 @@ export default function VoterCheckApp() {
                 </div>
               </div>
 
-              {/* Confirm button — grande, fácil de tocar */}
-              <button
-                onClick={handleConfirm}
-                disabled={confirming}
-                style={{
-                  width: '100%',
-                  padding: '1rem',
-                  borderRadius: '14px',
-                  border: 'none',
-                  background: elector.already_confirmed
-                    ? 'rgba(245,158,11,0.2)'
-                    : 'linear-gradient(135deg, #1558B0, #0D3D7A)',
-                  color: elector.already_confirmed ? '#F59E0B' : 'white',
-                  fontWeight: 900,
-                  fontSize: '1rem',
-                  cursor: confirming ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
-                  opacity: confirming ? 0.7 : 1,
-                  textTransform: 'uppercase', letterSpacing: '0.06em',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                <CheckCircle2 size={20} />
-                {confirming ? 'Confirmando...' : elector.already_confirmed ? 'Confirmar de Nuevo' : 'Confirmar Presencia'}
-              </button>
+              {/* Confirm button — solo si NO está ya confirmado */}
+              {!elector.already_confirmed && (
+                <button
+                  onClick={handleConfirm}
+                  disabled={confirming}
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #1558B0, #0D3D7A)',
+                    color: 'white',
+                    fontWeight: 900,
+                    fontSize: '1rem',
+                    cursor: confirming ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+                    opacity: confirming ? 0.7 : 1,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  <CheckCircle2 size={20} />
+                  {confirming ? 'Confirmando...' : 'Confirmar Presencia'}
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
