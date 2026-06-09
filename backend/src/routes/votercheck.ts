@@ -138,7 +138,8 @@ export default function voterCheckRoutes() {
     }
   });
 
-  // Compare confirmations vs actual votes — enriched with coordinator, padrino, phones, semáforo
+  // Compare captured electors vs actual votes — source: elector_captures (not voter_confirmations)
+  // Shows which coordinator captured each elector and whether that elector voted.
   router.get('/compare', (req, res) => {
     const userId = req.headers['x-user-id'] as string;
     const userInfo = userId ? getCachedUserInfo(userId) : null;
@@ -146,44 +147,45 @@ export default function voterCheckRoutes() {
     const district = districtParam || userInfo?.distrito;
 
     try {
-      // Single query: confirmations with coordinator + padrino + elector phone from captures
-      const districtFilter = district ? `AND UPPER(vc.distrito) = UPPER(?)` : '';
+      const districtFilter = district ? `AND UPPER(e.distrito) = UPPER(?)` : '';
       const params: any[] = district ? [district] : [];
 
-      const confirmed = db.prepare(`
+      // One row per elector_ci (latest non-disputed capture).
+      // Joins: elector_captures → electors (mesa/orden/local) → coordinator → padrino
+      const captured = db.prepare(`
         SELECT
-          vc.elector_ci,
-          vc.nombre,
-          vc.apellido,
-          vc.local_votacion,
-          vc.mesa,
-          vc.orden,
-          vc.distrito,
-          vc.confirmed_at,
-          vc.confirmed_by,
-          -- Coordinator who made the confirmation
+          ec.elector_ci,
+          e.nombre,
+          e.apellido,
+          e.local_votacion,
+          e.mesa,
+          e.orden,
+          e.distrito,
+          ec.telefono         AS elector_telefono,
+          ec.traffic_light,
+          ec.timestamp        AS captured_at,
+          -- Coordinator who registered this elector
+          u_coord.id          AS coord_id,
           u_coord.nombre      AS coord_nombre,
           u_coord.telefono    AS coord_telefono,
           u_coord.role        AS coord_role,
-          u_coord.id          AS coord_id,
           -- Padrino = coordinator's parent
           u_pad.nombre        AS padrino_nombre,
           u_pad.telefono      AS padrino_telefono,
-          u_pad.role          AS padrino_role,
-          -- Elector's captured phone (from elector_captures, if registered)
-          ec.telefono         AS elector_telefono,
-          ec.traffic_light    AS cap_traffic_light
-        FROM voter_confirmations vc
-        LEFT JOIN users u_coord ON vc.confirmed_by = u_coord.id
+          u_pad.role          AS padrino_role
+        FROM elector_captures ec
+        INNER JOIN electors e ON ec.elector_ci = e.ci
+        LEFT JOIN users u_coord ON ec.coordinator_id = u_coord.id
         LEFT JOIN users u_pad   ON u_coord.parent_id = u_pad.id
-        LEFT JOIN elector_captures ec ON ec.elector_ci = vc.elector_ci AND ec.is_disputed = 0
-        ${districtFilter}
-        ORDER BY vc.confirmed_at DESC
-        LIMIT 2000
+        WHERE ec.is_disputed = 0
+          ${districtFilter}
+        GROUP BY ec.elector_ci
+        ORDER BY ec.timestamp DESC
+        LIMIT 5000
       `).all(...params) as any[];
 
-      // Check voted status for each (participation_logs or tenant_electors)
-      const results = confirmed.map((c: any) => {
+      // Check voted status for each captured elector
+      const results = captured.map((c: any) => {
         const votedLog = db.prepare(`
           SELECT 1 FROM participation_logs
           WHERE orden = ? AND mesa = ? AND UPPER(local_votacion) = UPPER(?)
@@ -196,24 +198,20 @@ export default function voterCheckRoutes() {
         `).get(c.elector_ci) as any;
 
         const voted = !!(votedLog || votedTenant);
-
-        // Semáforo: green=confirmed+voted, red=confirmed+not voted
-        // yellow=confirmed but no vote registered yet (within active voting hours, ~before 16:00)
         const semaforo = voted ? 'green' : 'red';
 
         return { ...c, voted, semaforo };
       });
 
-      // Summary
-      const totalConfirmed = results.length;
+      const totalCaptured = results.length;
       const totalVoted = results.filter((r: any) => r.voted).length;
-      const pct = totalConfirmed > 0 ? Math.round((totalVoted / totalConfirmed) * 100) : 0;
+      const pct = totalCaptured > 0 ? Math.round((totalVoted / totalCaptured) * 100) : 0;
 
       res.json({
         summary: {
-          totalConfirmed,
+          totalConfirmed: totalCaptured,   // kept same key for compat
           totalVoted,
-          confirmedButNotVoted: totalConfirmed - totalVoted,
+          confirmedButNotVoted: totalCaptured - totalVoted,
           pct
         },
         records: results

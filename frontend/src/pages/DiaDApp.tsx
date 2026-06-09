@@ -288,9 +288,9 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
         {[
-          { label: 'Confirmados', value: summary.totalConfirmed, color: 'var(--plra-300)', sub: 'por coordinadores' },
-          { label: 'Votaron', value: summary.totalVoted, color: 'var(--green)', sub: 'confirmados que sufragaron' },
-          { label: 'Pendientes', value: summary.confirmedButNotVoted, color: 'var(--red)', sub: 'confirmados sin voto' },
+          { label: 'Capturados', value: summary.totalConfirmed, color: 'var(--plra-300)', sub: 'en base de campaña' },
+          { label: 'Votaron', value: summary.totalVoted, color: 'var(--green)', sub: 'capturados que sufragaron' },
+          { label: 'Sin voto', value: summary.confirmedButNotVoted, color: 'var(--red)', sub: 'capturados sin sufragio' },
           { label: 'Efectividad', value: `${summary.pct}%`, color: semColor, sub: 'tasa de sufragio' },
         ].map(s => (
           <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '1rem 1.25rem' }}>
@@ -332,8 +332,8 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
           <CheckCircle2 size={36} style={{ opacity: 0.15, marginBottom: '0.75rem' }} />
-          <p style={{ fontWeight: 700 }}>Sin registros de confirmación para este distrito</p>
-          <p style={{ fontSize: '0.7rem', marginTop: '0.35rem' }}>Los coordinadores confirman electores desde el módulo Verificación</p>
+          <p style={{ fontWeight: 700 }}>Sin electores capturados para este distrito</p>
+          <p style={{ fontSize: '0.7rem', marginTop: '0.35rem' }}>Los coordinadores capturan electores desde el módulo Coordinador</p>
         </div>
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
@@ -397,9 +397,9 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
                     </p>
                     <p style={{ fontSize: '0.62rem', color: 'var(--text-3)', marginTop: '1px' }}>
                       CI: {r.elector_ci}
-                      {r.confirmed_at && (
+                      {r.captured_at && (
                         <span style={{ marginLeft: '0.5rem', color: 'var(--text-3)' }}>
-                          · {new Date(r.confirmed_at).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+                          · cap. {new Date(r.captured_at).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit' })}
                         </span>
                       )}
                     </p>
