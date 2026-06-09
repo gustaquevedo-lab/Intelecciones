@@ -947,25 +947,26 @@ const ActaFinalTab = () => {
 
       {selectedCategory === null ? (
         <>
-          {/* QR Scan trigger */}
-          <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem', border: '1px dashed var(--plra-400)', background: 'rgba(0,71,171,0.05)' }}>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <QrCode size={18} /> Escaneo de Actas TREP / TSJE
+          {/* QR Scan trigger → ActaScanner */}
+          <div className="card-premium-styled" style={{ padding: '1.5rem', marginBottom: '1.25rem', border: '1px solid var(--plra-400)', background: 'linear-gradient(135deg, rgba(0,71,171,0.12), rgba(0,71,171,0.04))' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--plra-300)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <QrCode size={18} /> Escaneo de Actas QR (11 Cargos)
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.1rem' }}>
-              Escanee el código QR del acta oficial para cargar todos los votos automáticamente y luego adjunte las fotos.
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '1.1rem', lineHeight: 1.5 }}>
+              Escanea los 11 QRs del acta oficial (uno por cargo) para registrar todos los resultados automáticamente.
             </p>
-            <button
-              type="button"
-              onClick={() => setShowQRScanner(true)}
+            <a
+              href="/acta-scanner"
               style={{
-                width: '100%', padding: '0.9rem', borderRadius: '14px', border: 'none',
-                background: 'var(--plra-500)', color: 'white', fontWeight: 800, fontSize: '0.9rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer'
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+                width: '100%', padding: '1rem', borderRadius: '14px', border: 'none',
+                background: 'linear-gradient(135deg, var(--plra-500), var(--plra-600))',
+                color: 'white', fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
+                textDecoration: 'none', boxShadow: '0 4px 20px rgba(0,71,171,0.35)'
               }}
             >
-              <Camera size={18} /> ESCANEAR QR TSJE
-            </button>
+              <QrCode size={20} /> ABRIR ESCÁNER DE ACTAS
+            </a>
           </div>
 
           {/* Grid of Categories */}
