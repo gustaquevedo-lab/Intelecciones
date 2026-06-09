@@ -261,6 +261,34 @@ const fmtDateTime = (dt: string | null | undefined) => {
   return d.toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
+// Carga Roboto (soporte UTF-8 completo: tildes, ñ, etc.) en un doc jsPDF.
+// Si el CDN no está disponible (offline), cae a 'helvetica'.
+const loadPDFFont = async (orientation: 'portrait' | 'landscape' = 'portrait') => {
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ orientation });
+  let font = 'helvetica';
+  try {
+    const toB64 = async (url: string) => {
+      const buf = await (await fetch(url)).arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    };
+    const base = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/';
+    const [reg, bold] = await Promise.all([
+      toB64(base + 'Roboto-Regular.ttf'),
+      toB64(base + 'Roboto-Medium.ttf'),
+    ]);
+    doc.addFileToVFS('Roboto-Regular.ttf', reg);
+    doc.addFileToVFS('Roboto-Bold.ttf', bold);
+    doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+    doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+    font = 'Roboto';
+  } catch { /* sin internet: usa helvetica */ }
+  return { doc, font };
+};
+
 const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDistrict }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -375,18 +403,17 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
           </button>
           <button
             onClick={async () => {
-              const { jsPDF } = await import('jspdf');
               const autoTable = (await import('jspdf-autotable')).default;
-              const doc = new jsPDF({ orientation: filtered.length > 30 ? 'landscape' : 'portrait' });
+              const { doc, font } = await loadPDFFont(filtered.length > 30 ? 'landscape' : 'portrait');
               const now = new Date();
               const titulo = coordFilter
-                ? `Verificación — ${coordFilter}`
-                : `Verificación de Electores Capturados`;
-              const subtitulo = `${activeDistrict || 'Todos los distritos'} · ${now.toLocaleDateString('es-PY')} ${now.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}`;
+                ? `Verificacion - ${coordFilter}`
+                : `Verificacion de Electores Capturados`;
+              const subtitulo = `${activeDistrict || 'Todos los distritos'} - ${now.toLocaleDateString('es-PY')} ${now.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}`;
 
-              doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+              doc.setFontSize(14); doc.setFont(font, 'bold');
               doc.text(titulo, 14, 16);
-              doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
+              doc.setFontSize(9); doc.setFont(font, 'normal'); doc.setTextColor(100);
               doc.text(subtitulo, 14, 22);
 
               // Summary line
@@ -407,17 +434,17 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
                     r.mesa || '',
                     r.orden || '',
                     r.local_votacion || '',
-                    r.elector_telefono || '—',
-                    r.padrino_nombre || '—',
-                    r.voted ? 'Votó ✔' : 'No Votó ✗',
+                    r.elector_telefono || '-',
+                    r.padrino_nombre || '-',
+                    r.voted ? 'Voto' : 'No voto',
                     fmtDateTime(r.captured_at),
                   ]),
-                  styles: { fontSize: 7, cellPadding: 2 },
-                  headStyles: { fillColor: [21, 88, 176], fontSize: 7, fontStyle: 'bold' },
+                  styles: { fontSize: 7, cellPadding: 2, font },
+                  headStyles: { fillColor: [21, 88, 176], fontSize: 7, fontStyle: 'bold', font },
                   alternateRowStyles: { fillColor: [245, 247, 250] },
                   didParseCell: (data: any) => {
                     if (data.column.index === 7) {
-                      data.cell.styles.textColor = data.cell.raw?.toString().startsWith('Votó') ? [37, 200, 130] : [239, 68, 68];
+                      data.cell.styles.textColor = data.cell.raw === 'Voto' ? [37, 200, 130] : [239, 68, 68];
                       data.cell.styles.fontStyle = 'bold';
                     }
                   }
@@ -435,11 +462,11 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
                   const v = rows.filter(r => r.voted).length;
                   const pct = rows.length > 0 ? Math.round((v / rows.length) * 100) : 0;
                   const phone = rows[0]?.coord_telefono || '';
-                  const pad = rows[0]?.padrino_nombre || '—';
-                  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(21, 88, 176);
-                  doc.text(`${coord}${phone ? '  📱 ' + phone : ''}  ·  Padrino: ${pad}`, 14, startY);
-                  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100);
-                  doc.text(`${rows.length} capturados  ·  ${v} votaron  ·  ${rows.length - v} sin voto  ·  ${pct}%`, 14, startY + 5);
+                  const pad = rows[0]?.padrino_nombre || '-';
+                  doc.setFontSize(10); doc.setFont(font, 'bold'); doc.setTextColor(21, 88, 176);
+                  doc.text(`${coord}${phone ? '  Tel: ' + phone : ''}  -  Padrino: ${pad}`, 14, startY);
+                  doc.setFontSize(8); doc.setFont(font, 'normal'); doc.setTextColor(100);
+                  doc.text(`${rows.length} capturados  -  ${v} votaron  -  ${rows.length - v} sin voto  -  ${pct}%`, 14, startY + 5);
                   autoTable(doc, {
                     startY: startY + 8,
                     head: [['Elector', 'CI', 'Mesa', 'Orden', 'Local', 'Tel. Elector', 'Estado']],
@@ -449,15 +476,15 @@ const VerificacionTab: React.FC<{ activeDistrict: string | null }> = ({ activeDi
                       r.mesa || '',
                       r.orden || '',
                       r.local_votacion || '',
-                      r.elector_telefono || '—',
-                      r.voted ? 'Votó ✔' : 'No Votó ✗',
+                      r.elector_telefono || '-',
+                      r.voted ? 'Voto' : 'No voto',
                     ]),
-                    styles: { fontSize: 7, cellPadding: 2 },
-                    headStyles: { fillColor: [21, 88, 176], fontSize: 7, fontStyle: 'bold' },
+                    styles: { fontSize: 7, cellPadding: 2, font },
+                    headStyles: { fillColor: [21, 88, 176], fontSize: 7, fontStyle: 'bold', font },
                     alternateRowStyles: { fillColor: [245, 247, 250] },
                     didParseCell: (data: any) => {
                       if (data.column.index === 6) {
-                        data.cell.styles.textColor = data.cell.raw?.toString().startsWith('Votó') ? [37, 200, 130] : [239, 68, 68];
+                        data.cell.styles.textColor = data.cell.raw === 'Voto' ? [37, 200, 130] : [239, 68, 68];
                         data.cell.styles.fontStyle = 'bold';
                       }
                     }
@@ -675,25 +702,26 @@ const DiaDApp: React.FC = () => {
 
   const handleExportPDF = async (voters: any[], title: string, filename: string) => {
     try {
-      const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
-      
-      const doc = new jsPDF();
+      const { doc, font } = await loadPDFFont('portrait');
+
       doc.setFontSize(18);
-      doc.setTextColor(21, 88, 176); // PLRA Blue
+      doc.setFont(font, 'bold');
+      doc.setTextColor(21, 88, 176);
       doc.text(title, 14, 20);
-      
+
       doc.setFontSize(10);
+      doc.setFont(font, 'normal');
       doc.setTextColor(100, 100, 100);
       doc.text(`Generado: ${new Date().toLocaleString('es-PY')}`, 14, 28);
-      
+
       const tableColumn = ["Orden", "C.I.", "Nombre Completo", "Hora de Voto", "Registrado"];
       const tableRows = voters.map(v => [
         v.orden,
         v.ci,
         `${v.nombre || ''} ${v.apellido || ''}`.trim() || 'SIN NOMBRE',
-        v.voted_at ? new Date(v.voted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-        v.registrado === 1 ? 'SÍ' : 'NO'
+        v.voted_at ? new Date(v.voted_at + 'Z').toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' }) : '-',
+        v.registrado === 1 ? 'SI' : 'NO'
       ]);
 
       autoTable(doc, {
@@ -701,15 +729,15 @@ const DiaDApp: React.FC = () => {
         body: tableRows,
         startY: 35,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3 },
-        headStyles: { fillColor: [21, 88, 176], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 3, font },
+        headStyles: { fillColor: [21, 88, 176], textColor: 255, fontStyle: 'bold', font },
         alternateRowStyles: { fillColor: [245, 248, 255] }
       });
 
       doc.save(`${filename}.pdf`);
     } catch (e) {
       console.error('Error generando PDF', e);
-      alert('Error al generar el reporte PDF. Asegúrese de tener conexión.');
+      alert('Error al generar el reporte PDF.');
     }
   };
 
