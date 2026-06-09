@@ -41,7 +41,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 28; // Update this to trigger migrations
+const currentSchemaVersion = 29; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -663,6 +663,27 @@ if (dbVersion < currentSchemaVersion) {
     setDbVersion(currentSchemaVersion);
     console.log("MIGRATION: Update completed.");
 }
+
+// Always ensure voter_confirmations exists (idempotent, safe to run every start)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS voter_confirmations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      elector_ci TEXT NOT NULL,
+      nombre TEXT,
+      apellido TEXT,
+      local_votacion TEXT,
+      mesa INTEGER,
+      orden INTEGER,
+      distrito TEXT,
+      confirmed_by INTEGER,
+      confirmed_at DATETIME DEFAULT (datetime('now')),
+      UNIQUE(elector_ci)
+    );
+    CREATE INDEX IF NOT EXISTS idx_voter_confirmations_ci ON voter_confirmations(elector_ci);
+    CREATE INDEX IF NOT EXISTS idx_voter_confirmations_distrito ON voter_confirmations(distrito);
+  `);
+} catch (_) { /* already exists */ }
 
 // 🔄 COMPREHENSIVE DATA NORMALIZATION: Fix dots, spaces and casing globally
 try {

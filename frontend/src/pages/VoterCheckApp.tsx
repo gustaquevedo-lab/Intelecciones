@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, CheckCircle2, XCircle, Clock, Trash2, Users, MapPin, AlertTriangle, Hash } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Trash2, Users, MapPin, AlertTriangle, Hash, RefreshCw } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { useAuth } from '../context/AuthContext';
 import api, { getImageUrl } from '../services/api';
@@ -40,26 +40,18 @@ export default function VoterCheckApp() {
   const [successMsg, setSuccessMsg] = useState('');
   const [history, setHistory] = useState<ConfirmationRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  // Load history on mount
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { loadHistory(); }, []);
 
   const loadHistory = async () => {
     setHistoryLoading(true);
     try {
       const res = await api.get('/voter-check/history');
       setHistory(res.data);
-    } catch {
-      // ignore
-    } finally {
+    } catch { /* ignore */ } finally {
       setHistoryLoading(false);
     }
   };
@@ -68,12 +60,10 @@ export default function VoterCheckApp() {
     if (e) e.preventDefault();
     const cleaned = ci.replace(/\./g, '').replace(/ /g, '').trim();
     if (!cleaned) return;
-
     setLoading(true);
     setError('');
     setSuccessMsg('');
     setElector(null);
-
     try {
       const res = await api.get(`/voter-check/elector/${cleaned}`);
       setElector(res.data);
@@ -109,18 +99,13 @@ export default function VoterCheckApp() {
     try {
       await api.delete(`/voter-check/${ci}`);
       setHistory(prev => prev.filter(h => h.elector_ci !== ci));
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
+    } catch { /* ignore */ }
   };
 
   const formatTime = (dt: string) => {
-    const d = new Date(dt);
-    return d.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    try {
+      return new Date(dt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch { return dt; }
   };
 
   return (
@@ -129,341 +114,289 @@ export default function VoterCheckApp() {
       userName={user?.nombre || ''}
       userPhoto={getImageUrl(user?.photo_url) || ''}
     >
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '420px 1fr',
-        gap: '1.5rem',
-        padding: '1.25rem',
-        height: 'calc(100vh - 102px)',
-        overflow: 'hidden'
-      }}>
+      <div style={{ padding: '1rem', maxWidth: '680px', margin: '0 auto' }}>
 
-        {/* ─── Left panel: CI scanner ─── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
-
-          {/* CI input card */}
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '16px',
-            padding: '1.5rem',
-          }}>
-            <h2 style={{ fontSize: '0.85rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Hash size={16} style={{ color: 'var(--plra-300)' }} />
-              Ingresá la Cédula de Identidad
-            </h2>
-
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                ref={inputRef}
-                type="text"
-                inputMode="numeric"
-                value={ci}
-                onChange={e => { setCi(e.target.value); setError(''); setElector(null); setSuccessMsg(''); }}
-                onKeyDown={handleKeyDown}
-                placeholder="Ej: 4567890"
-                style={{
-                  flex: 1,
-                  padding: '0.75rem 1rem',
-                  borderRadius: '10px',
-                  border: '2px solid var(--border)',
-                  background: 'rgba(255,255,255,0.04)',
-                  color: 'var(--text)',
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  outline: 'none',
-                  transition: 'border-color 0.15s',
-                }}
-                autoComplete="off"
-              />
-              <button
-                type="submit"
-                disabled={loading || !ci.trim()}
-                style={{
-                  padding: '0.75rem 1.25rem',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'var(--plra-500)',
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  opacity: loading || !ci.trim() ? 0.6 : 1,
-                }}
-              >
-                <Search size={16} />
-                {loading ? 'Buscando...' : 'Buscar'}
-              </button>
-            </form>
-
-            <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
-              Presioná Enter o el botón Buscar. La cédula puede tener puntos o no.
-            </p>
-          </div>
-
-          {/* Result / error / success */}
-          <AnimatePresence mode="wait">
-            {successMsg && (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{
-                  background: 'rgba(37,200,130,0.1)',
-                  border: '1px solid rgba(37,200,130,0.3)',
-                  borderRadius: '12px',
-                  padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  color: 'var(--green)',
-                  fontWeight: 700,
-                  fontSize: '0.85rem'
-                }}
-              >
-                <CheckCircle2 size={22} />
-                {successMsg}
-              </motion.div>
-            )}
-
-            {error && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  borderRadius: '12px',
-                  padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  color: 'var(--red)',
-                  fontWeight: 700,
-                  fontSize: '0.85rem'
-                }}
-              >
-                <XCircle size={22} />
-                {error}
-              </motion.div>
-            )}
-
-            {elector && (
-              <motion.div
-                key="elector"
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{
-                  background: elector.already_confirmed
-                    ? 'rgba(245,158,11,0.08)'
-                    : 'rgba(21,88,176,0.08)',
-                  border: `1px solid ${elector.already_confirmed ? 'rgba(245,158,11,0.3)' : 'rgba(21,88,176,0.25)'}`,
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                }}
-              >
-                {elector.already_confirmed && (
-                  <div style={{
-                    background: 'rgba(245,158,11,0.15)',
-                    borderRadius: '8px',
-                    padding: '0.5rem 0.75rem',
-                    marginBottom: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    color: '#F59E0B',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
-                  }}>
-                    <AlertTriangle size={14} />
-                    Ya fue confirmado el {elector.confirmed_at ? formatTime(elector.confirmed_at) : ''}
-                  </div>
-                )}
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1.2, marginBottom: '0.25rem' }}>
-                    {elector.nombre} {elector.apellido}
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700 }}>
-                    CI: {elector.ci}
-                  </p>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '0.75rem' }}>
-                    <p style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-3)', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
-                      <MapPin size={10} style={{ display: 'inline', marginRight: '3px' }} />Local
-                    </p>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>{elector.local_votacion}</p>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '0.75rem' }}>
-                    <p style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-3)', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
-                      Mesa / Orden
-                    </p>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--plra-300)' }}>
-                      Mesa {elector.mesa} — #{elector.orden}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleConfirm}
-                  disabled={confirming}
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem',
-                    borderRadius: '12px',
-                    border: 'none',
-                    background: elector.already_confirmed
-                      ? 'rgba(245,158,11,0.2)'
-                      : 'linear-gradient(135deg, #1558B0, #0D3D7A)',
-                    color: elector.already_confirmed ? '#F59E0B' : 'white',
-                    fontWeight: 900,
-                    fontSize: '0.9rem',
-                    cursor: confirming ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    opacity: confirming ? 0.7 : 1,
-                    transition: 'all 0.15s',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  <CheckCircle2 size={18} />
-                  {confirming ? 'Confirmando...' : elector.already_confirmed ? 'Confirmar de Nuevo' : 'Confirmar Presencia'}
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ─── Right panel: History ─── */}
+        {/* ─── CI Input ─── */}
         <div style={{
           background: 'var(--surface)',
           border: '1px solid var(--border)',
           borderRadius: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
+          padding: '1.25rem',
+          marginBottom: '1rem'
         }}>
-          {/* Header */}
-          <div style={{
-            padding: '1rem 1.25rem',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0
+          <p style={{
+            fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase',
+            letterSpacing: '0.1em', color: 'var(--text-3)', marginBottom: '0.75rem',
+            display: 'flex', alignItems: 'center', gap: '0.4rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Clock size={16} style={{ color: 'var(--plra-300)' }} />
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text)' }}>
-                Historial de Confirmaciones
-              </h3>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{
-                background: 'rgba(21,88,176,0.15)',
-                color: 'var(--plra-300)',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '20px',
-                fontSize: '0.75rem',
-                fontWeight: 800
-              }}>
-                <Users size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                {history.length} confirmados
-              </span>
+            <Hash size={13} style={{ color: 'var(--plra-300)' }} />
+            Cédula de Identidad
+          </p>
+
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              ref={inputRef}
+              type="tel"
+              inputMode="numeric"
+              value={ci}
+              onChange={e => { setCi(e.target.value); setError(''); setElector(null); setSuccessMsg(''); }}
+              placeholder="Ej: 4567890"
+              autoComplete="off"
+              style={{
+                flex: 1,
+                padding: '0.9rem 1rem',
+                borderRadius: '12px',
+                border: '2px solid var(--border)',
+                background: 'rgba(255,255,255,0.04)',
+                color: 'var(--text)',
+                fontSize: '1.3rem',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                outline: 'none',
+                WebkitAppearance: 'none',
+              }}
+            />
+            <button
+              type="submit"
+              disabled={loading || !ci.trim()}
+              style={{
+                padding: '0.9rem 1.25rem',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'var(--plra-500)',
+                color: 'white',
+                fontWeight: 900,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                opacity: loading || !ci.trim() ? 0.6 : 1,
+                minWidth: '80px',
+                flexShrink: 0,
+              }}
+            >
+              {loading ? '...' : 'Buscar'}
+            </button>
+          </form>
+          <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', marginTop: '0.4rem' }}>
+            Con o sin puntos. Presioná Enter o el botón.
+          </p>
+        </div>
+
+        {/* ─── Feedback ─── */}
+        <AnimatePresence mode="wait">
+          {successMsg && (
+            <motion.div key="ok"
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{
+                background: 'rgba(37,200,130,0.1)', border: '1px solid rgba(37,200,130,0.3)',
+                borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1rem',
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                color: 'var(--green)', fontWeight: 700, fontSize: '0.9rem'
+              }}
+            >
+              <CheckCircle2 size={22} />
+              {successMsg}
+            </motion.div>
+          )}
+
+          {error && (
+            <motion.div key="err"
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{
+                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1rem',
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                color: 'var(--red)', fontWeight: 700, fontSize: '0.85rem'
+              }}
+            >
+              <XCircle size={20} />
+              {error}
+            </motion.div>
+          )}
+
+          {elector && (
+            <motion.div key="elector"
+              initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              style={{
+                background: elector.already_confirmed ? 'rgba(245,158,11,0.06)' : 'rgba(21,88,176,0.07)',
+                border: `2px solid ${elector.already_confirmed ? 'rgba(245,158,11,0.3)' : 'rgba(21,88,176,0.25)'}`,
+                borderRadius: '16px', padding: '1.25rem', marginBottom: '1rem',
+              }}
+            >
+              {elector.already_confirmed && (
+                <div style={{
+                  background: 'rgba(245,158,11,0.15)', borderRadius: '8px', padding: '0.5rem 0.75rem',
+                  marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  fontSize: '0.7rem', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase'
+                }}>
+                  <AlertTriangle size={14} />
+                  Ya confirmado — {elector.confirmed_at ? formatTime(elector.confirmed_at) : ''}
+                </div>
+              )}
+
+              {/* Nombre grande */}
+              <p style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1.2, marginBottom: '0.2rem' }}>
+                {elector.nombre} {elector.apellido}
+              </p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '1rem' }}>
+                CI: {elector.ci}
+              </p>
+
+              {/* Info en grid 2 cols */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '1.25rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '0.75rem' }}>
+                  <p style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '0.3rem' }}>
+                    <MapPin size={10} style={{ display: 'inline', marginRight: '3px' }} />Local
+                  </p>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
+                    {elector.local_votacion}
+                  </p>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '0.75rem' }}>
+                  <p style={{ fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '0.3rem' }}>
+                    Mesa / Orden
+                  </p>
+                  <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--plra-300)' }}>
+                    Mesa {elector.mesa} — #{elector.orden}
+                  </p>
+                </div>
+              </div>
+
+              {/* Confirm button — grande, fácil de tocar */}
               <button
-                onClick={loadHistory}
+                onClick={handleConfirm}
+                disabled={confirming}
                 style={{
-                  padding: '0.3rem 0.65rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  background: 'transparent',
-                  color: 'var(--text-3)',
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  cursor: 'pointer'
+                  width: '100%',
+                  padding: '1rem',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: elector.already_confirmed
+                    ? 'rgba(245,158,11,0.2)'
+                    : 'linear-gradient(135deg, #1558B0, #0D3D7A)',
+                  color: elector.already_confirmed ? '#F59E0B' : 'white',
+                  fontWeight: 900,
+                  fontSize: '1rem',
+                  cursor: confirming ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+                  opacity: confirming ? 0.7 : 1,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  WebkitTapHighlightColor: 'transparent',
                 }}
               >
-                Actualizar
+                <CheckCircle2 size={20} />
+                {confirming ? 'Confirmando...' : elector.already_confirmed ? 'Confirmar de Nuevo' : 'Confirmar Presencia'}
               </button>
-            </div>
-          </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
-            {historyLoading ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', fontSize: '0.8rem' }}>
-                Cargando historial...
-              </div>
-            ) : history.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)' }}>
-                <CheckCircle2 size={40} style={{ opacity: 0.2, marginBottom: '0.75rem' }} />
-                <p style={{ fontSize: '0.85rem', fontWeight: 700 }}>Sin confirmaciones aún</p>
-                <p style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>Los electores confirmados aparecerán aquí</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {history.map((h, idx) => (
-                  <motion.div
-                    key={h.id}
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx < 10 ? idx * 0.03 : 0 }}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr auto auto',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.6rem 0.75rem',
-                      background: 'rgba(255,255,255,0.025)',
-                      borderRadius: '10px',
-                      border: '1px solid var(--border)',
-                    }}
-                  >
-                    <div>
-                      <p style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.3 }}>
-                        {h.nombre} {h.apellido}
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 600, marginLeft: '0.5rem' }}>
-                          CI: {h.elector_ci}
-                        </span>
-                      </p>
-                      <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>
-                        {h.local_votacion} — Mesa {h.mesa} / #{h.orden}
-                      </p>
-                    </div>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--plra-300)', whiteSpace: 'nowrap' }}>
-                      {formatTime(h.confirmed_at)}
-                    </span>
-                    <button
-                      onClick={() => handleDelete(h.elector_ci)}
-                      title="Deshacer confirmación"
+        {/* ─── History toggle button ─── */}
+        <button
+          onClick={() => setShowHistory(p => !p)}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            borderRadius: '12px',
+            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            color: 'var(--text)',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: showHistory ? '0.5rem' : 0,
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Clock size={16} style={{ color: 'var(--plra-300)' }} />
+            Historial de Confirmaciones
+            <span style={{
+              background: 'rgba(21,88,176,0.2)', color: 'var(--plra-300)',
+              padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 800
+            }}>
+              {history.length}
+            </span>
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); loadHistory(); }}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: '2px', display: 'flex' }}
+              title="Actualizar"
+            >
+              <RefreshCw size={14} />
+            </button>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>{showHistory ? '▲' : '▼'}</span>
+          </span>
+        </button>
+
+        {/* ─── History list ─── */}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: '12px', overflow: 'hidden', marginTop: '0.25rem'
+              }}>
+                {historyLoading ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.8rem' }}>
+                    Cargando...
+                  </div>
+                ) : history.length === 0 ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-3)' }}>
+                    <CheckCircle2 size={32} style={{ opacity: 0.15, marginBottom: '0.5rem' }} />
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>Sin confirmaciones aún</p>
+                  </div>
+                ) : (
+                  history.map((h, idx) => (
+                    <div
+                      key={h.id}
                       style={{
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-3)',
-                        padding: '4px',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
+                        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        borderBottom: idx < history.length - 1 ? '1px solid var(--border)' : 'none',
+                        gap: '0.75rem'
                       }}
                     >
-                      <Trash2 size={13} />
-                    </button>
-                  </motion.div>
-                ))}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {h.nombre} {h.apellido}
+                        </p>
+                        <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          CI: {h.elector_ci} · M{h.mesa}/#{h.orden}
+                        </p>
+                        <p style={{ fontSize: '0.6rem', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {h.local_votacion}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--plra-300)', whiteSpace: 'nowrap' }}>
+                          {formatTime(h.confirmed_at)}
+                        </span>
+                        <button
+                          onClick={() => handleDelete(h.elector_ci)}
+                          title="Deshacer"
+                          style={{
+                            background: 'transparent', border: 'none', cursor: 'pointer',
+                            color: 'var(--text-3)', padding: '4px', display: 'flex', alignItems: 'center',
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </MainLayout>
   );
