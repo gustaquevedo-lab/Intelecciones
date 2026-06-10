@@ -43,7 +43,7 @@ interface ActaEntry {
 // Maps cargo byte → { label, category for DB, expectedLists }
 const CARGO_DEFINITIONS: Record<string, { label: string; category: string; cargoByte?: number; autoDecodable: boolean }> = {
   INTENDENTE:                    { label: 'Intendente Municipal',              category: 'INTENDENTE',         cargoByte: 0xA7, autoDecodable: true },
-  JUNTA_MUNICIPAL:               { label: 'Junta Municipal',                   category: 'CONCEJAL',           cargoByte: 0x2B, autoDecodable: false },
+  JUNTA_MUNICIPAL:               { label: 'Junta Municipal',                   category: 'CONCEJAL',           cargoByte: 0x2B, autoDecodable: true },
   PRESIDENTE_VICE_PLRA:          { label: 'Presidente / Vice PLRA',            category: 'AUTORIDADES',        cargoByte: 0xA6, autoDecodable: false },
   DIRECTORIO_NACIONAL:           { label: 'Directorio Nacional',               category: 'AUTORIDADES',        cargoByte: 0x1E, autoDecodable: false },
   DIRECTORIO_DEPARTAMENTAL:      { label: 'Directorio Departamental',          category: 'AUTORIDADES',        cargoByte: 0x81, autoDecodable: true },
@@ -473,7 +473,7 @@ const ActaScanner = () => {
     setScanningCargo(null);
 
     try {
-      const res = await api.post('/veedor/parse-qr', { qrData: rawQR });
+      const res = await api.post('/veedor/parse-qr', { qrData: rawQR, cargoKey });
       const data = res.data;
 
       if (!data.success) {

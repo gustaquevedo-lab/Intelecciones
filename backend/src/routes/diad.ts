@@ -1617,8 +1617,14 @@ export function veedorRoutes() {
   });
 
   router.post('/parse-qr', async (req, res) => {
-    const { qrData } = req.body;
+    const { qrData, cargoKey } = req.body;
     if (!qrData) return res.status(400).json({ error: 'qrData es requerido' });
+
+    const CARGO_TO_DB_TYPE: Record<string, string> = {
+      INTENDENTE: 'INTENDENTE', JUNTA_MUNICIPAL: 'CONCEJAL',
+      DIRECTORIO_DEPARTAMENTAL: 'AUTORIDADES', DIRECTORIO_NACIONAL: 'AUTORIDADES',
+      COMITE_LOCAL: 'AUTORIDADES', CONVENCIONAL: 'AUTORIDADES',
+    };
 
     try {
       let parsedData: any = { success: false, blancos: 0, nulos: 0, votos: {}, mesa: null };
@@ -1628,108 +1634,108 @@ export function veedorRoutes() {
         const zlib = require('zlib');
         const zlibHeaderIdx = hexPart.toLowerCase().indexOf('789c');
         if (zlibHeaderIdx !== -1) {
-          // ── PREFIX ANALYSIS ──────────────────────────────────────────────
-          // The 15-byte prefix encodes cargo and mesa identifiers:
-          //   prefix[4]     = cargo type byte (0xA7=Intendente, 0x2B=Junta, etc.)
-          //   prefix[11-14] = mesa identifier (same for all cargo QRs of same mesa)
           const prefixHex = hexPart.substring(0, zlibHeaderIdx);
           const prefixBuf = Buffer.from(prefixHex, 'hex');
           const cargoByte = prefixBuf.length >= 5 ? prefixBuf[4] : 0;
           const mesaId = prefixBuf.length >= 15 ? prefixBuf.slice(11, 15).toString('hex') : null;
 
-          // Map cargo byte to cargo name and list number order
-          // Confirmed mapping from reverse-engineered QR samples (PJC elections 2026):
-          //   0xA7 = Intendente Municipal       → 3 lists: L3, L9, L100  (autoDecodable)
-          //   0xA6 = Presidente Vice PLRA       → multi-member, manual verify
-          //   0x1E = Directorio Nacional        → multi-member, manual verify
-          //   0x81 = Directorio Departamental   → 3 lists: L3, L9, L100  (autoDecodable)
-          //   0x83 = Comité Local               → multi-member, manual verify
-          //   0x64 = Convencional               → multi-member, manual verify
-          //   0x2B = Junta Municipal            → multi-member per candidate, manual verify
-          //   0x04 = Presidente Vice JLRA       → multi-member, manual verify
-          //   0x94 = Conducción Nacional JLRA   → multi-member, manual verify
-          //   0x2A = Representante Depto JLRA   → multi-member, manual verify
-          //   0xEE = Miembro Filial JLRA        → multi-member, manual verify
-          //   PLRA mesa: mesaId prefix = D5E9A780
-          //   JLRA mesa: mesaId prefix = FC04E1CC (same physical mesa, different acta)
-          const CARGO_MAP: Record<number, { nombre: string; listNumbers: string[]; autoDecodable: boolean }> = {
-            0xA7: { nombre: 'INTENDENTE',                    listNumbers: ['3', '9', '100'], autoDecodable: true  },
-            0x81: { nombre: 'DIRECTORIO_DEPARTAMENTAL',      listNumbers: ['3', '9', '100'], autoDecodable: true  },
-            0x2B: { nombre: 'JUNTA_MUNICIPAL',               listNumbers: [],               autoDecodable: false },
-            0xA6: { nombre: 'PRESIDENTE_VICE_PLRA',          listNumbers: [],               autoDecodable: false },
-            0x1E: { nombre: 'DIRECTORIO_NACIONAL',           listNumbers: [],               autoDecodable: false },
-            0x83: { nombre: 'COMITE_LOCAL',                  listNumbers: [],               autoDecodable: false },
-            0x64: { nombre: 'CONVENCIONAL',                  listNumbers: [],               autoDecodable: false },
-            0x04: { nombre: 'PRESIDENTE_VICE_JLRA',          listNumbers: [],               autoDecodable: false },
-            0x94: { nombre: 'CONDUCCION_NACIONAL_JLRA',      listNumbers: [],               autoDecodable: false },
-            0x2A: { nombre: 'REPRESENTANTE_DEPARTAMENTAL_JLRA', listNumbers: [],            autoDecodable: false },
-            0xEE: { nombre: 'MIEMBRO_FILIAL_JLRA',           listNumbers: [],               autoDecodable: false },
-          };
-          const cargoInfo = CARGO_MAP[cargoByte];
-
-          // ── DECOMPRESS & BIT-SHIFT DECODE ────────────────────────────────
-          // After zlib inflate, shift the buffer 3 bits left. Then:
-          //   shifted[8]        = votos en blanco
-          //   shifted[9..9+N-1] = votos por lista (in listNumbers order)
-          //   shifted[9+N]      = total votos emitidos
           const compressedBuf = Buffer.from(hexPart.substring(zlibHeaderIdx), 'hex');
           const raw = zlib.inflateSync(compressedBuf);
 
+          function readBitsMSB(buf: Buffer, bitPos: number, width: number): number {
+            let val = 0;
+            for (let b = 0; b < width; b++) {
+              const pos = bitPos + b;
+              const byteIdx = Math.floor(pos / 8);
+              const bitIdx = 7 - (pos % 8);
+              if (byteIdx < buf.length) val = (val << 1) | ((buf[byteIdx] >> bitIdx) & 1);
+            }
+            return val;
+          }
+
+          // Query DB for list structure (list_number → candidate count)
+          const dbType = cargoKey ? CARGO_TO_DB_TYPE[cargoKey] : null;
+          let listStructure: { list_number: string; candidate_count: number }[] = [];
+          if (dbType) {
+            const dist = getDistrict(req) || '';
+            let sql = `SELECT list_number, COUNT(*) as candidate_count FROM lists WHERE type = ?`;
+            const params: any[] = [dbType];
+            if (dist && dist !== 'GLOBAL') {
+              sql += ` AND (UPPER(ciudad) = UPPER(?) OR ciudad = '' OR ciudad IS NULL OR UPPER(ciudad) = 'AUTO')`;
+              params.push(dist);
+            }
+            sql += ` GROUP BY list_number ORDER BY CAST(list_number AS INTEGER) ASC`;
+            listStructure = db.prepare(sql).all(...params) as any[];
+          }
+          const distinctListNums = listStructure.map(l => l.list_number);
+          const numLists = distinctListNums.length;
+
+          // Resolve list_number → DB id for frontend mapping
+          const listsFromDb = db.prepare('SELECT id, list_number FROM lists').all() as any[];
+          function resolveIds(votosMap: Record<string, number>): Record<string, number> {
+            const result: Record<string, number> = { ...votosMap };
+            for (const [ln, v] of Object.entries(votosMap)) {
+              const m = listsFromDb.find((l: any) => String(l.list_number) === ln);
+              if (m) result[String(m.id)] = v as number;
+            }
+            return result;
+          }
+
+          // ── TRY 8-BIT DECODE (shift-3) ──
           const shifted = Buffer.alloc(raw.length);
           for (let i = 0; i < raw.length; i++) {
             const curr = raw[i];
             const next = i + 1 < raw.length ? raw[i + 1] : 0;
             shifted[i] = ((curr << 3) | (next >> 5)) & 0xFF;
           }
+          const N = numLists > 0 ? numLists : 3;
+          const blancos8 = shifted[8] ?? 0;
+          const listVals8: number[] = [];
+          for (let i = 0; i < N; i++) listVals8.push(shifted[9 + i] ?? 0);
+          const total8 = shifted[9 + N] ?? 0;
+          const sum8 = listVals8.reduce((a, b) => a + b, 0);
+          const valid8bit = total8 > 0 && Math.abs(blancos8 + sum8 - total8) <= 2;
 
-          const blancos = shifted[8] ?? 0;
-
-          // Determine list count: for known cargos use listNumbers; otherwise auto-detect
-          const listNumbers = cargoInfo?.listNumbers ?? [];
-          const N = listNumbers.length;
-          const total = (N > 0 && shifted[9 + N] !== undefined) ? shifted[9 + N] : (shifted[12] ?? 0);
-
-          const votosMap: Record<string, number> = {};
-          if (N > 0) {
-            listNumbers.forEach((listNum, idx) => {
-              votosMap[listNum] = shifted[9 + idx] ?? 0;
-            });
-          } else {
-            // Unknown cargo: greedily extract until sum reaches total
-            let acc = blancos;
-            let idx = 0;
-            while (9 + idx < shifted.length - 2) {
-              const val = shifted[9 + idx] ?? 0;
-              if (acc + val > total + 5) break; // stop if overshooting total (5 tolerance)
-              votosMap[String(idx + 1)] = val;
-              acc += val;
-              idx++;
+          if (valid8bit) {
+            const votosMap: Record<string, number> = {};
+            const lns = numLists > 0 ? distinctListNums : listVals8.map((_, i) => String(i + 1));
+            lns.forEach((ln, idx) => { votosMap[ln] = listVals8[idx] ?? 0; });
+            const nulos = Math.max(0, total8 - blancos8 - sum8);
+            parsedData = {
+              success: true, blancos: blancos8, nulos, total: total8,
+              votos: resolveIds(votosMap), mesa: null, mesaId,
+              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+              cargo_byte: cargoByte, autoDecodable: true,
+            };
+          } else if (numLists > 0) {
+            // ── 5-BIT DECODE (complex cargos: Junta, Directorio Nacional, etc.) ──
+            const blancos5 = readBitsMSB(raw, 67, 5);
+            let bitPos = 72;
+            const votosMap: Record<string, number> = {};
+            for (const ls of listStructure) {
+              let listSum = 0;
+              for (let c = 0; c < ls.candidate_count; c++) {
+                listSum += readBitsMSB(raw, bitPos, 5);
+                bitPos += 5;
+              }
+              votosMap[ls.list_number] = listSum;
             }
+            const sumListas = Object.values(votosMap).reduce((a, b) => a + b, 0);
+            parsedData = {
+              success: true, blancos: blancos5, nulos: 0,
+              total: blancos5 + sumListas,
+              votos: resolveIds(votosMap), mesa: null, mesaId,
+              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+              cargo_byte: cargoByte, autoDecodable: true,
+            };
+          } else {
+            parsedData = {
+              success: true, blancos: blancos8, nulos: 0, total: 0,
+              votos: {}, mesa: null, mesaId,
+              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+              cargo_byte: cargoByte, autoDecodable: false,
+            };
           }
-
-          const sumListas = Object.values(votosMap).reduce((a, b) => a + b, 0);
-          const nulos = Math.max(0, total - blancos - sumListas);
-
-          // Also resolve list_number → lista DB id for direct UI mapping
-          const listsFromDb = db.prepare('SELECT id, list_number FROM lists').all() as any[];
-          const votosPorId: Record<string, number> = { ...votosMap };
-          for (const [listNum, votes] of Object.entries(votosMap)) {
-            const match = listsFromDb.find((l: any) => String(l.list_number) === String(listNum));
-            if (match) votosPorId[String(match.id)] = votes as number;
-          }
-
-          parsedData = {
-            success: true,
-            blancos,
-            nulos,
-            total,
-            votos: votosPorId,
-            mesa: null,
-            mesaId,
-            cargo: cargoInfo?.nombre ?? `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
-            cargo_byte: cargoByte,
-            autoDecodable: cargoInfo?.autoDecodable ?? false,
-          };
         }
       } else if (qrData.startsWith('TSJE|')) {
         const parts = qrData.split('|');
