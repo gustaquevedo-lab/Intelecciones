@@ -1708,26 +1708,69 @@ export function veedorRoutes() {
               cargo_byte: cargoByte, autoDecodable: true,
             };
           } else if (numLists > 0) {
-            // ── 5-BIT DECODE (complex cargos: Junta, Directorio Nacional, etc.) ──
-            const blancos5 = readBitsMSB(raw, 67, 5);
-            let bitPos = 72;
-            const votosMap: Record<string, number> = {};
-            for (const ls of listStructure) {
-              let listSum = 0;
-              for (let c = 0; c < ls.candidate_count; c++) {
-                listSum += readBitsMSB(raw, bitPos, 5);
-                bitPos += 5;
+            // Improved heuristic: try variable bit-widths and offsets to decode per-candidate counts
+            const tryDecodeBitfields = (): { blancos: number; votosMap: Record<string, number>; total: number } | null => {
+              const MAX_TOTAL = 10000;
+              // bitWidth 1..8 (practical) and offset bits 0..127
+              for (let bitWidth = 1; bitWidth <= 8; bitWidth++) {
+                for (let bitOffset = 0; bitOffset < 128; bitOffset += 1) {
+                  try {
+                    let pos = bitOffset;
+                    const blancosVal = readBitsMSB(raw, pos, bitWidth);
+                    if (blancosVal > 5000) continue;
+                    pos += bitWidth;
+                    const votosMap: Record<string, number> = {};
+                    let overallSum = 0;
+                    let invalid = false;
+                    for (const ls of listStructure) {
+                      let listSum = 0;
+                      for (let c = 0; c < ls.candidate_count; c++) {
+                        const v = readBitsMSB(raw, pos, bitWidth);
+                        pos += bitWidth;
+                        if (v > 5000) { invalid = true; break; }
+                        listSum += v;
+                      }
+                      if (invalid) break;
+                      votosMap[ls.list_number] = listSum;
+                      overallSum += listSum;
+                    }
+                    if (invalid) continue;
+                    const total = blancosVal + overallSum;
+                    if (total <= 0 || total > MAX_TOTAL) continue;
+                    // Basic plausibility: blanco not larger than total and overallSum reasonable
+                    if (blancosVal <= total && overallSum >= 0) {
+                      return { blancos: blancosVal, votosMap, total };
+                    }
+                  } catch (e) {
+                    continue;
+                  }
+                }
               }
-              votosMap[ls.list_number] = listSum;
-            }
-            const sumListas = Object.values(votosMap).reduce((a, b) => a + b, 0);
-            parsedData = {
-              success: true, blancos: blancos5, nulos: 0,
-              total: blancos5 + sumListas,
-              votos: resolveIds(votosMap), mesa: null, mesaId,
-              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
-              cargo_byte: cargoByte, autoDecodable: true,
+              return null;
             };
+
+            const decoded = tryDecodeBitfields();
+            if (decoded) {
+              parsedData = {
+                success: true,
+                blancos: decoded.blancos,
+                nulos: 0,
+                total: decoded.total,
+                votos: resolveIds(decoded.votosMap),
+                mesa: null,
+                mesaId,
+                cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+                cargo_byte: cargoByte,
+                autoDecodable: true,
+              };
+            } else {
+              parsedData = {
+                success: true, blancos: blancos8, nulos: 0, total: 0,
+                votos: {}, mesa: null, mesaId,
+                cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+                cargo_byte: cargoByte, autoDecodable: false,
+              };
+            }
           } else {
             parsedData = {
               success: true, blancos: blancos8, nulos: 0, total: 0,
