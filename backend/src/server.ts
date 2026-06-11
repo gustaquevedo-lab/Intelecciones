@@ -40,6 +40,7 @@ import qrcode from 'qrcode';
 import * as XLSX from 'xlsx';
 import whatsappRoutes from './routes/whatsapp';
 import diadRoutes, { veedorRoutes } from './routes/diad';
+import tsjeRoutes from './routes/tsje';
 import usersRoutes from './routes/users';
 import teamRoutes from './routes/team';
 import capturesRoutes, { conflictsRoutes, coordinatorsRoutes } from './routes/captures';
@@ -1584,6 +1585,7 @@ app.use('/api/admin/conflicts', conflictsRoutes());
 app.use('/api/whatsapp', whatsappRoutes(storage));
 app.use('/api/diad', diadRoutes(upload));
 app.use('/api/veedor', veedorRoutes());
+app.use('/api/tsje', tsjeRoutes());
 app.use('/api/attendance', attendanceRoutes());
 app.use('/api/voter-check', voterCheckRoutes());
 

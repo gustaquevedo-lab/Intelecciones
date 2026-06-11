@@ -20,6 +20,7 @@ import 'leaflet/dist/leaflet.css';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { Skeleton, SkeletonTable } from '../components/Skeleton';
 import { CIUDADES_PARAGUAY } from '../constants/cities';
+import ResultadosTsje from './diad/ResultadosTsje';
 
 const AVAILABLE_DISTRICTS = [
   'PEDRO JUAN CABALLERO',
@@ -656,7 +657,7 @@ const DiaDApp: React.FC = () => {
   const { user, activeDistrict, setActiveDistrict } = useAuth();
   const { settings } = useSettings();
 
-  const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros' | 'verificacion'>('cobertura');
+  const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros' | 'verificacion' | 'tsje'>('cobertura');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
   
@@ -1177,6 +1178,7 @@ const DiaDApp: React.FC = () => {
     { id: 'dhondt', label: "D'Hondt", icon: <Award size={14} /> },
     { id: 'actas', label: 'Actas', icon: <FileText size={14} /> },
     { id: 'verificacion', label: 'Verificación', icon: <CheckCircle2 size={14} /> },
+    { id: 'tsje', label: 'Resultados TSJE', icon: <TrendingUp size={14} /> },
   ] as const;
 
   return (
@@ -2518,6 +2520,13 @@ const DiaDApp: React.FC = () => {
             {activeTab === 'verificacion' && (
               <motion.div key="verificacion" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <VerificacionTab activeDistrict={activeDistrict} />
+              </motion.div>
+            )}
+
+            {/* ══════════ TAB: RESULTADOS TSJE ══════════ */}
+            {activeTab === 'tsje' && (
+              <motion.div key="tsje" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <ResultadosTsje />
               </motion.div>
             )}
 

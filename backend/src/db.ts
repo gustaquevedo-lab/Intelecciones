@@ -83,6 +83,121 @@ try {
   console.error("MIGRATION ERROR creating indexes for participation_logs:", e.message);
 }
 
+// ── TSJE TREP SCRAPER TABLES (idempotent — runs every boot) ──
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tsje_cargos (
+      cod_eleccion INTEGER NOT NULL,
+      cod_cargo    INTEGER NOT NULL,
+      des_cargo    TEXT NOT NULL,
+      tip_cargo    INTEGER,
+      niv_cargo    INTEGER,
+      PRIMARY KEY (cod_eleccion, cod_cargo)
+    );
+
+    CREATE TABLE IF NOT EXISTS tsje_resultado_distrito (
+      cod_eleccion       INTEGER NOT NULL,
+      cod_cargo          INTEGER NOT NULL,
+      cod_dpto           INTEGER NOT NULL,
+      cod_distrito       INTEGER NOT NULL,
+      des_dpto           TEXT,
+      des_distrito       TEXT,
+      blancos            INTEGER DEFAULT 0,
+      nulos              INTEGER DEFAULT 0,
+      total_votos        INTEGER DEFAULT 0,
+      electores          INTEGER DEFAULT 0,
+      electores_publ     INTEGER DEFAULT 0,
+      mesas_publicadas   INTEGER DEFAULT 0,
+      total_mesas        INTEGER DEFAULT 0,
+      no_computados      INTEGER DEFAULT 0,
+      hora_tsje          TEXT,
+      fetched_at         TEXT NOT NULL,
+      PRIMARY KEY (cod_eleccion, cod_cargo, cod_dpto, cod_distrito)
+    );
+
+    CREATE TABLE IF NOT EXISTS tsje_resultado_lista (
+      cod_eleccion  INTEGER NOT NULL,
+      cod_cargo     INTEGER NOT NULL,
+      cod_dpto      INTEGER NOT NULL,
+      cod_distrito  INTEGER NOT NULL,
+      num_lista     TEXT NOT NULL,
+      orden         INTEGER,
+      des_partido   TEXT,
+      sig_partido   TEXT,
+      col_lista     TEXT,
+      img_lista     TEXT,
+      votos         INTEGER DEFAULT 0,
+      PRIMARY KEY (cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista)
+    );
+
+    CREATE TABLE IF NOT EXISTS tsje_resultado_preferente (
+      cod_eleccion    INTEGER NOT NULL,
+      cod_cargo       INTEGER NOT NULL,
+      cod_dpto        INTEGER NOT NULL,
+      cod_distrito    INTEGER NOT NULL,
+      num_lista       TEXT NOT NULL,
+      ord_candidato   INTEGER NOT NULL,
+      nom_candidato   TEXT,
+      des_partido     TEXT,
+      orden           INTEGER,
+      votos           INTEGER DEFAULT 0,
+      PRIMARY KEY (cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato)
+    );
+
+    CREATE TABLE IF NOT EXISTS tsje_sync_log (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      cod_eleccion  INTEGER NOT NULL,
+      cod_dpto      INTEGER NOT NULL,
+      cod_distrito  INTEGER NOT NULL,
+      started_at    TEXT NOT NULL,
+      finished_at   TEXT,
+      status        TEXT NOT NULL,
+      cargos_ok     INTEGER DEFAULT 0,
+      cargos_err    INTEGER DEFAULT 0,
+      error_msg     TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tsje_pref_lookup
+      ON tsje_resultado_preferente (cod_eleccion, cod_cargo, cod_dpto, cod_distrito, votos DESC);
+    CREATE INDEX IF NOT EXISTS idx_tsje_lista_lookup
+      ON tsje_resultado_lista (cod_eleccion, cod_cargo, cod_dpto, cod_distrito, votos DESC);
+    CREATE INDEX IF NOT EXISTS idx_tsje_sync_log_recent
+      ON tsje_sync_log (cod_eleccion, cod_dpto, cod_distrito, started_at DESC);
+  `);
+} catch (e: any) {
+  console.error("MIGRATION ERROR creating TSJE tables:", e.message);
+}
+
+// ── TSJE D'HONDT SCENARIOS TABLE (idempotent — runs every boot) ──
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tsje_dhondt_scenarios (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      cod_eleccion INTEGER NOT NULL,
+      nombre       TEXT NOT NULL,
+      descripcion  TEXT,
+      seats_json   TEXT NOT NULL,
+      created_by   INTEGER,
+      created_at   TEXT NOT NULL,
+      updated_at   TEXT,
+      UNIQUE(cod_eleccion, nombre)
+    );
+    CREATE INDEX IF NOT EXISTS idx_dhondt_scenarios_eleccion
+      ON tsje_dhondt_scenarios (cod_eleccion);
+  `);
+
+  // Seed default scenario "Hipótesis de referencia"
+  db.prepare(`
+    INSERT OR IGNORE INTO tsje_dhondt_scenarios
+      (cod_eleccion, nombre, descripcion, seats_json, created_at)
+    VALUES (45, 'Hipotesis de referencia',
+      'Valores hipoteticos iniciales por cargo',
+      '{"2":12,"4":30,"5":5,"6":11,"7":5,"9":15,"10":3,"11":3,"12":5}',
+      datetime('now'))
+  `).run();
+} catch (e: any) {
+  console.error("MIGRATION ERROR creating tsje_dhondt_scenarios:", e.message);
+}
 
 // Only run heavy schema checks if version changed
 if (dbVersion < currentSchemaVersion) {
