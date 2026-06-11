@@ -392,18 +392,6 @@ const ResultadosTsje: React.FC = () => {
         </div>
       )}
 
-      {/* ── Non-Amambay disclaimer ── */}
-      {selectedDistrict && !isAmambay && !loading && (
-        <div style={{
-          padding: '0.65rem 1rem', borderRadius: '10px',
-          background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
-          color: '#F59E0B', fontSize: '0.75rem',
-        }}>
-          Los cargos de nivel nacional y departamental solo se muestran para distritos de Amambay (depto 13).
-          Los cargos de otros departamentos se ocultaran automaticamente.
-        </div>
-      )}
-
       {/* ── Scenario selector (visible when there are plurinominal cargos) ── */}
       {selectedDistrict && !loading && hasPluri && scenState.scenarios.length > 0 && (
         <ScenarioSelector
@@ -423,11 +411,6 @@ const ResultadosTsje: React.FC = () => {
       {selectedDistrict && !loading && filtered.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {filtered.map(r => {
-            // Hide depto/national cargos for non-Amambay districts
-            if (!isAmambay && (r.niv_cargo === 0 || r.niv_cargo === 1)) {
-              return null;
-            }
-
             const bancas = scenState.seatsDraft[String(r.cod_cargo)] ?? SEATS_BY_CARGO[r.cod_cargo] ?? 0;
 
             return (
