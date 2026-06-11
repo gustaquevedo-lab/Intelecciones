@@ -744,24 +744,42 @@ app.get('/api/stream/events', (req, res) => {
   const userId = req.query.userId as string;
   if (!userId) return res.status(400).json({ error: 'Missing userId' });
 
-  // Set headers for Server-Sent Events
+  // Headers SSE + bypass del buffering del proxy (Railway/nginx)
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders(); // flush the headers to establish SSE
+  res.setHeader('X-Accel-Buffering', 'no');
+  // Importante: desactivar timeout del socket — Railway corta HTTP/2 si no hay tráfico
+  if (typeof (res as any).socket?.setTimeout === 'function') {
+    (res as any).socket.setTimeout(0);
+  }
+  res.flushHeaders();
 
-  // Tell the client that connection is established
+  res.write(`retry: 5000\n\n`);
   res.write(`data: ${JSON.stringify({ type: 'CONNECTED', message: 'SSE Connection Established' })}\n\n`);
 
-  // Register client
+  // Heartbeat cada 25s — mantiene viva la conexión contra HTTP/2 idle timeout
+  const heartbeat = setInterval(() => {
+    try { res.write(`: heartbeat ${Date.now()}\n\n`); }
+    catch { clearInterval(heartbeat); }
+  }, 25000);
+
+  // Reemplaza cualquier conexión previa del mismo userId para evitar zombies
+  const existing = sseClients.get(userId);
+  if (existing && existing !== res) {
+    try { existing.end(); } catch {}
+  }
   sseClients.set(userId, res);
   console.log(`[SSE] Client connected: ${userId}. Total clients: ${sseClients.size}`);
 
-  // Handle client disconnect
-  req.on('close', () => {
-    sseClients.delete(userId);
+  const cleanup = () => {
+    clearInterval(heartbeat);
+    if (sseClients.get(userId) === res) sseClients.delete(userId);
     console.log(`[SSE] Client disconnected: ${userId}. Total clients: ${sseClients.size}`);
-  });
+  };
+  req.on('close', cleanup);
+  req.on('aborted', cleanup);
+  res.on('error', cleanup);
 });
 
 app.post('/api/command/push-message', requireRole('SUPERUSUARIO', 'COORDINADOR', 'SUPER_ADMIN'), (req, res) => {

@@ -135,7 +135,6 @@ export function useDiadMembers(district?: string | null) {
       const res = await api.get('/diad/members', {
         params: { district }
       });
-      console.log('[useDiadMembers] district:', district, 'received:', res.data?.length || res.data, 'full:', res.data);
       return res.data;
     },
     staleTime: 0,

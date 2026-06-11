@@ -66,7 +66,13 @@ export const tsjeApi = {
   getResultados: (codDpto: number, codDistrito: number): Promise<TsjeResultado[]> =>
     api.get('/tsje/resultados', {
       params: { cod_eleccion: PLRA_2026, cod_dpto: codDpto, cod_distrito: codDistrito },
-    }).then(r => Array.isArray(r.data) ? r.data : []),
+    }).then(r => {
+      // El backend devuelve { codEleccion, codDpto, codDistrito, cargos: [...] }
+      const body = r.data;
+      if (Array.isArray(body)) return body;
+      if (body && Array.isArray(body.cargos)) return body.cargos;
+      return [];
+    }),
 
   getSyncStatus: (codDpto: number, codDistrito: number): Promise<{ lastSync: string | null; inFlight: boolean; lastError: string | null }> =>
     api.get('/tsje/sync/status', {
