@@ -1284,7 +1284,17 @@ const DiaDApp: React.FC = () => {
           borderBottom: '1px solid var(--border)', flexShrink: 0, flexWrap: 'wrap', gap: '0.5rem'
         }}>
           {/* Tabs */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '3px', borderRadius: '10px', gap: '2px' }}>
+          <div style={{
+            display: 'flex',
+            background: 'rgba(0,0,0,0.3)',
+            padding: '3px',
+            borderRadius: '10px',
+            gap: '2px',
+            overflowX: 'auto',
+            maxWidth: '100%',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}>
             {TABS.map(t => (
               <button
                 key={t.id}
@@ -1296,7 +1306,8 @@ const DiaDApp: React.FC = () => {
                   color: activeTab === t.id ? 'white' : 'var(--text-3)',
                   fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                   transition: 'all 0.15s',
-                  boxShadow: activeTab === t.id ? '0 2px 8px rgba(21,88,176,0.4)' : 'none'
+                  boxShadow: activeTab === t.id ? '0 2px 8px rgba(21,88,176,0.4)' : 'none',
+                  flexShrink: 0
                 }}
               >
                 {t.icon} {t.label}
@@ -1542,7 +1553,7 @@ const DiaDApp: React.FC = () => {
                 {/* Subheader Title & Action */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                   <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text)', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Constitución de Mesas de Votación
                     </h3>
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>
@@ -1580,7 +1591,7 @@ const DiaDApp: React.FC = () => {
                             {/* Location Header */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.50rem' }}>
                               <MapPin size={16} style={{ color: 'var(--plra-300)' }} />
-                              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>{loc.nombre}</span>
+                              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>{loc.nombre}</span>
                               <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-3)', padding: '2px 8px', borderRadius: '10px', marginLeft: 'auto', fontWeight: 700 }}>
                                 {mesasInLoc.length} MESAS
                               </span>
@@ -1599,7 +1610,7 @@ const DiaDApp: React.FC = () => {
                                       background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.5rem', 
                                       borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)'
                                     }}>
-                                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
+                                      <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text)' }}>
                                         {ap.nombre}
                                       </span>
                                       <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 800, background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
@@ -1669,7 +1680,7 @@ const DiaDApp: React.FC = () => {
                                     }}
                                   >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                      <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white' }}>
+                                      <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)' }}>
                                         Mesa {mesa.numero}
                                       </span>
                                       <span style={{
@@ -1788,7 +1799,7 @@ const DiaDApp: React.FC = () => {
                   }}>
                     {/* Panel Title */}
                     <div>
-                      <h4 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         <Users size={16} style={{ color: 'var(--plra-300)' }} /> Banco de Suplentes
                       </h4>
                       <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.1rem' }}>
@@ -1809,7 +1820,7 @@ const DiaDApp: React.FC = () => {
                         <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#4ADE80', textTransform: 'uppercase' }}>
                           👉 Asignando a Mesa
                         </span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text)' }}>
                           MESA {selectedMesaForSwap.numero} ({selectedMesaForSwap.local})
                         </span>
                         <button 
@@ -1915,7 +1926,7 @@ const DiaDApp: React.FC = () => {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                               <div>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', display: 'block' }}>{m.nombre}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text)', display: 'block' }}>{m.nombre}</span>
                                 <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>CI: {m.ci || '—'}</span>
                               </div>
                               <span style={{ 
@@ -2522,7 +2533,7 @@ const DiaDApp: React.FC = () => {
                             flexWrap: 'wrap', gap: '0.5rem'
                           }}>
                             <div>
-                              <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <span style={{
                                   padding: '0.1rem 0.45rem', borderRadius: '5px',
                                   background: 'rgba(46,132,240,0.2)', border: '1px solid rgba(46,132,240,0.3)',

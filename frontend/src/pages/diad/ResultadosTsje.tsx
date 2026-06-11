@@ -194,6 +194,25 @@ const ResultadosTsje: React.FC = () => {
     setSyncMsg('');
   };
 
+  // ── Filtered resultados ──
+  const filtered = useMemo(() => {
+    let list = [...resultados].sort((a, b) => a.cod_cargo - b.cod_cargo);
+    if (filterCargo !== null) list = list.filter(r => r.cod_cargo === filterCargo);
+    return list;
+  }, [resultados, filterCargo]);
+
+  // ── Group results by cod_cargo ──
+  const groupedCargos = useMemo(() => {
+    const groups: Record<number, TsjeResultado[]> = {};
+    filtered.forEach(r => {
+      if (!groups[r.cod_cargo]) groups[r.cod_cargo] = [];
+      groups[r.cod_cargo].push(r);
+    });
+    return Object.entries(groups)
+      .map(([cod, list]) => ({ cod_cargo: Number(cod), scopes: list }))
+      .sort((a, b) => a.cod_cargo - b.cod_cargo);
+  }, [filtered]);
+
   // ── Cargo filter options ──
   const cargoOptions = useMemo(() => {
     const seen = new Set<number>();
@@ -201,13 +220,6 @@ const ResultadosTsje: React.FC = () => {
       .filter(r => { if (seen.has(r.cod_cargo)) return false; seen.add(r.cod_cargo); return true; })
       .sort((a, b) => a.cod_cargo - b.cod_cargo);
   }, [resultados]);
-
-  // ── Filtered resultados ──
-  const filtered = useMemo(() => {
-    let list = [...resultados].sort((a, b) => a.cod_cargo - b.cod_cargo);
-    if (filterCargo !== null) list = list.filter(r => r.cod_cargo === filterCargo);
-    return list;
-  }, [resultados, filterCargo]);
 
   // ── Check if selected district is Amambay ──
   const isAmambay = selectedDistrict?.cod_dpto === 13;
@@ -408,15 +420,15 @@ const ResultadosTsje: React.FC = () => {
       )}
 
       {/* ── Cargo cards ── */}
-      {selectedDistrict && !loading && filtered.length > 0 && (
+      {selectedDistrict && !loading && groupedCargos.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filtered.map(r => {
-            const bancas = scenState.seatsDraft[String(r.cod_cargo)] ?? SEATS_BY_CARGO[r.cod_cargo] ?? 0;
+          {groupedCargos.map(g => {
+            const bancas = scenState.seatsDraft[String(g.cod_cargo)] ?? SEATS_BY_CARGO[g.cod_cargo] ?? 0;
 
             return (
               <CargoCard
-                key={r.cod_cargo}
-                resultado={r}
+                key={g.cod_cargo}
+                scopes={g.scopes}
                 bancas={bancas}
                 onBancasChange={(cod, v) => dispatch({ type: 'SEAT_CHANGE', cod: String(cod), value: v })}
               />

@@ -379,29 +379,39 @@ export async function syncDistrito(
         //   niv 0 (nacional)        → sin dpto ni distrito
         //   niv 1 (departamental)   → solo dpto
         //   niv 2 (distrital/local) → dpto + distrito
-        const params: Record<string, any> = {
-          codeleccion: codEleccion,
-          candidatura: cargo.cod,
-          departamento: codDpto,
-          distrito: codDistrito,
-        };
+        // 1. Fetch the official consolidated level
+        const params: Record<string, any> = { codeleccion: codEleccion, candidatura: cargo.cod };
+        if (cargo.niv >= 1) params.departamento = codDpto;
+        
         const data = await fetchWithRetry(DIVULGACION_ENDPOINT, params);
-        if (!data) {
-          details.push({ cargo: cargo.cod, via: 'divulgacion', status: 'empty' });
-        } else {
-          persistResult(codEleccion, cargo.cod, codDpto, codDistrito, data);
-          cargosOk++;
-          details.push({ cargo: cargo.cod, via: 'divulgacion', status: 'ok' });
+        if (data) {
+          const storeDpto     = cargo.niv >= 1 ? codDpto     : 0;
+          const storeDistrito = cargo.niv === 1 ? -1 : 0; // -1 represents departmental consolidation
+          persistResult(codEleccion, cargo.cod, storeDpto, storeDistrito, data);
         }
+
+        // 2. For national/departamental cargos, aggregate mesa-by-mesa to get district-level results
+        if (cargo.niv < 2) {
+          if (seguridad === null) {
+            seguridad = await fetchTsjeCatalog<SeguridadCatalog>('seguridad');
+          }
+          if (seguridad) {
+            await aggregateCargoByMesa(
+              codEleccion, codDpto, codDistrito, cargo, seguridad, rateLimitMs
+            );
+          }
+        }
+
+        cargosOk++;
+        details.push({ cargo: cargo.cod, via: 'divulgacion', status: 'ok' });
       } catch (e: any) {
         cargosErr++;
         details.push({ cargo: cargo.cod, via: 'divulgacion', status: 'error', error: e?.message ?? String(e) });
       }
-      if (rateLimitMs > 0) await new Promise(r => setTimeout(r, rateLimitMs));
     } else {
       // via === 'mesa': itera certificado.ajax.php por cada mesa y agrega
       try {
-        if (seguridad === null && needsCatalog) {
+        if (seguridad === null) {
           seguridad = await fetchTsjeCatalog<SeguridadCatalog>('seguridad');
         }
         if (!seguridad) {
@@ -455,9 +465,13 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
     FROM tsje_resultado_distrito t
     JOIN tsje_cargos c ON c.cod_eleccion = t.cod_eleccion AND c.cod_cargo = t.cod_cargo
     WHERE t.cod_eleccion = ?
-      AND t.cod_dpto = ? AND t.cod_distrito = ?
-    ORDER BY t.cod_cargo
-  `).all(codEleccion, codDpto, codDistrito) as any[];
+      AND (
+        (t.cod_dpto = 0 AND t.cod_distrito = 0)
+        OR (t.cod_dpto = ? AND t.cod_distrito = -1) -- Departmental consolidation
+        OR (t.cod_dpto = ? AND t.cod_distrito = ?)   -- Active District
+      )
+    ORDER BY t.cod_cargo, t.cod_dpto, t.cod_distrito
+  `).all(codEleccion, codDpto, codDpto, codDistrito) as any[];
 
   const cargos = totales.map((t: any) => {
     const listas = db.prepare(`
@@ -475,6 +489,107 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
     `).all(codEleccion, t.cod_cargo, t.cod_dpto, t.cod_distrito);
 
     return { ...t, listas, preferentes };
+  });
+
+  // Dynamically calculate departmental scope for national cargos (niv_cargo === 0)
+  const nationalCargos = cargos.filter(c => c.niv_cargo === 0);
+  const uniqueNationalCargos = Array.from(new Set(nationalCargos.map(c => c.cod_cargo)));
+
+  for (const codCargo of uniqueNationalCargos) {
+    if (cargos.some(c => c.cod_cargo === codCargo && c.cod_dpto === codDpto && c.cod_distrito === -1)) {
+      continue;
+    }
+
+    const districts = db.prepare(`
+      SELECT blancos, nulos, total_votos, electores, electores_publ,
+             mesas_publicadas, total_mesas, no_computados, hora_tsje, fetched_at
+      FROM tsje_resultado_distrito
+      WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito >= 0
+    `).all(codEleccion, codCargo, codDpto) as any[];
+
+    if (districts.length === 0) continue;
+
+    const baseCargo = nationalCargos.find(c => c.cod_cargo === codCargo)!;
+    const aggTotal = {
+      cod_cargo: codCargo,
+      cod_dpto: codDpto,
+      cod_distrito: -1,
+      des_cargo: baseCargo.des_cargo,
+      tip_cargo: baseCargo.tip_cargo,
+      niv_cargo: baseCargo.niv_cargo,
+      blancos: 0,
+      nulos: 0,
+      total_votos: 0,
+      electores: 0,
+      electores_publ: 0,
+      mesas_publicadas: 0,
+      total_mesas: 0,
+      no_computados: 0,
+      hora_tsje: districts[0].hora_tsje,
+      fetched_at: districts[0].fetched_at,
+    };
+
+    for (const d of districts) {
+      aggTotal.blancos += d.blancos;
+      aggTotal.nulos += d.nulos;
+      aggTotal.total_votos += d.total_votos;
+      aggTotal.electores += d.electores;
+      aggTotal.electores_publ += d.electores_publ;
+      aggTotal.mesas_publicadas += d.mesas_publicadas;
+      aggTotal.total_mesas += d.total_mesas;
+      aggTotal.no_computados += d.no_computados;
+      if (d.fetched_at > aggTotal.fetched_at) {
+        aggTotal.fetched_at = d.fetched_at;
+        aggTotal.hora_tsje = d.hora_tsje;
+      }
+    }
+
+    const listsRows = db.prepare(`
+      SELECT num_lista, orden, des_partido, sig_partido, col_lista, SUM(votos) as total_votos
+      FROM tsje_resultado_lista
+      WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito >= 0
+      GROUP BY num_lista
+      ORDER BY total_votos DESC
+    `).all(codEleccion, codCargo, codDpto) as any[];
+
+    const listas = listsRows.map(r => ({
+      num_lista: r.num_lista,
+      orden: r.orden,
+      des_partido: r.des_partido,
+      sig_partido: r.sig_partido,
+      col_lista: r.col_lista,
+      votos: r.total_votos,
+    }));
+
+    const prefRows = db.prepare(`
+      SELECT num_lista, ord_candidato, nom_candidato, des_partido, orden, SUM(votos) as total_votos
+      FROM tsje_resultado_preferente
+      WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito >= 0
+      GROUP BY num_lista, ord_candidato
+      ORDER BY total_votos DESC
+    `).all(codEleccion, codCargo, codDpto) as any[];
+
+    const preferentes = prefRows.map(r => ({
+      num_lista: r.num_lista,
+      ord_candidato: r.ord_candidato,
+      nom_candidato: r.nom_candidato,
+      des_partido: r.des_partido,
+      orden: r.orden,
+      votos: r.total_votos,
+    }));
+
+    cargos.push({
+      ...aggTotal,
+      listas,
+      preferentes,
+    });
+  }
+
+  // Ensure they remain sorted properly
+  cargos.sort((a, b) => {
+    if (a.cod_cargo !== b.cod_cargo) return a.cod_cargo - b.cod_cargo;
+    if (a.cod_dpto !== b.cod_dpto) return a.cod_dpto - b.cod_dpto;
+    return a.cod_distrito - b.cod_distrito;
   });
 
   return { codEleccion, codDpto, codDistrito, cargos };

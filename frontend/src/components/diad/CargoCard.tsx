@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import RankingTable from './RankingTable';
 import DhondtTable from './DhondtTable';
 import type { TsjeResultado } from '../../services/tsjeService';
@@ -7,7 +7,7 @@ const NIV_LABEL: Record<number, string> = { 0: 'Nacional', 1: 'Departamental', 2
 const TIP_LABEL: Record<number, string> = { 1: 'Nominal', 2: 'Plurinominal' };
 
 interface Props {
-  resultado: TsjeResultado;
+  scopes: TsjeResultado[];
   bancas: number;
   onBancasChange: (cod: number, v: number) => void;
 }
@@ -23,8 +23,22 @@ const fmtDateTime = (dt: string | null | undefined) => {
   return d.toLocaleString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Asuncion' });
 };
 
-const CargoCard: React.FC<Props> = ({ resultado, bancas, onBancasChange }) => {
-  const r = resultado;
+const CargoCard: React.FC<Props> = ({ scopes, bancas, onBancasChange }) => {
+  // Choose default scope: most specific (district) is sorted last
+  const defaultIndex = useMemo(() => {
+    return Math.max(0, scopes.length - 1);
+  }, [scopes]);
+
+  const [activeIdx, setActiveIdx] = useState(defaultIndex);
+
+  // Sync active index if scopes change (e.g. new district is selected/synced)
+  useEffect(() => {
+    setActiveIdx(defaultIndex);
+  }, [defaultIndex]);
+
+  const r = scopes[activeIdx] || scopes[0];
+  if (!r) return null;
+
   const mesasPct = r.total_mesas > 0 ? ((r.mesas_publicadas / r.total_mesas) * 100).toFixed(0) : '0';
   const participPct = r.electores > 0 ? ((r.total_votos / r.electores) * 100).toFixed(1) : '0.0';
 
@@ -81,6 +95,38 @@ const CargoCard: React.FC<Props> = ({ resultado, bancas, onBancasChange }) => {
           </span>
         )}
       </div>
+
+      {/* Scope selector tabs */}
+      {scopes.length > 1 && (
+        <div style={{
+          display: 'flex', gap: '0.4rem', padding: '0.5rem 1.1rem',
+          background: 'rgba(0,0,0,0.15)', borderBottom: '1px solid var(--border)'
+        }}>
+          {scopes.map((s, idx) => {
+            const label = s.cod_distrito === -1
+              ? 'Resultado Departamento'
+              : (s.cod_dpto === 0 && s.cod_distrito === 0)
+                ? 'Resultado Nacional'
+                : 'Resultado Distrito';
+            const isActive = idx === activeIdx;
+            return (
+              <button
+                key={idx}
+                onClick={() => setActiveIdx(idx)}
+                style={{
+                  padding: '0.25rem 0.6rem', borderRadius: '6px', border: 'none',
+                  background: isActive ? 'linear-gradient(135deg,#1558B0,#0D3D7A)' : 'rgba(255,255,255,0.03)',
+                  color: isActive ? 'white' : 'var(--text-3)',
+                  fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Body */}
       <div style={{ padding: '1rem 1.1rem' }}>
