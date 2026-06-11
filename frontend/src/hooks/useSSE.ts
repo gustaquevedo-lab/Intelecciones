@@ -13,11 +13,13 @@ export const useSSE = (onEvent: (event: { type: string; data: any }) => void) =>
     let eventSource: EventSource | null = null;
     let delay = 1000;
     let timeoutId: any = null;
+    let everConnected = false;
+    let errorCount = 0;
 
     const connect = () => {
       // API_BASE is e.g. 'http://localhost:5000/api'
       const url = `${API_BASE}/stream/events?userId=${user.id}`;
-      
+
       eventSource = new EventSource(url);
 
       eventSource.onmessage = (event) => {
@@ -30,12 +32,18 @@ export const useSSE = (onEvent: (event: { type: string; data: any }) => void) =>
         }
       };
 
-      eventSource.onerror = (err) => {
-        console.error('[SSE] Connection error:', err);
+      eventSource.onerror = () => {
+        errorCount++;
+        // Solo loggeamos el primer error (si nunca conectó) o cada 10 reconexiones
+        // para no llenar la consola en redes intermitentes.
+        if (!everConnected && errorCount === 1) {
+          console.warn('[SSE] Conexion inicial falló, reintentando...');
+        } else if (errorCount % 10 === 0) {
+          console.warn(`[SSE] Reconectando (intento ${errorCount}, espera ${delay}ms)`);
+        }
         if (eventSource) {
           eventSource.close();
         }
-        // Retry connection with exponential backoff
         timeoutId = setTimeout(() => {
           delay = Math.min(delay * 2, 30000);
           connect();
@@ -43,7 +51,9 @@ export const useSSE = (onEvent: (event: { type: string; data: any }) => void) =>
       };
 
       eventSource.onopen = () => {
+        if (!everConnected) everConnected = true;
         delay = 1000;
+        errorCount = 0;
       };
     };
 

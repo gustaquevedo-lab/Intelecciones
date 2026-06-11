@@ -21,6 +21,11 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 import { Skeleton, SkeletonTable } from '../components/Skeleton';
 import { CIUDADES_PARAGUAY } from '../constants/cities';
 import ResultadosTsje from './diad/ResultadosTsje';
+import { tsjeApi, districtForName } from '../services/tsjeService';
+import type { TsjeResultado, TsjeScenario } from '../services/tsjeService';
+import { SEATS_BY_CARGO } from '../utils/seats';
+import { dhondt } from '../utils/dhondt';
+
 
 const AVAILABLE_DISTRICTS = [
   'PEDRO JUAN CABALLERO',
@@ -660,6 +665,73 @@ const DiaDApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cobertura' | 'participacion' | 'resultados' | 'dhondt' | 'actas' | 'miembros' | 'verificacion' | 'tsje'>('cobertura');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(false); // Desactivado por defecto hasta el Dia D
+  
+  // TSJE results and scenario states for D'Hondt tab
+  const [tsjeResultados, setTsjeResultados] = useState<TsjeResultado[]>([]);
+  const [tsjeScenarios, setTsjeScenarios] = useState<TsjeScenario[]>([]);
+  const [tsjeSeats, setTsjeSeats] = useState<Record<string, number>>({});
+  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const district = districtForName(activeDistrict);
+    if (district) {
+      tsjeApi.getResultados(district.cod_dpto, district.cod_distrito)
+        .then(setTsjeResultados)
+        .catch(() => {});
+    } else {
+      setTsjeResultados([]);
+    }
+  }, [activeDistrict, activeTab]);
+
+  useEffect(() => {
+    tsjeApi.getScenarios()
+      .then(scens => {
+        setTsjeScenarios(scens);
+        if (scens.length > 0 && selectedScenarioId === null) {
+          const first = scens[0];
+          setSelectedScenarioId(first.id);
+          const seats = { ...SEATS_BY_CARGO };
+          Object.entries(first.seats).forEach(([k, v]) => {
+            seats[Number(k)] = v;
+          });
+          const seatsStr: Record<string, number> = {};
+          Object.entries(seats).forEach(([k, v]) => { seatsStr[k] = v; });
+          setTsjeSeats(seatsStr);
+        } else if (selectedScenarioId === null) {
+          const seatsStr: Record<string, number> = {};
+          Object.entries(SEATS_BY_CARGO).forEach(([k, v]) => { seatsStr[k] = v; });
+          setTsjeSeats(seatsStr);
+        }
+      })
+      .catch(() => {});
+  }, [activeDistrict, selectedScenarioId]);
+
+  const handleScenarioChange = (idStr: string) => {
+    if (idStr === '') {
+      setSelectedScenarioId(null);
+      const seatsStr: Record<string, number> = {};
+      Object.entries(SEATS_BY_CARGO).forEach(([k, v]) => { seatsStr[k] = v; });
+      setTsjeSeats(seatsStr);
+      return;
+    }
+    const id = Number(idStr);
+    setSelectedScenarioId(id);
+    const scen = tsjeScenarios.find(s => s.id === id);
+    if (scen) {
+      const seats = { ...SEATS_BY_CARGO };
+      Object.entries(scen.seats).forEach(([k, v]) => {
+        seats[Number(k)] = v;
+      });
+      const seatsStr: Record<string, number> = {};
+      Object.entries(seats).forEach(([k, v]) => { seatsStr[k] = v; });
+      setTsjeSeats(seatsStr);
+    }
+  };
+
+  const handleSeatChange = (codCargo: number, val: number) => {
+    setTsjeSeats(prev => ({ ...prev, [String(codCargo)]: val }));
+  };
+
   
   // Data queries (TanStack Query)
   const { data: coverageData, isLoading: coverageLoading, refetch: refetchCoverage } = useCoverage(activeDistrict);
@@ -2327,89 +2399,254 @@ const DiaDApp: React.FC = () => {
             {/* ══════════ TAB: D'HONDT ══════════ */}
             {activeTab === 'dhondt' && (
               <motion.div key="dhondt" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                {/* Scenario Selector & Header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '1rem', background: 'var(--surface-light)', border: '1px solid var(--border)',
+                  borderRadius: '16px', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem'
+                }}>
                   <div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.25rem' }}>
-                      Proyección D'Hondt — Concejales
+                      Proyección D'Hondt — Listas Definitivas
                     </h3>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>
-                      Asignación proporcional de bancas basada en votos procesados ({coverage.porcentaje.toFixed(0)}% de cobertura)
+                      Asignación proporcional de escaños y nombres de candidatos electos basados en votos del TSJE.
                     </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <button 
-                      onClick={() => setShowListModal(true)}
-                      className="btn-cancel-styled"
-                      style={{ fontSize: '0.65rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                    >
-                      <Plus size={12} /> Gestionar Listas
-                    </button>
-                    <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
-                    <label style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontWeight: 700 }}>Bancas:</label>
-                    <input
-                      type="number"
-                      value={bancasConcejal}
-                      onChange={e => setBancasConcejal(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 700 }}>Escenario:</label>
+                    <select
+                      value={selectedScenarioId ?? ''}
+                      onChange={e => handleScenarioChange(e.target.value)}
                       style={{
-                        width: 50, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                        borderRadius: '8px', color: 'var(--text)', padding: '0.3rem 0.5rem',
-                        fontFamily: 'Space Grotesk', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center'
+                        padding: '0.35rem 0.65rem', borderRadius: '8px',
+                        border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)',
+                        color: 'var(--text)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
                       }}
-                    />
+                    >
+                      <option value="">-- Por defecto --</option>
+                      {tsjeScenarios.map(sc => (
+                        <option key={sc.id} value={sc.id}>{sc.nombre}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                {concejales.length > 0 ? (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                      {[...concejales]
-                        .sort((a, b) => (dhondtResult[b.id] || 0) - (dhondtResult[a.id] || 0))
-                        .map((r, i) => {
-                          const bancas = dhondtResult[r.id] || 0;
-                          const color = LIST_COLORS[i % LIST_COLORS.length];
-                          return (
-                            <motion.div
-                              key={r.id}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: i * 0.04 }}
-                              style={{
-                                background: bancas > 0 ? `${color}14` : 'rgba(255,255,255,0.02)',
-                                border: `1px solid ${bancas > 0 ? color + '40' : 'rgba(255,255,255,0.06)'}`,
-                                borderRadius: '14px', padding: '1.1rem',
-                                display: 'flex', flexDirection: 'column', gap: '0.4rem'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <span style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-2)' }}>
-                                  {r.list_number}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>
-                                {r.candidate_alias || 'Lista ' + r.list_number}
-                              </span>
-                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', marginTop: '0.2rem' }}>
-                                <span style={{ fontSize: '2.2rem', fontWeight: 800, fontFamily: 'Space Grotesk', color: bancas > 0 ? color : 'var(--text-3)', lineHeight: 1 }}>
-                                  {bancas}
-                                </span>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 600 }}>
-                                  banca{bancas !== 1 ? 's' : ''}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>
-                                {(r.votos || 0).toLocaleString('es-PY')} votos · {(r.porcentaje || 0).toFixed(1)}%
-                              </span>
-                            </motion.div>
-                          );
-                        })}
-                    </div>
-                  </>
-                ) : (
+                {!activeDistrict ? (
                   <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-3)' }}>
-                    <BarChart3 size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                    <p style={{ fontWeight: 700 }}>Sin resultados cargados aún</p>
-                    <p style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>Los veedores deben cargar las actas de mesa para visualizar resultados.</p>
+                    <p style={{ fontWeight: 700 }}>Selecciona un distrito para ver la proyección D'Hondt</p>
+                  </div>
+                ) : tsjeResultados.filter(r => r.tip_cargo === 2).length === 0 ? (
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    padding: '4rem 2rem', background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: '16px', gap: '0.75rem', textAlign: 'center',
+                  }}>
+                    <AlertCircle size={32} style={{ color: 'var(--text-3)', opacity: 0.5 }} />
+                    <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-2)' }}>
+                      No hay datos sincronizados del TSJE en {activeDistrict}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                      Sincronizá los datos del distrito en la pestaña "Resultados TSJE" para habilitar la proyección.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+                    {tsjeResultados.filter(r => r.tip_cargo === 2).map((cargo) => {
+                      const limitBancas = tsjeSeats[String(cargo.cod_cargo)] ?? SEATS_BY_CARGO[cargo.cod_cargo] ?? 0;
+
+                      // Calculate D'Hondt
+                      const listVotesInput = cargo.listas.map(l => ({ num_lista: l.num_lista, votos: l.votos }));
+                      const dhondtAllocations = dhondt(listVotesInput, limitBancas);
+                      const allocationsMap: Record<string, number> = {};
+                      dhondtAllocations.forEach(res => { allocationsMap[res.num_lista] = res.bancas; });
+
+                      // Sort lists by votes
+                      const sortedLists = [...cargo.listas].sort((a, b) => b.votos - a.votos);
+
+                      // Detailed winners array
+                      const detailedWinners = (() => {
+                        if (limitBancas <= 0 || cargo.listas.length === 0) return [];
+                        
+                        const candidatesByList: Record<string, typeof cargo.preferentes> = {};
+                        cargo.listas.forEach(l => {
+                          const listPrefs = cargo.preferentes.filter(p => p.num_lista === l.num_lista);
+                          const sortedListPrefs = [...listPrefs].sort((a, b) => {
+                            if (b.votos !== a.votos) return b.votos - a.votos;
+                            return a.orden - b.orden;
+                          });
+                          candidatesByList[l.num_lista] = sortedListPrefs;
+                        });
+
+                        const quotients: { num_lista: string; q: number }[] = [];
+                        cargo.listas.forEach(l => {
+                          for (let k = 1; k <= limitBancas; k++) {
+                            quotients.push({ num_lista: l.num_lista, q: l.votos / k });
+                          }
+                        });
+                        quotients.sort((a, b) => b.q - a.q);
+
+                        const winners: any[] = [];
+                        const listSeatCounters: Record<string, number> = {};
+                        cargo.listas.forEach(l => { listSeatCounters[l.num_lista] = 0; });
+
+                        const limit = Math.min(limitBancas, quotients.length);
+                        for (let i = 0; i < limit; i++) {
+                          const q = quotients[i];
+                          const list = cargo.listas.find(l => l.num_lista === q.num_lista)!;
+                          const currentSeatIndex = listSeatCounters[q.num_lista];
+                          listSeatCounters[q.num_lista]++;
+
+                          const candidateList = candidatesByList[q.num_lista] || [];
+                          const candidate = candidateList[currentSeatIndex];
+
+                          winners.push({
+                            escaño: i + 1,
+                            num_lista: q.num_lista,
+                            sig_partido: list.sig_partido || list.des_partido || '',
+                            candidateName: candidate ? candidate.nom_candidato : `Candidato #${currentSeatIndex + 1} (Lista ${q.num_lista})`,
+                            candidateVotes: candidate ? candidate.votos : 0,
+                            originalOrden: candidate ? candidate.orden : currentSeatIndex + 1,
+                          });
+                        }
+                        return winners;
+                      })();
+
+                      return (
+                        <div key={cargo.cod_cargo} className="card-premium-styled" style={{ padding: '1.5rem' }}>
+                          {/* Header with selector */}
+                          <div style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            borderBottom: '1px solid var(--border)', paddingBottom: '0.85rem', marginBottom: '1.25rem',
+                            flexWrap: 'wrap', gap: '0.5rem'
+                          }}>
+                            <div>
+                              <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{
+                                  padding: '0.1rem 0.45rem', borderRadius: '5px',
+                                  background: 'rgba(46,132,240,0.2)', border: '1px solid rgba(46,132,240,0.3)',
+                                  color: '#2E84F0', fontSize: '0.65rem', fontWeight: 800
+                                }}>{cargo.cod_cargo}</span>
+                                {cargo.des_cargo}
+                              </h4>
+                              <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.15rem' }}>
+                                Nivel: {cargo.niv_cargo === 0 ? 'Nacional' : cargo.niv_cargo === 1 ? 'Departamental' : 'Distrital'}
+                              </p>
+                            </div>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <label style={{ fontSize: '0.72rem', color: 'var(--text-3)', fontWeight: 700 }}>Bancas a repartir:</label>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <button
+                                  onClick={() => handleSeatChange(cargo.cod_cargo, Math.max(0, limitBancas - 1))}
+                                  style={{ padding: '0.2rem 0.4rem', borderRadius: '4px 0 0 4px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-2)', cursor: 'pointer', fontSize: '0.7rem' }}
+                                >-</button>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={limitBancas}
+                                  onChange={e => handleSeatChange(cargo.cod_cargo, Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                                  style={{
+                                    width: '44px', textAlign: 'center', padding: '0.2rem 0.4rem',
+                                    border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none',
+                                    background: 'rgba(255,255,255,0.06)', color: 'var(--text)',
+                                    fontSize: '0.75rem', fontWeight: 800, fontFamily: 'Space Grotesk, monospace',
+                                  }}
+                                />
+                                <button
+                                  onClick={() => handleSeatChange(cargo.cod_cargo, Math.min(100, limitBancas + 1))}
+                                  style={{ padding: '0.2rem 0.4rem', borderRadius: '0 4px 4px 0', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-2)', cursor: 'pointer', fontSize: '0.7rem' }}
+                                >+</button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Grid with tables */}
+                          <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                            gap: '1.5rem', alignItems: 'start'
+                          }}>
+                            {/* Left: Lists summary */}
+                            <div>
+                              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>
+                                Resumen por Lista
+                              </p>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                                <thead>
+                                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <th style={{ textAlign: 'left', padding: '0.4rem', color: 'var(--text-3)' }}>Lista</th>
+                                    <th style={{ textAlign: 'left', padding: '0.4rem', color: 'var(--text-3)' }}>Movimiento</th>
+                                    <th style={{ textAlign: 'right', padding: '0.4rem', color: 'var(--text-3)' }}>Votos</th>
+                                    <th style={{ textAlign: 'right', padding: '0.4rem', color: 'var(--text-3)' }}>Bancas</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {sortedLists.map(l => {
+                                    const b = allocationsMap[l.num_lista] ?? 0;
+                                    return (
+                                      <tr key={l.num_lista} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                        <td style={{ padding: '0.45rem 0.4rem' }}>
+                                          <span style={{ display: 'inline-block', padding: '0.15rem 0.4rem', borderRadius: '6px', background: 'rgba(255,255,255,0.07)', fontWeight: 800 }}>{l.num_lista}</span>
+                                        </td>
+                                        <td style={{ padding: '0.45rem 0.4rem', color: 'var(--text-2)' }}>{l.des_partido || l.sig_partido}</td>
+                                        <td style={{ padding: '0.45rem 0.4rem', textAlign: 'right', fontWeight: 700 }}>{l.votos.toLocaleString('es-PY')}</td>
+                                        <td style={{ padding: '0.45rem 0.4rem', textAlign: 'right', fontWeight: 800, color: b > 0 ? '#2E84F0' : 'var(--text-3)' }}>{b}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Right: Absolute Winners list */}
+                            <div>
+                              <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>
+                                Lista Definitiva (Escaños)
+                              </p>
+                              {detailedWinners.length === 0 ? (
+                                <p style={{ color: 'var(--text-3)', fontSize: '0.72rem', fontStyle: 'italic', padding: '1rem 0' }}>
+                                  0 bancas distribuidas.
+                                </p>
+                              ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                                  <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                      <th style={{ textAlign: 'left', padding: '0.4rem', color: 'var(--text-3)', width: '40px' }}>Esc.</th>
+                                      <th style={{ textAlign: 'left', padding: '0.4rem', color: 'var(--text-3)', width: '50px' }}>Lista</th>
+                                      <th style={{ textAlign: 'left', padding: '0.4rem', color: 'var(--text-3)' }}>Candidato</th>
+                                      <th style={{ textAlign: 'right', padding: '0.4rem', color: 'var(--text-3)', width: '70px' }}>Pref.</th>
+                                      <th style={{ textAlign: 'right', padding: '0.4rem', color: 'var(--text-3)', width: '50px' }}>Orig.</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {detailedWinners.map((w: any) => (
+                                      <tr key={w.escaño} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: w.num_lista === '9' ? 'rgba(46,132,240,0.03)' : 'transparent' }}>
+                                        <td style={{ padding: '0.45rem 0.4rem', fontWeight: 800, color: 'var(--yellow, #EAB308)' }}>#{w.escaño}</td>
+                                        <td style={{ padding: '0.45rem 0.4rem' }}>
+                                          <span style={{ display: 'inline-block', padding: '0.1rem 0.35rem', borderRadius: '4px', background: 'rgba(255,255,255,0.07)', fontSize: '0.7rem', fontWeight: 700 }}>{w.num_lista}</span>
+                                        </td>
+                                        <td style={{ padding: '0.45rem 0.4rem', fontWeight: 600, color: 'var(--text)' }}>{w.candidateName}</td>
+                                        <td style={{ padding: '0.45rem 0.4rem', textAlign: 'right', color: 'var(--text-2)' }}>
+                                          {w.candidateVotes > 0 ? w.candidateVotes.toLocaleString('es-PY') : '0'}
+                                        </td>
+                                        <td style={{ padding: '0.45rem 0.4rem', textAlign: 'right', color: 'var(--text-3)' }}>{w.originalOrden}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
+                              {[6, 7, 11, 12].includes(cargo.cod_cargo) && (
+                                <p style={{ color: 'var(--text-3)', fontSize: '0.65rem', fontStyle: 'italic', marginTop: '0.5rem' }}>
+                                  * Nota: Nombres asignados de forma ordinal al no disponer de voto preferente en V1.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </motion.div>

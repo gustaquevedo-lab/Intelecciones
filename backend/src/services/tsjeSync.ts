@@ -379,16 +379,17 @@ export async function syncDistrito(
         //   niv 0 (nacional)        → sin dpto ni distrito
         //   niv 1 (departamental)   → solo dpto
         //   niv 2 (distrital/local) → dpto + distrito
-        const params: Record<string, any> = { codeleccion: codEleccion, candidatura: cargo.cod };
-        if (cargo.niv >= 1) params.departamento = codDpto;
-        if (cargo.niv >= 2) params.distrito = codDistrito;
+        const params: Record<string, any> = {
+          codeleccion: codEleccion,
+          candidatura: cargo.cod,
+          departamento: codDpto,
+          distrito: codDistrito,
+        };
         const data = await fetchWithRetry(DIVULGACION_ENDPOINT, params);
         if (!data) {
           details.push({ cargo: cargo.cod, via: 'divulgacion', status: 'empty' });
         } else {
-          const storeDpto     = cargo.niv >= 1 ? codDpto     : 0;
-          const storeDistrito = cargo.niv >= 2 ? codDistrito : 0;
-          persistResult(codEleccion, cargo.cod, storeDpto, storeDistrito, data);
+          persistResult(codEleccion, cargo.cod, codDpto, codDistrito, data);
           cargosOk++;
           details.push({ cargo: cargo.cod, via: 'divulgacion', status: 'ok' });
         }
@@ -446,8 +447,6 @@ export function listCargos(codEleccion: number) {
 }
 
 export function getResultados(codEleccion: number, codDpto: number, codDistrito: number) {
-  // Resuelve el scope (dpto, distrito) según el nivel de cada cargo:
-  //   niv 0 → (0, 0), niv 1 → (codDpto, 0), niv 2 → (codDpto, codDistrito)
   const totales = db.prepare(`
     SELECT t.cod_cargo, t.cod_dpto, t.cod_distrito, c.des_cargo, c.tip_cargo, c.niv_cargo,
            t.blancos, t.nulos, t.total_votos, t.electores, t.electores_publ,
@@ -456,13 +455,9 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
     FROM tsje_resultado_distrito t
     JOIN tsje_cargos c ON c.cod_eleccion = t.cod_eleccion AND c.cod_cargo = t.cod_cargo
     WHERE t.cod_eleccion = ?
-      AND (
-        (c.niv_cargo = 0 AND t.cod_dpto = 0 AND t.cod_distrito = 0)
-        OR (c.niv_cargo = 1 AND t.cod_dpto = ? AND t.cod_distrito = 0)
-        OR (c.niv_cargo >= 2 AND t.cod_dpto = ? AND t.cod_distrito = ?)
-      )
+      AND t.cod_dpto = ? AND t.cod_distrito = ?
     ORDER BY t.cod_cargo
-  `).all(codEleccion, codDpto, codDpto, codDistrito) as any[];
+  `).all(codEleccion, codDpto, codDistrito) as any[];
 
   const cargos = totales.map((t: any) => {
     const listas = db.prepare(`
