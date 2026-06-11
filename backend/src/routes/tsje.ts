@@ -9,9 +9,9 @@ import {
 } from '../services/tsjeSync';
 import db from '../db';
 
-// Estado del último sync en proceso (in-memory). Evita que dos requests
-// disparen sincronizaciones concurrentes contra el TSJE.
+// Estado del último sync en proceso (in-memory). Evita sincronizaciones concurrentes.
 let syncInFlight: Promise<any> | null = null;
+let syncLastError: string | null = null;
 
 const PLRA_2026 = 45;
 const AMAMBAY = 13;
@@ -60,31 +60,31 @@ export default function tsjeRoutes() {
     res.json({
       lastSync: getLastSync(codEleccion, codDpto, codDistrito) ?? null,
       inFlight: syncInFlight !== null,
+      lastError: syncLastError,
     });
   });
 
-  // Dispara una sincronización. Solo superusuario/jefe.
+  // Dispara una sincronización en background. Responde 202 inmediatamente.
+  // El cliente debe hacer polling a /sync/status para saber cuándo terminó.
   router.post(
     '/sync',
     requireRole('SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'),
-    async (req, res) => {
+    (req, res) => {
       const codEleccion = parseIntDefault(req.body?.cod_eleccion ?? req.query.cod_eleccion, PLRA_2026);
       const codDpto     = parseIntDefault(req.body?.cod_dpto ?? req.query.cod_dpto, AMAMBAY);
       const codDistrito = parseIntDefault(req.body?.cod_distrito ?? req.query.cod_distrito, PJC);
 
       if (syncInFlight) {
-        return res.status(409).json({ error: 'Ya hay un sync en curso.' });
+        return res.status(409).json({ error: 'Ya hay un sync en curso.', inFlight: true });
       }
 
-      try {
-        syncInFlight = syncDistrito(codEleccion, codDpto, codDistrito);
-        const result = await syncInFlight;
-        res.json(result);
-      } catch (e: any) {
-        res.status(500).json({ error: e?.message ?? 'Error desconocido durante sync' });
-      } finally {
-        syncInFlight = null;
-      }
+      syncLastError = null;
+      syncInFlight = syncDistrito(codEleccion, codDpto, codDistrito);
+      syncInFlight
+        .catch((e: any) => { syncLastError = e?.message ?? 'Error desconocido durante sync'; })
+        .finally(() => { syncInFlight = null; });
+
+      res.status(202).json({ status: 'started' });
     },
   );
 

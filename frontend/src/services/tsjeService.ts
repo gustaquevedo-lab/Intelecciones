@@ -68,13 +68,37 @@ export const tsjeApi = {
       params: { cod_eleccion: PLRA_2026, cod_dpto: codDpto, cod_distrito: codDistrito },
     }).then(r => Array.isArray(r.data) ? r.data : []),
 
-  getSyncStatus: (codDpto: number, codDistrito: number): Promise<{ lastSync: string | null; inFlight: boolean }> =>
+  getSyncStatus: (codDpto: number, codDistrito: number): Promise<{ lastSync: string | null; inFlight: boolean; lastError: string | null }> =>
     api.get('/tsje/sync/status', {
       params: { cod_eleccion: PLRA_2026, cod_dpto: codDpto, cod_distrito: codDistrito },
     }).then(r => r.data),
 
+  // Dispara sync en background — el server responde 202 de inmediato.
+  // Usar pollUntilDone() para saber cuando terminó.
   triggerSync: (codDpto: number, codDistrito: number): Promise<void> =>
-    api.post('/tsje/sync', { cod_eleccion: PLRA_2026, cod_dpto: codDpto, cod_distrito: codDistrito }).then(() => {}),
+    api.post('/tsje/sync', { cod_eleccion: PLRA_2026, cod_dpto: codDpto, cod_distrito: codDistrito }, { timeout: 10000 }).then(() => {}),
+
+  // Polling: resuelve cuando inFlight pasa a false o se detecta error.
+  pollUntilDone: (codDpto: number, codDistrito: number, intervalMs = 3000, maxWaitMs = 300000): Promise<{ error: string | null }> => {
+    const deadline = Date.now() + maxWaitMs;
+    return new Promise((resolve) => {
+      const check = async () => {
+        try {
+          const status = await tsjeApi.getSyncStatus(codDpto, codDistrito);
+          if (!status.inFlight) {
+            resolve({ error: status.lastError ?? null });
+            return;
+          }
+        } catch { /* ignore poll errors, keep waiting */ }
+        if (Date.now() >= deadline) {
+          resolve({ error: 'Tiempo de espera agotado.' });
+          return;
+        }
+        setTimeout(check, intervalMs);
+      };
+      setTimeout(check, intervalMs);
+    });
+  },
 
   getScenarios: (): Promise<TsjeScenario[]> =>
     api.get('/tsje/scenarios', { params: { cod_eleccion: PLRA_2026 } }).then(r => r.data),

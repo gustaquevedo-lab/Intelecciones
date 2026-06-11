@@ -120,6 +120,7 @@ const ResultadosTsje: React.FC = () => {
 
   // Sync
   const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');   // progress message shown to user
   const [syncError, setSyncError] = useState('');
   const [lastSync, setLastSync] = useState<string | null>(null);
 
@@ -160,19 +161,37 @@ const ResultadosTsje: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  // ── Sync handler ──
+  // ── Sync handler (fire-and-forget + polling) ──
   const handleSync = async () => {
     if (!selectedDistrict) return;
     setSyncing(true);
     setSyncError('');
+    setSyncMsg('Iniciando sincronizacion...');
     try {
       await tsjeApi.triggerSync(selectedDistrict.cod_dpto, selectedDistrict.cod_distrito);
-      await fetchResultados();
     } catch (e: any) {
-      setSyncError(e?.response?.data?.error || 'Error durante la sincronizacion.');
-    } finally {
-      setSyncing(false);
+      const serverMsg = e?.response?.data?.error;
+      // 409 = ya hay un sync corriendo — tratar como "en curso"
+      if (e?.response?.status === 409) {
+        setSyncMsg('Sincronizacion ya en curso, esperando...');
+      } else {
+        setSyncError(serverMsg || 'No se pudo iniciar la sincronizacion.');
+        setSyncing(false);
+        setSyncMsg('');
+        return;
+      }
     }
+    // Polling hasta que el servidor termine
+    setSyncMsg('Sincronizando con TSJE (puede tardar varios minutos)...');
+    const { error } = await tsjeApi.pollUntilDone(selectedDistrict.cod_dpto, selectedDistrict.cod_distrito);
+    if (error) {
+      setSyncError(`La sincronizacion termino con errores: ${error}`);
+    } else {
+      setSyncMsg('');
+      await fetchResultados();
+    }
+    setSyncing(false);
+    setSyncMsg('');
   };
 
   // ── Cargo filter options ──
@@ -289,7 +308,12 @@ const ResultadosTsje: React.FC = () => {
 
         {/* Sync controls */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {maxFetchedAt && (
+          {syncMsg && (
+            <span style={{ fontSize: '0.6rem', color: '#F59E0B', alignSelf: 'center', fontWeight: 700 }}>
+              {syncMsg}
+            </span>
+          )}
+          {!syncMsg && maxFetchedAt && (
             <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', alignSelf: 'center' }}>
               TSJE: {fmtDateTime(maxFetchedAt)}
             </span>
