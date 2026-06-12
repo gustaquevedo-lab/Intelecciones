@@ -1608,22 +1608,23 @@ app.use('/api/attendance', attendanceRoutes());
 app.use('/api/voter-check', voterCheckRoutes());
 
 app.get('/api/routes-debug', (req, res) => {
-  const routes: string[] = [];
-  function print(pathStr: any, layer: any) {
+  const routes: any[] = [];
+  app._router.stack.forEach((layer: any) => {
     if (layer.route) {
-      layer.route.stack.forEach(print.bind(null, pathStr + layer.route.path));
-    } else if (layer.name === 'router' && layer.handle.stack) {
-      const match = layer.regexp.source
-        .replace('^\\', '')
-        .replace('\\/?(?=\\/|$)', '')
-        .replace('(?=\\/|$)', '')
-        .replace('\\/', '/');
-      layer.handle.stack.forEach(print.bind(null, pathStr + match));
-    } else if (layer.method) {
-      routes.push(`${layer.method.toUpperCase()} ${pathStr}`);
+      routes.push(`Route: ${layer.route.path}`);
+    } else if (layer.name === 'router') {
+      const prefix = layer.regexp.source || '';
+      if (layer.handle && layer.handle.stack) {
+        layer.handle.stack.forEach((handler: any) => {
+          if (handler.route) {
+            routes.push(`Router: ${prefix} -> ${handler.route.path} (${Object.keys(handler.route.methods || {}).join(',')})`);
+          } else {
+            routes.push(`Router: ${prefix} -> Middleware: ${handler.name || 'anonymous'}`);
+          }
+        });
+      }
     }
-  }
-  app._router.stack.forEach(print.bind(null, ''));
+  });
   res.json(routes);
 });
 
