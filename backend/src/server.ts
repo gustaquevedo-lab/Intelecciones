@@ -1607,6 +1607,26 @@ app.use('/api/tsje', tsjeRoutes());
 app.use('/api/attendance', attendanceRoutes());
 app.use('/api/voter-check', voterCheckRoutes());
 
+app.get('/api/routes-debug', (req, res) => {
+  const routes: string[] = [];
+  function print(pathStr: any, layer: any) {
+    if (layer.route) {
+      layer.route.stack.forEach(print.bind(null, pathStr + layer.route.path));
+    } else if (layer.name === 'router' && layer.handle.stack) {
+      const match = layer.regexp.source
+        .replace('^\\', '')
+        .replace('\\/?(?=\\/|$)', '')
+        .replace('(?=\\/|$)', '')
+        .replace('\\/', '/');
+      layer.handle.stack.forEach(print.bind(null, pathStr + match));
+    } else if (layer.method) {
+      routes.push(`${layer.method.toUpperCase()} ${pathStr}`);
+    }
+  }
+  app._router.stack.forEach(print.bind(null, ''));
+  res.json(routes);
+});
+
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = err.status || err.statusCode || 500;
   res.status(status).json({
