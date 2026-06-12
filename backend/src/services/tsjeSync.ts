@@ -520,12 +520,32 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
       ORDER BY votos DESC
     `).all(codEleccion, t.cod_cargo, t.cod_dpto, t.cod_distrito);
 
-    const preferentes = db.prepare(`
+    let preferentes = db.prepare(`
       SELECT num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
       FROM tsje_resultado_preferente
       WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ?
       ORDER BY votos DESC
-    `).all(codEleccion, t.cod_cargo, t.cod_dpto, t.cod_distrito);
+    `).all(codEleccion, t.cod_cargo, t.cod_dpto, t.cod_distrito) as any[];
+
+    if (preferentes.length === 0) {
+      // Fallback 1: Try departmental level (-1)
+      preferentes = db.prepare(`
+        SELECT num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
+        FROM tsje_resultado_preferente
+        WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = -1
+        ORDER BY votos DESC
+      `).all(codEleccion, t.cod_cargo, t.cod_dpto) as any[];
+    }
+
+    if (preferentes.length === 0) {
+      // Fallback 2: Try national level (0, 0)
+      preferentes = db.prepare(`
+        SELECT num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
+        FROM tsje_resultado_preferente
+        WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = 0 AND cod_distrito = 0
+        ORDER BY votos DESC
+      `).all(codEleccion, t.cod_cargo) as any[];
+    }
 
     return { ...t, listas, preferentes };
   });
@@ -610,7 +630,7 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
       ORDER BY total_votos DESC
     `).all(codEleccion, codCargo, codDpto) as any[];
 
-    const preferentes = prefRows.map(r => ({
+    let preferentes = prefRows.map(r => ({
       num_lista: r.num_lista,
       ord_candidato: r.ord_candidato,
       nom_candidato: r.nom_candidato,
@@ -618,6 +638,26 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
       orden: r.orden,
       votos: r.total_votos,
     }));
+
+    if (preferentes.length === 0) {
+      // Fallback 1: Try departmental level (-1)
+      preferentes = db.prepare(`
+        SELECT num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
+        FROM tsje_resultado_preferente
+        WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = -1
+        ORDER BY votos DESC
+      `).all(codEleccion, codCargo, codDpto) as any[];
+    }
+
+    if (preferentes.length === 0) {
+      // Fallback 2: Try national level (0, 0)
+      preferentes = db.prepare(`
+        SELECT num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
+        FROM tsje_resultado_preferente
+        WHERE cod_eleccion = ? AND cod_cargo = ? AND cod_dpto = 0 AND cod_distrito = 0
+        ORDER BY votos DESC
+      `).all(codEleccion, codCargo) as any[];
+    }
 
     cargos.push({
       ...aggTotal,
