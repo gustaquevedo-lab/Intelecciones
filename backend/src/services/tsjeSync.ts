@@ -274,6 +274,28 @@ function persistAggregate(
   tx();
 }
 
+async function runWithConcurrencyLimit<T>(
+  tasks: (() => Promise<T>)[],
+  limit: number
+): Promise<T[]> {
+  const results: Promise<T>[] = [];
+  const executing: Promise<void>[] = [];
+  for (const task of tasks) {
+    const p = Promise.resolve().then(() => task());
+    results.push(p);
+    if (limit <= tasks.length) {
+      const e: Promise<void> = p.then(() => {
+        executing.splice(executing.indexOf(e), 1);
+      });
+      executing.push(e);
+      if (executing.length >= limit) {
+        await Promise.race(executing);
+      }
+    }
+  }
+  return Promise.all(results);
+}
+
 async function aggregateCargoByMesa(
   codEleccion: number,
   codDpto: number,
@@ -291,6 +313,8 @@ async function aggregateCargoByMesa(
     listas: new Map<string, { numLista: string; orden: number | null; desPartido: string | null; sigPartido: string | null; votos: number }>(),
   };
 
+  const tasks: (() => Promise<void>)[] = [];
+
   for (const zona of Object.keys(distrito)) {
     for (const local of Object.keys(distrito[zona])) {
       for (const mesa of Object.keys(distrito[zona][local])) {
@@ -300,47 +324,50 @@ async function aggregateCargoByMesa(
 
         agg.totalMesas++;
 
-        try {
-          const res = await http.get(CERTIFICADO_ENDPOINT, {
-            params: {
-              eleccion: codEleccion, candidatura: cargo.cod,
-              departamento: codDpto, distrito: codDistrito,
-              zona, local, mesa, codigo,
-            },
-          });
-          if (res.status < 200 || res.status >= 300) continue;
-          const data: any = res.data;
-          if (!data?.cabecera) continue;
+        tasks.push(async () => {
+          try {
+            const res = await http.get(CERTIFICADO_ENDPOINT, {
+              params: {
+                eleccion: codEleccion, candidatura: cargo.cod,
+                departamento: codDpto, distrito: codDistrito,
+                zona, local, mesa, codigo,
+              },
+            });
+            if (res.status < 200 || res.status >= 300) return;
+            const data: any = res.data;
+            if (!data?.cabecera) return;
 
-          agg.mesasPublicadas++;
-          agg.blancos       += data.cabecera.blancos ?? 0;
-          agg.nulos         += data.cabecera.nulos ?? 0;
-          agg.totalVotos    += data.cabecera.totProg ?? 0;
-          agg.nocomputados  += data.cabecera.nocomputados ?? 0;
+            agg.mesasPublicadas++;
+            agg.blancos       += data.cabecera.blancos ?? 0;
+            agg.nulos         += data.cabecera.nulos ?? 0;
+            agg.totalVotos    += data.cabecera.totProg ?? 0;
+            agg.nocomputados  += data.cabecera.nocomputados ?? 0;
 
-          for (const det of data.detalle ?? []) {
-            const key = String(det.numLista);
-            const existing = agg.listas.get(key);
-            if (existing) {
-              existing.votos += det.votos ?? 0;
-            } else {
-              agg.listas.set(key, {
-                numLista: key,
-                orden: det.orden ?? null,
-                desPartido: det.desPartido ?? null,
-                sigPartido: det.sigPartido ?? null,
-                votos: det.votos ?? 0,
-              });
+            for (const det of data.detalle ?? []) {
+              const key = String(det.numLista);
+              const existing = agg.listas.get(key);
+              if (existing) {
+                existing.votos += det.votos ?? 0;
+              } else {
+                agg.listas.set(key, {
+                  numLista: key,
+                  orden: det.orden ?? null,
+                  desPartido: det.desPartido ?? null,
+                  sigPartido: det.sigPartido ?? null,
+                  votos: det.votos ?? 0,
+                });
+              }
             }
+          } catch {
+            // skip mesa con error puntual; el agregado igual continúa
           }
-        } catch {
-          // skip mesa con error puntual; el agregado igual continúa
-        }
-
-        if (rateLimitMs > 0) await new Promise(r => setTimeout(r, rateLimitMs));
+        });
       }
     }
   }
+
+  // Run tasks in parallel with a concurrency limit of 15
+  await runWithConcurrencyLimit(tasks, 15);
 
   persistAggregate(codEleccion, cargo.cod, codDpto, codDistrito, agg);
   return { mesasOk: agg.mesasPublicadas, mesasTotal: agg.totalMesas };
@@ -370,6 +397,8 @@ export async function syncDistrito(
   let seguridad: SeguridadCatalog | null = null;
   const needsCatalog = PLRA_2026_CARGOS.some(c => c.via === 'mesa');
 
+  const districtsToSync = (codDpto === 13) ? [0, 1, 3, 4, 5, 6] : [codDistrito];
+
   for (const cargo of PLRA_2026_CARGOS) {
     upsertCargo(codEleccion, cargo);
 
@@ -396,9 +425,11 @@ export async function syncDistrito(
             seguridad = await fetchTsjeCatalog<SeguridadCatalog>('seguridad');
           }
           if (seguridad) {
-            await aggregateCargoByMesa(
-              codEleccion, codDpto, codDistrito, cargo, seguridad, rateLimitMs
-            );
+            for (const d of districtsToSync) {
+              await aggregateCargoByMesa(
+                codEleccion, codDpto, d, cargo, seguridad, rateLimitMs
+              );
+            }
           }
         }
 
@@ -419,14 +450,22 @@ export async function syncDistrito(
           cargosErr++;
           continue;
         }
-        const { mesasOk, mesasTotal } = await aggregateCargoByMesa(
-          codEleccion, codDpto, codDistrito, cargo, seguridad, rateLimitMs,
-        );
-        if (mesasTotal === 0) {
-          details.push({ cargo: cargo.cod, via: 'mesa', status: 'empty', mesasOk, mesasTotal });
+        
+        let totalMesasOk = 0;
+        let totalMesasTotal = 0;
+        for (const d of districtsToSync) {
+          const { mesasOk, mesasTotal } = await aggregateCargoByMesa(
+            codEleccion, codDpto, d, cargo, seguridad, rateLimitMs,
+          );
+          totalMesasOk += mesasOk;
+          totalMesasTotal += mesasTotal;
+        }
+
+        if (totalMesasTotal === 0) {
+          details.push({ cargo: cargo.cod, via: 'mesa', status: 'empty', mesasOk: totalMesasOk, mesasTotal: totalMesasTotal });
         } else {
           cargosOk++;
-          details.push({ cargo: cargo.cod, via: 'mesa', status: 'ok', mesasOk, mesasTotal });
+          details.push({ cargo: cargo.cod, via: 'mesa', status: 'ok', mesasOk: totalMesasOk, mesasTotal: totalMesasTotal });
         }
       } catch (e: any) {
         cargosErr++;
@@ -491,14 +530,16 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
     return { ...t, listas, preferentes };
   });
 
-  // Dynamically calculate departmental scope for national cargos (niv_cargo === 0)
-  const nationalCargos = cargos.filter(c => c.niv_cargo === 0);
-  const uniqueNationalCargos = Array.from(new Set(nationalCargos.map(c => c.cod_cargo)));
+  // Dynamically calculate departmental scope for national (0) and departmental (1) cargos
+  const targetCargos = cargos.filter(c => c.niv_cargo === 0 || c.niv_cargo === 1);
+  const uniqueTargetCargos = Array.from(new Set(targetCargos.map(c => c.cod_cargo)));
 
-  for (const codCargo of uniqueNationalCargos) {
-    if (cargos.some(c => c.cod_cargo === codCargo && c.cod_dpto === codDpto && c.cod_distrito === -1)) {
-      continue;
-    }
+  for (const codCargo of uniqueTargetCargos) {
+    // Remove any pre-existing/stored -1 departmental consolidation from the cargos array
+    // so we can compute it fresh as the sum of all districts.
+    const filteredCargos = cargos.filter(c => !(c.cod_cargo === codCargo && c.cod_dpto === codDpto && c.cod_distrito === -1));
+    cargos.length = 0;
+    cargos.push(...filteredCargos);
 
     const districts = db.prepare(`
       SELECT blancos, nulos, total_votos, electores, electores_publ,
@@ -509,7 +550,7 @@ export function getResultados(codEleccion: number, codDpto: number, codDistrito:
 
     if (districts.length === 0) continue;
 
-    const baseCargo = nationalCargos.find(c => c.cod_cargo === codCargo)!;
+    const baseCargo = targetCargos.find(c => c.cod_cargo === codCargo)!;
     const aggTotal = {
       cod_cargo: codCargo,
       cod_dpto: codDpto,

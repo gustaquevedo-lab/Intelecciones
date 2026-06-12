@@ -4,10 +4,11 @@ export const PLRA_2026 = 45;
 
 export const TSJE_DISTRICTS = [
   { label: 'PEDRO JUAN CABALLERO', cod_dpto: 13, cod_distrito: 0 },
-  { label: 'CAPITAN BADO',         cod_dpto: 13, cod_distrito: 2 },
-  { label: 'BELLA VISTA NORTE',    cod_dpto: 13, cod_distrito: 3 },
+  { label: 'BELLA VISTA NORTE',    cod_dpto: 13, cod_distrito: 1 },
+  { label: 'CAPITAN BADO',         cod_dpto: 13, cod_distrito: 3 },
   { label: 'ZANJA PYTA',           cod_dpto: 13, cod_distrito: 4 },
   { label: 'KARAPAI',              cod_dpto: 13, cod_distrito: 5 },
+  { label: 'CERRO CORA',           cod_dpto: 13, cod_distrito: 6 },
 ] as const;
 
 export type TsjeDistrict = typeof TSJE_DISTRICTS[number];
