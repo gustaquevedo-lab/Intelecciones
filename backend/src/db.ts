@@ -144,6 +144,18 @@ try {
       PRIMARY KEY (cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato)
     );
 
+    CREATE TABLE IF NOT EXISTS tsje_resultado_preferente_mesa (
+      cod_eleccion    INTEGER NOT NULL,
+      cod_cargo       INTEGER NOT NULL,
+      cod_dpto        INTEGER NOT NULL,
+      cod_distrito    INTEGER NOT NULL,
+      mesa            INTEGER NOT NULL,
+      num_lista       TEXT NOT NULL,
+      ord_candidato   INTEGER NOT NULL,
+      votos           INTEGER DEFAULT 0,
+      PRIMARY KEY (cod_eleccion, cod_cargo, cod_dpto, cod_distrito, mesa, num_lista, ord_candidato)
+    );
+
     CREATE TABLE IF NOT EXISTS tsje_sync_log (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       cod_eleccion  INTEGER NOT NULL,

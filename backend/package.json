@@ -36,6 +36,7 @@
     "piscina": "^5.1.4",
     "posthog-node": "^5.35.7",
     "qrcode": "^1.5.4",
+    "tesseract.js": "^7.0.0",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
