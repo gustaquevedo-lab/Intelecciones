@@ -1607,25 +1607,25 @@ app.use('/api/tsje', tsjeRoutes());
 app.use('/api/attendance', attendanceRoutes());
 app.use('/api/voter-check', voterCheckRoutes());
 
-app.get('/api/routes-debug', (req, res) => {
-  const routes: any[] = [];
-  app._router.stack.forEach((layer: any) => {
-    if (layer.route) {
-      routes.push(`Route: ${layer.route.path}`);
-    } else if (layer.name === 'router') {
-      const prefix = layer.regexp.source || '';
-      if (layer.handle && layer.handle.stack) {
-        layer.handle.stack.forEach((handler: any) => {
-          if (handler.route) {
-            routes.push(`Router: ${prefix} -> ${handler.route.path} (${Object.keys(handler.route.methods || {}).join(',')})`);
-          } else {
-            routes.push(`Router: ${prefix} -> Middleware: ${handler.name || 'anonymous'}`);
-          }
-        });
-      }
+app.get('/api/file-check', (req, res) => {
+  try {
+    const filePath = path.join(__dirname, 'routes/diad.js');
+    if (!fs.existsSync(filePath)) {
+      return res.json({ error: `File not found: ${filePath}` });
     }
-  });
-  res.json(routes);
+    const content = fs.readFileSync(filePath, 'utf8');
+    const hasProcessActa = content.includes('process-acta');
+    const size = fs.statSync(filePath).size;
+    res.json({
+      filePath,
+      size,
+      hasProcessActa,
+      contentSnippet: content.slice(0, 300),
+      lastLines: content.slice(-300)
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
