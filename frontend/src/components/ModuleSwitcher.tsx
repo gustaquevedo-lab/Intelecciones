@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap, CheckCircle, UserCheck } from 'lucide-react';
+import { Map, Users, Shield, Truck, MessageSquare, CheckSquare, Zap, CheckCircle, UserCheck, ClipboardCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { usePrefetchOnHover } from '../hooks/usePrefetch';
@@ -11,6 +11,7 @@ const MODULES = [
   { id: 'logistics',      label: 'Logística',   short: 'Log',    path: '/logistica',      icon: Truck,        roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'LOGISTICS' },
   { id: 'veedor',         label: 'Veedor',      short: 'Veed',   path: '/veedor',         icon: CheckSquare,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','MIEMBRO_DE_MESA','SUBJEFE','COORDINADOR','VEEDOR','APODERADO','DRIVER','LOGISTICA','CATERING'], moduleKey: 'DAY_D' },
   { id: 'verificacion',  label: 'Verificación', short: 'Verif', path: '/verificacion',   icon: UserCheck,    roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE','COORDINADOR'], moduleKey: 'DAY_D' },
+  { id: 'auditor',        label: 'Auditor de Actas', short: 'Audit', path: '/acta-auditor', icon: ClipboardCheck, roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'], moduleKey: 'DAY_D' },
   { id: 'communications', label: 'WhatsApp',    short: 'WA',     path: '/comunicaciones', icon: MessageSquare,roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'COMMUNICATIONS' },
   { id: 'diad',           label: 'Día D',       short: 'DíaD',   path: '/diad',           icon: Zap,          roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO','SUBJEFE'],                  moduleKey: 'DAY_D', accent: '#22C47E' },
   { id: 'asistencia',     label: 'Reunión General',  short: 'Reunión',  path: '/asistencia',    icon: CheckCircle,  roles: ['SUPERUSUARIO','JEFE_CAMPANA','PADRINO'], moduleKey: 'REGISTRY' },
