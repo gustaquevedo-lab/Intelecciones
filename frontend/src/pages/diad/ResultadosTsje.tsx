@@ -247,9 +247,9 @@ const ResultadosTsje: React.FC = () => {
 
       {/* ── Filter bar ── */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 10,
         background: 'var(--surface)', borderBottom: '1px solid var(--border)',
         padding: '0.75rem 0', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center',
+        marginBottom: '1rem',
       }}>
         {/* Distrito */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
