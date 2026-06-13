@@ -1982,9 +1982,11 @@ export default function diadRoutes(upload: multer.Multer) {
 
       // Fallback to Gemini if QR failed, is not auto-decodable, or if decoded QR total doesn't match official total (likely false positive)
       let geminiResult: any = null;
+      let geminiError: string | null = null;
       const qrTotalMismatches = qrResult && qrResult.success && qrResult.total !== certData.cabecera.totProg;
       if (qrTotalMismatches) {
         console.warn(`[PROCESS ACTA] QR decoded successfully but total mismatch: QR ${qrResult.total} vs Official ${certData.cabecera.totProg}. Forcing Gemini Fallback.`);
+        qrResult = null; // Discard false-positive QR results immediately
       }
       const shouldCallGemini = !qrResult || !qrResult.success || !qrResult.autoDecodable || qrTotalMismatches;
       if (shouldCallGemini && process.env.GEMINI_API_KEY) {
@@ -2019,9 +2021,12 @@ export default function diadRoutes(upload: multer.Multer) {
               autoDecodable: true,
               isGeminiFallback: true
             };
+          } else if (geminiRes) {
+            geminiError = geminiRes.error || 'Error desconocido en Gemini';
           }
         } catch (geminiErr: any) {
           console.error('[PROCESS ACTA GEMINI FALLBACK ERROR]', geminiErr);
+          geminiError = geminiErr.message || 'Excepción en fallback de Gemini';
         }
       }
 
@@ -2103,13 +2108,18 @@ export default function diadRoutes(upload: multer.Multer) {
               }
             })();
             saved = true;
-            autoSaveReason = 'Validado y guardado automáticamente mediante el código QR del acta';
+            autoSaveReason = qrResult.isGeminiFallback 
+              ? 'Validado y guardado automáticamente mediante Gemini OCR Fallback' 
+              : 'Validado y guardado automáticamente mediante el código QR del acta';
           }
         } else {
-          autoSaveReason = `Mesa requiere verificación manual (Total QR: ${qrResult.total || 0} vs Oficial: ${certData.cabecera.totProg})`;
+          autoSaveReason = `Mesa requiere verificación manual (Total decodificado: ${qrResult.total || 0} vs Oficial: ${certData.cabecera.totProg})`;
         }
       } else if (autoSave) {
-        autoSaveReason = 'No se detectó un código QR válido en la imagen del acta para auto-guardar';
+        autoSaveReason = 'No se pudo decodificar el código QR ni procesar con Gemini OCR';
+        if (geminiError) {
+          autoSaveReason += ` (Error de Gemini: ${geminiError})`;
+        }
       }
 
       res.json({
@@ -2121,7 +2131,8 @@ export default function diadRoutes(upload: multer.Multer) {
         qr: qrResult,
         qrDataRaw,
         saved,
-        autoSaveReason
+        autoSaveReason,
+        geminiError
       });
     } catch (err: any) {
       console.error('[PROCESS ACTA ERROR]', err);
