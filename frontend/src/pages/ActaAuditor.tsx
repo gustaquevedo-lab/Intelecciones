@@ -40,7 +40,7 @@ export default function ActaAuditor() {
 
   // Bulk import states
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [bulkMesas, setBulkMesas] = useState<number[]>([]);
+  const [bulkMesas, setBulkMesas] = useState<any[]>([]);
   const [bulkProgress, setBulkProgress] = useState(0);
   const [bulkLogs, setBulkLogs] = useState<string[]>([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -106,9 +106,11 @@ export default function ActaAuditor() {
       }
       
       for (let i = 0; i < mesas.length; i++) {
-        const mesaNum = mesas[i];
+        const item = mesas[i];
+        const mesaNum = item.mesa;
+        const localVot = item.local_votacion;
         setBulkProgress(i + 1);
-        setBulkLogs(prev => [...prev, `Procesando Mesa ${mesaNum} de ${mesas.length}...`]);
+        setBulkLogs(prev => [...prev, `Procesando Mesa ${mesaNum} (${localVot}) de ${mesas.length}...`]);
         
         try {
           const importRes = await api.post('/diad/process-acta', {
@@ -116,13 +118,14 @@ export default function ActaAuditor() {
             distrito: parseInt(distrito),
             mesa: mesaNum,
             candidatura: parseInt(candidatura),
+            local_votacion: localVot,
             autoSave: true
           });
           
           if (importRes.data.saved) {
             setBulkLogs(prev => [...prev.slice(0, -1), `✓ Mesa ${mesaNum}: Importada con éxito (Validada automáticamente)`]);
           } else {
-            setBulkLogs(prev => [...prev.slice(0, -1), `⚠ Mesa ${mesaNum}: Requiere revisión manual`]);
+            setBulkLogs(prev => [...prev.slice(0, -1), `⚠ Mesa ${mesaNum} (${localVot}): Requiere revisión manual - ${importRes.data.autoSaveReason || ''}`]);
           }
         } catch (err) {
           setBulkLogs(prev => [...prev.slice(0, -1), `✗ Mesa ${mesaNum}: Error de conexión`]);

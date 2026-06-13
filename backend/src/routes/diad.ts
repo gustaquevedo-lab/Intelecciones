@@ -1750,18 +1750,46 @@ export default function diadRoutes(upload: multer.Multer) {
         return res.json([]);
       }
 
-      const mesasSet = new Set<number>();
-      for (const zona of Object.keys(dptoData)) {
-        for (const local of Object.keys(dptoData[zona])) {
-          for (const mesa of Object.keys(dptoData[zona][local])) {
-            if (dptoData[zona][local][mesa][cargoKey] !== undefined) {
-              mesasSet.add(parseInt(mesa));
+      const AMAMBAY_DISTRICTS_MAP: Record<string, string> = {
+        '0': 'PEDRO JUAN CABALLERO',
+        '1': 'BELLA VISTA NORTE',
+        '3': 'CAPITAN BADO',
+        '4': 'ZANJA PYTA',
+        '5': 'KARAPAI',
+        '6': 'CERRO CORA'
+      };
+      const distName = AMAMBAY_DISTRICTS_MAP[distKey] || distKey;
+
+      const dbMesas = db.prepare(`
+        SELECT DISTINCT local_votacion, mesa
+        FROM electors
+        WHERE (UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?))
+          AND local_votacion IS NOT NULL AND local_votacion != '' AND mesa IS NOT NULL AND mesa > 0
+        ORDER BY local_votacion ASC, CAST(mesa AS INTEGER) ASC
+      `).all(distName, distName) as any[];
+
+      const finalMesas: any[] = [];
+      for (const row of dbMesas) {
+        const mesaNum = row.mesa;
+        let found = false;
+        for (const zona of Object.keys(dptoData)) {
+          for (const local of Object.keys(dptoData[zona])) {
+            if (dptoData[zona][local][String(mesaNum)]?.[cargoKey] !== undefined) {
+              found = true;
+              break;
             }
           }
+          if (found) break;
+        }
+        if (found) {
+          finalMesas.push({
+            mesa: mesaNum,
+            local_votacion: row.local_votacion
+          });
         }
       }
 
-      res.json(Array.from(mesasSet).sort((a, b) => a - b));
+      res.json(finalMesas);
     } catch (err: any) {
       console.error('[MESAS TO IMPORT ERROR]', err);
       res.status(500).json({ error: err.message });
