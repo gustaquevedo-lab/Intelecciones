@@ -1837,72 +1837,99 @@ export default function diadRoutes(upload: multer.Multer) {
       let foundLocal: string | null = null;
       let foundCodigo: number | null = null;
 
-      // Clean local_votacion string to match
-      const targetLocalClean = String(local_votacion || '').trim().toUpperCase();
+    const normalizeLocalName = (name: string): string => {
+      if (!name) return '';
+      return name
+        .toUpperCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/\bTTE\b\.?/g, 'TENIENTE')
+        .replace(/\bESC\b\.?/g, 'ESCUELA')
+        .replace(/\bCOL\b\.?/g, 'COLEGIO')
+        .replace(/\bBAS\b\.?/g, 'BASICA')
+        .replace(/\bGRAL\b\.?/g, 'GENERAL')
+        .replace(/\bGRL\b\.?/g, 'GENERAL')
+        .replace(/\bRCA\b\.?/g, 'REPUBLICA')
+        .replace(/\bNTRA\b\.?/g, 'NUESTRA')
+        .replace(/\bSRA\b\.?/g, 'SENORA')
+        .replace(/\bDR\b\.?/g, 'DOCTOR')
+        .replace(/\bN[°º]\s*\d+\b/g, '')
+        .replace(/\bNRO\b\.?/g, '')
+        .replace(/[^A-Z0-9]/g, '')
+        .trim();
+    };
 
-      for (const zona of Object.keys(dptoData)) {
-        for (const local of Object.keys(dptoData[zona])) {
-          if (dptoData[zona][local][mesaKey]) {
-            const code = dptoData[zona][local][mesaKey][cargoKey];
-            if (code === undefined) continue;
+    const isLocalNameMatch = (tsjeName: string, dbName: string): boolean => {
+      const t = tsjeName.toUpperCase();
+      const d = dbName.toUpperCase();
+      const normT = normalizeLocalName(t);
+      const normD = normalizeLocalName(d);
+      return normT === normD || normT.includes(normD) || normD.includes(normT);
+    };
 
-            // If we have local_votacion, we must verify if this local code matches it
-            if (targetLocalClean) {
-              const cacheKey = `${dptoKey}_${distKey}_${zona}_${local}`;
-              const cachedName = tsjeLocalNamesCache.get(cacheKey);
+    // Clean local_votacion string to match
+    const targetLocalClean = String(local_votacion || '').trim().toUpperCase();
 
-              if (cachedName) {
-                if (cachedName === targetLocalClean) {
-                  foundZona = zona;
-                  foundLocal = local;
-                  foundCodigo = code;
-                  break;
-                }
-              } else {
-                // Fetch from TSJE to check the name
-                try {
-                  const certRes = await axios.get(CERTIFICADO_ENDPOINT, {
-                    params: {
-                      eleccion: 45,
-                      candidatura: candidatura,
-                      departamento: departamento,
-                      distrito: distrito,
-                      zona: zona,
-                      local: local,
-                      mesa: mesa,
-                      codigo: code
-                    },
-                    headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' }
-                  });
-                  const certData = certRes.data;
-                  if (certData?.cabecera?.desLocal) {
-                    const tsjeLocalName = String(certData.cabecera.desLocal).trim().toUpperCase();
-                    tsjeLocalNamesCache.set(cacheKey, tsjeLocalName);
+    for (const zona of Object.keys(dptoData)) {
+      for (const local of Object.keys(dptoData[zona])) {
+        if (dptoData[zona][local][mesaKey]) {
+          const code = dptoData[zona][local][mesaKey][cargoKey];
+          if (code === undefined) continue;
 
-                    // Fuzzy match: check if simplified string matches or if one contains the other
-                    const clean = (s: string) => s.replace(/[^A-Z0-9]/g, '');
-                    if (clean(tsjeLocalName) === clean(targetLocalClean) || tsjeLocalName.includes(targetLocalClean) || targetLocalClean.includes(tsjeLocalName)) {
-                      foundZona = zona;
-                      foundLocal = local;
-                      foundCodigo = code;
-                      break;
-                    }
-                  }
-                } catch (err) {
-                  console.error(`Error checking local name for code ${local}:`, err);
-                }
+          // If we have local_votacion, we must verify if this local code matches it
+          if (targetLocalClean) {
+            const cacheKey = `${dptoKey}_${distKey}_${zona}_${local}`;
+            const cachedName = tsjeLocalNamesCache.get(cacheKey);
+
+            if (cachedName) {
+              if (isLocalNameMatch(cachedName, targetLocalClean)) {
+                foundZona = zona;
+                foundLocal = local;
+                foundCodigo = code;
+                break;
               }
             } else {
-              // No local_votacion provided, take the first one (fallback behavior)
-              foundZona = zona;
-              foundLocal = local;
-              foundCodigo = code;
-              break;
+              // Fetch from TSJE to check the name
+              try {
+                const certRes = await axios.get(CERTIFICADO_ENDPOINT, {
+                  params: {
+                    eleccion: 45,
+                    candidatura: candidatura,
+                    departamento: departamento,
+                    distrito: distrito,
+                    zona: zona,
+                    local: local,
+                    mesa: mesa,
+                    codigo: code
+                  },
+                  headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' }
+                });
+                const certData = certRes.data;
+                if (certData?.cabecera?.desLocal) {
+                  const tsjeLocalName = String(certData.cabecera.desLocal).trim().toUpperCase();
+                  tsjeLocalNamesCache.set(cacheKey, tsjeLocalName);
+
+                  if (isLocalNameMatch(tsjeLocalName, targetLocalClean)) {
+                    foundZona = zona;
+                    foundLocal = local;
+                    foundCodigo = code;
+                    break;
+                  }
+                }
+              } catch (err) {
+                console.error(`Error checking local name for code ${local}:`, err);
+              }
             }
+          } else {
+            // No local_votacion provided, take the first one (fallback behavior)
+            foundZona = zona;
+            foundLocal = local;
+            foundCodigo = code;
+            break;
           }
         }
-        if (foundCodigo !== null && foundCodigo !== undefined) break;
       }
+      if (foundCodigo !== null && foundCodigo !== undefined) break;
+    }
 
       if (!foundCodigo) {
         return res.status(404).json({ error: `No se encontró el código de seguridad para la mesa ${mesa} y candidatura ${candidatura}` });
@@ -1953,9 +1980,13 @@ export default function diadRoutes(upload: multer.Multer) {
         console.error('[PROCESS ACTA QR DECODE ERROR]', qrErr);
       }
 
-      // Fallback to Gemini if QR failed or is not auto-decodable
+      // Fallback to Gemini if QR failed, is not auto-decodable, or if decoded QR total doesn't match official total (likely false positive)
       let geminiResult: any = null;
-      const shouldCallGemini = !qrResult || !qrResult.success || !qrResult.autoDecodable;
+      const qrTotalMismatches = qrResult && qrResult.success && qrResult.total !== certData.cabecera.totProg;
+      if (qrTotalMismatches) {
+        console.warn(`[PROCESS ACTA] QR decoded successfully but total mismatch: QR ${qrResult.total} vs Official ${certData.cabecera.totProg}. Forcing Gemini Fallback.`);
+      }
+      const shouldCallGemini = !qrResult || !qrResult.success || !qrResult.autoDecodable || qrTotalMismatches;
       if (shouldCallGemini && process.env.GEMINI_API_KEY) {
         try {
           console.log('[PROCESS ACTA] Invoking Gemini OCR Fallback...');
@@ -1976,6 +2007,7 @@ export default function diadRoutes(upload: multer.Multer) {
 
             const totalSum = geminiRes.blancos + geminiRes.nulos + Object.values(geminiRes.preferentes).reduce((a: number, b: any) => a + (b as number), 0);
 
+            // Override qrResult with the Gemini results since it is the correct data
             qrResult = {
               success: true,
               blancos: geminiRes.blancos,
