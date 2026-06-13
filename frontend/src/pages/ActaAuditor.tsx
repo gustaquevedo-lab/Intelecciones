@@ -105,12 +105,24 @@ export default function ActaAuditor() {
         return;
       }
       
+      let lastGeminiTime = 0;
       for (let i = 0; i < mesas.length; i++) {
         const item = mesas[i];
         const mesaNum = item.mesa;
         const localVot = item.local_votacion;
         setBulkProgress(i + 1);
         setBulkLogs(prev => [...prev, `Procesando Mesa ${mesaNum} (${localVot}) de ${mesas.length}...`]);
+        
+        // Wait to respect Gemini rate limits (5 RPM = 12 seconds spacing between Gemini calls)
+        if (lastGeminiTime > 0) {
+          const timeSinceLastGemini = Date.now() - lastGeminiTime;
+          if (timeSinceLastGemini < 12500) {
+            const waitTime = 12500 - timeSinceLastGemini;
+            setBulkLogs(prev => [...prev.slice(0, -1), `Procesando Mesa ${mesaNum} (${localVot}) de ${mesas.length}... (Esperando ${Math.ceil(waitTime / 1000)}s para respetar límite de API de Gemini)`]);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            setBulkLogs(prev => [...prev.slice(0, -1), `Procesando Mesa ${mesaNum} (${localVot}) de ${mesas.length}...`]);
+          }
+        }
         
         try {
           const importRes = await api.post('/diad/process-acta', {
@@ -122,6 +134,12 @@ export default function ActaAuditor() {
             autoSave: true
           });
           
+          // Check if Gemini fallback was triggered (either on successful fallback or on a specific Gemini error)
+          const usedGemini = importRes.data.qr?.isGeminiFallback || importRes.data.geminiError !== null;
+          if (usedGemini) {
+            lastGeminiTime = Date.now();
+          }
+
           if (importRes.data.saved) {
             setBulkLogs(prev => [...prev.slice(0, -1), `✓ Mesa ${mesaNum}: Importada con éxito (Validada automáticamente)`]);
           } else {
