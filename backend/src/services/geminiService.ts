@@ -70,7 +70,7 @@ Devuelve únicamente un objeto JSON con el siguiente formato, sin markdown ni ex
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 30000 // 30 seconds timeout
+        timeout: 90000 // 90 seconds timeout (to support slow image analysis)
       }
     );
 
