@@ -6,6 +6,8 @@ import { getCachedUserInfo, getRole, getListId, getDistrict } from './helpers';
 import { diadCoverageCache } from '../server';
 import { getParaguayTimestamp } from '../utils/timezone';
 
+const tsjeLocalNamesCache = new Map<string, string>();
+
 export default function diadRoutes(upload: multer.Multer) {
   const router = Router();
 
@@ -1460,10 +1462,30 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  router.get('/locales', (req, res) => {
+    const { distrito } = req.query;
+    if (!distrito) return res.status(400).json({ error: 'Falta el distrito' });
+    try {
+      const rows = db.prepare(`
+        SELECT DISTINCT local_votacion
+        FROM electors
+        WHERE UPPER(distrito) = UPPER(?)
+        ORDER BY local_votacion ASC
+      `).all(distrito) as any[];
+      res.json(rows.map(r => r.local_votacion));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // TSJE TREP / Preferente / Acta processing endpoints (Moved to diadRoutes to match frontend /api/diad/... calls)
   router.get('/mesas-to-import', async (req, res) => {
     const { departamento, distrito, candidatura } = req.query;
-    if (!departamento || !distrito || !candidatura) {
+    if (
+      departamento === undefined || departamento === null || departamento === '' ||
+      distrito === undefined || distrito === null || distrito === '' ||
+      candidatura === undefined || candidatura === null || candidatura === ''
+    ) {
       return res.status(400).json({ error: 'Faltan parámetros (departamento, distrito, candidatura)' });
     }
 
@@ -1508,8 +1530,13 @@ export default function diadRoutes(upload: multer.Multer) {
   });
 
   router.post('/process-acta', async (req, res) => {
-    const { departamento, distrito, mesa, candidatura, autoSave } = req.body;
-    if (!departamento || !distrito || !mesa || !candidatura) {
+    const { departamento, distrito, mesa, candidatura, autoSave, local_votacion } = req.body;
+    if (
+      departamento === undefined || departamento === null || departamento === '' ||
+      distrito === undefined || distrito === null || distrito === '' ||
+      mesa === undefined || mesa === null || mesa === '' ||
+      candidatura === undefined || candidatura === null || candidatura === ''
+    ) {
       return res.status(400).json({ error: 'Faltan parámetros requeridos (departamento, distrito, mesa, candidatura)' });
     }
 
@@ -1543,13 +1570,68 @@ export default function diadRoutes(upload: multer.Multer) {
       let foundLocal: string | null = null;
       let foundCodigo: number | null = null;
 
+      // Clean local_votacion string to match
+      const targetLocalClean = String(local_votacion || '').trim().toUpperCase();
+
       for (const zona of Object.keys(dptoData)) {
         for (const local of Object.keys(dptoData[zona])) {
           if (dptoData[zona][local][mesaKey]) {
-            foundZona = zona;
-            foundLocal = local;
-            foundCodigo = dptoData[zona][local][mesaKey][cargoKey];
-            break;
+            const code = dptoData[zona][local][mesaKey][cargoKey];
+            if (code === undefined) continue;
+
+            // If we have local_votacion, we must verify if this local code matches it
+            if (targetLocalClean) {
+              const cacheKey = `${dptoKey}_${distKey}_${zona}_${local}`;
+              const cachedName = tsjeLocalNamesCache.get(cacheKey);
+
+              if (cachedName) {
+                if (cachedName === targetLocalClean) {
+                  foundZona = zona;
+                  foundLocal = local;
+                  foundCodigo = code;
+                  break;
+                }
+              } else {
+                // Fetch from TSJE to check the name
+                try {
+                  const certRes = await axios.get(CERTIFICADO_ENDPOINT, {
+                    params: {
+                      eleccion: 45,
+                      candidatura: candidatura,
+                      departamento: departamento,
+                      distrito: distrito,
+                      zona: zona,
+                      local: local,
+                      mesa: mesa,
+                      codigo: code
+                    },
+                    headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' }
+                  });
+                  const certData = certRes.data;
+                  if (certData?.cabecera?.desLocal) {
+                    const tsjeLocalName = String(certData.cabecera.desLocal).trim().toUpperCase();
+                    tsjeLocalNamesCache.set(cacheKey, tsjeLocalName);
+
+                    // Fuzzy match: check if simplified string matches or if one contains the other
+                    const clean = (s: string) => s.replace(/[^A-Z0-9]/g, '');
+                    if (clean(tsjeLocalName) === clean(targetLocalClean) || tsjeLocalName.includes(targetLocalClean) || targetLocalClean.includes(tsjeLocalName)) {
+                      foundZona = zona;
+                      foundLocal = local;
+                      foundCodigo = code;
+                      break;
+                    }
+                  }
+                } catch (err) {
+                  console.error(`Error checking local name for code ${local}:`, err);
+                }
+              }
+            } else {
+              // No local_votacion provided, take the first one (fallback behavior)
+              foundZona = zona;
+              foundLocal = local;
+              foundCodigo = code;
+              break;
+            }
           }
         }
         if (foundCodigo !== null && foundCodigo !== undefined) break;

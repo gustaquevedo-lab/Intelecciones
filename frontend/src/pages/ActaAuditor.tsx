@@ -54,6 +54,28 @@ export default function ActaAuditor() {
     { code: '6', name: 'CERRO CORA' }
   ];
 
+  const [localVotacion, setLocalVotacion] = useState<string>('');
+  const [localesList, setLocalesList] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadLocales = async () => {
+      try {
+        const districtName = distritosAmambay.find(d => d.code === distrito)?.name || '';
+        if (!districtName) return;
+        const res = await api.get('/diad/locales', { params: { distrito: districtName } });
+        setLocalesList(res.data);
+        if (res.data.length > 0) {
+          setLocalVotacion(res.data[0]);
+        } else {
+          setLocalVotacion('');
+        }
+      } catch (err) {
+        console.error('Error loading locales:', err);
+      }
+    };
+    loadLocales();
+  }, [distrito]);
+
   const candidaturasPlurinominales = [
     { code: '4', name: 'DIRECTORIO NACIONAL' },
     { code: '5', name: 'DIRECTORIO DEPARTAMENTAL' }
@@ -130,7 +152,8 @@ export default function ActaAuditor() {
         departamento: parseInt(dpto),
         distrito: parseInt(distrito),
         mesa: parseInt(mesa),
-        candidatura: parseInt(candidatura)
+        candidatura: parseInt(candidatura),
+        local_votacion: localVotacion
       });
 
       const { jpeg, cabecera, detalle, ocr } = res.data;
@@ -341,6 +364,28 @@ export default function ActaAuditor() {
             }}>
             {distritosAmambay.map(d => (
               <option key={d.code} value={d.code}>{d.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: '1 1 250px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Local de Votación
+          </label>
+          <select 
+            value={localVotacion} 
+            onChange={(e) => setLocalVotacion(e.target.value)}
+            style={{
+              background: '#090e16',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              padding: '0.8rem',
+              color: '#fff',
+              fontSize: '0.9rem',
+              outline: 'none'
+            }}>
+            {localesList.map(loc => (
+              <option key={loc} value={loc}>{loc}</option>
             ))}
           </select>
         </div>
