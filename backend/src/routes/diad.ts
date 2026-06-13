@@ -1460,6 +1460,276 @@ export default function diadRoutes(upload: multer.Multer) {
     }
   });
 
+  // TSJE TREP / Preferente / Acta processing endpoints (Moved to diadRoutes to match frontend /api/diad/... calls)
+  router.get('/mesas-to-import', async (req, res) => {
+    const { departamento, distrito, candidatura } = req.query;
+    if (!departamento || !distrito || !candidatura) {
+      return res.status(400).json({ error: 'Faltan parámetros (departamento, distrito, candidatura)' });
+    }
+
+    try {
+      const axios = require('axios');
+      const TSJE_BASE = 'https://resultados.tsje.gov.py/publicacion';
+      const CATALOG_URL = `${TSJE_BASE}/statics/json/certificado/seguridad.json`;
+
+      const catRes = await axios.get(CATALOG_URL, {
+        headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' },
+        transformResponse: (r: any) => r
+      });
+      const text = String(catRes.data ?? '');
+      const cleaned = text.replace(/^\s*var\s+\w+\s*=\s*/, '').replace(/;\s*$/, '');
+      const seguridad = JSON.parse(cleaned);
+
+      const dptoKey = String(departamento);
+      const distKey = String(distrito);
+      const cargoKey = String(candidatura);
+
+      const dptoData = seguridad?.['45']?.[dptoKey]?.[distKey];
+      if (!dptoData) {
+        return res.json([]);
+      }
+
+      const mesasSet = new Set<number>();
+      for (const zona of Object.keys(dptoData)) {
+        for (const local of Object.keys(dptoData[zona])) {
+          for (const mesa of Object.keys(dptoData[zona][local])) {
+            if (dptoData[zona][local][mesa][cargoKey] !== undefined) {
+              mesasSet.add(parseInt(mesa));
+            }
+          }
+        }
+      }
+
+      res.json(Array.from(mesasSet).sort((a, b) => a - b));
+    } catch (err: any) {
+      console.error('[MESAS TO IMPORT ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/process-acta', async (req, res) => {
+    const { departamento, distrito, mesa, candidatura, autoSave } = req.body;
+    if (!departamento || !distrito || !mesa || !candidatura) {
+      return res.status(400).json({ error: 'Faltan parámetros requeridos (departamento, distrito, mesa, candidatura)' });
+    }
+
+    try {
+      const axios = require('axios');
+      const TSJE_BASE = 'https://resultados.tsje.gov.py/publicacion';
+      const CERTIFICADO_ENDPOINT = `${TSJE_BASE}/dinamics/certificado.ajax.php`;
+      const CATALOG_URL = `${TSJE_BASE}/statics/json/certificado/seguridad.json`;
+
+      // Fetch security catalog
+      const catRes = await axios.get(CATALOG_URL, {
+        headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' },
+        transformResponse: (r: any) => r
+      });
+      const text = String(catRes.data ?? '');
+      const cleaned = text.replace(/^\s*var\s+\w+\s*=\s*/, '').replace(/;\s*$/, '');
+      const seguridad = JSON.parse(cleaned);
+
+      // Lookup codes
+      const dptoKey = String(departamento);
+      const distKey = String(distrito);
+      const mesaKey = String(mesa);
+      const cargoKey = String(candidatura);
+
+      const dptoData = seguridad?.['45']?.[dptoKey]?.[distKey];
+      if (!dptoData) {
+        return res.status(404).json({ error: `No se encontraron datos de seguridad para el departamento ${departamento} y distrito ${distrito}` });
+      }
+
+      let foundZona: string | null = null;
+      let foundLocal: string | null = null;
+      let foundCodigo: number | null = null;
+
+      for (const zona of Object.keys(dptoData)) {
+        for (const local of Object.keys(dptoData[zona])) {
+          if (dptoData[zona][local][mesaKey]) {
+            foundZona = zona;
+            foundLocal = local;
+            foundCodigo = dptoData[zona][local][mesaKey][cargoKey];
+            break;
+          }
+        }
+        if (foundCodigo !== null && foundCodigo !== undefined) break;
+      }
+
+      if (!foundCodigo) {
+        return res.status(404).json({ error: `No se encontró el código de seguridad para la mesa ${mesa} y candidatura ${candidatura}` });
+      }
+
+      // Fetch certificate from TSJE
+      const certRes = await axios.get(CERTIFICADO_ENDPOINT, {
+        params: {
+          eleccion: 45,
+          candidatura: candidatura,
+          departamento: departamento,
+          distrito: distrito,
+          zona: foundZona,
+          local: foundLocal,
+          mesa: mesa,
+          codigo: foundCodigo
+        },
+        headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' }
+      });
+
+      const certData = certRes.data;
+      if (!certData || !certData.jpeg) {
+        return res.status(404).json({ error: 'No se obtuvo la imagen del acta desde el TSJE' });
+      }
+
+      // Process OCR locally via Tesseract.js
+      const imageBuffer = Buffer.from(certData.jpeg, 'base64');
+      const { processActaImage } = require('../services/ocrService');
+      const ocrResult = await processActaImage(imageBuffer);
+
+      let saved = false;
+      let autoSaveReason = 'No se solicitó auto-guardado o validación fallida';
+
+      // If autoSave is requested, we can attempt to save if the OCR/QR matches list totals
+      if (autoSave) {
+        // Since Tesseract on grids is prone to formatting failures, we only auto-save if the
+        // sum of preferentes matches the list total exactly. For bulk imports, since we default to
+        // manual confirmation if it doesn't match, we return saved: false.
+        autoSaveReason = 'La mesa requiere revisión manual para confirmar la transcripción';
+      }
+
+      res.json({
+        success: true,
+        cabecera: certData.cabecera,
+        detalle: certData.detalle,
+        jpeg: certData.jpeg,
+        ocr: ocrResult,
+        saved,
+        autoSaveReason
+      });
+    } catch (err: any) {
+      console.error('[PROCESS ACTA ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/save-preferente-votos', (req, res) => {
+    const { departamento, distrito, mesa, candidatura, votos } = req.body;
+    if (!departamento || !distrito || !mesa || !candidatura || !Array.isArray(votos)) {
+      return res.status(400).json({ error: 'Faltan parámetros requeridos o formato incorrecto' });
+    }
+
+    try {
+      db.transaction(() => {
+        // 1. Delete previous mesa-level votes
+        db.prepare(`
+          DELETE FROM tsje_resultado_preferente_mesa
+          WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND mesa = ?
+        `).run(candidatura, departamento, distrito, mesa);
+
+        // 2. Insert new mesa-level votes
+        const insertMesa = db.prepare(`
+          INSERT INTO tsje_resultado_preferente_mesa (
+            cod_eleccion, cod_cargo, cod_dpto, cod_distrito, mesa, num_lista, ord_candidato, votos
+          ) VALUES (45, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const item of votos) {
+          insertMesa.run(candidatura, departamento, distrito, mesa, String(item.num_lista), Number(item.ord_candidato), Number(item.votos || 0));
+        }
+
+        // 3. Re-calculate consolidated values for the district
+        const candidates = db.prepare(`
+          SELECT DISTINCT num_lista, ord_candidato
+          FROM tsje_resultado_preferente_mesa
+          WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ?
+        `).all(candidatura, departamento, distrito) as any[];
+
+        const insertPref = db.prepare(`
+          INSERT INTO tsje_resultado_preferente (
+            cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
+          ) VALUES (45, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato) DO UPDATE SET
+            votos = excluded.votos
+        `);
+
+        for (const cand of candidates) {
+          const sumRes = db.prepare(`
+            SELECT SUM(votos) as total_votos
+            FROM tsje_resultado_preferente_mesa
+            WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND num_lista = ? AND ord_candidato = ?
+          `).get(candidatura, departamento, distrito, cand.num_lista, cand.ord_candidato) as any;
+
+          const totalVotos = sumRes?.total_votos || 0;
+
+          const meta = db.prepare(`
+            SELECT nom_candidato, des_partido, orden
+            FROM tsje_resultado_preferente
+            WHERE cod_eleccion = 45 AND cod_cargo = ? AND num_lista = ? AND ord_candidato = ?
+            LIMIT 1
+          `).get(candidatura, cand.num_lista, cand.ord_candidato) as any;
+
+          insertPref.run(
+            candidatura, departamento, distrito,
+            cand.num_lista, cand.ord_candidato,
+            meta?.nom_candidato || '',
+            meta?.des_partido || '',
+            meta?.orden || 0,
+            totalVotos
+          );
+        }
+      })();
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('[SAVE PREFERENTE ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/tsje-results', (req, res) => {
+    const { dpto, distrito, cargo } = req.query;
+    try {
+      const rows = db.prepare(`
+        SELECT num_lista as numLista, ord_candidato as ordCandidato, nom_candidato as nomCandidato, des_partido as desPartido, orden, votos
+        FROM tsje_resultado_preferente
+        WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ?
+        ORDER BY num_lista ASC, ord_candidato ASC
+      `).all(cargo, dpto, distrito) as any[];
+
+      const listMap = new Map<string, any>();
+      rows.forEach(r => {
+        if (!listMap.has(r.numLista)) {
+          listMap.set(r.numLista, {
+            numLista: r.numLista,
+            desPartido: r.desPartido,
+            candidatosPref: []
+          });
+        }
+        listMap.get(r.numLista).candidatosPref.push({
+          ordCandidato: r.ordCandidato,
+          nomCandidato: r.nomCandidato,
+          votos: r.votos
+        });
+      });
+
+      res.json({ candidatos: Array.from(listMap.values()) });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/results-mesa', (req, res) => {
+    const { dpto, distrito, mesa, cargo } = req.query;
+    try {
+      const rows = db.prepare(`
+        SELECT num_lista, ord_candidato, votos
+        FROM tsje_resultado_preferente_mesa
+        WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND mesa = ?
+      `).all(cargo, dpto, distrito, mesa);
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }
 
@@ -1858,276 +2128,5 @@ export function veedorRoutes() {
       console.error('[PARSE QR ERROR]', err);
       res.status(500).json({ error: err.message });
     }
-  });
-
-  router.get('/mesas-to-import', async (req, res) => {
-    const { departamento, distrito, candidatura } = req.query;
-    if (!departamento || !distrito || !candidatura) {
-      return res.status(400).json({ error: 'Faltan parámetros (departamento, distrito, candidatura)' });
-    }
-
-    try {
-      const axios = require('axios');
-      const TSJE_BASE = 'https://resultados.tsje.gov.py/publicacion';
-      const CATALOG_URL = `${TSJE_BASE}/statics/json/certificado/seguridad.json`;
-
-      const catRes = await axios.get(CATALOG_URL, {
-        headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' },
-        transformResponse: (r: any) => r
-      });
-      const text = String(catRes.data ?? '');
-      const cleaned = text.replace(/^\s*var\s+\w+\s*=\s*/, '').replace(/;\s*$/, '');
-      const seguridad = JSON.parse(cleaned);
-
-      const dptoKey = String(departamento);
-      const distKey = String(distrito);
-      const cargoKey = String(candidatura);
-
-      const dptoData = seguridad?.['45']?.[dptoKey]?.[distKey];
-      if (!dptoData) {
-        return res.json([]);
-      }
-
-      const mesasSet = new Set<number>();
-      for (const zona of Object.keys(dptoData)) {
-        for (const local of Object.keys(dptoData[zona])) {
-          for (const mesa of Object.keys(dptoData[zona][local])) {
-            if (dptoData[zona][local][mesa][cargoKey] !== undefined) {
-              mesasSet.add(parseInt(mesa));
-            }
-          }
-        }
-      }
-
-      res.json(Array.from(mesasSet).sort((a, b) => a - b));
-    } catch (err: any) {
-      console.error('[MESAS TO IMPORT ERROR]', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  router.post('/process-acta', async (req, res) => {
-    const { departamento, distrito, mesa, candidatura, autoSave } = req.body;
-    if (!departamento || !distrito || !mesa || !candidatura) {
-      return res.status(400).json({ error: 'Faltan parámetros requeridos (departamento, distrito, mesa, candidatura)' });
-    }
-
-    try {
-      const axios = require('axios');
-      const TSJE_BASE = 'https://resultados.tsje.gov.py/publicacion';
-      const CERTIFICADO_ENDPOINT = `${TSJE_BASE}/dinamics/certificado.ajax.php`;
-      const CATALOG_URL = `${TSJE_BASE}/statics/json/certificado/seguridad.json`;
-
-      // Fetch security catalog
-      const catRes = await axios.get(CATALOG_URL, {
-        headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' },
-        transformResponse: (r: any) => r
-      });
-      const text = String(catRes.data ?? '');
-      const cleaned = text.replace(/^\s*var\s+\w+\s*=\s*/, '').replace(/;\s*$/, '');
-      const seguridad = JSON.parse(cleaned);
-
-      // Lookup codes
-      const dptoKey = String(departamento);
-      const distKey = String(distrito);
-      const mesaKey = String(mesa);
-      const cargoKey = String(candidatura);
-
-      const dptoData = seguridad?.['45']?.[dptoKey]?.[distKey];
-      if (!dptoData) {
-        return res.status(404).json({ error: `No se encontraron datos de seguridad para el departamento ${departamento} y distrito ${distrito}` });
-      }
-
-      let foundZona: string | null = null;
-      let foundLocal: string | null = null;
-      let foundCodigo: number | null = null;
-
-      for (const zona of Object.keys(dptoData)) {
-        for (const local of Object.keys(dptoData[zona])) {
-          if (dptoData[zona][local][mesaKey]) {
-            foundZona = zona;
-            foundLocal = local;
-            foundCodigo = dptoData[zona][local][mesaKey][cargoKey];
-            break;
-          }
-        }
-        if (foundCodigo !== null && foundCodigo !== undefined) break;
-      }
-
-      if (!foundCodigo) {
-        return res.status(404).json({ error: `No se encontró el código de seguridad para la mesa ${mesa} y candidatura ${candidatura}` });
-      }
-
-      // Fetch certificate from TSJE
-      const certRes = await axios.get(CERTIFICADO_ENDPOINT, {
-        params: {
-          eleccion: 45,
-          candidatura: candidatura,
-          departamento: departamento,
-          distrito: distrito,
-          zona: foundZona,
-          local: foundLocal,
-          mesa: mesa,
-          codigo: foundCodigo
-        },
-        headers: { 'User-Agent': 'Intelecciones-TREP-Sync/1.0' }
-      });
-
-      const certData = certRes.data;
-      if (!certData || !certData.jpeg) {
-        return res.status(404).json({ error: 'No se obtuvo la imagen del acta desde el TSJE' });
-      }
-
-      // Process OCR locally via Tesseract.js
-      const imageBuffer = Buffer.from(certData.jpeg, 'base64');
-      const { processActaImage } = require('../services/ocrService');
-      const ocrResult = await processActaImage(imageBuffer);
-
-      let saved = false;
-      let autoSaveReason = 'No se solicitó auto-guardado o validación fallida';
-
-      // If autoSave is requested, we can attempt to save if the OCR/QR matches list totals
-      if (autoSave) {
-        // Since Tesseract on grids is prone to formatting failures, we only auto-save if the
-        // sum of preferentes matches the list total exactly. For bulk imports, since we default to
-        // manual confirmation if it doesn't match, we return saved: false.
-        autoSaveReason = 'La mesa requiere revisión manual para confirmar la transcripción';
-      }
-
-      res.json({
-        success: true,
-        cabecera: certData.cabecera,
-        detalle: certData.detalle,
-        jpeg: certData.jpeg,
-        ocr: ocrResult,
-        saved,
-        autoSaveReason
-      });
-    } catch (err: any) {
-      console.error('[PROCESS ACTA ERROR]', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  router.post('/save-preferente-votos', (req, res) => {
-    const { departamento, distrito, mesa, candidatura, votos } = req.body;
-    if (!departamento || !distrito || !mesa || !candidatura || !Array.isArray(votos)) {
-      return res.status(400).json({ error: 'Faltan parámetros requeridos o formato incorrecto' });
-    }
-
-    try {
-      db.transaction(() => {
-        // 1. Delete previous mesa-level votes
-        db.prepare(`
-          DELETE FROM tsje_resultado_preferente_mesa
-          WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND mesa = ?
-        `).run(candidatura, departamento, distrito, mesa);
-
-        // 2. Insert new mesa-level votes
-        const insertMesa = db.prepare(`
-          INSERT INTO tsje_resultado_preferente_mesa (
-            cod_eleccion, cod_cargo, cod_dpto, cod_distrito, mesa, num_lista, ord_candidato, votos
-          ) VALUES (45, ?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        for (const item of votos) {
-          insertMesa.run(candidatura, departamento, distrito, mesa, String(item.num_lista), Number(item.ord_candidato), Number(item.votos || 0));
-        }
-
-        // 3. Re-calculate consolidated values for the district
-        const candidates = db.prepare(`
-          SELECT DISTINCT num_lista, ord_candidato
-          FROM tsje_resultado_preferente_mesa
-          WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ?
-        `).all(candidatura, departamento, distrito) as any[];
-
-        const insertPref = db.prepare(`
-          INSERT INTO tsje_resultado_preferente (
-            cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
-          ) VALUES (45, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato) DO UPDATE SET
-            votos = excluded.votos
-        `);
-
-        for (const cand of candidates) {
-          const sumRes = db.prepare(`
-            SELECT SUM(votos) as total_votos
-            FROM tsje_resultado_preferente_mesa
-            WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND num_lista = ? AND ord_candidato = ?
-          `).get(candidatura, departamento, distrito, cand.num_lista, cand.ord_candidato) as any;
-
-          const totalVotos = sumRes?.total_votos || 0;
-
-          const meta = db.prepare(`
-            SELECT nom_candidato, des_partido, orden
-            FROM tsje_resultado_preferente
-            WHERE cod_eleccion = 45 AND cod_cargo = ? AND num_lista = ? AND ord_candidato = ?
-            LIMIT 1
-          `).get(candidatura, cand.num_lista, cand.ord_candidato) as any;
-
-          insertPref.run(
-            candidatura, departamento, distrito,
-            cand.num_lista, cand.ord_candidato,
-            meta?.nom_candidato || '',
-            meta?.des_partido || '',
-            meta?.orden || 0,
-            totalVotos
-          );
-        }
-      })();
-
-      res.json({ success: true });
-    } catch (err: any) {
-      console.error('[SAVE PREFERENTE ERROR]', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  router.get('/tsje-results', (req, res) => {
-    const { dpto, distrito, cargo } = req.query;
-    try {
-      const rows = db.prepare(`
-        SELECT num_lista as numLista, ord_candidato as ordCandidato, nom_candidato as nomCandidato, des_partido as desPartido, orden, votos
-        FROM tsje_resultado_preferente
-        WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ?
-        ORDER BY num_lista ASC, ord_candidato ASC
-      `).all(cargo, dpto, distrito) as any[];
-
-      const listMap = new Map<string, any>();
-      rows.forEach(r => {
-        if (!listMap.has(r.numLista)) {
-          listMap.set(r.numLista, {
-            numLista: r.numLista,
-            desPartido: r.desPartido,
-            candidatosPref: []
-          });
-        }
-        listMap.get(r.numLista).candidatosPref.push({
-          ordCandidato: r.ordCandidato,
-          nomCandidato: r.nomCandidato,
-          votos: r.votos
-        });
-      });
-
-      res.json({ candidatos: Array.from(listMap.values()) });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  router.get('/results-mesa', (req, res) => {
-    const { dpto, distrito, mesa, cargo } = req.query;
-    try {
-      const rows = db.prepare(`
-        SELECT num_lista, ord_candidato, votos
-        FROM tsje_resultado_preferente_mesa
-        WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND mesa = ?
-      `).all(cargo, dpto, distrito, mesa);
-      res.json(rows);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  return router;
+  });  return router;
 }
