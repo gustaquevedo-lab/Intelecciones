@@ -247,9 +247,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   next(err);
 });
 
-// Global request timeout (30s) — prevents hanging queries on slow mobile connections
-app.use((_req, res, next) => {
-  res.setTimeout(30000, () => {
+// Global request timeout (30s) — prevents hanging queries on slow mobile connections, longer for OCR/Reports
+app.use((req, res, next) => {
+  const isLongRunning = req.path.includes('/process-acta') || 
+                        req.path.includes('/my-team/reports') || 
+                        req.path.includes('/full-report') || 
+                        req.path.includes('/offline/padron');
+  const timeoutMs = isLongRunning ? 180000 : 30000; // 3 minutes for long-running operations
+  res.setTimeout(timeoutMs, () => {
     if (!res.headersSent) res.status(408).json({ error: 'Request timeout' });
   });
   next();
