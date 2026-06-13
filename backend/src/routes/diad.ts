@@ -8,6 +8,230 @@ import { getParaguayTimestamp } from '../utils/timezone';
 
 const tsjeLocalNamesCache = new Map<string, string>();
 
+async function parseQrDataInternal(qrData: string, cargoKey: string, dist: string): Promise<any> {
+  const CARGO_TO_DB_TYPE: Record<string, string> = {
+    INTENDENTE: 'INTENDENTE', JUNTA_MUNICIPAL: 'CONCEJAL',
+    DIRECTORIO_DEPARTAMENTAL: 'AUTORIDADES', DIRECTORIO_NACIONAL: 'AUTORIDADES',
+    COMITE_LOCAL: 'AUTORIDADES', CONVENCIONAL: 'AUTORIDADES',
+  };
+
+  try {
+    let parsedData: any = { success: false, blancos: 0, nulos: 0, votos: {}, preferentes: {}, mesa: null };
+
+    if (qrData.startsWith('REC ')) {
+      const hexPart = qrData.substring(4);
+      const zlib = require('zlib');
+      const zlibHeaderIdx = hexPart.toLowerCase().indexOf('789c');
+      if (zlibHeaderIdx !== -1) {
+        const prefixHex = hexPart.substring(0, zlibHeaderIdx);
+        const prefixBuf = Buffer.from(prefixHex, 'hex');
+        const cargoByte = prefixBuf.length >= 5 ? prefixBuf[4] : 0;
+        const mesaId = prefixBuf.length >= 15 ? prefixBuf.slice(11, 15).toString('hex') : null;
+
+        const compressedBuf = Buffer.from(hexPart.substring(zlibHeaderIdx), 'hex');
+        const raw = zlib.inflateSync(compressedBuf);
+
+        function readBitsMSB(buf: Buffer, bitPos: number, width: number): number {
+          let val = 0;
+          for (let b = 0; b < width; b++) {
+            const pos = bitPos + b;
+            const byteIdx = Math.floor(pos / 8);
+            const bitIdx = 7 - (pos % 8);
+            if (byteIdx < buf.length) val = (val << 1) | ((buf[byteIdx] >> bitIdx) & 1);
+          }
+          return val;
+        }
+
+        // Query DB for list structure (list_number → candidate count)
+        const dbType = cargoKey ? CARGO_TO_DB_TYPE[cargoKey] : null;
+        let listStructure: { list_number: string; candidate_count: number }[] = [];
+        if (dbType) {
+          let sql = `SELECT list_number, COUNT(*) as candidate_count FROM lists WHERE type = ?`;
+          const params: any[] = [dbType];
+          if (dist && dist !== 'GLOBAL') {
+            sql += ` AND (UPPER(ciudad) = UPPER(?) OR ciudad = '' OR ciudad IS NULL OR UPPER(ciudad) = 'AUTO')`;
+            params.push(dist);
+          }
+          sql += ` GROUP BY list_number ORDER BY CAST(list_number AS INTEGER) ASC`;
+          listStructure = db.prepare(sql).all(...params) as any[];
+        }
+        const distinctListNums = listStructure.map(l => l.list_number);
+        const numLists = distinctListNums.length;
+
+        // Resolve list_number → DB id for frontend mapping
+        const listsFromDb = db.prepare('SELECT id, list_number FROM lists').all() as any[];
+        function resolveIds(votosMap: Record<string, number>): Record<string, number> {
+          const result: Record<string, number> = { ...votosMap };
+          for (const [ln, v] of Object.entries(votosMap)) {
+            const m = listsFromDb.find((l: any) => String(l.list_number) === ln);
+            if (m) result[String(m.id)] = v as number;
+          }
+          return result;
+        }
+
+        // ── TRY 8-BIT DECODE (shift-3) ──
+        const shifted = Buffer.alloc(raw.length);
+        for (let i = 0; i < raw.length; i++) {
+          const curr = raw[i];
+          const next = i + 1 < raw.length ? raw[i + 1] : 0;
+          shifted[i] = ((curr << 3) | (next >> 5)) & 0xFF;
+        }
+        const N = numLists > 0 ? numLists : 3;
+        const blancos8 = shifted[8] ?? 0;
+        const listVals8: number[] = [];
+        for (let i = 0; i < N; i++) listVals8.push(shifted[9 + i] ?? 0);
+        const total8 = shifted[9 + N] ?? 0;
+        const sum8 = listVals8.reduce((a, b) => a + b, 0);
+        const valid8bit = total8 > 0 && Math.abs(blancos8 + sum8 - total8) <= 2;
+
+        if (valid8bit) {
+          const votosMap: Record<string, number> = {};
+          const preferentesMap: Record<string, number> = {};
+          const lns = numLists > 0 ? distinctListNums : listVals8.map((_, i) => String(i + 1));
+          lns.forEach((ln, idx) => {
+            const val = listVals8[idx] ?? 0;
+            votosMap[ln] = val;
+            preferentesMap[`${ln}_1`] = val;
+          });
+          const nulos = Math.max(0, total8 - blancos8 - sum8);
+          parsedData = {
+            success: true, blancos: blancos8, nulos, total: total8,
+            votos: resolveIds(votosMap), preferentes: preferentesMap, mesa: null, mesaId,
+            cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+            cargo_byte: cargoByte, autoDecodable: true,
+          };
+        } else if (numLists > 0) {
+          // Improved heuristic: try variable bit-widths and offsets to decode per-candidate counts
+          const tryDecodeBitfields = (): { blancos: number; votosMap: Record<string, number>; preferentesMap: Record<string, number>; total: number } | null => {
+            const MAX_TOTAL = 10000;
+            for (let bitWidth = 1; bitWidth <= 8; bitWidth++) {
+              for (let bitOffset = 0; bitOffset < 128; bitOffset += 1) {
+                try {
+                  let pos = bitOffset;
+                  const blancosVal = readBitsMSB(raw, pos, bitWidth);
+                  if (blancosVal > 5000) continue;
+                  pos += bitWidth;
+                  const votosMap: Record<string, number> = {};
+                  const preferentesMap: Record<string, number> = {};
+                  let overallSum = 0;
+                  let invalid = false;
+                  for (const ls of listStructure) {
+                    let listSum = 0;
+                    for (let c = 0; c < ls.candidate_count; c++) {
+                      const v = readBitsMSB(raw, pos, bitWidth);
+                      pos += bitWidth;
+                      if (v > 5000) { invalid = true; break; }
+                      listSum += v;
+                      preferentesMap[`${ls.list_number}_${c + 1}`] = v;
+                    }
+                    if (invalid) break;
+                    votosMap[ls.list_number] = listSum;
+                    overallSum += listSum;
+                  }
+                  if (invalid) continue;
+                  const total = blancosVal + overallSum;
+                  if (total <= 0 || total > MAX_TOTAL) continue;
+                  if (blancosVal <= total && overallSum >= 0) {
+                    return { blancos: blancosVal, votosMap, preferentesMap, total };
+                  }
+                } catch (e) {
+                  continue;
+                }
+              }
+            }
+            return null;
+          };
+
+          const decoded = tryDecodeBitfields();
+          if (decoded) {
+            parsedData = {
+              success: true,
+              blancos: decoded.blancos,
+              nulos: 0,
+              total: decoded.total,
+              votos: resolveIds(decoded.votosMap),
+              preferentes: decoded.preferentesMap,
+              mesa: null,
+              mesaId,
+              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+              cargo_byte: cargoByte,
+              autoDecodable: true,
+            };
+          } else {
+            parsedData = {
+              success: true, blancos: blancos8, nulos: 0, total: 0,
+              votos: {}, preferentes: {}, mesa: null, mesaId,
+              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+              cargo_byte: cargoByte, autoDecodable: false,
+            };
+          }
+        } else {
+          parsedData = {
+            success: true, blancos: blancos8, nulos: 0, total: 0,
+            votos: {}, preferentes: {}, mesa: null, mesaId,
+            cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
+            cargo_byte: cargoByte, autoDecodable: false,
+          };
+        }
+      }
+    } else if (qrData.startsWith('TSJE|')) {
+      const parts = qrData.split('|');
+      const votosMap: Record<string, number> = {};
+      const preferentesMap: Record<string, number> = {};
+      let blancos = 0;
+      let nulos = 0;
+      let mesa = null;
+      parts.forEach((part: string) => {
+        const pair = part.split(':');
+        if (pair.length === 2) {
+          const key = pair[0].trim();
+          const val = pair[1].trim();
+          if (key === 'blancos') blancos = parseInt(val) || 0;
+          else if (key === 'nulos') nulos = parseInt(val) || 0;
+          else if (key === 'mesa') mesa = parseInt(val) || null;
+          else {
+            votosMap[key] = parseInt(val) || 0;
+            // For simple list results, map it to candidate 1
+            preferentesMap[`${key}_1`] = parseInt(val) || 0;
+          }
+        }
+      });
+      parsedData = { success: true, blancos, nulos, votos: votosMap, preferentes: preferentesMap, mesa };
+    } else if (qrData.startsWith('http')) {
+      const url = new URL(qrData);
+      const mesa = url.searchParams.get('mesa') || url.searchParams.get('m');
+      const blancos = url.searchParams.get('blancos') || url.searchParams.get('b') || 0;
+      const nulos = url.searchParams.get('nulos') || url.searchParams.get('n') || 0;
+      
+      const votosMap: Record<string, number> = {};
+      const preferentesMap: Record<string, number> = {};
+      url.searchParams.forEach((value, key) => {
+        if (key.startsWith('l') || key.startsWith('list')) {
+          const listNum = key.replace(/\D/g, '');
+          if (listNum) {
+            const val = parseInt(value) || 0;
+            votosMap[listNum] = val;
+            preferentesMap[`${listNum}_1`] = val;
+          }
+        }
+      });
+
+      parsedData = {
+        success: true,
+        blancos: parseInt(blancos as string) || 0,
+        nulos: parseInt(nulos as string) || 0,
+        votos: votosMap,
+        preferentes: preferentesMap,
+        mesa: mesa ? parseInt(mesa) : null
+      };
+    }
+    return parsedData;
+  } catch (err: any) {
+    console.error('Error inside parseQrDataInternal:', err);
+    throw err;
+  }
+}
+
 export default function diadRoutes(upload: multer.Multer) {
   const router = Router();
 
@@ -1666,15 +1890,111 @@ export default function diadRoutes(upload: multer.Multer) {
       const { processActaImage } = require('../services/ocrService');
       const ocrResult = await processActaImage(imageBuffer);
 
+      // Process QR from image
+      let qrResult: any = null;
+      let qrDataRaw: string | null = null;
+      try {
+        const { Jimp } = require('jimp');
+        const jsQR = require('jsqr');
+        const image = await Jimp.read(imageBuffer);
+        const rgbaData = new Uint8ClampedArray(image.bitmap.data);
+        const code = jsQR(rgbaData, image.bitmap.width, image.bitmap.height);
+        if (code?.data) {
+          qrDataRaw = code.data;
+          // Resolve district name for lists lookup
+          const distRow = db.prepare('SELECT DISTINCT distrito FROM electors WHERE (distrito = ? OR ciudad = ?) LIMIT 1').get(distKey, distKey) as any;
+          const distName = distRow?.distrito || 'GLOBAL';
+          qrResult = await parseQrDataInternal(code.data, candidatura, distName);
+        }
+      } catch (qrErr: any) {
+        console.error('[PROCESS ACTA QR DECODE ERROR]', qrErr);
+      }
+
       let saved = false;
       let autoSaveReason = 'No se solicitó auto-guardado o validación fallida';
 
       // If autoSave is requested, we can attempt to save if the OCR/QR matches list totals
-      if (autoSave) {
-        // Since Tesseract on grids is prone to formatting failures, we only auto-save if the
-        // sum of preferentes matches the list total exactly. For bulk imports, since we default to
-        // manual confirmation if it doesn't match, we return saved: false.
-        autoSaveReason = 'La mesa requiere revisión manual para confirmar la transcripción';
+      if (autoSave && qrResult && qrResult.success) {
+        // If the QR total matches the official totProg, we can auto-save
+        if (qrResult.total === certData.cabecera.totProg) {
+          const saveVotos: any[] = [];
+          if (qrResult.preferentes && Object.keys(qrResult.preferentes).length > 0) {
+            for (const [key, v] of Object.entries(qrResult.preferentes)) {
+              const [num_lista, ord_candidato] = key.split('_');
+              saveVotos.push({
+                num_lista,
+                ord_candidato: parseInt(ord_candidato),
+                votos: v
+              });
+            }
+          }
+
+          if (saveVotos.length > 0) {
+            db.transaction(() => {
+              db.prepare(`
+                DELETE FROM tsje_resultado_preferente_mesa
+                WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND mesa = ?
+              `).run(candidatura, departamento, distrito, mesa);
+
+              const insertMesa = db.prepare(`
+                INSERT INTO tsje_resultado_preferente_mesa (
+                  cod_eleccion, cod_cargo, cod_dpto, cod_distrito, mesa, num_lista, ord_candidato, votos
+                ) VALUES (45, ?, ?, ?, ?, ?, ?, ?)
+              `);
+
+              for (const item of saveVotos) {
+                insertMesa.run(candidatura, departamento, distrito, mesa, String(item.num_lista), Number(item.ord_candidato), Number(item.votos || 0));
+              }
+
+              // Re-calculate consolidated values
+              const candidates = db.prepare(`
+                SELECT DISTINCT num_lista, ord_candidato
+                FROM tsje_resultado_preferente_mesa
+                WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ?
+              `).all(candidatura, departamento, distrito) as any[];
+
+              const insertPref = db.prepare(`
+                INSERT INTO tsje_resultado_preferente (
+                  cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato, nom_candidato, des_partido, orden, votos
+                ) VALUES (45, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(cod_eleccion, cod_cargo, cod_dpto, cod_distrito, num_lista, ord_candidato) DO UPDATE SET
+                  votos = excluded.votos
+              `);
+
+              for (const cand of candidates) {
+                const sumRes = db.prepare(`
+                  SELECT SUM(votos) as total_votos
+                  FROM tsje_resultado_preferente_mesa
+                  WHERE cod_eleccion = 45 AND cod_cargo = ? AND cod_dpto = ? AND cod_distrito = ? AND num_lista = ? AND ord_candidato = ?
+                `).get(candidatura, departamento, distrito, cand.num_lista, cand.ord_candidato) as any;
+
+                const totalVotos = sumRes?.total_votos || 0;
+
+                const meta = db.prepare(`
+                  SELECT nom_candidato, des_partido, orden
+                  FROM tsje_resultado_preferente
+                  WHERE cod_eleccion = 45 AND cod_cargo = ? AND num_lista = ? AND ord_candidato = ?
+                  LIMIT 1
+                `).get(candidatura, cand.num_lista, cand.ord_candidato) as any;
+
+                insertPref.run(
+                  candidatura, departamento, distrito,
+                  cand.num_lista, cand.ord_candidato,
+                  meta?.nom_candidato || '',
+                  meta?.des_partido || '',
+                  meta?.orden || 0,
+                  totalVotos
+                );
+              }
+            })();
+            saved = true;
+            autoSaveReason = 'Validado y guardado automáticamente mediante el código QR del acta';
+          }
+        } else {
+          autoSaveReason = `Mesa requiere verificación manual (Total QR: ${qrResult.total || 0} vs Oficial: ${certData.cabecera.totProg})`;
+        }
+      } else if (autoSave) {
+        autoSaveReason = 'No se detectó un código QR válido en la imagen del acta para auto-guardar';
       }
 
       res.json({
@@ -1683,6 +2003,8 @@ export default function diadRoutes(upload: multer.Multer) {
         detalle: certData.detalle,
         jpeg: certData.jpeg,
         ocr: ocrResult,
+        qr: qrResult,
+        qrDataRaw,
         saved,
         autoSaveReason
       });
@@ -1999,216 +2321,17 @@ export function veedorRoutes() {
   router.post('/parse-qr', async (req, res) => {
     const { qrData, cargoKey } = req.body;
     if (!qrData) return res.status(400).json({ error: 'qrData es requerido' });
-
-    const CARGO_TO_DB_TYPE: Record<string, string> = {
-      INTENDENTE: 'INTENDENTE', JUNTA_MUNICIPAL: 'CONCEJAL',
-      DIRECTORIO_DEPARTAMENTAL: 'AUTORIDADES', DIRECTORIO_NACIONAL: 'AUTORIDADES',
-      COMITE_LOCAL: 'AUTORIDADES', CONVENCIONAL: 'AUTORIDADES',
-    };
-
+    const dist = getDistrict(req) || '';
     try {
-      let parsedData: any = { success: false, blancos: 0, nulos: 0, votos: {}, mesa: null };
-
-      if (qrData.startsWith('REC ')) {
-        const hexPart = qrData.substring(4);
-        const zlib = require('zlib');
-        const zlibHeaderIdx = hexPart.toLowerCase().indexOf('789c');
-        if (zlibHeaderIdx !== -1) {
-          const prefixHex = hexPart.substring(0, zlibHeaderIdx);
-          const prefixBuf = Buffer.from(prefixHex, 'hex');
-          const cargoByte = prefixBuf.length >= 5 ? prefixBuf[4] : 0;
-          const mesaId = prefixBuf.length >= 15 ? prefixBuf.slice(11, 15).toString('hex') : null;
-
-          const compressedBuf = Buffer.from(hexPart.substring(zlibHeaderIdx), 'hex');
-          const raw = zlib.inflateSync(compressedBuf);
-
-          function readBitsMSB(buf: Buffer, bitPos: number, width: number): number {
-            let val = 0;
-            for (let b = 0; b < width; b++) {
-              const pos = bitPos + b;
-              const byteIdx = Math.floor(pos / 8);
-              const bitIdx = 7 - (pos % 8);
-              if (byteIdx < buf.length) val = (val << 1) | ((buf[byteIdx] >> bitIdx) & 1);
-            }
-            return val;
-          }
-
-          // Query DB for list structure (list_number → candidate count)
-          const dbType = cargoKey ? CARGO_TO_DB_TYPE[cargoKey] : null;
-          let listStructure: { list_number: string; candidate_count: number }[] = [];
-          if (dbType) {
-            const dist = getDistrict(req) || '';
-            let sql = `SELECT list_number, COUNT(*) as candidate_count FROM lists WHERE type = ?`;
-            const params: any[] = [dbType];
-            if (dist && dist !== 'GLOBAL') {
-              sql += ` AND (UPPER(ciudad) = UPPER(?) OR ciudad = '' OR ciudad IS NULL OR UPPER(ciudad) = 'AUTO')`;
-              params.push(dist);
-            }
-            sql += ` GROUP BY list_number ORDER BY CAST(list_number AS INTEGER) ASC`;
-            listStructure = db.prepare(sql).all(...params) as any[];
-          }
-          const distinctListNums = listStructure.map(l => l.list_number);
-          const numLists = distinctListNums.length;
-
-          // Resolve list_number → DB id for frontend mapping
-          const listsFromDb = db.prepare('SELECT id, list_number FROM lists').all() as any[];
-          function resolveIds(votosMap: Record<string, number>): Record<string, number> {
-            const result: Record<string, number> = { ...votosMap };
-            for (const [ln, v] of Object.entries(votosMap)) {
-              const m = listsFromDb.find((l: any) => String(l.list_number) === ln);
-              if (m) result[String(m.id)] = v as number;
-            }
-            return result;
-          }
-
-          // ── TRY 8-BIT DECODE (shift-3) ──
-          const shifted = Buffer.alloc(raw.length);
-          for (let i = 0; i < raw.length; i++) {
-            const curr = raw[i];
-            const next = i + 1 < raw.length ? raw[i + 1] : 0;
-            shifted[i] = ((curr << 3) | (next >> 5)) & 0xFF;
-          }
-          const N = numLists > 0 ? numLists : 3;
-          const blancos8 = shifted[8] ?? 0;
-          const listVals8: number[] = [];
-          for (let i = 0; i < N; i++) listVals8.push(shifted[9 + i] ?? 0);
-          const total8 = shifted[9 + N] ?? 0;
-          const sum8 = listVals8.reduce((a, b) => a + b, 0);
-          const valid8bit = total8 > 0 && Math.abs(blancos8 + sum8 - total8) <= 2;
-
-          if (valid8bit) {
-            const votosMap: Record<string, number> = {};
-            const lns = numLists > 0 ? distinctListNums : listVals8.map((_, i) => String(i + 1));
-            lns.forEach((ln, idx) => { votosMap[ln] = listVals8[idx] ?? 0; });
-            const nulos = Math.max(0, total8 - blancos8 - sum8);
-            parsedData = {
-              success: true, blancos: blancos8, nulos, total: total8,
-              votos: resolveIds(votosMap), mesa: null, mesaId,
-              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
-              cargo_byte: cargoByte, autoDecodable: true,
-            };
-          } else if (numLists > 0) {
-            // Improved heuristic: try variable bit-widths and offsets to decode per-candidate counts
-            const tryDecodeBitfields = (): { blancos: number; votosMap: Record<string, number>; total: number } | null => {
-              const MAX_TOTAL = 10000;
-              // bitWidth 1..8 (practical) and offset bits 0..127
-              for (let bitWidth = 1; bitWidth <= 8; bitWidth++) {
-                for (let bitOffset = 0; bitOffset < 128; bitOffset += 1) {
-                  try {
-                    let pos = bitOffset;
-                    const blancosVal = readBitsMSB(raw, pos, bitWidth);
-                    if (blancosVal > 5000) continue;
-                    pos += bitWidth;
-                    const votosMap: Record<string, number> = {};
-                    let overallSum = 0;
-                    let invalid = false;
-                    for (const ls of listStructure) {
-                      let listSum = 0;
-                      for (let c = 0; c < ls.candidate_count; c++) {
-                        const v = readBitsMSB(raw, pos, bitWidth);
-                        pos += bitWidth;
-                        if (v > 5000) { invalid = true; break; }
-                        listSum += v;
-                      }
-                      if (invalid) break;
-                      votosMap[ls.list_number] = listSum;
-                      overallSum += listSum;
-                    }
-                    if (invalid) continue;
-                    const total = blancosVal + overallSum;
-                    if (total <= 0 || total > MAX_TOTAL) continue;
-                    // Basic plausibility: blanco not larger than total and overallSum reasonable
-                    if (blancosVal <= total && overallSum >= 0) {
-                      return { blancos: blancosVal, votosMap, total };
-                    }
-                  } catch (e) {
-                    continue;
-                  }
-                }
-              }
-              return null;
-            };
-
-            const decoded = tryDecodeBitfields();
-            if (decoded) {
-              parsedData = {
-                success: true,
-                blancos: decoded.blancos,
-                nulos: 0,
-                total: decoded.total,
-                votos: resolveIds(decoded.votosMap),
-                mesa: null,
-                mesaId,
-                cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
-                cargo_byte: cargoByte,
-                autoDecodable: true,
-              };
-            } else {
-              parsedData = {
-                success: true, blancos: blancos8, nulos: 0, total: 0,
-                votos: {}, mesa: null, mesaId,
-                cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
-                cargo_byte: cargoByte, autoDecodable: false,
-              };
-            }
-          } else {
-            parsedData = {
-              success: true, blancos: blancos8, nulos: 0, total: 0,
-              votos: {}, mesa: null, mesaId,
-              cargo: cargoKey || `DESCONOCIDO_0x${cargoByte.toString(16).toUpperCase()}`,
-              cargo_byte: cargoByte, autoDecodable: false,
-            };
-          }
-        }
-      } else if (qrData.startsWith('TSJE|')) {
-        const parts = qrData.split('|');
-        const votosMap: Record<string, number> = {};
-        let blancos = 0;
-        let nulos = 0;
-        let mesa = null;
-        parts.forEach((part: string) => {
-          const pair = part.split(':');
-          if (pair.length === 2) {
-            const key = pair[0].trim();
-            const val = pair[1].trim();
-            if (key === 'blancos') blancos = parseInt(val) || 0;
-            else if (key === 'nulos') nulos = parseInt(val) || 0;
-            else if (key === 'mesa') mesa = parseInt(val) || null;
-            else {
-              votosMap[key] = parseInt(val) || 0;
-            }
-          }
-        });
-        parsedData = { success: true, blancos, nulos, votos: votosMap, mesa };
-      } else if (qrData.startsWith('http')) {
-        const url = new URL(qrData);
-        const mesa = url.searchParams.get('mesa') || url.searchParams.get('m');
-        const blancos = url.searchParams.get('blancos') || url.searchParams.get('b') || 0;
-        const nulos = url.searchParams.get('nulos') || url.searchParams.get('n') || 0;
-        
-        const votosMap: Record<string, number> = {};
-        url.searchParams.forEach((value, key) => {
-          if (key.startsWith('l') || key.startsWith('list')) {
-            const listNum = key.replace(/\D/g, '');
-            if (listNum) {
-              votosMap[listNum] = parseInt(value) || 0;
-            }
-          }
-        });
-
-        parsedData = {
-          success: true,
-          blancos: parseInt(blancos as string) || 0,
-          nulos: parseInt(nulos as string) || 0,
-          votos: votosMap,
-          mesa: mesa ? parseInt(mesa) : null
-        };
-      }
-
+      const distRow = db.prepare('SELECT DISTINCT distrito FROM electors WHERE (distrito = ? OR ciudad = ?) LIMIT 1').get(dist, dist) as any;
+      const distName = distRow?.distrito || 'GLOBAL';
+      const parsedData = await parseQrDataInternal(qrData, cargoKey, distName);
       res.json(parsedData);
     } catch (err: any) {
       console.error('[PARSE QR ERROR]', err);
       res.status(500).json({ error: err.message });
     }
-  });  return router;
+  });
+
+  return router;
 }

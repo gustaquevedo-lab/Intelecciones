@@ -156,7 +156,7 @@ export default function ActaAuditor() {
         local_votacion: localVotacion
       });
 
-      const { jpeg, cabecera, detalle, ocr } = res.data;
+      const { jpeg, cabecera, detalle, ocr, qr } = res.data;
       setActaImage(jpeg);
       setCabecera(cabecera);
       setOcrText(ocr?.rawText || '');
@@ -210,6 +210,13 @@ export default function ActaAuditor() {
         const initialized = candidatesList.map(c => ({
           ...c,
           votos: savedMap.get(`${c.num_lista}_${c.ord_candidato}`) || 0
+        }));
+        setCandidateVotes(initialized);
+      } else if (qr && qr.success && qr.preferentes) {
+        // Map QR preferentes to the candidates list
+        const initialized = candidatesList.map(c => ({
+          ...c,
+          votos: qr.preferentes[`${c.num_lista}_${c.ord_candidato}`] ?? 0
         }));
         setCandidateVotes(initialized);
       } else {
