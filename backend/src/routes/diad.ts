@@ -43,17 +43,32 @@ async function parseQrDataInternal(qrData: string, cargoKey: string, dist: strin
         }
 
         // Query DB for list structure (list_number → candidate count)
-        const dbType = cargoKey ? CARGO_TO_DB_TYPE[cargoKey] : null;
         let listStructure: { list_number: string; candidate_count: number }[] = [];
-        if (dbType) {
-          let sql = `SELECT list_number, COUNT(*) as candidate_count FROM lists WHERE type = ?`;
-          const params: any[] = [dbType];
-          if (dist && dist !== 'GLOBAL') {
-            sql += ` AND (UPPER(ciudad) = UPPER(?) OR ciudad = '' OR ciudad IS NULL OR UPPER(ciudad) = 'AUTO')`;
-            params.push(dist);
+        if (cargoKey) {
+          let sql = `SELECT num_lista as list_number, MAX(ord_candidato) as candidate_count 
+                     FROM tsje_resultado_preferente 
+                     WHERE cod_eleccion = 45 AND cod_cargo = ?
+                     GROUP BY num_lista 
+                     ORDER BY CAST(num_lista AS INTEGER) ASC`;
+          try {
+            listStructure = db.prepare(sql).all(cargoKey) as any[];
+          } catch (e) {
+            console.error('Error fetching from tsje_resultado_preferente:', e);
           }
-          sql += ` GROUP BY list_number ORDER BY CAST(list_number AS INTEGER) ASC`;
-          listStructure = db.prepare(sql).all(...params) as any[];
+        }
+
+        if (listStructure.length === 0) {
+          const dbType = cargoKey ? CARGO_TO_DB_TYPE[cargoKey] : null;
+          if (dbType) {
+            let sql = `SELECT list_number, COUNT(*) as candidate_count FROM lists WHERE type = ?`;
+            const params: any[] = [dbType];
+            if (dist && dist !== 'GLOBAL') {
+              sql += ` AND (UPPER(ciudad) = UPPER(?) OR ciudad = '' OR ciudad IS NULL OR UPPER(ciudad) = 'AUTO')`;
+              params.push(dist);
+            }
+            sql += ` GROUP BY list_number ORDER BY CAST(list_number AS INTEGER) ASC`;
+            listStructure = db.prepare(sql).all(...params) as any[];
+          }
         }
         const distinctListNums = listStructure.map(l => l.list_number);
         const numLists = distinctListNums.length;
@@ -1908,6 +1923,46 @@ export default function diadRoutes(upload: multer.Multer) {
         }
       } catch (qrErr: any) {
         console.error('[PROCESS ACTA QR DECODE ERROR]', qrErr);
+      }
+
+      // Fallback to Gemini if QR failed or is not auto-decodable
+      let geminiResult: any = null;
+      const shouldCallGemini = !qrResult || !qrResult.success || !qrResult.autoDecodable;
+      if (shouldCallGemini && process.env.GEMINI_API_KEY) {
+        try {
+          console.log('[PROCESS ACTA] Invoking Gemini OCR Fallback...');
+          const { processActaWithGemini } = require('../services/geminiService');
+          const geminiRes = await processActaWithGemini(imageBuffer, certData.cabecera.desCandidatura || 'Candidatura');
+          if (geminiRes && geminiRes.success) {
+            console.log('[PROCESS ACTA] Gemini OCR Fallback successful!');
+            geminiResult = geminiRes;
+            
+            // Resolve list_number → DB id for frontend mapping
+            const listsFromDb = db.prepare('SELECT id, list_number FROM lists').all() as any[];
+            const resolvedVotos: Record<string, number> = {};
+            for (const [ln, v] of Object.entries(geminiRes.votos)) {
+              const m = listsFromDb.find((l: any) => String(l.list_number) === ln);
+              if (m) resolvedVotos[String(m.id)] = v as number;
+              else resolvedVotos[ln] = v as number;
+            }
+
+            const totalSum = geminiRes.blancos + geminiRes.nulos + Object.values(geminiRes.preferentes).reduce((a: number, b: any) => a + (b as number), 0);
+
+            qrResult = {
+              success: true,
+              blancos: geminiRes.blancos,
+              nulos: geminiRes.nulos,
+              total: totalSum,
+              votos: resolvedVotos,
+              preferentes: geminiRes.preferentes,
+              mesa: parseInt(mesa),
+              autoDecodable: true,
+              isGeminiFallback: true
+            };
+          }
+        } catch (geminiErr: any) {
+          console.error('[PROCESS ACTA GEMINI FALLBACK ERROR]', geminiErr);
+        }
       }
 
       let saved = false;
