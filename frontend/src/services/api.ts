@@ -77,8 +77,8 @@ api.interceptors.response.use(
 api.interceptors.request.use((config) => {
   // Dynamic timeouts based on endpoint type
   const url = config.url || '';
-  if (url.includes('/my-team/reports') || url.includes('/full-report') || url.includes('/coverage') || url.includes('/stats/command')) {
-    config.timeout = 120000; // 120s for reports
+  if (url.includes('/my-team/reports') || url.includes('/full-report') || url.includes('/coverage') || url.includes('/stats/command') || url.includes('/process-acta')) {
+    config.timeout = 120000; // 120s for reports & complex actas ocr
   } else if (url.includes('/offline/padron')) {
     config.timeout = 300000; // 300s for offline padron
   } else if (config.method?.toLowerCase() === 'post' || config.method?.toLowerCase() === 'put' || config.method?.toLowerCase() === 'delete' || url.includes('/login')) {
