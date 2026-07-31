@@ -329,10 +329,10 @@ export default function adminRoutes(upload: multer.Multer) {
       let cityFilter = '';
       let cityParams: any[] = [];
       if (role !== 'SUPERUSUARIO' && user_id) {
-        const user = db.prepare(`SELECT c.distrito FROM users u JOIN lists l ON u.assigned_list_id = l.id JOIN campaigns c ON l.campaign_id = c.id WHERE u.id = ?`).get(user_id) as any;
-        if (user?.distrito) {
+        const userInfo = getCachedUserInfo(String(user_id));
+        if (userInfo?.distrito) {
           cityFilter = 'AND (e.distrito = ? OR e.ciudad = ?)';
-          cityParams = [user.distrito, user.distrito];
+          cityParams = [userInfo.distrito, userInfo.distrito];
         }
       }
 

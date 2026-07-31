@@ -1182,17 +1182,11 @@ app.get('/api/electors/:ci', (req, res) => {
 
   let distritoFilter = '';
   let distritoParams: any[] = [];
-  if (!['SUPERUSUARIO', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO'].includes(role) && user_id) {
-    const user = db.prepare(`
-      SELECT c.distrito 
-      FROM users u 
-      JOIN lists l ON u.assigned_list_id = l.id 
-      JOIN campaigns c ON l.campaign_id = c.id 
-      WHERE u.id = ?
-    `).get(user_id) as any;
-    if (user?.distrito) {
+  if (role !== 'SUPERUSUARIO' && user_id) {
+    const userInfo = getCachedUserInfo(String(user_id));
+    if (userInfo?.distrito) {
       distritoFilter = 'AND (e.distrito = ? OR e.ciudad = ?)';
-      distritoParams = [user.distrito, user.distrito];
+      distritoParams = [userInfo.distrito, userInfo.distrito];
     }
   }
   

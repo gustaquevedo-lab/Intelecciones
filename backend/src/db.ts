@@ -41,7 +41,7 @@ db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
-const currentSchemaVersion = 29; // Update this to trigger migrations
+const currentSchemaVersion = 30; // Update this to trigger migrations
 const getDbVersion = () => {
   try {
     const res = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as any;
@@ -608,6 +608,22 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("vehicles", "ciudad", "TEXT DEFAULT ''");
     addColumnIfNotExists("users", "phone_hash", "TEXT");
     addColumnIfNotExists("elector_captures", "phone_hash", "TEXT");
+
+    // National Padron and Demographics fields
+    addColumnIfNotExists("electors", "dpto_code", "INTEGER");
+    addColumnIfNotExists("electors", "distrito_code", "INTEGER");
+    addColumnIfNotExists("electors", "zona_code", "INTEGER");
+    addColumnIfNotExists("electors", "local_code", "INTEGER");
+    addColumnIfNotExists("electors", "fecha_inscripcion", "TEXT");
+    addColumnIfNotExists("electors", "es_indigena", "TEXT");
+    addColumnIfNotExists("electors", "tiene_discapacidad", "TEXT");
+    addColumnIfNotExists("electors", "detalles_discapacidad", "TEXT");
+    addColumnIfNotExists("electors", "inhabilitado", "INTEGER DEFAULT 0");
+
+    addColumnIfNotExists("voting_locations", "departamento", "TEXT");
+    addColumnIfNotExists("voting_locations", "distrito_id", "INTEGER");
+    addColumnIfNotExists("voting_locations", "zona_id", "INTEGER");
+    addColumnIfNotExists("voting_locations", "local_id", "INTEGER");
     // copiatin_printed_at is added at startup (outside this block) — see module-level addColumnIfNotExists calls
  
     // Indexes for better JOIN performance

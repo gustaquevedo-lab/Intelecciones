@@ -1399,7 +1399,16 @@ const CommandCenter = () => {
                           {electorDetails.map(e => (
                             <tr key={e.id} style={{ borderBottom: '1px solid var(--border)', background: 'transparent' }}>
                               <td style={{ padding: '1.25rem' }}>
-                                <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>{e.nombre} {e.apellido}</p>
+                                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                  <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>{e.nombre} {e.apellido}</p>
+                                  {e.inhabilitado === 1 && <span style={{ fontSize: '0.55rem', color: '#F87171', fontWeight: 900, background: 'rgba(239,68,68,0.2)', padding: '2px 6px', borderRadius: '4px' }}>INHABILITADO</span>}
+                                  {e.tiene_discapacidad === 'S' && <span style={{ fontSize: '0.55rem', color: '#FBBF24', fontWeight: 900, background: 'rgba(245,158,11,0.2)', padding: '2px 6px', borderRadius: '4px' }} title={e.detalles_discapacidad}>ACCESIBILIDAD</span>}
+                                  {e.es_indigena === 'S' && <span style={{ fontSize: '0.55rem', color: '#34D399', fontWeight: 900, background: 'rgba(52,211,153,0.2)', padding: '2px 6px', borderRadius: '4px' }}>INDÍGENA</span>}
+                                </div>
+                                <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', margin: '2px 0 0' }}>
+                                  {e.sexo ? `${e.sexo === 'M' ? 'MASCULINO' : 'FEMENINO'}` : ''}
+                                  {e.edad ? ` • ${e.edad} AÑOS` : ''}
+                                </p>
                                 {e.needs_transport === 1 && <span style={{ fontSize: '0.55rem', color: 'var(--plra-300)', fontWeight: 900 }}>REQUIERE TRANSPORTE</span>}
                               </td>
                               <td style={{ padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-3)', fontWeight: 700 }}>{e.elector_ci}</td>

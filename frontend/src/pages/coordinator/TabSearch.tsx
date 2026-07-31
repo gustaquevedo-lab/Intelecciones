@@ -398,17 +398,31 @@ const TabSearch = (props: any) => {
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                      <div className="badge" style={{ 
-                        background: 'rgba(34,197,94,0.25)', 
-                        color: '#4ADE80', 
-                        border: '1px solid rgba(34,197,94,0.4)',
-                        padding: '0.25rem 0.75rem',
-                        fontSize: '0.62rem',
-                        fontWeight: 900
-                      }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ADE80', animation: 'pulse-dot 2s infinite' }} />
-                        ACTIVO / HABILITADO
-                      </div>
+                      {elector.inhabilitado === 1 ? (
+                        <div className="badge" style={{ 
+                          background: 'rgba(239,68,68,0.25)', 
+                          color: '#F87171', 
+                          border: '1px solid rgba(239,68,68,0.4)',
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.62rem',
+                          fontWeight: 900
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }} />
+                          INHABILITADO PARA VOTAR
+                        </div>
+                      ) : (
+                        <div className="badge" style={{ 
+                          background: 'rgba(34,197,94,0.25)', 
+                          color: '#4ADE80', 
+                          border: '1px solid rgba(34,197,94,0.4)',
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.62rem',
+                          fontWeight: 900
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ADE80', animation: 'pulse-dot 2s infinite' }} />
+                          ACTIVO / HABILITADO
+                        </div>
+                      )}
                     </div>
                     <h2 style={{
                       fontFamily: 'var(--font-display)', fontWeight: 800,
@@ -513,6 +527,47 @@ const TabSearch = (props: any) => {
                 />
               </div>
             </div>
+
+            {/* Datos Adicionales Demografía e Inclusividad */}
+            {(elector.sexo || elector.edad || elector.tiene_discapacidad === 'S' || elector.es_indigena === 'S') && (
+              <div className="card-section" style={{ background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+                <SectionLabel icon={<Activity size={13} />} text="Demografía e Inclusión" color="var(--blue)" />
+                <div className="territory-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
+                  {elector.sexo && (
+                    <DataItem 
+                      icon={<User size={18} />} 
+                      iconColor="blue" 
+                      label="Género" 
+                      value={elector.sexo === 'M' ? 'MASCULINO' : elector.sexo === 'F' ? 'FEMENINO' : elector.sexo} 
+                    />
+                  )}
+                  {elector.edad && (
+                    <DataItem 
+                      icon={<Activity size={18} />} 
+                      iconColor="teal" 
+                      label="Edad" 
+                      value={`${elector.edad} años (${elector.fecha_nacimiento ? elector.fecha_nacimiento.split('-').reverse().join('/') : ''})`} 
+                    />
+                  )}
+                  {elector.tiene_discapacidad === 'S' && (
+                    <DataItem 
+                      icon={<Shield size={18} />} 
+                      iconColor="amber" 
+                      label="Accesibilidad / Discapacidad" 
+                      value={elector.detalles_discapacidad || 'REQUIERE ASISTENCIA'} 
+                    />
+                  )}
+                  {elector.es_indigena === 'S' && (
+                    <DataItem 
+                      icon={<Landmark size={18} />} 
+                      iconColor="green" 
+                      label="Comunidad Indígena" 
+                      value="SÍ (PADRÓN ESPECIAL)" 
+                    />
+                  )}
+                </div>
+              </div>
+            )}
       
             {elector.traffic_light && (
               <div className="card-section" style={{ background: 'var(--surface-light)', borderTop: '1px solid var(--border)' }}>
