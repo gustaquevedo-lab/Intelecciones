@@ -66,11 +66,10 @@ async function runImport() {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    const fileStream = fs.createReadStream(locPath);
-    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+    const lines = fs.readFileSync(locPath, 'utf8').split(/\r?\n/);
 
     db.transaction(() => {
-      for (const line of (rl as any)) {
+      for (const line of lines) {
         if (!line.trim()) continue;
         const parts = parseCSVLine(line);
         if (parts.length >= 13) {
