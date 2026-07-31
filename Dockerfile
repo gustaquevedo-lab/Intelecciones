@@ -29,4 +29,4 @@ RUN mkdir -p /app/data && chmod 777 /app/data
 
 EXPOSE 5000
 
-CMD ["sleep", "3600"]
+CMD ["npm", "start"]
