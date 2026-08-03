@@ -9,3 +9,5 @@ sessions
 *.db
 *.db-wal
 *.db-shm
+PADRON ACTUAL/
+backend/uploads/

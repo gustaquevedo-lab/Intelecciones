@@ -723,9 +723,8 @@ const CoordinatorApp = () => {
     }
 
     if (!navigator.geolocation) {
-      setError('La geolocalización no está disponible. Se registrará sin coordenadas.');
-      setLocation({ lat: 0, lng: 0 });
-      setShowModal(true);
+      setError('📍 UBICACIÓN GPS REQUERIDA: Su dispositivo o navegador no admite GPS. El GPS es obligatorio para registrar electores en el mapa.');
+      setIsLoading(false);
       return;
     }
 
@@ -747,7 +746,7 @@ const CoordinatorApp = () => {
             setIsLoading(false);
           },
           () => {
-            setError('No se pudo obtener la ubicación GPS.');
+            setError('📍 UBICACIÓN GPS REQUERIDA: No se pudo obtener la posición GPS. Active la ubicación de su dispositivo para poder registrar al elector en el mapa.');
             setIsLoading(false);
           },
           { enableHighAccuracy: false, timeout: 5000 }

@@ -248,6 +248,8 @@ async function convertDbfToCsv() {
       return parseInt(v) || 0;
     };
 
+    const mesaOrdenCounter = new Map<string, number>();
+
     for (let i = 0; i < header.numRecords; i++) {
       fs.readSync(fd, recBuf, 0, header.recordLength, header.headerLength + i * header.recordLength);
       if (recBuf[0] === 0x2a) continue;
@@ -273,8 +275,10 @@ async function convertDbfToCsv() {
       const dptoName = departments[dpto] || '';
       const distName = districts[`${dpto}-${dist}`] || '';
 
-      const mesa = getFieldNum(recBuf, 'TALON');
-      const orden = getFieldNum(recBuf, 'BOLETA');
+      const mesa = getFieldNum(recBuf, 'TALON') || 1;
+      const mesaKey = `${code}-${mesa}`;
+      const orden = (mesaOrdenCounter.get(mesaKey) || 0) + 1;
+      mesaOrdenCounter.set(mesaKey, orden);
       
       const esIndigen = getFieldVal(recBuf, 'ES_INDIGEN').toUpperCase();
       const tieneDisc = getFieldVal(recBuf, 'TIENE_DISC').toUpperCase();
