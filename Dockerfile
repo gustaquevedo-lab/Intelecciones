@@ -18,15 +18,14 @@ RUN npm install
 # Copy source and compile
 COPY backend/ .
 RUN npm run build
+# Ensure native modules (better-sqlite3) are compiled for production
+RUN npm rebuild better-sqlite3 --build-from-source
 
-# Remove devDependencies after build to keep image lean
-RUN npm prune --production
-
-# Set production env for runtime
+# Set production environment
 ENV NODE_ENV=production
 
 RUN mkdir -p /app/data && chmod 777 /app/data
 
 EXPOSE 5000
 
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]
