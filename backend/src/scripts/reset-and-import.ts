@@ -26,6 +26,8 @@ db.pragma('temp_store = MEMORY');
 // 2. WIPE Y RECREACIÓN DE TABLAS
 console.log('Limpiando tablas anteriores (WIPE)...');
 
+db.pragma('foreign_keys = OFF');
+
 db.exec(`
   DROP TABLE IF EXISTS tenant_electors;
   DROP TABLE IF EXISTS elector_locations;
@@ -36,6 +38,9 @@ db.exec(`
   DROP TABLE IF EXISTS desafiliaciones;
   DROP TABLE IF EXISTS voting_locations;
   DROP TABLE IF EXISTS electors;
+  DROP TABLE IF EXISTS lists;
+  DROP TABLE IF EXISTS users;
+  DROP TABLE IF EXISTS campaigns;
 
   -- Tabla Padrón General
   CREATE TABLE electors (
@@ -83,6 +88,60 @@ db.exec(`
     total_mesas INTEGER DEFAULT 0
   );
 
+  -- Tabla Campañas / Tenants
+  CREATE TABLE campaigns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    enabled_modules TEXT DEFAULT 'COMMAND_CENTER,REGISTRY',
+    status TEXT DEFAULT 'ACTIVE',
+    slogan TEXT,
+    photo_url TEXT,
+    distrito TEXT,
+    goal INTEGER DEFAULT 1000
+  );
+
+  -- Tabla Listas
+  CREATE TABLE lists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER,
+    type TEXT NOT NULL,
+    list_number TEXT,
+    option_number TEXT,
+    candidate_ci TEXT,
+    candidate_nombre TEXT,
+    candidate_alias TEXT,
+    goal INTEGER DEFAULT 1000,
+    photo_url TEXT,
+    ciudad TEXT DEFAULT '',
+    is_adversary INTEGER DEFAULT 0,
+    FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
+  );
+
+  -- Tabla Usuarios
+  CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT,
+    role TEXT NOT NULL,
+    assigned_list_id INTEGER,
+    assigned_campaign_id INTEGER,
+    assigned_local TEXT,
+    assigned_mesa INTEGER,
+    assigned_table_role TEXT,
+    nombre TEXT,
+    photo_url TEXT,
+    needs_password_change INTEGER DEFAULT 0,
+    parent_id INTEGER,
+    telefono TEXT,
+    phone_hash TEXT,
+    distrito TEXT,
+    ci TEXT,
+    status TEXT DEFAULT 'ACTIVE',
+    FOREIGN KEY(assigned_list_id) REFERENCES lists(id),
+    FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id),
+    FOREIGN KEY(parent_id) REFERENCES users(id)
+  );
+
   -- Tabla Multi-Tenant de Electores Asignados
   CREATE TABLE IF NOT EXISTS tenant_electors (
     tenant_id INTEGER,
@@ -96,6 +155,13 @@ db.exec(`
     PRIMARY KEY(tenant_id, elector_ci),
     FOREIGN KEY(elector_ci) REFERENCES electors(ci)
   );
+
+  -- Crear usuario SuperAdmin único limpio
+  INSERT INTO users (username, password, role, nombre, ci, telefono, status, needs_password_change)
+  VALUES ('3657834', '123456', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834', '+595981123456', 'ACTIVE', 0);
+  
+  INSERT INTO users (username, password, role, nombre, ci, telefono, status, needs_password_change)
+  VALUES ('admin', '123456', 'SUPERADMIN', 'Super Administrador', '1234567', '+595981123456', 'ACTIVE', 0);
 `);
 
 console.log('Tablas recreadas correctamente.');
