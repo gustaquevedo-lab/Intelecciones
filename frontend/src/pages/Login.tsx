@@ -39,16 +39,6 @@ const Login = () => {
     }
   };
 
-  const startWakingTimer = () => {
-    setWakingSeconds(0);
-    if (wakingTimerRef.current) clearInterval(wakingTimerRef.current);
-    wakingTimerRef.current = setInterval(() => setWakingSeconds(s => s + 1), 1000);
-  };
-
-  const stopWakingTimer = () => {
-    if (wakingTimerRef.current) { clearInterval(wakingTimerRef.current); wakingTimerRef.current = null; }
-  };
-
   useEffect(() => {
     let cancelled = false;
 
@@ -61,8 +51,6 @@ const Login = () => {
     probe();
     return () => {
       cancelled = true;
-      if (retryTimerRef.current) clearInterval(retryTimerRef.current);
-      stopWakingTimer();
     };
   }, []);
 
