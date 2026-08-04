@@ -650,6 +650,22 @@ export default function adminRoutes(upload: multer.Multer) {
     const { rows } = req.body;
     if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows array required' });
     try {
+      const addCol = (col: string, type: string) => {
+        try { db.exec(`ALTER TABLE electors ADD COLUMN ${col} ${type}`); } catch(e){}
+      };
+      addCol('sexo', 'TEXT');
+      addCol('fecha_nacimiento', 'TEXT');
+      addCol('edad', 'INTEGER DEFAULT 0');
+      addCol('departamento', 'TEXT');
+      addCol('cod_local', 'TEXT');
+      addCol('pol_mil', 'INTEGER DEFAULT 0');
+      addCol('interdicto', 'INTEGER DEFAULT 0');
+      addCol('fiscales', 'INTEGER DEFAULT 0');
+      addCol('es_indigen', 'INTEGER DEFAULT 0');
+      addCol('tiene_disc', 'INTEGER DEFAULT 0');
+      addCol('ref_discap', 'TEXT');
+      addCol('fec_inscri', 'TEXT');
+
       const stmt = db.prepare(`
         INSERT OR REPLACE INTO electors (
           ci, nombre, apellido, sexo, fecha_nacimiento, edad, departamento, distrito, ciudad,
