@@ -802,25 +802,19 @@ if (dbVersion < currentSchemaVersion) {
 
       // 5. Clean up any invalid/dangling conflicts (where capture_id_b is still NULL or matches capture_id)
       // Select the captures that are in invalid conflicts so we can reset their is_disputed status
-      const invalidCaptureIds = db.prepare(`
-        SELECT id FROM elector_captures 
+      // 5. Clean up any invalid/dangling conflicts
+      db.prepare(`
+        UPDATE elector_captures SET is_disputed = 0
         WHERE id IN (
           SELECT capture_id FROM capture_conflicts WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b
           UNION
           SELECT capture_id_b FROM capture_conflicts WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b
         )
-      `).all() as any[];
+      `).run();
 
-      if (invalidCaptureIds.length > 0) {
-        const ids = invalidCaptureIds.map(c => c.id);
-        const placeholders = ids.map(() => '?').join(',');
-        db.prepare(`UPDATE elector_captures SET is_disputed = 0 WHERE id IN (${placeholders})`).run(...ids);
-      }
-
-      // Delete the invalid conflict rows
       db.prepare(`
         DELETE FROM capture_conflicts 
-        WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b;
+        WHERE capture_id_b IS NULL OR capture_id IS NULL OR capture_id = capture_id_b
       `).run();
     } catch (e: any) {
       console.error("MIGRATION ERROR in repair block:", e.message);
