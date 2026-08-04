@@ -75,6 +75,20 @@ addColumnIfNotExists("attendance", "photo_url", "TEXT");
 addColumnIfNotExists("users", "assigned_table_role", "TEXT");
 addColumnIfNotExists("results", "category", "TEXT DEFAULT 'INTENDENTE'");
 
+// TSJE Padron columns (Must run on every startup)
+addColumnIfNotExists("electors", "sexo", "TEXT");
+addColumnIfNotExists("electors", "fecha_nacimiento", "TEXT");
+addColumnIfNotExists("electors", "edad", "INTEGER DEFAULT 0");
+addColumnIfNotExists("electors", "departamento", "TEXT");
+addColumnIfNotExists("electors", "cod_local", "TEXT");
+addColumnIfNotExists("electors", "pol_mil", "INTEGER DEFAULT 0");
+addColumnIfNotExists("electors", "interdicto", "INTEGER DEFAULT 0");
+addColumnIfNotExists("electors", "fiscales", "INTEGER DEFAULT 0");
+addColumnIfNotExists("electors", "es_indigen", "INTEGER DEFAULT 0");
+addColumnIfNotExists("electors", "tiene_disc", "INTEGER DEFAULT 0");
+addColumnIfNotExists("electors", "ref_discap", "TEXT");
+addColumnIfNotExists("electors", "fec_inscri", "TEXT");
+
 // Create index optimizations on startup
 try {
   db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_voted ON participation_logs(local_votacion, mesa, orden);");
