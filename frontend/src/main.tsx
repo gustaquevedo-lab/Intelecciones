@@ -15,9 +15,16 @@ if (import.meta.env.VITE_POSTHOG_KEY) {
   });
 }
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const r of registrations) r.unregister();
+  }).catch(() => {});
+}
+
 if ('caches' in window) {
-  caches.delete('static-data-cache').catch(() => {});
-  caches.delete('stats-cache').catch(() => {});
+  caches.keys().then(keys => {
+    keys.forEach(k => caches.delete(k));
+  }).catch(() => {});
 }
 
 window.addEventListener('vite:preloadError', () => {
