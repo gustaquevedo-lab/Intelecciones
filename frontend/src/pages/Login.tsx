@@ -268,7 +268,7 @@ const Login = () => {
               ) : serverStatus === 'waking' ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <div className="spinner" />
-                  Servidor iniciando... ({wakingSeconds}s)
+                  Servidor iniciando...
                 </span>
               ) : (
                 'Ingresar al Sistema'
