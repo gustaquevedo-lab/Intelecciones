@@ -917,7 +917,7 @@ try {
   const needsNormalization = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v4_full_done'").get();
   if (!needsNormalization) {
     console.log("PERFORMANCE: Running global database normalization (v4)...");
-    db.transaction(() => {
+    const doNorm = db.transaction(() => {
       // 1. Clean Electors
       db.exec(`
         UPDATE OR IGNORE electors SET 
@@ -985,7 +985,8 @@ try {
       `).run();
 
       db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v4_full_done', 'true')").run();
-    })();
+    });
+    doNorm();
     console.log("PERFORMANCE: Global normalization and backfill complete.");
   }
 } catch (e: any) {
