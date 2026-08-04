@@ -645,6 +645,37 @@ export default function adminRoutes(upload: multer.Multer) {
     }
   });
 
+  // ── POST /api/admin/system/import-batch ──────────────────────────────────
+  router.post('/admin/system/import-batch', (req, res) => {
+    const { rows } = req.body;
+    if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows array required' });
+    try {
+      const stmt = db.prepare(`
+        INSERT OR REPLACE INTO electors (
+          ci, nombre, apellido, sexo, fecha_nacimiento, edad, departamento, distrito, ciudad,
+          local_votacion, cod_local, mesa, orden, inhabilitado, pol_mil, interdicto, fiscales, es_indigen, tiene_disc, ref_discap, fec_inscri
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const insertBatch = db.transaction((electors: any[]) => {
+        for (const e of electors) {
+          stmt.run(
+            String(e.ci), String(e.nombre), String(e.apellido || ''), String(e.sexo || ''),
+            String(e.fecha_nacimiento || ''), Number(e.edad || 0), String(e.departamento || ''),
+            String(e.distrito || ''), String(e.ciudad || ''), String(e.local_votacion || ''),
+            String(e.cod_local || ''), Number(e.mesa || 0), Number(e.orden || 0),
+            e.inhabilitado ? 1 : 0, e.pol_mil ? 1 : 0, e.interdicto ? 1 : 0, e.fiscales ? 1 : 0,
+            e.es_indigen ? 1 : 0, e.tiene_disc ? 1 : 0, String(e.ref_discap || ''), String(e.fec_inscri || '')
+          );
+        }
+      });
+      insertBatch(rows);
+      res.json({ success: true, count: rows.length });
+    } catch (err: any) {
+      console.error('[IMPORT BATCH ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.post('/admin/users/:id/reset-password', (req, res) => {
     const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
     if (requesterRole !== 'SUPERUSUARIO' && requesterRole !== 'SUPER_ADMIN') {
