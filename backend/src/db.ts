@@ -996,7 +996,7 @@ try {
 // Exported so server.ts can run this AFTER app.listen (non-blocking startup)
 export const runBootstrapChecks = () => {
   try {
-    db.transaction(() => {
+    const doTx = db.transaction(() => {
       // ── STEP 0: Remove zombie re-created conflicts ─────────────────────────
       // When the bootstrap previously ran with a buggy exclusion filter, it re-created
       // PENDING conflicts for electors whose dispute was already RESOLVED.
@@ -1100,7 +1100,8 @@ export const runBootstrapChecks = () => {
           }
         }
       }
-    })();
+    });
+    doTx();
     // ── DISPUTE HOTFIX: reset stale is_disputed flags for specific CIs ──
     // These electors have no active disputes in PJC but were left with is_disputed=1
     (() => {
