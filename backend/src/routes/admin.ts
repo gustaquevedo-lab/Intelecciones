@@ -652,6 +652,7 @@ export default function adminRoutes(upload: multer.Multer) {
     try {
       if (reset === true) {
         console.log('[IMPORT BATCH] Recreating electors table cleanly...');
+        db.pragma('foreign_keys = OFF');
         db.exec(`
           DROP TABLE IF EXISTS electors;
           CREATE TABLE electors (
@@ -686,7 +687,22 @@ export default function adminRoutes(upload: multer.Multer) {
           CREATE INDEX IF NOT EXISTS idx_electors_nombre ON electors (nombre, apellido);
           CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors (distrito);
         `);
+        db.pragma('foreign_keys = ON');
       }
+
+      // Safe fallback column additions
+      try { db.exec("ALTER TABLE electors ADD COLUMN pol_mil INTEGER DEFAULT 0"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN interdicto INTEGER DEFAULT 0"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN fiscales INTEGER DEFAULT 0"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN es_indigen INTEGER DEFAULT 0"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN tiene_disc INTEGER DEFAULT 0"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN ref_discap TEXT"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN fec_inscri TEXT"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN sexo TEXT"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN fecha_nacimiento TEXT"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN edad INTEGER DEFAULT 0"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN departamento TEXT"); } catch(e){}
+      try { db.exec("ALTER TABLE electors ADD COLUMN cod_local TEXT"); } catch(e){}
 
       const stmt = db.prepare(`
         INSERT OR REPLACE INTO electors (
