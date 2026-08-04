@@ -616,6 +616,35 @@ export default function adminRoutes(upload: multer.Multer) {
     }
   });
 
+  // ── POST /api/admin/system/upload-database ───────────────────────────────
+  router.post('/admin/system/upload-database', upload.single('database'), (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No database file attached' });
+      const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
+      const targetDbPath = path.join(dbDir, 'intellecciones.db');
+      
+      console.log(`[DB SYNC] Replacing production database with uploaded file: ${req.file.path} -> ${targetDbPath}`);
+      
+      // Close current connection
+      db.close();
+      
+      // Replace file
+      fs.copyFileSync(req.file.path, targetDbPath);
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+
+      res.json({ success: true, message: 'Base de datos de producción actualizada correctamente.' });
+
+      // Restart process to pick up new SQLite file cleanly
+      setTimeout(() => {
+        console.log('[DB SYNC] Restarting process to reload new database...');
+        process.exit(0);
+      }, 500);
+    } catch (err: any) {
+      console.error('[UPLOAD DB ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.post('/admin/users/:id/reset-password', (req, res) => {
     const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
     if (requesterRole !== 'SUPERUSUARIO' && requesterRole !== 'SUPER_ADMIN') {
