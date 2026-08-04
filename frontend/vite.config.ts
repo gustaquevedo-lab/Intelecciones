@@ -29,16 +29,10 @@ export default defineConfig({
             handler: 'NetworkOnly'
           },
 
-          // ── Semi-static data: StaleWhileRevalidate (instant + background refresh) ─
-          // Locales de votación, campañas, listas — cambian muy poco
+          // ── Always fetch fresh from server: campaigns, lists, locales ─────────
           {
             urlPattern: /\/api\/(locales|campaigns|lists|admin\/lists)/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'static-data-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 10 * 60 },
-              cacheableResponse: { statuses: [0, 200] }
-            }
+            handler: 'NetworkOnly'
           },
 
           // ── Stats & KPI data: StaleWhileRevalidate with short TTL ─────────

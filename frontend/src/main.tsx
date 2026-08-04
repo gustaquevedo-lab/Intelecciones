@@ -15,6 +15,11 @@ if (import.meta.env.VITE_POSTHOG_KEY) {
   });
 }
 
+if ('caches' in window) {
+  caches.delete('static-data-cache').catch(() => {});
+  caches.delete('stats-cache').catch(() => {});
+}
+
 window.addEventListener('vite:preloadError', () => {
   window.location.reload();
 });
