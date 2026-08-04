@@ -280,20 +280,18 @@ if (dbVersion < currentSchemaVersion) {
       if (oldCamps && oldCamps.c > 0) {
         console.log("[DB BOOTSTRAP] Purging legacy campaigns and users in production database...");
         db.pragma('foreign_keys = OFF');
-        db.exec(`
-          DELETE FROM tenant_electors;
-          DELETE FROM elector_locations;
-          DELETE FROM logistics;
-          DELETE FROM results;
-          DELETE FROM acta_results;
-          DELETE FROM voter_confirmations;
-          DELETE FROM mesa_constitutions;
-          DELETE FROM capture_conflicts;
-          DELETE FROM elector_captures;
-          DELETE FROM lists;
-          DELETE FROM campaigns;
-          DELETE FROM users WHERE username NOT IN ('3657834', 'admin');
-        `);
+        try { db.prepare("DELETE FROM tenant_electors").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM elector_locations").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM logistics").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM results").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM acta_results").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM voter_confirmations").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM mesa_constitutions").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM capture_conflicts").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM elector_captures").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM lists").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM campaigns").run(); } catch (e) {}
+        try { db.prepare("DELETE FROM users WHERE username NOT IN ('3657834', 'admin')").run(); } catch (e) {}
         db.pragma('foreign_keys = ON');
       }
     } catch (e: any) {
