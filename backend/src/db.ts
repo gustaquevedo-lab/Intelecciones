@@ -336,9 +336,21 @@ if (dbVersion < currentSchemaVersion) {
         ciudad TEXT DEFAULT '',
         distrito TEXT DEFAULT '',
         barrio TEXT DEFAULT '',
-        campaign_id INTEGER,
         photo_ci_frente TEXT,
-        photo_ci_verso TEXT
+        photo_ci_verso TEXT,
+        sexo TEXT,
+        fecha_nacimiento TEXT,
+        edad INTEGER DEFAULT 0,
+        departamento TEXT,
+        cod_local TEXT,
+        pol_mil INTEGER DEFAULT 0,
+        interdicto INTEGER DEFAULT 0,
+        fiscales INTEGER DEFAULT 0,
+        es_indigen INTEGER DEFAULT 0,
+        tiene_disc INTEGER DEFAULT 0,
+        ref_discap TEXT,
+        fec_inscri TEXT,
+        inhabilitado INTEGER DEFAULT 0
       );
 
       CREATE TABLE IF NOT EXISTS participation_logs (
@@ -651,6 +663,18 @@ if (dbVersion < currentSchemaVersion) {
     addColumnIfNotExists("elector_captures", "phone_hash", "TEXT");
 
     // National Padron and Demographics fields
+    addColumnIfNotExists("electors", "sexo", "TEXT");
+    addColumnIfNotExists("electors", "fecha_nacimiento", "TEXT");
+    addColumnIfNotExists("electors", "edad", "INTEGER DEFAULT 0");
+    addColumnIfNotExists("electors", "departamento", "TEXT");
+    addColumnIfNotExists("electors", "cod_local", "TEXT");
+    addColumnIfNotExists("electors", "pol_mil", "INTEGER DEFAULT 0");
+    addColumnIfNotExists("electors", "interdicto", "INTEGER DEFAULT 0");
+    addColumnIfNotExists("electors", "fiscales", "INTEGER DEFAULT 0");
+    addColumnIfNotExists("electors", "es_indigen", "INTEGER DEFAULT 0");
+    addColumnIfNotExists("electors", "tiene_disc", "INTEGER DEFAULT 0");
+    addColumnIfNotExists("electors", "ref_discap", "TEXT");
+    addColumnIfNotExists("electors", "fec_inscri", "TEXT");
     addColumnIfNotExists("electors", "dpto_code", "INTEGER");
     addColumnIfNotExists("electors", "distrito_code", "INTEGER");
     addColumnIfNotExists("electors", "zona_code", "INTEGER");
