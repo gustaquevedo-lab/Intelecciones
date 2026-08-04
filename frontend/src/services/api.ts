@@ -51,7 +51,9 @@ api.interceptors.response.use(
         sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
       } else if (stored !== serverVersion) {
         sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
-        // New deploy detected — force SW update then reload
+        // New deploy detected — clear legacy cached storage and force SW update then reload
+        localStorage.removeItem('cached_campaigns');
+        localStorage.removeItem('cached_stats');
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistration().then((reg) => {
             if (reg) {
