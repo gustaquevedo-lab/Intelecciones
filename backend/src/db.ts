@@ -226,7 +226,7 @@ if (dbVersion < currentSchemaVersion) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         enabled_modules TEXT DEFAULT 'COMMAND_CENTER,REGISTRY',
-        status TEXT DEFAULT 'active',
+        status TEXT DEFAULT 'ACTIVE',
         slogan TEXT,
         photo_url TEXT,
         distrito TEXT,
@@ -272,7 +272,50 @@ if (dbVersion < currentSchemaVersion) {
         FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id),
         FOREIGN KEY(parent_id) REFERENCES users(id)
       );
+    `);
 
+    // Auto-wipe legacy campaigns/users on production startup
+    try {
+      const oldCamps = db.prepare("SELECT COUNT(*) as c FROM campaigns").get() as any;
+      if (oldCamps && oldCamps.c > 0) {
+        console.log("[DB BOOTSTRAP] Purging legacy campaigns and users in production database...");
+        db.pragma('foreign_keys = OFF');
+        db.exec(`
+          DELETE FROM tenant_electors;
+          DELETE FROM elector_locations;
+          DELETE FROM logistics;
+          DELETE FROM results;
+          DELETE FROM acta_results;
+          DELETE FROM voter_confirmations;
+          DELETE FROM mesa_constitutions;
+          DELETE FROM capture_conflicts;
+          DELETE FROM elector_captures;
+          DELETE FROM lists;
+          DELETE FROM campaigns;
+          DELETE FROM users WHERE username NOT IN ('3657834', 'admin');
+        `);
+        db.pragma('foreign_keys = ON');
+      }
+    } catch (e: any) {
+      console.warn("[DB BOOTSTRAP WIPE WARNING]", e.message);
+    }
+
+    // Ensure SuperAdmin users exist
+    try {
+      db.prepare(`
+        INSERT OR REPLACE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
+        VALUES (1, '3657834', '123456', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834', '+595981123456', 'ACTIVE', 0)
+      `).run();
+
+      db.prepare(`
+        INSERT OR REPLACE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
+        VALUES (2, 'admin', '123456', 'SUPERADMIN', 'Super Administrador', '1234567', '+595981123456', 'ACTIVE', 0)
+      `).run();
+    } catch (e: any) {
+      console.warn("[DB USER SEED WARNING]", e.message);
+    }
+
+    db.exec(`
       CREATE TABLE IF NOT EXISTS voting_locations (
         cod_local TEXT PRIMARY KEY,
         nombre TEXT NOT NULL,
