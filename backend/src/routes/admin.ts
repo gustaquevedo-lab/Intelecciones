@@ -162,14 +162,17 @@ export default function adminRoutes(upload: multer.Multer) {
     const campaign_id = parseInt(req.params.id);
     if (isNaN(campaign_id)) return res.status(400).json({ error: "ID de campaña inválido" });
     try {
+      db.pragma('foreign_keys = OFF');
       db.transaction(() => {
-        db.prepare(`UPDATE users SET assigned_list_id = NULL WHERE assigned_list_id IN (SELECT id FROM lists WHERE campaign_id = ?)`).run(campaign_id);
+        db.prepare(`UPDATE users SET assigned_campaign_id = NULL, assigned_list_id = NULL WHERE assigned_campaign_id = ? OR assigned_list_id IN (SELECT id FROM lists WHERE campaign_id = ?)`).run(campaign_id, campaign_id);
         db.prepare('DELETE FROM lists WHERE campaign_id = ?').run(campaign_id);
         db.prepare('DELETE FROM campaigns WHERE id = ?').run(campaign_id);
       })();
-      logAction(1, 'DELETE', 'CAMPAIGN', campaign_id, `Deleted campaign ${campaign_id} and purged all associated lists`);
+      db.pragma('foreign_keys = ON');
+      try { logAction(1, 'DELETE', 'CAMPAIGN', campaign_id, `Deleted campaign ${campaign_id} and purged all associated lists`); } catch(e){}
       res.json({ success: true });
     } catch (err: any) {
+      db.pragma('foreign_keys = ON');
       console.error("Error deleting campaign:", err);
       res.status(500).json({ error: "No se pudo borrar la campaña: " + err.message });
     }
@@ -194,9 +197,11 @@ export default function adminRoutes(upload: multer.Multer) {
   // ── POST /api/lists ─────────────────────────────────────────────────────────
   router.post('/lists', (req, res) => {
     const { campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad } = req.body;
-    if (!campaign_id || !type || !list_number || !candidate_ci || !ciudad) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios para registrar la lista (incluyendo ciudad).' });
-    }
+    if (!campaign_id) return res.status(400).json({ error: 'campaign_id es requerido' });
+    if (!type) return res.status(400).json({ error: 'type es requerido' });
+    if (!list_number) return res.status(400).json({ error: 'list_number es requerido' });
+    if (!ciudad) return res.status(400).json({ error: 'ciudad es requerida' });
+
     try {
       db.transaction(() => {
         const finalCiudad = ciudad.toString().toUpperCase().trim();
@@ -236,10 +241,16 @@ export default function adminRoutes(upload: multer.Multer) {
   // ── DELETE /api/lists/:id ───────────────────────────────────────────────────
   router.delete('/lists/:id', (req, res) => {
     try {
+      db.pragma('foreign_keys = OFF');
+      db.prepare(`UPDATE users SET assigned_list_id = NULL WHERE assigned_list_id = ?`).run(req.params.id);
       db.prepare('DELETE FROM lists WHERE id = ?').run(req.params.id);
-      logAction(1, 'DELETE', 'LIST', req.params.id, `Deleted list with ID ${req.params.id}`);
+      db.pragma('foreign_keys = ON');
+      try { logAction(1, 'DELETE', 'LIST', req.params.id, `Deleted list with ID ${req.params.id}`); } catch(e){}
       res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: any) {
+      db.pragma('foreign_keys = ON');
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // ── GET /api/locales ────────────────────────────────────────────────────────
