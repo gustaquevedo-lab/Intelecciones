@@ -134,7 +134,7 @@ const Login = () => {
   const serverLabel = {
     checking: { text: 'Verificando servidor...', color: '#93C5FD', dot: '#3B82F6', pulse: true },
     online:   { text: 'Servidor en línea',       color: '#86EFAC', dot: '#22C55E', pulse: false },
-    waking:   { text: `Servidor iniciando... ${wakingSeconds}s`, color: '#FDE68A', dot: '#F59E0B', pulse: true },
+    waking:   { text: 'Servidor iniciando...',   color: '#FDE68A', dot: '#F59E0B', pulse: true },
     offline:  { text: 'Servidor sin respuesta',  color: '#FCA5A5', dot: '#EF4444', pulse: false },
   }[serverStatus];
 
@@ -202,8 +202,7 @@ const Login = () => {
                 >
                   <p style={{ fontSize: '0.7rem', color: '#FDE68A', fontWeight: 700, margin: '0 0 0.2rem' }}>⚡ Servidor en modo ahorro de energía</p>
                   <p style={{ fontSize: '0.62rem', color: 'rgba(253,230,138,0.7)', margin: 0, lineHeight: 1.4 }}>
-                    El servidor se activa automáticamente. Espera 20-30 segundos
-                    {retryCount > 0 ? ` (intento ${retryCount})` : ''} y el ingreso se habilitará solo.
+                    El servidor se activa automáticamente. Espera 20-30 segundos y el ingreso se habilitará solo.
                   </p>
                 </motion.div>
               )}
