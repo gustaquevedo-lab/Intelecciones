@@ -872,19 +872,17 @@ Status: ${error.response?.status || 'N/A'}
       let hasErrors = false;
       let lastErrorMessage = '';
 
-      const safeGet = async (url: string, fallback: any = null, retries = 2) => {
+      const safeGet = async (url: string, fallback: any = null, retries = 0) => {
         for (let attempt = 1; attempt <= retries + 1; attempt++) {
           try {
-            const res = await api.get(url);
+            const res = await api.get(url, { timeout: 6000 });
             if (serverWaking) setServerWaking(false);
             return res.data;
           } catch (err: any) {
-            /* retry logging suppressed - expected for cold-start */
             if (attempt <= retries) {
               const isNetworkOrTimeout = !err.response;
               if (isNetworkOrTimeout) setServerWaking(true);
-              // For cold-start network errors wait 5s, otherwise exponential backoff
-              const delay = isNetworkOrTimeout ? 5000 : Math.pow(2, attempt) * 150;
+              const delay = isNetworkOrTimeout ? 1000 : Math.pow(2, attempt) * 150;
               await new Promise(resolve => setTimeout(resolve, delay));
               continue;
             }
@@ -913,7 +911,6 @@ Status: ${error.response?.status || 'N/A'}
           setStats(summary);
           setServerWaking(false);
         } else if (!silent) {
-          // Server unreachable — don't throw error, let retry state handle it
           setServerWaking(true);
         }
 
@@ -926,23 +923,29 @@ Status: ${error.response?.status || 'N/A'}
         const res = await safeGet('/campaigns', []);
         setCampaigns(Array.isArray(res) ? res : []);
       } else if (activeTab === 'lists') {
-        const lts = await safeGet('/lists', []);
-        const camps = await safeGet('/campaigns', []);
+        const [lts, camps] = await Promise.all([
+          safeGet('/lists', []),
+          safeGet('/campaigns', [])
+        ]);
         setLists(Array.isArray(lts) ? lts : []);
         setCampaigns(Array.isArray(camps) ? camps : []);
       } else if (activeTab === 'users') {
-        const res = await safeGet('/users', []);
-        const lts = await safeGet('/lists', []);
-        const camps = await safeGet('/campaigns', []);
+        const [res, lts, camps] = await Promise.all([
+          safeGet('/users', []),
+          safeGet('/lists', []),
+          safeGet('/campaigns', [])
+        ]);
         setUsers(Array.isArray(res) ? res : []);
         setLists(Array.isArray(lts) ? lts : []);
         setCampaigns(Array.isArray(camps) ? camps : []);
       } else if (activeTab === 'audit') {
         await fetchAuditData();
       } else if (activeTab === 'logistics') {
-        const v = await safeGet('/vehicles', []);
-        const p = await safeGet('/logistics/pending', []);
-        const lts = await safeGet('/lists', []);
+        const [v, p, lts] = await Promise.all([
+          safeGet('/vehicles', []),
+          safeGet('/logistics/pending', []),
+          safeGet('/lists', [])
+        ]);
         setVehicles(Array.isArray(v) ? v : []);
         setPendingLogistics(Array.isArray(p) ? p : []);
         setLists(Array.isArray(lts) ? lts : []);
