@@ -14,16 +14,16 @@ async function streamPadron() {
   const totalCount = (db.prepare('SELECT COUNT(*) as c FROM electors').get()).c;
   console.log(`Total de Electores Locales a Sincronizar: ${totalCount}`);
 
-  const BATCH_SIZE = 2500;
-  let offset = 0;
-  let batchIndex = 1;
+  const BATCH_SIZE = 10000;
+  let offset = parseInt(process.env.START_OFFSET || '0', 10);
+  let batchIndex = Math.floor(offset / BATCH_SIZE) + 1;
 
   while (offset < totalCount) {
     const rows = db.prepare(`SELECT * FROM electors LIMIT ? OFFSET ?`).all(BATCH_SIZE, offset);
     if (rows.length === 0) break;
 
     let success = false;
-    for (let retry = 1; retry <= 3; retry++) {
+    for (let retry = 1; retry <= 10; retry++) {
       try {
         const res = await fetch(TARGET_URL, {
           method: 'POST',
@@ -31,18 +31,19 @@ async function streamPadron() {
             'Content-Type': 'application/json',
             'x-user-role': 'SUPERUSUARIO'
           },
-          body: JSON.stringify({ rows, reset: offset === 0 })
+          body: JSON.stringify({ rows, reset: offset === 0 && retry === 1 })
         });
         if (res.ok) {
           success = true;
           break;
         } else {
           const errText = await res.text();
-          console.warn(`⚠️ Error HTTP ${res.status} en lote ${batchIndex}:`, errText);
+          console.warn(`⚠️ Error HTTP ${res.status} (intento ${retry}/10) en lote ${batchIndex}:`, errText);
+          await new Promise(r => setTimeout(r, 5000));
         }
       } catch (err) {
-        console.warn(`⚠️ Reintento ${retry}/3 para lote ${batchIndex}:`, err.message);
-        await new Promise(r => setTimeout(r, 2000));
+        console.warn(`⚠️ Reintento ${retry}/10 para lote ${batchIndex}:`, err.message);
+        await new Promise(r => setTimeout(r, 5000));
       }
     }
 

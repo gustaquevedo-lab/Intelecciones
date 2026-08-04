@@ -656,6 +656,8 @@ export default function adminRoutes(upload: multer.Multer) {
     }
   });
 
+  let cachedElectorsCols: Set<string> | null = null;
+
   // ── POST /api/admin/system/import-batch ──────────────────────────────────
   router.post('/admin/system/import-batch', (req, res) => {
     const { rows, reset } = req.body;
@@ -701,24 +703,12 @@ export default function adminRoutes(upload: multer.Multer) {
         db.pragma('foreign_keys = ON');
       }
 
-      // Safe fallback column additions
-      try { db.exec("ALTER TABLE electors ADD COLUMN pol_mil INTEGER DEFAULT 0"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN interdicto INTEGER DEFAULT 0"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN fiscales INTEGER DEFAULT 0"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN es_indigen INTEGER DEFAULT 0"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN tiene_disc INTEGER DEFAULT 0"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN ref_discap TEXT"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN fec_inscri TEXT"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN sexo TEXT"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN fecha_nacimiento TEXT"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN edad INTEGER DEFAULT 0"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN departamento TEXT"); } catch(e){}
-      try { db.exec("ALTER TABLE electors ADD COLUMN cod_local TEXT"); } catch(e){}
-
-      // Dynamically detect existing columns in the table to prevent hardcoded schema mismatches
-      const existingCols = new Set(
-        (db.prepare("PRAGMA table_info(electors)").all() as any[]).map(c => c.name)
-      );
+      // Cached column set to eliminate PRAGMA schema lookups on every batch
+      if (!cachedElectorsCols) {
+        cachedElectorsCols = new Set(
+          (db.prepare("PRAGMA table_info(electors)").all() as any[]).map(c => c.name)
+        );
+      }
 
       const allTargetCols = [
         'ci', 'nombre', 'apellido', 'sexo', 'fecha_nacimiento', 'edad', 'departamento', 'distrito', 'ciudad',
@@ -726,7 +716,7 @@ export default function adminRoutes(upload: multer.Multer) {
         'es_indigen', 'tiene_disc', 'ref_discap', 'fec_inscri'
       ];
 
-      const activeCols = allTargetCols.filter(c => existingCols.has(c));
+      const activeCols = allTargetCols.filter(c => cachedElectorsCols.has(c));
       const colPlaceholders = activeCols.map(() => '?').join(', ');
       const sql = `INSERT OR REPLACE INTO electors (${activeCols.join(', ')}) VALUES (${colPlaceholders})`;
       const stmt = db.prepare(sql);
