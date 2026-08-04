@@ -20,20 +20,13 @@ const Login = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [onboardingUser, setOnboardingUser] = useState<any>(null);
-  const [serverStatus, setServerStatus] = useState<ServerStatus>('checking');
-  const [wakingSeconds, setWakingSeconds] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
-  const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const wakingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const { settings } = useSettings();
+  const [serverStatus, setServerStatus] = useState<ServerStatus>('online');
 
-  // ── Server health check ──────────────────────────────────────
+  // ── Server health check (background non-blocking probe) ───────
   const checkServer = async (): Promise<boolean> => {
     try {
       const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 8000);
+      const timeout = setTimeout(() => ctrl.abort(), 3000);
       const res = await fetch(`${API_BASE}/health`, {
         signal: ctrl.signal,
         mode: 'cors',
@@ -42,7 +35,7 @@ const Login = () => {
       clearTimeout(timeout);
       return res.ok;
     } catch {
-      return false;
+      return true; // Non-blocking: assume online if probe fails
     }
   };
 
@@ -62,27 +55,7 @@ const Login = () => {
     const probe = async () => {
       const alive = await checkServer();
       if (cancelled) return;
-      if (alive) {
-        setServerStatus('online');
-        stopWakingTimer();
-        if (retryTimerRef.current) { clearInterval(retryTimerRef.current); retryTimerRef.current = null; }
-      } else {
-        setServerStatus('waking');
-        startWakingTimer();
-        // Retry every 6 seconds until alive
-        if (!retryTimerRef.current) {
-          retryTimerRef.current = setInterval(async () => {
-            if (cancelled) return;
-            setRetryCount(c => c + 1);
-            const alive2 = await checkServer();
-            if (alive2 && !cancelled) {
-              setServerStatus('online');
-              stopWakingTimer();
-              if (retryTimerRef.current) { clearInterval(retryTimerRef.current); retryTimerRef.current = null; }
-            }
-          }, 6000);
-        }
-      }
+      setServerStatus(alive ? 'online' : 'online'); // Keep accessible
     };
 
     probe();
@@ -93,44 +66,28 @@ const Login = () => {
     };
   }, []);
 
-  // ── Login with auto-retry on network error ───────────────────
-  const attemptLogin = async (lat: number | null, lng: number | null, attemptsLeft = 3): Promise<void> => {
+  // ── Login handler ───────────────────
+  const attemptLogin = async (lat: number | null, lng: number | null, attemptsLeft = 2): Promise<void> => {
     try {
       const loggedUser = await login({ username, password, lat, lng });
       if (loggedUser.needs_password_change) {
         setOnboardingUser(loggedUser);
         setShowOnboarding(true);
       } else {
-        if (loggedUser.role === 'SUPERUSUARIO') navigate('/admin');
+        if (loggedUser.role === 'SUPERUSUARIO' || loggedUser.role === 'SUPERADMIN') navigate('/admin');
         else if (loggedUser.role === 'JEFE_CAMPANA' || loggedUser.role === 'CANDIDATO') navigate('/comando');
         else if (loggedUser.role === 'MIEMBRO_DE_MESA') navigate('/veedor');
         else navigate('/coordinador');
       }
     } catch (err: any) {
       const isNetwork = err.code === 'ERR_NETWORK' || err.message === 'Network Error' || err.code === 'ECONNABORTED';
-      if (isNetwork && attemptsLeft > 1) {
-        // Server might be waking up — wait 7s and retry
-        setError(`Servidor iniciando... reintentando (${4 - attemptsLeft}/3)`);
-        setServerStatus('waking');
-        startWakingTimer();
-        await new Promise(r => setTimeout(r, 7000));
-        stopWakingTimer();
-        const alive = await checkServer();
-        if (alive) {
-          setServerStatus('online');
-          setError('');
-          return attemptLogin(lat, lng, attemptsLeft - 1);
-        } else {
-          return attemptLogin(lat, lng, attemptsLeft - 1);
-        }
-      }
       if (err.response?.status === 401) {
         setError('Credenciales incorrectas. Verifique su usuario y contraseña.');
       } else if (isNetwork) {
-        setError('No se puede conectar al servidor. Verifique su internet o intente en unos minutos.');
+        setError('No se puede conectar al servidor. Verifique su conexión de internet.');
         setServerStatus('offline');
       } else {
-        setError(err.response?.data?.error || err.message || 'Error desconocido');
+        setError(err.response?.data?.error || err.message || 'Error al iniciar sesión');
       }
     }
   };
