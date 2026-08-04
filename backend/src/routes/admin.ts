@@ -704,22 +704,30 @@ export default function adminRoutes(upload: multer.Multer) {
       try { db.exec("ALTER TABLE electors ADD COLUMN departamento TEXT"); } catch(e){}
       try { db.exec("ALTER TABLE electors ADD COLUMN cod_local TEXT"); } catch(e){}
 
-      const stmt = db.prepare(`
-        INSERT OR REPLACE INTO electors (
-          ci, nombre, apellido, sexo, fecha_nacimiento, edad, departamento, distrito, ciudad,
-          local_votacion, cod_local, mesa, orden, inhabilitado, pol_mil, interdicto, fiscales, es_indigen, tiene_disc, ref_discap, fec_inscri
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      // Dynamically detect existing columns in the table to prevent hardcoded schema mismatches
+      const existingCols = new Set(
+        (db.prepare("PRAGMA table_info(electors)").all() as any[]).map(c => c.name)
+      );
+
+      const allTargetCols = [
+        'ci', 'nombre', 'apellido', 'sexo', 'fecha_nacimiento', 'edad', 'departamento', 'distrito', 'ciudad',
+        'local_votacion', 'cod_local', 'mesa', 'orden', 'inhabilitado', 'pol_mil', 'interdicto', 'fiscales',
+        'es_indigen', 'tiene_disc', 'ref_discap', 'fec_inscri'
+      ];
+
+      const activeCols = allTargetCols.filter(c => existingCols.has(c));
+      const colPlaceholders = activeCols.map(() => '?').join(', ');
+      const sql = `INSERT OR REPLACE INTO electors (${activeCols.join(', ')}) VALUES (${colPlaceholders})`;
+      const stmt = db.prepare(sql);
+
       const insertBatch = db.transaction((electors: any[]) => {
         for (const e of electors) {
-          stmt.run(
-            String(e.ci), String(e.nombre), String(e.apellido || ''), String(e.sexo || ''),
-            String(e.fecha_nacimiento || ''), Number(e.edad || 0), String(e.departamento || ''),
-            String(e.distrito || ''), String(e.ciudad || ''), String(e.local_votacion || ''),
-            String(e.cod_local || ''), Number(e.mesa || 0), Number(e.orden || 0),
-            e.inhabilitado ? 1 : 0, e.pol_mil ? 1 : 0, e.interdicto ? 1 : 0, e.fiscales ? 1 : 0,
-            e.es_indigen ? 1 : 0, e.tiene_disc ? 1 : 0, String(e.ref_discap || ''), String(e.fec_inscri || '')
-          );
+          const values = activeCols.map(col => {
+            if (col === 'mesa' || col === 'orden' || col === 'edad') return Number(e[col] || 0);
+            if (col === 'inhabilitado' || col === 'pol_mil' || col === 'interdicto' || col === 'fiscales' || col === 'es_indigen' || col === 'tiene_disc') return e[col] ? 1 : 0;
+            return String(e[col] || '');
+          });
+          stmt.run(...values);
         }
       });
       insertBatch(rows);
