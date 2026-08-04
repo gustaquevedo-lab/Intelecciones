@@ -647,24 +647,46 @@ export default function adminRoutes(upload: multer.Multer) {
 
   // ── POST /api/admin/system/import-batch ──────────────────────────────────
   router.post('/admin/system/import-batch', (req, res) => {
-    const { rows } = req.body;
+    const { rows, reset } = req.body;
     if (!Array.isArray(rows)) return res.status(400).json({ error: 'rows array required' });
     try {
-      const addCol = (col: string, type: string) => {
-        try { db.exec(`ALTER TABLE electors ADD COLUMN ${col} ${type}`); } catch(e){}
-      };
-      addCol('sexo', 'TEXT');
-      addCol('fecha_nacimiento', 'TEXT');
-      addCol('edad', 'INTEGER DEFAULT 0');
-      addCol('departamento', 'TEXT');
-      addCol('cod_local', 'TEXT');
-      addCol('pol_mil', 'INTEGER DEFAULT 0');
-      addCol('interdicto', 'INTEGER DEFAULT 0');
-      addCol('fiscales', 'INTEGER DEFAULT 0');
-      addCol('es_indigen', 'INTEGER DEFAULT 0');
-      addCol('tiene_disc', 'INTEGER DEFAULT 0');
-      addCol('ref_discap', 'TEXT');
-      addCol('fec_inscri', 'TEXT');
+      if (reset === true) {
+        console.log('[IMPORT BATCH] Recreating electors table cleanly...');
+        db.exec(`
+          DROP TABLE IF EXISTS electors;
+          CREATE TABLE electors (
+            ci TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            apellido TEXT,
+            local_votacion TEXT NOT NULL,
+            mesa INTEGER NOT NULL,
+            orden INTEGER NOT NULL,
+            is_priority BOOLEAN DEFAULT 0,
+            ciudad TEXT DEFAULT '',
+            distrito TEXT DEFAULT '',
+            barrio TEXT DEFAULT '',
+            campaign_id INTEGER,
+            photo_ci_frente TEXT,
+            photo_ci_verso TEXT,
+            sexo TEXT,
+            fecha_nacimiento TEXT,
+            edad INTEGER DEFAULT 0,
+            departamento TEXT,
+            cod_local TEXT,
+            pol_mil INTEGER DEFAULT 0,
+            interdicto INTEGER DEFAULT 0,
+            fiscales INTEGER DEFAULT 0,
+            es_indigen INTEGER DEFAULT 0,
+            tiene_disc INTEGER DEFAULT 0,
+            ref_discap TEXT,
+            fec_inscri TEXT,
+            inhabilitado INTEGER DEFAULT 0
+          );
+          CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa);
+          CREATE INDEX IF NOT EXISTS idx_electors_nombre ON electors (nombre, apellido);
+          CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors (distrito);
+        `);
+      }
 
       const stmt = db.prepare(`
         INSERT OR REPLACE INTO electors (

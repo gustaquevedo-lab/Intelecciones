@@ -31,7 +31,7 @@ async function streamPadron() {
             'Content-Type': 'application/json',
             'x-user-role': 'SUPERUSUARIO'
           },
-          body: JSON.stringify({ rows })
+          body: JSON.stringify({ rows, reset: offset === 0 })
         });
         if (res.ok) {
           success = true;
