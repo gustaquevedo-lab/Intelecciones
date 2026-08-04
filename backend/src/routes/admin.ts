@@ -576,6 +576,46 @@ export default function adminRoutes(upload: multer.Multer) {
     }
   });
 
+  // ── POST /api/admin/system/full-wipe-tenants ─────────────────────────────
+  router.post('/admin/system/full-wipe-tenants', (req, res) => {
+    try {
+      db.pragma('foreign_keys = OFF');
+      db.transaction(() => {
+        db.prepare('DELETE FROM tenant_electors').run();
+        db.prepare('DELETE FROM elector_locations').run();
+        db.prepare('DELETE FROM logistics').run();
+        db.prepare('DELETE FROM results').run();
+        db.prepare('DELETE FROM acta_results').run();
+        db.prepare('DELETE FROM voter_confirmations').run();
+        db.prepare('DELETE FROM mesa_constitutions').run();
+        db.prepare('DELETE FROM capture_conflicts').run();
+        db.prepare('DELETE FROM elector_captures').run();
+        db.prepare('DELETE FROM lists').run();
+        db.prepare('DELETE FROM campaigns').run();
+        db.prepare("DELETE FROM users WHERE username NOT IN ('3657834', 'admin')").run();
+
+        // Ensure default SuperAdmin users exist
+        db.prepare(`
+          INSERT OR REPLACE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
+          VALUES (1, '3657834', '123456', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834', '+595981123456', 'ACTIVE', 0)
+        `).run();
+
+        db.prepare(`
+          INSERT OR REPLACE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
+          VALUES (2, 'admin', '123456', 'SUPERADMIN', 'Super Administrador', '1234567', '+595981123456', 'ACTIVE', 0)
+        `).run();
+      })();
+      db.pragma('foreign_keys = ON');
+
+      clearElectorsCache();
+      invalidateAllReportsCaches();
+      res.json({ success: true, message: 'Wipe total de campañas, listas y usuarios completado.' });
+    } catch (err: any) {
+      console.error('[FULL WIPE ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.post('/admin/users/:id/reset-password', (req, res) => {
     const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
     if (requesterRole !== 'SUPERUSUARIO' && requesterRole !== 'SUPER_ADMIN') {
