@@ -328,6 +328,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/', (_req, res) => {
+  res.json({ status: 'ok', service: 'intelecciones-backend' });
+});
+
 // 💓 Health Check & Warmup
 app.get('/api/ping', (_req, res) => {
   try {
