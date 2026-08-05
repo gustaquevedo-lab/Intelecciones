@@ -55,12 +55,20 @@ const setDbVersion = (v: number) => {
 
 const dbVersion = getDbVersion();
 
+const pragmaCache = new Map<string, Set<string>>();
+
 // Always-safe: add missing columns idempotently on every startup
 const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
   try {
-    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as any[];
-    if (!columns.some((c: any) => c.name === columnName)) {
+    let cols = pragmaCache.get(tableName);
+    if (!cols) {
+      const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as any[];
+      cols = new Set(columns.map((c: any) => c.name));
+      pragmaCache.set(tableName, cols);
+    }
+    if (!cols.has(columnName)) {
       db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`).run();
+      cols.add(columnName);
       console.log(`MIGRATION: Added column [${columnName}] to table [${tableName}]`);
     }
   } catch (e: any) { console.error(`MIGRATION ERROR adding ${columnName} to ${tableName}: ${e.message}`); }
