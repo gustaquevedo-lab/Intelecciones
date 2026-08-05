@@ -209,7 +209,6 @@ export default function adminRoutes(upload: multer.Multer) {
         const finalNombre = (candidate_nombre || '').toString().toUpperCase().trim();
         db.prepare(`INSERT INTO lists (campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
           .run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, finalNombre, finalAlias, finalCiudad);
-        if (photo_url) db.prepare('UPDATE electors SET photo_url = ? WHERE ci = ?').run(photo_url, candidate_ci);
         logAction(1, 'CREATE', 'LIST', list_number, `Created list ${list_number} for campaign ${campaign_id} in ${finalCiudad}`);
       })();
       res.json({ success: true });
@@ -229,10 +228,6 @@ export default function adminRoutes(upload: multer.Multer) {
       const finalNombre = candidate_nombre ? candidate_nombre.toString().toUpperCase().trim() : '';
       db.prepare(`UPDATE lists SET goal = ?, photo_url = ?, type = ?, list_number = ?, option_number = ?, campaign_id = ?, candidate_alias = ?, candidate_nombre = ?, ciudad = ? WHERE id = ?`)
         .run(goal || 1000, photo_url || null, type || 'INTENDENTE', list_number || '', option_number || null, campaign_id || null, finalAlias, finalNombre, finalCiudad, id);
-      if (photo_url) {
-        const list = db.prepare('SELECT candidate_ci FROM lists WHERE id = ?').get(id) as any;
-        if (list) db.prepare('UPDATE electors SET photo_url = ? WHERE ci = ?').run(photo_url, list.candidate_ci);
-      }
       logAction(1, 'UPDATE', 'LIST', id, `Updated list ${id} goals/photo`);
       res.json({ success: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
