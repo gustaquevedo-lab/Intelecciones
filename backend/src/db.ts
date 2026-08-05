@@ -710,8 +710,6 @@ if (dbVersion < currentSchemaVersion) {
  
     // Indexes for better JOIN performance
     db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa);
-      CREATE INDEX IF NOT EXISTS idx_electors_nombre ON electors (nombre, apellido);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
       CREATE INDEX IF NOT EXISTS idx_elector_captures_timestamp ON elector_captures(timestamp DESC);
       -- Covering index for reports CTE aggregation (avoids full table scan)
@@ -725,7 +723,6 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_conflicts_status_ci ON capture_conflicts(status, elector_ci);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_user_timestamp ON audit_logs(user_id, timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_users_role_distrito_parent ON users(role, distrito, parent_id);
-      CREATE INDEX IF NOT EXISTS idx_electors_ciudad_distrito ON electors(ciudad, distrito);
       CREATE INDEX IF NOT EXISTS idx_users_phone_hash ON users(phone_hash);
       CREATE INDEX IF NOT EXISTS idx_captures_phone_hash ON elector_captures(phone_hash);
     `);
@@ -988,6 +985,9 @@ export const runBootstrapChecks = () => {
         CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
         CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(distrito);
         CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors(ciudad);
+        CREATE INDEX IF NOT EXISTS idx_electors_local_mesa ON electors (local_votacion, mesa);
+        CREATE INDEX IF NOT EXISTS idx_electors_nombre ON electors (nombre, apellido);
+        CREATE INDEX IF NOT EXISTS idx_electors_ciudad_distrito ON electors(ciudad, distrito);
       `);
     } catch (_) {}
 
