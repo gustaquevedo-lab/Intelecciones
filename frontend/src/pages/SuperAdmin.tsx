@@ -229,9 +229,17 @@ const SuperAdmin = () => {
   const [apiCriticalError, setApiCriticalError] = useState<Error | null>(null);
 
   const cities = Array.from(new Set([
-    ...(Array.isArray(lists) ? lists.map(l => l.ciudad) : []),
-    ...(Array.isArray(locales) ? locales.map(l => l.ciudad || l.distrito) : []),
-    ...(Array.isArray(campaigns) ? campaigns.map(c => c.distrito) : [])
+    'PEDRO J. CABALLERO',
+    'CONCEPCION',
+    'ASUNCION',
+    'CIUDAD DEL ESTE',
+    'ENCARNACION',
+    'LUQUE',
+    'SAN LORENZO',
+    'CORONEL OVIEDO',
+    ...(Array.isArray(lists) ? lists.map(l => l.ciudad === 'PEDRO JUAN CABALLERO' ? 'PEDRO J. CABALLERO' : l.ciudad) : []),
+    ...(Array.isArray(locales) ? locales.map(l => (l.ciudad || l.distrito) === 'PEDRO JUAN CABALLERO' ? 'PEDRO J. CABALLERO' : (l.ciudad || l.distrito)) : []),
+    ...(Array.isArray(campaigns) ? campaigns.map(c => c.distrito === 'PEDRO JUAN CABALLERO' ? 'PEDRO J. CABALLERO' : c.distrito) : [])
   ].filter(Boolean))).sort();
 
   const handleCopyDiagnostic = (error: any) => {
@@ -1294,13 +1302,17 @@ Status: ${error.response?.status || 'N/A'}
                         </div>
                         <div className="form-group">
                           <label>Distrito</label>
-                          <input
+                          <select
                             className="modern-input-premium-styled"
-                            value={newCampaignDistrito}
+                            value={newCampaignDistrito === 'PEDRO JUAN CABALLERO' ? 'PEDRO J. CABALLERO' : newCampaignDistrito}
                             onChange={e => setNewCampaignDistrito(e.target.value.toUpperCase())}
-                            placeholder="Ej: ASUNCION"
-                            list="districts-list"
-                          />
+                            required
+                          >
+                            <option value="">Seleccione Distrito...</option>
+                            {cities.map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
@@ -1702,13 +1714,16 @@ Status: ${error.response?.status || 'N/A'}
                             </div>
                             <div className="form-group" style={{ gridColumn: 'span 2', marginBottom: '0.5rem' }}>
                               <label>Distrito bajo su mando (Opcional)</label>
-                              <input
+                              <select
                                 className="modern-input-premium-styled"
-                                placeholder="Ej: PEDRO JUAN CABALLERO"
-                                value={newUserDistrito}
+                                value={newUserDistrito === 'PEDRO JUAN CABALLERO' ? 'PEDRO J. CABALLERO' : newUserDistrito}
                                 onChange={e => setNewUserDistrito(e.target.value.toUpperCase())}
-                                list="districts-list"
-                              />
+                              >
+                                <option value="">Seleccione Distrito...</option>
+                                {cities.map(c => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
                               <p style={{ fontSize: '0.55rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>
                                 Si asigna un distrito, este Jefe podrá ver TODAS las campañas y listas de esa ciudad.
                               </p>
@@ -1834,14 +1849,17 @@ Status: ${error.response?.status || 'N/A'}
                       <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>
                           <label>Ciudad / Distrito</label>
-                          <input
+                          <select
                             className="modern-input-premium-styled"
-                            placeholder="Ej: PEDRO JUAN CABALLERO"
-                            value={newListCiudad}
+                            value={newListCiudad === 'PEDRO JUAN CABALLERO' ? 'PEDRO J. CABALLERO' : newListCiudad}
                             onChange={e => setNewListCiudad(e.target.value.toUpperCase())}
-                            list="districts-list"
                             required
-                          />
+                          >
+                            <option value="">Seleccione Distrito...</option>
+                            {cities.map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="form-group" style={{ gridColumn: 'span 2' }}>

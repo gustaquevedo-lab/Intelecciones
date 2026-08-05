@@ -858,12 +858,22 @@ export default function adminRoutes(upload: multer.Multer) {
       const usersDeleted = db.prepare("DELETE FROM users WHERE role NOT IN ('SUPERUSUARIO', 'SUPERADMIN')").run();
       results['users_demo'] = usersDeleted.changes;
 
+      // Normalize duplicate district aliases in system tables to match official padron names
+      db.prepare("UPDATE campaigns SET distrito = 'PEDRO J. CABALLERO' WHERE distrito = 'PEDRO JUAN CABALLERO'").run();
+      db.prepare("UPDATE lists SET ciudad = 'PEDRO J. CABALLERO' WHERE ciudad = 'PEDRO JUAN CABALLERO'").run();
+      db.prepare("UPDATE users SET distrito = 'PEDRO J. CABALLERO' WHERE distrito = 'PEDRO JUAN CABALLERO'").run();
+      db.prepare("DELETE FROM lists WHERE ciudad = 'PEDRO JUAN CABALLERO'").run();
+      db.prepare("DELETE FROM campaigns WHERE distrito = 'PEDRO JUAN CABALLERO'").run();
+
       db.exec('PRAGMA foreign_keys = ON');
 
       // Vacuum to reclaim space
       db.exec('VACUUM');
 
-      console.log('[RESET] Operational data wiped:', results);
+      clearElectorsCache();
+      invalidateAllReportsCaches();
+
+      console.log('[RESET] Operational data wiped and district aliases normalized:', results);
       res.json({ success: true, message: 'Datos operativos eliminados. Sistema listo para Día D.', wiped: results });
     } catch (err: any) {
       console.error('[RESET ERROR]', err);
