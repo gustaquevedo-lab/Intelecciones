@@ -196,20 +196,34 @@ export default function adminRoutes(upload: multer.Multer) {
 
   // ── POST /api/lists ─────────────────────────────────────────────────────────
   router.post('/lists', (req, res) => {
-    const { campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad } = req.body;
-    if (!campaign_id) return res.status(400).json({ error: 'campaign_id es requerido' });
+    const { campaign_id: rawCampaignId, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad } = req.body;
     if (!type) return res.status(400).json({ error: 'type es requerido' });
     if (!list_number) return res.status(400).json({ error: 'list_number es requerido' });
     if (!ciudad) return res.status(400).json({ error: 'ciudad es requerida' });
 
     try {
       db.transaction(() => {
+        let finalCampaignId = rawCampaignId ? parseInt(rawCampaignId) : null;
+        if (finalCampaignId) {
+          const camp = db.prepare('SELECT id FROM campaigns WHERE id = ?').get(finalCampaignId);
+          if (!camp) finalCampaignId = null;
+        }
+        if (!finalCampaignId) {
+          const firstCamp = db.prepare('SELECT id FROM campaigns LIMIT 1').get() as any;
+          if (firstCamp) {
+            finalCampaignId = firstCamp.id;
+          } else {
+            const newCamp = db.prepare(`INSERT INTO campaigns (name, status, goal, distrito) VALUES (?, 'ACTIVE', 1000, ?)`).run('Campaña Municipal 2026', ciudad.toString().toUpperCase().trim());
+            finalCampaignId = Number(newCamp.lastInsertRowid);
+          }
+        }
+
         const finalCiudad = ciudad.toString().toUpperCase().trim();
         const finalAlias = (candidate_alias || '').toString().toUpperCase().trim();
         const finalNombre = (candidate_nombre || '').toString().toUpperCase().trim();
         db.prepare(`INSERT INTO lists (campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal, candidate_nombre, candidate_alias, ciudad) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-          .run(campaign_id, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, finalNombre, finalAlias, finalCiudad);
-        logAction(1, 'CREATE', 'LIST', list_number, `Created list ${list_number} for campaign ${campaign_id} in ${finalCiudad}`);
+          .run(finalCampaignId, type, list_number, option_number, candidate_ci, photo_url, goal || 1000, finalNombre, finalAlias, finalCiudad);
+        logAction(1, 'CREATE', 'LIST', list_number, `Created list ${list_number} for campaign ${finalCampaignId} in ${finalCiudad}`);
       })();
       res.json({ success: true });
     } catch (err: any) {
