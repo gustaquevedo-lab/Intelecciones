@@ -912,92 +912,74 @@ try {
   `);
 } catch (_) { /* already exists */ }
 
-// 🔄 COMPREHENSIVE DATA NORMALIZATION: Fix dots, spaces and casing globally
-try {
-  const needsNormalization = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v4_full_done'").get();
-  if (!needsNormalization) {
-    console.log("PERFORMANCE: Running global database normalization (v4)...");
-    const doNorm = db.transaction(() => {
-      // 1. Clean Electors (only run if uncleaned rows remain)
-      const uncleanedElectors = db.prepare("SELECT 1 FROM electors WHERE ci LIKE '%.%' OR ci LIKE '% %' LIMIT 1").get();
-      if (uncleanedElectors) {
+// Data normalization runs inside runBootstrapChecks (deferred)
+const runNormalizationIfPending = () => {
+  try {
+    const needsNorm = db.prepare("SELECT 1 FROM settings WHERE key = 'normalization_v4_full_done'").get();
+    if (!needsNorm) {
+      console.log("PERFORMANCE: Running global database normalization (v4)...");
+      const doNorm = db.transaction(() => {
+        const uncleanedElectors = db.prepare("SELECT 1 FROM electors WHERE ci LIKE '%.%' OR ci LIKE '% %' LIMIT 1").get();
+        if (uncleanedElectors) {
+          db.exec(`
+            UPDATE OR IGNORE electors SET 
+              ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
+              ciudad = UPPER(TRIM(ciudad)), 
+              distrito = UPPER(TRIM(distrito)) 
+            WHERE ci IS NOT NULL AND (
+              ci LIKE '%.%' OR 
+              ci LIKE '% %' OR 
+              ciudad != UPPER(TRIM(ciudad)) OR 
+              distrito != UPPER(TRIM(distrito))
+            );
+          `);
+        }
+        
         db.exec(`
-          UPDATE OR IGNORE electors SET 
+          UPDATE OR IGNORE elector_captures SET 
+            elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
+          WHERE elector_ci IS NOT NULL AND (
+            elector_ci LIKE '%.%' OR 
+            elector_ci LIKE '% %'
+          );
+        `);
+
+        db.exec(`
+          UPDATE OR IGNORE capture_conflicts SET 
+            elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
+          WHERE elector_ci IS NOT NULL AND (
+            elector_ci LIKE '%.%' OR 
+            elector_ci LIKE '% %'
+          );
+        `);
+
+        db.exec(`
+          UPDATE OR IGNORE users SET 
             ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
-            ciudad = UPPER(TRIM(ciudad)), 
+            username = REPLACE(REPLACE(TRIM(username), '.', ''), ' ', ''),
             distrito = UPPER(TRIM(distrito)) 
           WHERE ci IS NOT NULL AND (
             ci LIKE '%.%' OR 
             ci LIKE '% %' OR 
-            ciudad != UPPER(TRIM(ciudad)) OR 
+            username LIKE '%.%' OR 
+            username LIKE '% %' OR
             distrito != UPPER(TRIM(distrito))
           );
         `);
-      }
-      
-      // 2. Clean Captures (Critical for JOINs)
-      db.exec(`
-        UPDATE OR IGNORE elector_captures SET 
-          elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
-        WHERE elector_ci IS NOT NULL AND (
-          elector_ci LIKE '%.%' OR 
-          elector_ci LIKE '% %'
-        );
-      `);
 
-      // 3. Clean Conflicts
-      db.exec(`
-        UPDATE OR IGNORE capture_conflicts SET 
-          elector_ci = REPLACE(REPLACE(TRIM(elector_ci), '.', ''), ' ', '')
-        WHERE elector_ci IS NOT NULL AND (
-          elector_ci LIKE '%.%' OR 
-          elector_ci LIKE '% %'
-        );
-      `);
-
-      // 4. Clean Users (CI and Username are often the same)
-      db.exec(`
-        UPDATE OR IGNORE users SET 
-          ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
-          username = REPLACE(REPLACE(TRIM(username), '.', ''), ' ', ''),
-          distrito = UPPER(TRIM(distrito)) 
-        WHERE ci IS NOT NULL AND (
-          ci LIKE '%.%' OR 
-          ci LIKE '% %' OR 
-          username LIKE '%.%' OR 
-          username LIKE '% %' OR
-          distrito != UPPER(TRIM(distrito))
-        );
-      `);
-
-      // 5. RE-BACKFILL: Now that CIs are clean, we might find new duplicates that were fragmented
-      db.prepare(`
-        INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
-        SELECT 
-          MIN(id) as capture_id, 
-          MAX(id) as capture_id_b, 
-          elector_ci, 
-          MIN(list_id) as list_id_a, 
-          MAX(list_id) as list_id_b,
-          CASE WHEN MIN(list_id) = MAX(list_id) THEN 'INTERNAL' ELSE 'INTER_LIST' END as conflict_type,
-          'PENDING'
-        FROM elector_captures
-        WHERE elector_ci IN (SELECT elector_ci FROM elector_captures GROUP BY elector_ci HAVING COUNT(*) > 1)
-        AND elector_ci NOT IN (SELECT elector_ci FROM capture_conflicts)
-        GROUP BY elector_ci
-      `).run();
-
-      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v4_full_done', 'true')").run();
-    });
-    doNorm();
-    console.log("PERFORMANCE: Global normalization and backfill complete.");
-  }
-} catch (e: any) {
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('normalization_v4_full_done', 'true')").run();
+      });
+      doNorm();
+      console.log("PERFORMANCE: Global normalization complete.");
+    }
+  } catch (e: any) {
     console.error("MIGRATION ERROR (Normalization):", e.message);
-}
+  }
+};
 
 // Exported so server.ts can run this AFTER app.listen (non-blocking startup)
 export const runBootstrapChecks = () => {
+  runNormalizationIfPending();
   try {
     const doTx = db.transaction(() => {
       // ── STEP 0: Remove zombie re-created conflicts ─────────────────────────
