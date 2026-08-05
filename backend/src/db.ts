@@ -918,19 +918,22 @@ try {
   if (!needsNormalization) {
     console.log("PERFORMANCE: Running global database normalization (v4)...");
     const doNorm = db.transaction(() => {
-      // 1. Clean Electors
-      db.exec(`
-        UPDATE OR IGNORE electors SET 
-          ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
-          ciudad = UPPER(TRIM(ciudad)), 
-          distrito = UPPER(TRIM(distrito)) 
-        WHERE ci IS NOT NULL AND (
-          ci LIKE '%.%' OR 
-          ci LIKE '% %' OR 
-          ciudad != UPPER(TRIM(ciudad)) OR 
-          distrito != UPPER(TRIM(distrito))
-        );
-      `);
+      // 1. Clean Electors (only run if uncleaned rows remain)
+      const uncleanedElectors = db.prepare("SELECT 1 FROM electors WHERE ci LIKE '%.%' OR ci LIKE '% %' LIMIT 1").get();
+      if (uncleanedElectors) {
+        db.exec(`
+          UPDATE OR IGNORE electors SET 
+            ci = REPLACE(REPLACE(TRIM(ci), '.', ''), ' ', ''),
+            ciudad = UPPER(TRIM(ciudad)), 
+            distrito = UPPER(TRIM(distrito)) 
+          WHERE ci IS NOT NULL AND (
+            ci LIKE '%.%' OR 
+            ci LIKE '% %' OR 
+            ciudad != UPPER(TRIM(ciudad)) OR 
+            distrito != UPPER(TRIM(distrito))
+          );
+        `);
+      }
       
       // 2. Clean Captures (Critical for JOINs)
       db.exec(`
