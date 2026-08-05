@@ -51,22 +51,37 @@ api.interceptors.response.use(
       if (!stored) {
         sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
       } else if (stored !== serverVersion) {
+        // Guard: never reload more than once per session to prevent infinite loops
+        const reloadGuard = sessionStorage.getItem('_reload_guard');
+        if (reloadGuard === serverVersion) {
+          // Already reloaded for this version — just update stored value and stop
+          return response;
+        }
         sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
-        // New deploy detected — clear legacy cached storage and force SW update then reload
+        sessionStorage.setItem('_reload_guard', serverVersion);
+        // New deploy detected — clear legacy cached storage and reload
         localStorage.removeItem('cached_campaigns');
         localStorage.removeItem('cached_stats');
+        const doReload = () => setTimeout(() => window.location.reload(), 500);
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistration().then((reg) => {
-            if (reg) {
-              reg.update().then(() => {
-                setTimeout(() => window.location.reload(), 500);
-              });
-            } else {
-              window.location.reload();
-            }
-          });
+          navigator.serviceWorker.getRegistration()
+            .then((reg) => {
+              if (reg) {
+                // Wrap in try/catch: corrupted SW registrations (script='Unknown') throw InvalidStateError
+                try {
+                  reg.update()
+                    .then(doReload)
+                    .catch(() => doReload()); // SW update failed — still reload normally
+                } catch (_) {
+                  doReload();
+                }
+              } else {
+                doReload();
+              }
+            })
+            .catch(() => doReload());
         } else {
-          window.location.reload();
+          doReload();
         }
       }
     }
@@ -76,6 +91,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 api.interceptors.request.use((config) => {
   // Dynamic timeouts based on endpoint type
