@@ -13,6 +13,8 @@ class CacheService {
       try {
         this.redis = new Redis(redisUrl, {
           maxRetriesPerRequest: 1,
+          enableOfflineQueue: false,
+          connectTimeout: 2000,
           retryStrategy: (times) => {
             if (times > 3) {
               logger.warn(`[CACHE] Redis connection failed 3 times. Falling back to Memory Cache (degraded mode).`);
