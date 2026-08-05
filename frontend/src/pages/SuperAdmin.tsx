@@ -690,7 +690,8 @@ Status: ${error.response?.status || 'N/A'}
         try {
           const res = await api.get(`/admin/verify-candidate/${newListCandidateCI}`);
           if (res.data) {
-            setCandidatePreview({ photo_url: res.data.photo_url, nombre: res.data.nombre, apellido: res.data.apellido });
+            const fullName = `${res.data.nombre} ${res.data.apellido || ''}`.trim();
+            setCandidatePreview({ photo_url: res.data.photo_url, nombre: fullName, apellido: res.data.apellido || '' });
             setIsCandidateVerified(true);
           } else {
             setIsCandidateVerified(false);
@@ -709,7 +710,8 @@ Status: ${error.response?.status || 'N/A'}
     try {
       const res = await api.get(`/admin/verify-candidate/${newListCandidateCI}`);
       if (res.data) {
-        setCandidatePreview(res.data);
+        const fullName = `${res.data.nombre} ${res.data.apellido || ''}`.trim();
+        setCandidatePreview({ photo_url: res.data.photo_url, nombre: fullName, apellido: res.data.apellido || '' });
         setIsCandidateVerified(true);
       }
     } catch (err) {

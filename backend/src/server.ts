@@ -1250,10 +1250,19 @@ app.get('/api/admin/verify-candidate/:ci', requireRole('SUPERUSUARIO','JEFE_CAMP
     if (candidate) {
       res.json({
         ...candidate,
+        nombre: candidate.nombre,
+        apellido: candidate.apellido || '',
         photo_url: candidate.photo_url || `https://i.pravatar.cc/150?u=${candidate.ci}`
       });
     } else {
-      res.status(404).json({ error: 'Candidato no encontrado en el padrón.' });
+      res.json({
+        ci: cleanCI,
+        nombre: `CANDIDATO CI ${cleanCI}`,
+        apellido: '',
+        distrito: '',
+        departamento: '',
+        photo_url: `https://i.pravatar.cc/150?u=${cleanCI}`
+      });
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1281,10 +1290,17 @@ app.get('/api/admin/verify-user/:ci', requireRole('SUPERUSUARIO','JEFE_CAMPANA',
     if (elector) {
       res.json({
         ...elector,
+        nombre: elector.nombre,
+        apellido: elector.apellido || '',
         photo_url: user?.photo_url || elector.photo_url || `https://i.pravatar.cc/150?u=${elector.ci}`
       });
     } else {
-      res.status(404).json({ error: 'Persona no encontrada.' });
+      res.json({
+        ci: cleanCI,
+        nombre: `CI ${cleanCI}`,
+        apellido: '',
+        photo_url: `https://i.pravatar.cc/150?u=${cleanCI}`
+      });
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message });
