@@ -630,18 +630,28 @@ const CoordinatorApp = () => {
       if (ci.length >= 5 && activeTab === 'search') {
         try {
           setIsLoading(true);
-          const localResults = await searchElectorOffline(ci);
-          if (localResults.length > 0) {
-             setElector(localResults[0]);
-             if (isReadOnly) saveElectorToHistory(localResults[0]);
-             setError('');
-             setIsLoading(false);
-             return;
+          // Prioritize online API to guarantee exact server padron data (mesa, orden, local)
+          try {
+            const res = await api.get(`/electors/${ci}`);
+            if (res.data) {
+              setElector(res.data);
+              if (isReadOnly) saveElectorToHistory(res.data);
+              setError('');
+              setIsLoading(false);
+              return;
+            }
+          } catch {
+            // Fallback to local offline cache only if server request fails
+            const localResults = await searchElectorOffline(ci);
+            if (localResults.length > 0) {
+              setElector(localResults[0]);
+              if (isReadOnly) saveElectorToHistory(localResults[0]);
+              setError('');
+              setIsLoading(false);
+              return;
+            }
           }
-          const res = await api.get(`/electors/${ci}`);
-          setElector(res.data);
-          if (isReadOnly) saveElectorToHistory(res.data);
-          setError('');
+          setElector(null);
         } catch {
           setElector(null);
         } finally {
@@ -662,12 +672,14 @@ const CoordinatorApp = () => {
     setSuccessMsg('');
     try {
       let electorData = null;
-      const localResults = await searchElectorOffline(ci);
-      if (localResults.length > 0) {
-        electorData = localResults[0];
-      } else {
+      try {
         const res = await api.get(`/electors/${ci}`);
         electorData = res.data;
+      } catch {
+        const localResults = await searchElectorOffline(ci);
+        if (localResults.length > 0) {
+          electorData = localResults[0];
+        }
       }
       
       if (electorData) {
