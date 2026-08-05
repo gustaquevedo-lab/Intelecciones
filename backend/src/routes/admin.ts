@@ -836,6 +836,8 @@ export default function adminRoutes(upload: multer.Multer) {
         'whatsapp_messages',
         'attendance',
         'login_attempts',
+        'campaigns',
+        'lists',
       ];
 
       const results: Record<string, number> = {};
@@ -844,6 +846,9 @@ export default function adminRoutes(upload: multer.Multer) {
         const r = db.prepare(`DELETE FROM ${table}`).run();
         results[table] = r.changes;
       }
+      const usersDeleted = db.prepare("DELETE FROM users WHERE role NOT IN ('SUPERUSUARIO', 'SUPERADMIN')").run();
+      results['users_demo'] = usersDeleted.changes;
+
       db.exec('PRAGMA foreign_keys = ON');
 
       // Vacuum to reclaim space
