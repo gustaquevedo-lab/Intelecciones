@@ -865,6 +865,13 @@ export default function adminRoutes(upload: multer.Multer) {
       db.prepare("DELETE FROM lists WHERE ciudad = 'PEDRO JUAN CABALLERO'").run();
       db.prepare("DELETE FROM campaigns WHERE distrito = 'PEDRO JUAN CABALLERO'").run();
 
+      // Normalize UTF-8 encoding artifacts (Q -> Ñ) from legacy DBF imports
+      db.prepare("UPDATE electors SET nombre = REPLACE(nombre, 'Q', 'Ñ') WHERE nombre LIKE '%Q%' AND nombre NOT LIKE '%QUE%' AND nombre NOT LIKE '%QUI%'").run();
+      db.prepare("UPDATE electors SET apellido = REPLACE(apellido, 'Q', 'Ñ') WHERE apellido LIKE '%Q%' AND apellido NOT LIKE '%QUE%' AND apellido NOT LIKE '%QUI%'").run();
+      db.prepare("UPDATE electors SET local_votacion = REPLACE(local_votacion, 'ARGAQA', 'ARGAÑA') WHERE local_votacion LIKE '%ARGAQA%'").run();
+      db.prepare("UPDATE electors SET local_votacion = REPLACE(local_votacion, 'PEQA', 'PEÑA') WHERE local_votacion LIKE '%PEQA%'").run();
+      db.prepare("UPDATE electors SET local_votacion = REPLACE(local_votacion, 'BAQADO', 'BAÑADO') WHERE local_votacion LIKE '%BAQADO%'").run();
+
       db.exec('PRAGMA foreign_keys = ON');
 
       // Vacuum to reclaim space
