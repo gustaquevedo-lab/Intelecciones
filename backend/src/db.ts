@@ -40,6 +40,19 @@ db.pragma('page_size = 4096');
 db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
 
+// Force WAL checkpoint on startup to recover from any interrupted writes (e.g. large WAL file)
+try {
+  const walResult = db.pragma('wal_checkpoint(TRUNCATE)') as any[];
+  if (walResult && walResult[0]) {
+    const { busy, log, checkpointed } = walResult[0];
+    if (log > 0) {
+      console.log(`[DB] WAL checkpoint: ${checkpointed}/${log} pages checkpointed (busy=${busy})`);
+    }
+  }
+} catch (err: any) {
+  console.warn('[DB] WAL checkpoint failed (non-critical):', err.message);
+}
+
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
 const currentSchemaVersion = 31; // Update this to trigger migrations
 const getDbVersion = () => {
