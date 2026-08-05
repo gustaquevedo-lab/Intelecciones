@@ -236,9 +236,6 @@ try {
 // Only run heavy schema checks if version changed
 if (dbVersion < currentSchemaVersion) {
     console.log(`MIGRATION: Database version [${dbVersion}] detected. Updating to [${currentSchemaVersion}]...`);
-    
-    // Drop incorrect duplicate index to force recreation on correct column
-    db.exec("DROP INDEX IF EXISTS idx_electors_distrito;");
 
     try { db.exec("ALTER TABLE users ADD COLUMN enabled_modules TEXT"); } catch (e) { /* ignore */ }
     try { db.exec("ALTER TABLE users ADD COLUMN assigned_table_role TEXT"); } catch (e) { /* ignore */ }
@@ -582,11 +579,6 @@ if (dbVersion < currentSchemaVersion) {
       CREATE INDEX IF NOT EXISTS idx_users_ci ON users(ci);
       CREATE INDEX IF NOT EXISTS idx_users_distrito ON users(distrito);
       CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-
-      CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
-      CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
-      CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(distrito);
-      CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors(ciudad);
 
       CREATE INDEX IF NOT EXISTS idx_captures_ci ON elector_captures(elector_ci);
       CREATE INDEX IF NOT EXISTS idx_captures_coord ON elector_captures(coordinator_id);
@@ -989,6 +981,16 @@ const runNormalizationIfPending = () => {
 export const runBootstrapChecks = () => {
   runNormalizationIfPending();
   try {
+    // Non-blocking electors index creation
+    try {
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_electors_local ON electors(local_votacion);
+        CREATE INDEX IF NOT EXISTS idx_electors_mesa ON electors(mesa);
+        CREATE INDEX IF NOT EXISTS idx_electors_distrito ON electors(distrito);
+        CREATE INDEX IF NOT EXISTS idx_electors_ciudad ON electors(ciudad);
+      `);
+    } catch (_) {}
+
     const doTx = db.transaction(() => {
       // ── STEP 0: Remove zombie re-created conflicts ─────────────────────────
       // When the bootstrap previously ran with a buggy exclusion filter, it re-created
