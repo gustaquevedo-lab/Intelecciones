@@ -1647,8 +1647,9 @@ process.on('uncaughtException', (err: Error) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+  const portNum = parseInt(String(PORT), 10) || 5000;
+  app.listen(portNum, '0.0.0.0', () => {
+    console.log(`Server running on port ${portNum}`);
 
     serverReady = true;
     console.log('[SYSTEM] Server fully ready.');
