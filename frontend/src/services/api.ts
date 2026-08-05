@@ -16,12 +16,13 @@ const api = axios.create({
 // Configure axios-retry
 axiosRetry(api, {
   retries: 3,
-  retryDelay: axiosRetry.exponentialDelay,
+  retryDelay: (retryCount) => retryCount * 1000,
   retryCondition: (error) => {
-    // Only retry on network errors and timeouts — NOT on 5xx (persistent backend errors)
+    // Retry on network errors, timeouts, and 502/503/504 Bad Gateway from proxy restart
     const isNetworkError = !error.response;
     const isTimeout = error.code === 'ECONNABORTED';
-    return isNetworkError || isTimeout;
+    const is502or503 = error.response?.status === 502 || error.response?.status === 503 || error.response?.status === 504;
+    return isNetworkError || isTimeout || is502or503;
   }
 });
 

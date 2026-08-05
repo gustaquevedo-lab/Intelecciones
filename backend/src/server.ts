@@ -33,7 +33,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { z } from 'zod';
-import db, { runBootstrapChecks } from './db';
+import db from './db';
 import { whatsappService } from './whatsappService';
 import { Jimp, loadFont } from 'jimp';
 import qrcode from 'qrcode';
@@ -1658,10 +1658,28 @@ if (process.env.NODE_ENV !== 'test') {
     serverReady = true;
     console.log('[SYSTEM] Server fully ready.');
 
+    // Run bootstrap checks in a SEPARATE WORKER THREAD after 60s.
+    // This prevents SQLite heavy work (schema migrations, index creation on 5M rows,
+    // transactions) from blocking the main Node.js Event Loop and causing Railway 502s.
     setTimeout(() => {
-      console.log('[SYSTEM] Running async bootstrap checks in background...');
       try {
-        runBootstrapChecks();
+        const { Worker } = require('worker_threads');
+        const workerPath = require('path').resolve(__dirname, 'bootstrapWorker.js');
+        const worker = new Worker(workerPath);
+
+        worker.on('message', (msg: any) => {
+          console.log('[SYSTEM BOOTSTRAP WORKER]', msg.status, msg.message || '');
+        });
+        worker.on('error', (err: Error) => {
+          console.error('[SYSTEM BOOTSTRAP WORKER ERROR]', err.message);
+        });
+        worker.on('exit', (code: number) => {
+          if (code !== 0) {
+            console.error(`[SYSTEM BOOTSTRAP WORKER] exited with code ${code}`);
+          } else {
+            console.log('[SYSTEM BOOTSTRAP WORKER] finished successfully.');
+          }
+        });
       } catch (err: any) {
         console.error('[SYSTEM BOOTSTRAP ERROR]', err.message);
       }
