@@ -1676,63 +1676,8 @@ if (process.env.NODE_ENV !== 'test') {
   const portNum = parseInt(String(PORT), 10) || 5000;
   app.listen(portNum, '0.0.0.0', () => {
     console.log(`Server running on port ${portNum}`);
-
     serverReady = true;
     console.log('[SYSTEM] Server fully ready.');
-
-    // ── ONE-TIME MESA/ORDEN RECALIBRATION ─────────────────────────────────
-    // Runs in background after startup. Recalibrates mesa/orden using
-    // TSJE standard: 350 electores per mesa, sequential within each local.
-    // Marks itself complete in settings so it never runs again.
-    setImmediate(async () => {
-      try {
-        const migrationKey = 'mesa_recalibracion_v1';
-        const alreadyDone = db.prepare("SELECT value FROM settings WHERE key = ?").get(migrationKey) as any;
-        if (alreadyDone) {
-          console.log('[MIGRATION] Mesa recalibration already applied. Skipping.');
-          return;
-        }
-
-        console.log('[MIGRATION] Starting mesa/orden recalibration (350 electores/mesa)...');
-
-        const locals = db.prepare(
-          "SELECT local_votacion, COUNT(*) as total FROM electors GROUP BY local_votacion"
-        ).all() as { local_votacion: string; total: number }[];
-
-        console.log('[MIGRATION] Locales a procesar:', locals.length);
-
-        const updateStmt = db.prepare("UPDATE electors SET mesa = ?, orden = ? WHERE ci = ?");
-
-        let localsDone = 0;
-        for (const loc of locals) {
-          const electores = db.prepare(
-            "SELECT ci FROM electors WHERE local_votacion = ? ORDER BY CAST(mesa AS INTEGER) ASC, CAST(orden AS INTEGER) ASC, ci ASC"
-          ).all(loc.local_votacion) as { ci: string }[];
-
-          db.transaction(() => {
-            for (let i = 0; i < electores.length; i++) {
-              const newMesa = Math.floor(i / 350) + 1;
-              const newOrden = (i % 350) + 1;
-              updateStmt.run(newMesa, newOrden, electores[i].ci);
-            }
-          })();
-
-          localsDone++;
-          if (localsDone % 50 === 0 || localsDone === locals.length) {
-            console.log('[MIGRATION] Progreso: ' + localsDone + '/' + locals.length + ' locales');
-          }
-
-          // Yield to event loop every 10 locals to avoid starving HTTP requests
-          if (localsDone % 10 === 0) {
-            await new Promise(r => setImmediate(r));
-          }
-        }
-
-        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(migrationKey, new Date().toISOString());
-        console.log('[MIGRATION] Mesa/orden recalibration COMPLETADA.');
-      } catch (err: any) {
-        console.error('[MIGRATION] Error en recalibración (no crítico):', err.message);
-      }
-    });
+    console.log('[SYSTEM] Background bootstrap checks disabled for instant responsiveness.');
   });
 }
