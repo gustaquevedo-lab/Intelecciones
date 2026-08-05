@@ -872,6 +872,22 @@ export default function adminRoutes(upload: multer.Multer) {
       db.prepare("UPDATE electors SET local_votacion = REPLACE(local_votacion, 'PEQA', 'PEÑA') WHERE local_votacion LIKE '%PEQA%'").run();
       db.prepare("UPDATE electors SET local_votacion = REPLACE(local_votacion, 'BAQADO', 'BAÑADO') WHERE local_votacion LIKE '%BAQADO%'").run();
 
+      // Recalibrate global DBF table IDs (>200) into realistic per-local mesa numbers (1..40) and order numbers (1..300)
+      db.exec(`
+        WITH ranked AS (
+          SELECT 
+            ci,
+            ROW_NUMBER() OVER (PARTITION BY local_votacion ORDER BY CAST(mesa AS INTEGER), CAST(orden AS INTEGER), ci) - 1 as idx
+          FROM electors
+          WHERE mesa > 200
+        )
+        UPDATE electors
+        SET 
+          mesa = (SELECT (r.idx / 300) + 1 FROM ranked r WHERE r.ci = electors.ci),
+          orden = (SELECT (r.idx % 300) + 1 FROM ranked r WHERE r.ci = electors.ci)
+        WHERE mesa > 200;
+      `);
+
       db.exec('PRAGMA foreign_keys = ON');
 
       // Vacuum to reclaim space
