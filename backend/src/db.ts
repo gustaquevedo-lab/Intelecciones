@@ -1123,6 +1123,9 @@ export const runBootstrapChecks = () => {
     // ── CONCEPCION DATABASE CLEANUP ──
     (() => {
       try {
+        const concDone = db.prepare("SELECT value FROM settings WHERE key = 'concepcion_cleanup_v1'").get() as any;
+        if (concDone && concDone.value === 'true') return;
+
         // Ensure local exists
         db.prepare(`
           INSERT OR IGNORE INTO voting_locations (cod_local, nombre, lat, lng, direccion, icon, distrito, ciudad)
@@ -1148,6 +1151,8 @@ export const runBootstrapChecks = () => {
         if (updateElectors.changes > 0) {
           console.log(`[BOOTSTRAP CLEANUP] Mapped ${updateElectors.changes} electors to LOC_CONCEPCION`);
         }
+
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('concepcion_cleanup_v1', 'true')").run();
       } catch (err: any) {
         console.error("[BOOTSTRAP CLEANUP ERROR] Failed to clean Concepcion data:", err.message);
       }
