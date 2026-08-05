@@ -28,7 +28,11 @@ if ('caches' in window) {
 }
 
 window.addEventListener('vite:preloadError', () => {
-  window.location.reload();
+  // Guard: only reload once per session to avoid infinite loops
+  if (!sessionStorage.getItem('_vite_preload_reload')) {
+    sessionStorage.setItem('_vite_preload_reload', '1');
+    window.location.reload();
+  }
 });
 
 const queryClient = new QueryClient({

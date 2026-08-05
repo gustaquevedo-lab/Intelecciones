@@ -42,48 +42,15 @@ api.interceptors.response.use(
   }
 );
 
-// Build Version Interceptor - runs last
+// Build Version Interceptor — tracks server version silently.
+// NO automatic reload: main.tsx already unregisters all SWs on every load,
+// so calling reg.update() or window.location.reload() here creates infinite loops
+// (InvalidStateError → vite:preloadError → reload → repeat).
 api.interceptors.response.use(
   (response) => {
     const serverVersion = response.headers['x-build-version'];
     if (serverVersion) {
-      const stored = sessionStorage.getItem(BUILD_VERSION_KEY);
-      if (!stored) {
-        sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
-      } else if (stored !== serverVersion) {
-        // Guard: never reload more than once per session to prevent infinite loops
-        const reloadGuard = sessionStorage.getItem('_reload_guard');
-        if (reloadGuard === serverVersion) {
-          // Already reloaded for this version — just update stored value and stop
-          return response;
-        }
-        sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
-        sessionStorage.setItem('_reload_guard', serverVersion);
-        // New deploy detected — clear legacy cached storage and reload
-        localStorage.removeItem('cached_campaigns');
-        localStorage.removeItem('cached_stats');
-        const doReload = () => setTimeout(() => window.location.reload(), 500);
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistration()
-            .then((reg) => {
-              if (reg) {
-                // Wrap in try/catch: corrupted SW registrations (script='Unknown') throw InvalidStateError
-                try {
-                  reg.update()
-                    .then(doReload)
-                    .catch(() => doReload()); // SW update failed — still reload normally
-                } catch (_) {
-                  doReload();
-                }
-              } else {
-                doReload();
-              }
-            })
-            .catch(() => doReload());
-        } else {
-          doReload();
-        }
-      }
+      sessionStorage.setItem(BUILD_VERSION_KEY, serverVersion);
     }
     return response;
   },
