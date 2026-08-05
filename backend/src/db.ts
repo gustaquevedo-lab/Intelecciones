@@ -1362,47 +1362,10 @@ export const runBootstrapChecks = () => {
     }
 
     console.log("DATABASE: Bootstrap checks complete.");
-
   } catch (e: any) {
     console.error("DATABASE ERROR (Bootstrap):", e.message);
   }
 };
-
-  // PJC Import EVERY BOOT
-  try {
-    let pjcExcelPath = '';
-    const pjcPaths = [
-      path.resolve(dbDir, 'MESARIOS 2026.xlsx'),
-      path.resolve(process.cwd(), 'MESARIOS 2026.xlsx'),
-      path.resolve(__dirname, 'MESARIOS 2026.xlsx'),
-      path.resolve(__dirname, '..', 'MESARIOS 2026.xlsx'),
-      path.resolve(__dirname, '../..', 'MESARIOS 2026.xlsx')
-    ];
-    for (const p of pjcPaths) {
-      if (fs.existsSync(p)) {
-        pjcExcelPath = p;
-        break;
-      }
-    }
-
-    if (pjcExcelPath) {
-        console.log('[BOOTSTRAP IMPORT PJC] Encontrado MESARIOS 2026.xlsx en ' + pjcExcelPath);
-        const { runImport } = require('../scripts/import_mesarios_pjc');
-        // runImport(db, pjcExcelPath); // DESACTIVADO para no pisar la UI
-    } else {
-        console.log('[BOOTSTRAP IMPORT PJC] Archivo MESARIOS 2026.xlsx no encontrado en ninguna ruta, omitiendo.');
-    }
-  } catch (err: any) {
-      console.log(`[BOOTSTRAP IMPORT PJC ERROR] Error importando PJC: ${err.message}`);
-  }
-
-  // Insercion Manual de Apoderados
-  try {
-    const { runForceCerro } = require('../scripts/force_cerro');
-    runForceCerro(db);
-  } catch (err: any) {
-    console.log(`[BOOTSTRAP FORCE CERRO ERROR] Error: ${err.message}`);
-  }
 
 export default db;
 
