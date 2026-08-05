@@ -1242,9 +1242,15 @@ app.get('/api/admin/verify-candidate/:ci', requireRole('SUPERUSUARIO','JEFE_CAMP
 
   try {
     const candidate = db.prepare(`
-      SELECT ci, nombre, apellido, distrito, departamento, photo_url 
+      SELECT ci, nombre, apellido, distrito, departamento 
       FROM electors 
       WHERE ci = ?
+    `).get(cleanCI) as any;
+
+    const user = db.prepare(`
+      SELECT photo_url 
+      FROM users 
+      WHERE username = ?
     `).get(cleanCI) as any;
     
     if (candidate) {
@@ -1252,7 +1258,7 @@ app.get('/api/admin/verify-candidate/:ci', requireRole('SUPERUSUARIO','JEFE_CAMP
         ...candidate,
         nombre: candidate.nombre,
         apellido: candidate.apellido || '',
-        photo_url: candidate.photo_url || `https://i.pravatar.cc/150?u=${candidate.ci}`
+        photo_url: user?.photo_url || `https://i.pravatar.cc/150?u=${candidate.ci}`
       });
     } else {
       res.json({
@@ -1276,7 +1282,7 @@ app.get('/api/admin/verify-user/:ci', requireRole('SUPERUSUARIO','JEFE_CAMPANA',
 
   try {
     const elector = db.prepare(`
-      SELECT ci, nombre, apellido, photo_url 
+      SELECT ci, nombre, apellido 
       FROM electors 
       WHERE ci = ?
     `).get(cleanCI) as any;
@@ -1292,7 +1298,7 @@ app.get('/api/admin/verify-user/:ci', requireRole('SUPERUSUARIO','JEFE_CAMPANA',
         ...elector,
         nombre: elector.nombre,
         apellido: elector.apellido || '',
-        photo_url: user?.photo_url || elector.photo_url || `https://i.pravatar.cc/150?u=${elector.ci}`
+        photo_url: user?.photo_url || `https://i.pravatar.cc/150?u=${elector.ci}`
       });
     } else {
       res.json({
