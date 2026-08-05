@@ -12,6 +12,8 @@ import { useSettings } from '../context/SettingsContext';
 type ServerStatus = 'checking' | 'online' | 'waking' | 'offline';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
