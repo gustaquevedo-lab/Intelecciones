@@ -1655,17 +1655,17 @@ if (process.env.NODE_ENV !== 'test') {
     console.log('[SYSTEM] Server fully ready.');
 
     setTimeout(() => {
+      console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');
+      whatsappService.connect('default').catch(err => console.error('Error in auto-connect:', err));
+    }, 30000);
+
+    setTimeout(() => {
       console.log('[SYSTEM] Running async bootstrap checks in background...');
       try {
         runBootstrapChecks();
       } catch (err: any) {
         console.error('[SYSTEM BOOTSTRAP ERROR]', err.message);
       }
-    }, 10000);
-
-    setTimeout(() => {
-      console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');
-      whatsappService.connect('default').catch(err => console.error('Error in auto-connect:', err));
-    }, 5000);
+    }, 60000);
   });
 }
