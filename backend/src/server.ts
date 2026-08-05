@@ -162,8 +162,7 @@ export const broadcastLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 const PORT = process.env.PORT || 5000;
-
-const BUILD_VERSION = Date.now().toString();
+const BUILD_VERSION = () => `${Date.now()}-v1.0.1`;
 let serverReady = false;
 
 import { cacheService } from './services/cache';
@@ -283,7 +282,7 @@ const storage = multer.diskStorage({
 
 // Attach build version to every response so clients can detect deploys
 app.use((_req, res, next) => {
-  res.setHeader('X-Build-Version', BUILD_VERSION);
+  res.setHeader('X-Build-Version', BUILD_VERSION());
   next();
 });
 
@@ -340,7 +339,7 @@ app.get('/api/ping', (_req, res) => {
 });
 
 app.get('/api/version', (_req, res) => {
-  res.json({ version: BUILD_VERSION });
+  res.json({ version: BUILD_VERSION() });
 });
 
 app.get('/api/ready', (_req, res) => {
@@ -1654,10 +1653,14 @@ if (process.env.NODE_ENV !== 'test') {
     serverReady = true;
     console.log('[SYSTEM] Server fully ready.');
 
-    setImmediate(() => {
-      console.log('[SYSTEM] Running async bootstrap checks...');
-      runBootstrapChecks();
-    });
+    setTimeout(() => {
+      console.log('[SYSTEM] Running async bootstrap checks in background...');
+      try {
+        runBootstrapChecks();
+      } catch (err: any) {
+        console.error('[SYSTEM BOOTSTRAP ERROR]', err.message);
+      }
+    }, 10000);
 
     setTimeout(() => {
       console.log('[SYSTEM] Intentando auto-conectar WhatsApp...');
