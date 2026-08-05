@@ -1648,7 +1648,7 @@ process.on('uncaughtException', (err: Error) => {
 
 if (process.env.NODE_ENV !== 'test') {
   const portNum = parseInt(String(PORT), 10) || 5000;
-  app.listen(portNum, () => {
+  app.listen(portNum, '0.0.0.0', () => {
     console.log(`Server running on port ${portNum}`);
 
     serverReady = true;
