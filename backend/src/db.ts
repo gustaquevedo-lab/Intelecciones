@@ -233,8 +233,10 @@ try {
   console.error("MIGRATION ERROR creating tsje_dhondt_scenarios:", e.message);
 }
 
-// Only run heavy schema checks if version changed
-if (dbVersion < currentSchemaVersion) {
+// Heavy schema migrations function (runs deferred)
+const runSchemaMigrations = () => {
+  const dbVersion = getDbVersion();
+  if (dbVersion < currentSchemaVersion) {
     console.log(`MIGRATION: Database version [${dbVersion}] detected. Updating to [${currentSchemaVersion}]...`);
 
     try { db.exec("ALTER TABLE users ADD COLUMN enabled_modules TEXT"); } catch (e) { /* ignore */ }
@@ -886,7 +888,8 @@ if (dbVersion < currentSchemaVersion) {
 
     setDbVersion(currentSchemaVersion);
     console.log("MIGRATION: Update completed.");
-}
+  }
+};
 
 // Always ensure voter_confirmations exists (idempotent, safe to run every start)
 try {
@@ -976,6 +979,7 @@ const runNormalizationIfPending = () => {
 
 // Exported so server.ts can run this AFTER app.listen (non-blocking startup)
 export const runBootstrapChecks = () => {
+  runSchemaMigrations();
   runNormalizationIfPending();
   try {
     // Non-blocking electors index creation
