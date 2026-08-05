@@ -12,9 +12,26 @@ if (process.env.NODE_ENV !== 'production') {
 }
 const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(dbDir, 'intellecciones.db');
 
-
-
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+
+// ── EMERGENCY WAL RECOVERY ───────────────────────────────────────────────────
+// If an interrupted write left a WAL file > 500 MB, delete it before opening.
+// Any uncommitted transactions in it are safe to discard (no partial data loss).
+const walPath = dbPath + '-wal';
+const shmPath = dbPath + '-shm';
+if (fs.existsSync(walPath)) {
+  try {
+    const walSizeMB = fs.statSync(walPath).size / (1024 * 1024);
+    if (walSizeMB > 500) {
+      console.warn(`[DB] WARNING: Oversized WAL detected (${walSizeMB.toFixed(0)} MB). Removing to prevent startup hang.`);
+      fs.unlinkSync(walPath);
+      if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath);
+      console.log('[DB] WAL files removed. Starting with clean state.');
+    }
+  } catch (err: any) {
+    console.warn('[DB] Could not check/remove WAL file:', err.message);
+  }
+}
 
 console.log("Initializing database at:", dbPath);
 const db = new Database(dbPath);
@@ -39,19 +56,7 @@ db.pragma('auto_vacuum = INCREMENTAL');
 db.pragma('page_size = 4096');
 db.pragma('query_only = false');
 db.pragma('read_uncommitted = true'); // Better concurrency for read-heavy workloads
-
-// Force WAL checkpoint on startup to recover from any interrupted writes (e.g. large WAL file)
-try {
-  const walResult = db.pragma('wal_checkpoint(TRUNCATE)') as any[];
-  if (walResult && walResult[0]) {
-    const { busy, log, checkpointed } = walResult[0];
-    if (log > 0) {
-      console.log(`[DB] WAL checkpoint: ${checkpointed}/${log} pages checkpointed (busy=${busy})`);
-    }
-  }
-} catch (err: any) {
-  console.warn('[DB] WAL checkpoint failed (non-critical):', err.message);
-}
+db.pragma('wal_autocheckpoint = 1000'); // Auto-checkpoint every 1000 pages to keep WAL small
 
 // 🏗️ SCHEMA & MIGRATIONS MANAGER
 const currentSchemaVersion = 31; // Update this to trigger migrations
