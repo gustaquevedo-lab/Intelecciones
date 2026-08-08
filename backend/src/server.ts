@@ -1632,6 +1632,26 @@ app.use('/api/tsje', tsjeRoutes());
 app.use('/api/attendance', attendanceRoutes());
 app.use('/api/voter-check', voterCheckRoutes());
 
+app.post('/api/bulk-update-mesas', (req, res) => {
+  const { updates } = req.body;
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return res.status(400).json({ error: 'Formato inválido o updates vacíos' });
+  }
+
+  try {
+    const updateStmt = db.prepare('UPDATE electors SET mesa = ?, orden = ? WHERE ci = ?');
+    db.transaction(() => {
+      for (const item of updates) {
+        updateStmt.run(item.mesa, item.orden, item.ci);
+      }
+    })();
+    res.json({ success: true, updated: updates.length });
+  } catch (err: any) {
+    console.error('[BULK UPDATE MESAS ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/file-check', (req, res) => {
   try {
     const filePath = path.join(__dirname, 'routes/diad.js');
