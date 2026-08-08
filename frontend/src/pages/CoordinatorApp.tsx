@@ -722,50 +722,40 @@ const CoordinatorApp = () => {
       handleEditHistory(elector);
       return;
     }
-    if (location) {
-      setShowModal(true);
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => setLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
-          null,
-          { enableHighAccuracy: false, timeout: 5000 }
-        );
-      }
-      return;
-    }
+
+    setIsLoading(true);
+    setError('');
 
     if (!navigator.geolocation) {
-      setError('📍 UBICACIÓN GPS REQUERIDA: Su dispositivo o navegador no admite GPS. El GPS es obligatorio para registrar electores en el mapa.');
+      setError('📍 GPS NO COMPATIBLE: Su dispositivo o navegador no admite GPS.');
       setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-    const geoOptions = { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 };
-    
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setShowModal(true);
-        setIsLoading(false);
-      },
-      () => {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    const requestPosition = () => {
+      // 100% Offline Compatible: Browser/Mobile native GPS hardware positioning
+      const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (position.coords.latitude && position.coords.longitude) {
+            setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
             setShowModal(true);
-            setIsLoading(false);
-          },
-          () => {
-            setError('📍 UBICACIÓN GPS REQUERIDA: No se pudo obtener la posición GPS. Active la ubicación de su dispositivo para poder registrar al elector en el mapa.');
-            setIsLoading(false);
-          },
-          { enableHighAccuracy: false, timeout: 5000 }
-        );
-      },
-      geoOptions
-    );
+            setError('');
+          } else {
+            setError('📍 ERROR GPS: La posición recibida no es válida. Intente nuevamente.');
+          }
+          setIsLoading(false);
+        },
+        (err) => {
+          console.warn('[GPS Hardware Warning]', err);
+          setError('📍 GPS OBLIGATORIO: No se pudo obtener la posición real por GPS. Asegúrate de tener activada la Ubicación/GPS en tu celular y pulsa "INGRESAR REGISTRO" para reintentar.');
+          setIsLoading(false);
+        },
+        options
+      );
+    };
+
+    requestPosition();
   };
 
   const handleUploadCustomElectorPhoto = async (file: File, type: 'FRENTE' | 'VERSO') => {
@@ -776,16 +766,14 @@ const CoordinatorApp = () => {
     try {
       const formData = new FormData();
       formData.append('photo', file);
-      const res = await api.post('/upload-photo', formData, {
+      formData.append('type', type);
+      const res = await api.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (type === 'FRENTE') {
-        setPhotoFrente(res.data.photo_url);
-      } else {
-        setPhotoVerso(res.data.photo_url);
-      }
-    } catch (e: any) {
-      setError('Error al subir la foto de la cédula. Intente de nuevo.');
+      if (type === 'FRENTE') setPhotoFrente(res.data.url);
+      else setPhotoVerso(res.data.url);
+    } catch {
+      setError('Error al subir la imagen.');
     } finally {
       if (type === 'FRENTE') setIsUploadingFrente(false);
       else setIsUploadingVerso(false);
