@@ -14,7 +14,7 @@ async function streamPadron() {
   const totalCount = (db.prepare('SELECT COUNT(*) as c FROM electors').get()).c;
   console.log(`Total de Electores Locales a Sincronizar: ${totalCount}`);
 
-  const BATCH_SIZE = 10000;
+  const BATCH_SIZE = 5000;
   let offset = parseInt(process.env.START_OFFSET || '0', 10);
   let batchIndex = Math.floor(offset / BATCH_SIZE) + 1;
 
