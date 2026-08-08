@@ -867,10 +867,7 @@ const CoordinatorApp = () => {
     if (!elector || isReadOnly || !user) return;
     
     const activeLocation = location || { lat: 0, lng: 0 };
-    if (!telefono || telefono.length < 10) {
-      setError('El número de teléfono es obligatorio para registrar al elector.');
-      return;
-    }
+    const cleanPhone = telefono ? telefono.replace(/\D/g, '') : '';
     
     const captureData = {
       elector_ci: elector.ci,
@@ -879,7 +876,7 @@ const CoordinatorApp = () => {
       lng: activeLocation.lng,
       traffic_light: color,
       needs_transport: needsTransport,
-      telefono: telefono.replace(/\s/g, ''),
+      telefono: cleanPhone || '0900000000',
       timestamp: new Date().toISOString(),
       elector_nombre: elector.nombre + ' ' + (elector.apellido || '')
     };
