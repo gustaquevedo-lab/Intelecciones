@@ -26,6 +26,27 @@ function hashCode(str: string) {
 export default function adminRoutes(upload: multer.Multer) {
   const router = Router();
 
+  // ── POST /api/admin/bulk-update-mesas (CERO DOWNTIME BULK UPDATER) ──────────
+  router.post('/admin/bulk-update-mesas', (req, res) => {
+    const { updates } = req.body;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ error: 'Formato inválido o updates vacíos' });
+    }
+
+    try {
+      const updateStmt = db.prepare('UPDATE electors SET mesa = ?, orden = ? WHERE ci = ?');
+      db.transaction(() => {
+        for (const item of updates) {
+          updateStmt.run(item.mesa, item.orden, item.ci);
+        }
+      })();
+      res.json({ success: true, updated: updates.length });
+    } catch (err: any) {
+      console.error('[BULK UPDATE MESAS ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── GET /api/voting-locations ───────────────────────────────────────────────
   router.get('/voting-locations', (req, res) => {
     const sec = getSecurityFilter(req, 'loc');
