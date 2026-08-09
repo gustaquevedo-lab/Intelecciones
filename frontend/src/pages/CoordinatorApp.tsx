@@ -408,8 +408,8 @@ const CoordinatorApp = () => {
   const fetchMyCoordinators = async () => {
     if (!user) return;
     try {
-      await api.get(`/users?parent_id=${user.id}`);
-      // If we need to filter further, we do it here
+      const res = await api.get(`/users?parent_id=${user.id}`);
+      setTeamStats(res.data);
     } catch {
     }
   };

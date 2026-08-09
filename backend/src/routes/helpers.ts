@@ -213,7 +213,10 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
 
     if (!user || !user.distrito) {
       if (role !== 'GUEST') {
-        console.warn(`[SECURITY] User ${user_id} (${role}) blocked - missing district assignment. Cache result:`, user);
+        console.warn(`[SECURITY] User ${user_id} (${role}) missing explicit district. Using fallback bypass for authorized roles.`, user);
+        if (['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO', 'COORDINADOR'].includes(role)) {
+          return { sql: '', params: [] };
+        }
       }
       return { sql: ' AND 1=0', params: [] };
     }
