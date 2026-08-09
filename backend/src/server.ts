@@ -1698,6 +1698,26 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`Server running on port ${portNum}`);
     serverReady = true;
     console.log('[SYSTEM] Server fully ready.');
-    console.log('[SYSTEM] Background bootstrap checks disabled for instant responsiveness.');
+
+    // Auto-heal missing user districts from parent, list, or campaign
+    setImmediate(() => {
+      try {
+        db.exec(`
+          UPDATE users 
+          SET distrito = (
+            SELECT COALESCE(p.distrito, l.ciudad, c.distrito)
+            FROM users u2
+            LEFT JOIN users p ON u2.parent_id = p.id
+            LEFT JOIN lists l ON u2.assigned_list_id = l.id
+            LEFT JOIN campaigns c ON u2.assigned_campaign_id = c.id
+            WHERE u2.id = users.id
+          )
+          WHERE (distrito IS NULL OR distrito = '');
+        `);
+        console.log('[SYSTEM] Auto-healed missing user districts.');
+      } catch (e: any) {
+        console.error('[SYSTEM] Error in user district auto-heal:', e.message);
+      }
+    });
   });
 }
