@@ -900,7 +900,8 @@ const CoordinatorApp = () => {
         setCi(''); setElector(null); setSuccessMsg(''); setLocation(null); setNeedsTransport(false); setTelefono('');
       }, 2000);
     } catch (err: any) {
-      setError('Error al procesar la captura.');
+      console.error('[Capture Error]', err);
+      setError(err.response?.data?.error || err.message || 'Error al procesar la captura.');
     } finally {
       setIsLoading(false);
     }

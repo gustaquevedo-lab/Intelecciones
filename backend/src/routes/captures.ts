@@ -18,11 +18,20 @@ export default function capturesRoutes() {
       const capture = { ...rawCapture, elector_ci: rawCapture.elector_ci.replace(/\./g, '').replace(/,/g, '').trim() };
 
       const user = db.prepare('SELECT assigned_list_id, assigned_campaign_id, distrito FROM users WHERE id = ?').get(capture.coordinator_id) as any;
-      const list_id = user?.assigned_list_id;
-      const campaign_id = user?.assigned_campaign_id;
+      let list_id = user?.assigned_list_id;
+      let campaign_id = user?.assigned_campaign_id;
       const userDistrict = user?.distrito || 'DESCONOCIDO';
 
-      if (!list_id) return res.status(403).json({ error: 'El usuario no tiene una lista asignada.' });
+      if (!list_id && campaign_id) {
+        const firstList = db.prepare('SELECT id FROM lists WHERE campaign_id = ? LIMIT 1').get(campaign_id) as any;
+        if (firstList) list_id = firstList.id;
+      }
+      if (!list_id) {
+        const fallbackList = db.prepare('SELECT id FROM lists LIMIT 1').get() as any;
+        if (fallbackList) list_id = fallbackList.id;
+      }
+
+      if (!list_id) return res.status(403).json({ error: 'El usuario no tiene una lista ni campaña asignada para capturar electores.' });
 
       const electorExists = db.prepare('SELECT ci FROM electors WHERE ci = ?').get(capture.elector_ci);
       if (!electorExists) {
