@@ -384,7 +384,6 @@ router.delete('/:id', (req, res) => {
       
       // 3. Nullify references in field_requests
       db.prepare('UPDATE field_requests SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
-      db.prepare('UPDATE field_requests SET resolved_by_id = NULL WHERE resolved_by_id = ?').run(userId);
 
       // 4. Nullify references in capture_conflicts and audit_logs
       db.prepare('UPDATE capture_conflicts SET resolved_by_jefe_id = NULL WHERE resolved_by_jefe_id = ?').run(userId);
