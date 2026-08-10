@@ -393,8 +393,6 @@ router.delete('/:id', (req, res) => {
       // 5. Nullify references in participation_logs
       db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
 
-      // 6. Nullify references in electors
-      db.prepare('UPDATE electors SET coordinador_asignado = NULL WHERE coordinador_asignado = ?').run(userId);
 
       // 7. Nullify references in acta_results (Veedores)
       db.prepare('UPDATE acta_results SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
