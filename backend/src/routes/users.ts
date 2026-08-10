@@ -394,9 +394,6 @@ router.delete('/:id', (req, res) => {
       db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
 
 
-      // 7. Nullify references in acta_results (Veedores)
-      db.prepare('UPDATE acta_results SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
-
       // 8. Update children users to have no parent (orphan them instead of deleting)
       db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(userId);
 
