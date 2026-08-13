@@ -312,7 +312,7 @@ const CoordinatorApp = () => {
     
     const timer = setTimeout(checkPadronVersion, 3500);
     return () => clearTimeout(timer);
-  }, [activeDistrict, user]);
+  }, [activeDistrict, user?.id]);
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
   
@@ -606,11 +606,14 @@ const CoordinatorApp = () => {
     if (activeTab === 'history') fetchHistory();
     if (activeTab === 'coordinators') {
       if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
-      else if (user?.role === 'PADRINO') fetchMyPadrinoStats();
+      else if (user?.role === 'PADRINO') {
+        fetchMyCoordinators();
+        fetchMyPadrinoStats();
+      }
     }
     if (activeTab === 'support') fetchRequests();
     if (activeTab === 'disputes') fetchDisputes();
-  }, [activeTab, user]);
+  }, [activeTab, user?.id, user?.role]);
 
   const fetchRequests = async () => {
     if (!user) return;
@@ -949,12 +952,7 @@ const CoordinatorApp = () => {
     }
   }, [])); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (activeTab === 'coordinators') {
-      if (user?.role === 'PADRINO') fetchMyCoordinators();
-      if (user?.role === 'JEFE_CAMPANA') fetchMyPadrinos();
-    }
-  }, [activeTab, user]);
+
 
   const fetchTeamStats = async () => {};
 
