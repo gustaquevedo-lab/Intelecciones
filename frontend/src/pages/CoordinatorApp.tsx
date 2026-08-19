@@ -630,31 +630,63 @@ const CoordinatorApp = () => {
 
   useEffect(() => {
     const lookup = async () => {
-      if (ci.length >= 5 && activeTab === 'search') {
+      const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
+      if (cleanCI.length >= 5 && activeTab === 'search') {
         try {
           setIsLoading(true);
+          let electorData = null;
+
+          // Check pending offline captures
+          let pendingCapture = null;
+          try {
+            const { getPendingActions } = await import('../services/offlineDb');
+            const pending = await getPendingActions();
+            const found = pending.find((a: any) => a.type === 'CAPTURE' && String(a.data?.elector_ci) === String(cleanCI));
+            if (found) pendingCapture = found.data;
+          } catch {}
+
           // Prioritize online API to guarantee exact server padron data (mesa, orden, local)
           try {
-            const res = await api.get(`/electors/${ci}`);
-            if (res.data) {
-              setElector(res.data);
-              if (isReadOnly) saveElectorToHistory(res.data);
-              setError('');
-              setIsLoading(false);
-              return;
-            }
+            const res = await api.get(`/electors/${cleanCI}`);
+            if (res.data) electorData = res.data;
           } catch {
             // Fallback to local offline cache only if server request fails
-            const localResults = await searchElectorOffline(ci);
-            if (localResults.length > 0) {
-              setElector(localResults[0]);
-              if (isReadOnly) saveElectorToHistory(localResults[0]);
-              setError('');
-              setIsLoading(false);
-              return;
-            }
+            const localResults = await searchElectorOffline(cleanCI);
+            if (localResults.length > 0) electorData = localResults[0];
           }
-          setElector(null);
+
+          if (electorData) {
+            if (pendingCapture) {
+              electorData = {
+                ...electorData,
+                traffic_light: pendingCapture.traffic_light || electorData.traffic_light,
+                capture_telefono: pendingCapture.telefono || electorData.capture_telefono,
+                needs_transport: pendingCapture.needs_transport ? 1 : electorData.needs_transport,
+                captured_by: user?.id,
+                coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
+              };
+            }
+            setElector(electorData);
+            if (isReadOnly) saveElectorToHistory(electorData);
+            setError('');
+          } else if (pendingCapture) {
+            setElector({
+              ci: cleanCI,
+              nombre: pendingCapture.elector_nombre?.split(' ')[0] || 'ELECTOR',
+              apellido: pendingCapture.elector_nombre?.split(' ').slice(1).join(' ') || 'CAMPO',
+              local_votacion: 'REGISTRO DE CAMPO',
+              mesa: 0,
+              orden: 0,
+              traffic_light: pendingCapture.traffic_light,
+              capture_telefono: pendingCapture.telefono,
+              needs_transport: pendingCapture.needs_transport ? 1 : 0,
+              captured_by: user?.id,
+              coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
+            });
+            setError('');
+          } else {
+            setElector(null);
+          }
         } catch {
           setElector(null);
         } finally {
@@ -668,33 +700,66 @@ const CoordinatorApp = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ci) return;
+    const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
+    if (!cleanCI) return;
     setIsLoading(true);
     setError('');
     setElector(null);
     setSuccessMsg('');
     try {
       let electorData = null;
+
+      let pendingCapture = null;
       try {
-        const res = await api.get(`/electors/${ci}`);
+        const { getPendingActions } = await import('../services/offlineDb');
+        const pending = await getPendingActions();
+        const found = pending.find((a: any) => a.type === 'CAPTURE' && String(a.data?.elector_ci) === String(cleanCI));
+        if (found) pendingCapture = found.data;
+      } catch {}
+
+      try {
+        const res = await api.get(`/electors/${cleanCI}`);
         electorData = res.data;
       } catch {
-        const localResults = await searchElectorOffline(ci);
+        const localResults = await searchElectorOffline(cleanCI);
         if (localResults.length > 0) {
           electorData = localResults[0];
         }
       }
       
-      if (electorData) {
-        setElector(electorData);
-        if (isReadOnly) saveElectorToHistory(electorData);
-        if (electorData.traffic_light) {
-          if (!isReadOnly && electorData.coordinator_id !== user?.id) {
-            setError(`Este elector ya fue captado por ${electorData.coordinator_name || 'otro coordinador'}.`);
+      if (electorData || pendingCapture) {
+        const finalElector = electorData ? {
+          ...electorData,
+          ...(pendingCapture ? {
+            traffic_light: pendingCapture.traffic_light || electorData.traffic_light,
+            capture_telefono: pendingCapture.telefono || electorData.capture_telefono,
+            needs_transport: pendingCapture.needs_transport ? 1 : electorData.needs_transport,
+            captured_by: user?.id,
+            coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
+          } : {})
+        } : {
+          ci: cleanCI,
+          nombre: pendingCapture.elector_nombre?.split(' ')[0] || 'ELECTOR',
+          apellido: pendingCapture.elector_nombre?.split(' ').slice(1).join(' ') || 'CAMPO',
+          local_votacion: 'REGISTRO DE CAMPO',
+          mesa: 0,
+          orden: 0,
+          traffic_light: pendingCapture.traffic_light,
+          capture_telefono: pendingCapture.telefono,
+          needs_transport: pendingCapture.needs_transport ? 1 : 0,
+          captured_by: user?.id,
+          coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
+        };
+
+        setElector(finalElector);
+        if (isReadOnly) saveElectorToHistory(finalElector);
+        if (finalElector.traffic_light) {
+          if (!isReadOnly && finalElector.captured_by && finalElector.captured_by !== user?.id) {
+            setError(`Este elector ya fue captado por ${finalElector.coordinator_name || 'otro coordinador'}.`);
           }
         }
       } else {
-        setCustomElectorCI(ci);
+        setCustomElectorCI(cleanCI);
         setCustomElectorName('');
         setCustomElectorTelefono('');
         setCustomActionPill(null);
@@ -702,18 +767,12 @@ const CoordinatorApp = () => {
         setShowUnregisteredModal(true);
       }
     } catch {
-      const localResults = await searchElectorOffline(ci);
-      if (localResults.length > 0) {
-        setElector(localResults[0]);
-        if (isReadOnly) saveElectorToHistory(localResults[0]);
-      } else {
-        setCustomElectorCI(ci);
-        setCustomElectorName('');
-        setCustomElectorTelefono('');
-        setCustomActionPill(null);
-        setIsConfirmed(false);
-        setShowUnregisteredModal(true);
-      }
+      setCustomElectorCI(cleanCI);
+      setCustomElectorName('');
+      setCustomElectorTelefono('');
+      setCustomActionPill(null);
+      setIsConfirmed(false);
+      setShowUnregisteredModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -983,14 +1042,39 @@ const CoordinatorApp = () => {
 
     try {
       const res = await api.get(`/coordinator/${user.id}/captures`);
-      const data = res.data;
+      let data = Array.isArray(res.data) ? res.data : [];
       
-      if (!Array.isArray(data)) {
-        console.warn("Ignored invalid history data (not an array)");
-        setIsStatsLoading(false);
-        return;
+      // Merge pending offline captures from local queue
+      try {
+        const { getPendingActions } = await import('../services/offlineDb');
+        const pending = await getPendingActions();
+        const pendingCaptures = pending.filter((a: any) => a.type === 'CAPTURE' && (a.data?.coordinator_id === user.id || !a.data?.coordinator_id));
+        
+        for (const p of pendingCaptures) {
+          const pData = p.data;
+          const exists = data.some((c: any) => String(c.ci || c.elector_ci) === String(pData.elector_ci));
+          if (!exists) {
+            data.unshift({
+              id: p.id || 'pending_' + pData.elector_ci,
+              elector_ci: pData.elector_ci,
+              ci: pData.elector_ci,
+              nombre: pData.elector_nombre?.split(' ')[0] || 'ELECTOR',
+              apellido: pData.elector_nombre?.split(' ').slice(1).join(' ') || 'PENDIENTE SYNC',
+              local_votacion: 'REGISTRO DE CAMPO',
+              mesa: 0,
+              orden: 0,
+              traffic_light: pData.traffic_light,
+              needs_transport: pData.needs_transport ? 1 : 0,
+              telefono: pData.telefono,
+              timestamp: pData.timestamp || new Date().toISOString(),
+              is_pending_sync: true
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load offline pending captures:', e);
       }
-      
+
       setHistory(data);
       
       // Calculate real stats from history

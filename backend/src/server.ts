@@ -128,8 +128,8 @@ export const apiLimiter = rateLimit({
 
 export const captureLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
-  message: { error: 'Límite de capturas de electores excedido (30/min).' },
+  max: 180,
+  message: { error: 'Límite de capturas de electores excedido (180/min).' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -1179,39 +1179,56 @@ app.get('/api/dia-d/validate/:ci', (req, res) => {
 });
 
 app.get('/api/electors/:ci', (req, res) => {
-  const { ci } = req.params;
+  const rawCI = req.params.ci || '';
+  const cleanCI = rawCI.replace(/\./g, '').replace(/,/g, '').trim();
   const list_id = getListId(req);
-  const user_id = req.headers['x-user-id'];
+  const user_id = req.headers['x-user-id'] ? Number(req.headers['x-user-id']) : null;
   const role = getRole(req);
 
   let distritoFilter = '';
-  let distritoParams: any[] = [];
-  if (role !== 'SUPERUSUARIO' && user_id) {
+  let queryParams: any[] = [user_id || 0, list_id || 0, cleanCI];
+
+  if (role !== 'SUPERUSUARIO' && role !== 'SUPER_ADMIN' && user_id) {
     const userInfo = getCachedUserInfo(String(user_id));
     if (userInfo?.distrito) {
-      distritoFilter = 'AND (e.distrito = ? OR e.ciudad = ?)';
-      distritoParams = [userInfo.distrito, userInfo.distrito];
+      distritoFilter = `
+        AND (
+          UPPER(TRIM(COALESCE(e.distrito, ''))) = UPPER(TRIM(?)) 
+          OR UPPER(TRIM(COALESCE(e.ciudad, ''))) = UPPER(TRIM(?))
+          OR c.coordinator_id = ?
+        )
+      `;
+      queryParams.push(userInfo.distrito, userInfo.distrito, user_id);
     }
   }
-  
-  const isReadOnlyRole = ['CANDIDATO', 'CANDIDATE', 'SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA'].includes(role);
-  const effectiveListId = isReadOnlyRole ? null : list_id;
 
-  const elector = db.prepare(`
-    SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, 
-           c.telefono as capture_telefono, c.lat as capture_lat, c.lng as capture_lng, c.needs_transport,
-           u.nombre as coordinator_name, p.nombre as padrino_name
-    FROM electors e
-    LEFT JOIN elector_captures c ON e.ci = c.elector_ci AND (c.list_id = ? OR ? IS NULL)
-    LEFT JOIN users u ON c.coordinator_id = u.id
-    LEFT JOIN users p ON u.parent_id = p.id
-    WHERE e.ci = ? ${distritoFilter}
-  `).get(effectiveListId, effectiveListId, ci, ...distritoParams);
-  
-  if (elector) {
-    res.json(elector);
-  } else {
-    res.status(404).json({ error: 'Elector no encontrado en el padrón.' });
+  try {
+    const elector = db.prepare(`
+      SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, 
+             c.telefono as capture_telefono, c.lat as capture_lat, c.lng as capture_lng, c.needs_transport,
+             u.nombre as coordinator_name, p.nombre as padrino_name
+      FROM electors e
+      LEFT JOIN elector_captures c ON c.id = (
+        SELECT id FROM elector_captures
+        WHERE elector_ci = e.ci
+        ORDER BY 
+          (CASE WHEN coordinator_id = ? THEN 1 WHEN list_id = ? THEN 2 ELSE 3 END), 
+          timestamp DESC 
+        LIMIT 1
+      )
+      LEFT JOIN users u ON c.coordinator_id = u.id
+      LEFT JOIN users p ON u.parent_id = p.id
+      WHERE e.ci = ? ${distritoFilter}
+    `).get(...queryParams) as any;
+    
+    if (elector) {
+      res.json(elector);
+    } else {
+      res.status(404).json({ error: 'Elector no encontrado en el padrón.' });
+    }
+  } catch (err: any) {
+    console.error('[ELECTOR LOOKUP ERROR]', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

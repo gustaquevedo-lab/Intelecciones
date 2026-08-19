@@ -822,7 +822,7 @@ const TeamPanel = () => {
   };
 
   // Reports states
-  const [reportType, setReportType] = useState<'padrinos' | 'coordinators' | 'electors' | 'locales' | 'copiatines'>('padrinos');
+  const [reportType, setReportType] = useState<'padrinos' | 'coordinators' | 'electors' | 'locales' | 'copiatines' | 'padron'>('padrinos');
   const [reportData, setReportData] = useState<{
     district: string;
     filterPadrinos: any[];
@@ -837,6 +837,82 @@ const TeamPanel = () => {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  // Padron export states
+  const [padronCityList, setPadronCityList] = useState<string[]>([]);
+  const [selectedPadronCity, setSelectedPadronCity] = useState<string>('');
+  const [padronLocales, setPadronLocales] = useState<string[]>([]);
+  const [selectedPadronLocale, setSelectedPadronLocale] = useState<string>('ALL');
+  const [padronMesa, setPadronMesa] = useState<string>('');
+  const [padronSearch, setPadronSearch] = useState<string>('');
+  const [downloadingPadronFormat, setDownloadingPadronFormat] = useState<'pdf' | 'xlsx' | null>(null);
+  const [loadingPadronLocales, setLoadingPadronLocales] = useState<boolean>(false);
+
+  const fetchPadronCities = async () => {
+    try {
+      const res = await api.get('/districts/global');
+      const list = Array.isArray(res.data) ? res.data : [];
+      setPadronCityList(list);
+      if (list.length > 0 && !selectedPadronCity) {
+        const defaultCity = activeDistrict || user?.distrito || list[0];
+        setSelectedPadronCity(defaultCity);
+        fetchPadronLocales(defaultCity);
+      }
+    } catch (err) {
+      console.error('Error fetching padron districts:', err);
+    }
+  };
+
+  const fetchPadronLocales = async (city: string) => {
+    if (!city) return;
+    setLoadingPadronLocales(true);
+    try {
+      const res = await api.get(`/reports/padron/locales?ciudad=${encodeURIComponent(city)}`);
+      setPadronLocales(Array.isArray(res.data) ? res.data : []);
+      setSelectedPadronLocale('ALL');
+    } catch (err) {
+      console.error('Error fetching locales for padron:', err);
+      setPadronLocales([]);
+    } finally {
+      setLoadingPadronLocales(false);
+    }
+  };
+
+  const handleDownloadCityPadron = async (format: 'pdf' | 'xlsx') => {
+    if (!selectedPadronCity) {
+      alert('Por favor seleccione una ciudad.');
+      return;
+    }
+    setDownloadingPadronFormat(format);
+    try {
+      const params = new URLSearchParams();
+      params.append('ciudad', selectedPadronCity);
+      if (selectedPadronLocale && selectedPadronLocale !== 'ALL') params.append('local', selectedPadronLocale);
+      if (padronMesa.trim()) params.append('mesa', padronMesa.trim());
+      if (padronSearch.trim()) params.append('search', padronSearch.trim());
+
+      const res = await api.get(`/reports/padron/export/${format}?${params.toString()}`, {
+        responseType: 'blob'
+      });
+      const safeCity = selectedPadronCity.toLowerCase().replace(/[^a-z0-9]/gi, '_');
+      const extension = format === 'pdf' ? 'pdf' : 'xlsx';
+      const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+      const blob = new Blob([res.data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `padron_${safeCity}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Error al descargar el padrón: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setDownloadingPadronFormat(null);
+    }
+  };
 
   // CI Lookup States
   const [ciLookupValue, setCiLookupValue] = useState('');
@@ -1873,6 +1949,7 @@ const TeamPanel = () => {
                 { id: 'coordinators', label: 'Listado de Coordinadores', visible: true },
                 { id: 'electors', label: 'Electores Registrados', visible: true },
                 { id: 'locales', label: 'Cobertura de Locales', visible: true },
+                { id: 'padron', label: '📖 Padrón por Ciudad', visible: true },
                 { id: 'copiatines', label: '🗳 Copiatines Electorales', visible: true },
               ].filter(t => t.visible).map(t => (
                 <button
@@ -1881,6 +1958,9 @@ const TeamPanel = () => {
                     setReportType(t.id as any);
                     setSelectedPadrinoFilter('ALL');
                     setSelectedCoordinatorFilter('ALL');
+                    if (t.id === 'padron') {
+                      fetchPadronCities();
+                    }
                   }}
                   style={{
                     padding: '0.5rem 0.9rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 900,
@@ -1897,7 +1977,7 @@ const TeamPanel = () => {
             </div>
 
             {/* Print and Export Buttons */}
-            <div style={{ display: reportType === 'copiatines' ? 'none' : 'flex', gap: '0.6rem', alignItems: 'center' }}>
+            <div style={{ display: (reportType === 'copiatines' || reportType === 'padron') ? 'none' : 'flex', gap: '0.6rem', alignItems: 'center' }}>
               {/* Search Bar */}
               <div style={{ position: 'relative', width: '180px' }}>
                 <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
@@ -2161,6 +2241,137 @@ const TeamPanel = () => {
 
            {/* Copiatines Electorales */}
           {reportType === 'copiatines' && <CopiatinesReport />}
+
+          {/* Padrón Electoral por Ciudad */}
+          {reportType === 'padron' && (
+            <div className="card-premium-styled" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileText size={20} style={{ color: 'var(--plra-300)' }} /> Padrón Electoral por Ciudad
+                  </h3>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+                    Genera listados oficiales con Cédula, Apellido y Nombre, Local de Votación, Mesa y Orden.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.35rem', display: 'block' }}>
+                    Ciudad / Distrito
+                  </label>
+                  <select
+                    className="modern-input-premium-styled"
+                    value={selectedPadronCity}
+                    onChange={e => {
+                      setSelectedPadronCity(e.target.value);
+                      fetchPadronLocales(e.target.value);
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Seleccione una ciudad...</option>
+                    {padronCityList.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.35rem', display: 'block' }}>
+                    Local de Votación (Opcional)
+                  </label>
+                  <select
+                    className="modern-input-premium-styled"
+                    value={selectedPadronLocale}
+                    onChange={e => setSelectedPadronLocale(e.target.value)}
+                    disabled={loadingPadronLocales || padronLocales.length === 0}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="ALL">Todos los locales ({padronLocales.length})</option>
+                    {padronLocales.map(loc => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.35rem', display: 'block' }}>
+                    Mesa (Opcional)
+                  </label>
+                  <input
+                    type="number"
+                    className="modern-input-premium-styled"
+                    placeholder="Ej: 1"
+                    value={padronMesa}
+                    onChange={e => setPadronMesa(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.35rem', display: 'block' }}>
+                    Filtro Búsqueda (Opcional)
+                  </label>
+                  <input
+                    className="modern-input-premium-styled"
+                    placeholder="Nombre o CI..."
+                    value={padronSearch}
+                    onChange={e => setPadronSearch(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '12px', padding: '1rem' }}>
+                <p style={{ fontSize: '0.75rem', color: '#93C5FD', margin: 0, lineHeight: 1.4 }}>
+                  💡 <strong>PDF Ultra-Compacto Paginado:</strong> Formato denso de 2 columnas (~100 electores por página) optimizado para ahorrar papel y facilitar el trabajo de los apoderados, miembros de mesa y coordinadores.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleDownloadCityPadron('pdf')}
+                  disabled={!selectedPadronCity || downloadingPadronFormat !== null}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+                    border: 'none', borderRadius: '10px', color: 'white', padding: '0.75rem 1.5rem',
+                    fontSize: '0.85rem', fontWeight: 800,
+                    cursor: (!selectedPadronCity || downloadingPadronFormat !== null) ? 'not-allowed' : 'pointer',
+                    opacity: (!selectedPadronCity || downloadingPadronFormat !== null) ? 0.6 : 1
+                  }}
+                >
+                  {downloadingPadronFormat === 'pdf' ? (
+                    <div className="animate-spin" style={{ width: '14px', height: '14px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                  ) : (
+                    <FileText size={16} />
+                  )}
+                  <span>Descargar PDF Paginado</span>
+                </button>
+
+                <button
+                  onClick={() => handleDownloadCityPadron('xlsx')}
+                  disabled={!selectedPadronCity || downloadingPadronFormat !== null}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    background: 'linear-gradient(135deg, #16A34A, #15803D)',
+                    border: 'none', borderRadius: '10px', color: 'white', padding: '0.75rem 1.5rem',
+                    fontSize: '0.85rem', fontWeight: 800,
+                    cursor: (!selectedPadronCity || downloadingPadronFormat !== null) ? 'not-allowed' : 'pointer',
+                    opacity: (!selectedPadronCity || downloadingPadronFormat !== null) ? 0.6 : 1
+                  }}
+                >
+                  {downloadingPadronFormat === 'xlsx' ? (
+                    <div className="animate-spin" style={{ width: '14px', height: '14px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  <span>Descargar Excel (XLS)</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* C.I. Elector Capture Lookup Searchbox */}
           {activeTab === 'reports' && reportType === 'electors' && (

@@ -342,9 +342,10 @@ const TabHistory = (props: any) => {
                       <User size={20} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
                         {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
+                        {cap.is_pending_sync && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'rgba(234,179,8,0.2)', border: '1px solid rgba(234,179,8,0.4)', color: '#FACC15', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>⏳ GUARDADO LOCAL (SINCRONIZANDO)</span>}
                       </div>
                       <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.ci || cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion || cap.local}</p>
                       {cap.is_disputed === 1 && (

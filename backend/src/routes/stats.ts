@@ -407,6 +407,278 @@ export default function statsRoutes() {
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── GET /api/reports/padron/locales ─────────────────────────────────────────
+  router.get('/reports/padron/locales', (req, res) => {
+    const ciudad = (req.query.ciudad as string || '').trim();
+    if (!ciudad) return res.json([]);
+    try {
+      const rows = db.prepare(`
+        SELECT DISTINCT local_votacion
+        FROM electors
+        WHERE local_votacion IS NOT NULL AND local_votacion != ''
+          AND (UPPER(TRIM(ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(distrito)) = UPPER(TRIM(?)))
+        ORDER BY local_votacion ASC
+      `).all(ciudad, ciudad) as any[];
+      res.json(rows.map(r => r.local_votacion));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GET /api/reports/padron/export/xlsx ───────────────────────────────────────
+  router.get('/reports/padron/export/xlsx', requireRole('SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'SUBJEFE', 'CANDIDATO'), (req, res) => {
+    const ciudad = (req.query.ciudad as string || '').trim();
+    const local = (req.query.local as string || '').trim();
+    const mesa = (req.query.mesa as string || '').trim();
+    const search = (req.query.search as string || '').trim();
+
+    if (!ciudad) {
+      return res.status(400).json({ error: 'Debe especificar el nombre de la ciudad o distrito.' });
+    }
+
+    try {
+      let whereClauses = ['(UPPER(TRIM(ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(distrito)) = UPPER(TRIM(?)))'];
+      let params: any[] = [ciudad, ciudad];
+
+      if (local && local !== 'ALL') {
+        whereClauses.push('UPPER(local_votacion) = UPPER(?)');
+        params.push(local);
+      }
+      if (mesa && mesa !== 'ALL' && !isNaN(parseInt(mesa))) {
+        whereClauses.push('mesa = ?');
+        params.push(parseInt(mesa));
+      }
+      if (search) {
+        whereClauses.push('(ci LIKE ? OR nombre LIKE ? OR apellido LIKE ?)');
+        const searchPattern = `%${search}%`;
+        params.push(searchPattern, searchPattern, searchPattern);
+      }
+
+      const rows = db.prepare(`
+        SELECT ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito
+        FROM electors
+        WHERE ${whereClauses.join(' AND ')}
+        ORDER BY local_votacion ASC, mesa ASC, orden ASC, apellido ASC, nombre ASC
+      `).all(...params) as any[];
+
+      const sheetData = rows.map(r => ({
+        'Cédula': r.ci || '',
+        'Apellidos': r.apellido || '',
+        'Nombres': r.nombre || '',
+        'Nombre Completo': ((r.apellido || '') + ' ' + (r.nombre || '')).trim(),
+        'Local de Votación': r.local_votacion || '',
+        'Mesa': r.mesa || 0,
+        'Orden': r.orden || 0,
+        'Ciudad / Distrito': r.ciudad || r.distrito || ciudad
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(sheetData);
+      ws['!cols'] = [
+        { wch: 12 }, { wch: 22 }, { wch: 22 }, { wch: 35 }, { wch: 35 }, { wch: 8 }, { wch: 8 }, { wch: 25 }
+      ];
+      XLSX.utils.book_append_sheet(wb, ws, 'Padrón');
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      const safeCity = ciudad.toLowerCase().replace(/[^a-z0-9]/gi, '_');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=padron_${safeCity}.xlsx`);
+      res.end(buffer);
+    } catch (err: any) {
+      console.error('[PADRON XLSX EXPORT ERROR]:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GET /api/reports/padron/export/pdf ────────────────────────────────────────
+  router.get('/reports/padron/export/pdf', requireRole('SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'SUBJEFE', 'CANDIDATO'), (req, res) => {
+    const ciudad = (req.query.ciudad as string || '').trim();
+    const local = (req.query.local as string || '').trim();
+    const mesa = (req.query.mesa as string || '').trim();
+    const search = (req.query.search as string || '').trim();
+    const limitParam = req.query.limit as string;
+    const maxLimit = limitParam && !isNaN(parseInt(limitParam)) ? parseInt(limitParam) : 30000;
+
+    if (!ciudad) {
+      return res.status(400).json({ error: 'Debe especificar el nombre de la ciudad o distrito.' });
+    }
+
+    try {
+      let whereClauses = ['(UPPER(TRIM(ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(distrito)) = UPPER(TRIM(?)))'];
+      let params: any[] = [ciudad, ciudad];
+
+      if (local && local !== 'ALL') {
+        whereClauses.push('UPPER(local_votacion) = UPPER(?)');
+        params.push(local);
+      }
+      if (mesa && mesa !== 'ALL' && !isNaN(parseInt(mesa))) {
+        whereClauses.push('mesa = ?');
+        params.push(parseInt(mesa));
+      }
+      if (search) {
+        whereClauses.push('(ci LIKE ? OR nombre LIKE ? OR apellido LIKE ?)');
+        const searchPattern = `%${search}%`;
+        params.push(searchPattern, searchPattern, searchPattern);
+      }
+
+      const rows = db.prepare(`
+        SELECT ci, nombre, apellido, local_votacion, mesa, orden
+        FROM electors
+        WHERE ${whereClauses.join(' AND ')}
+        ORDER BY local_votacion ASC, mesa ASC, orden ASC, apellido ASC, nombre ASC
+        LIMIT ?
+      `).all(...params, maxLimit) as any[];
+
+      const PDFDocument = require('pdfkit/js/pdfkit.standalone.js');
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: 18, bottom: 18, left: 18, right: 18 },
+        bufferPages: true,
+        autoFirstPage: false
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on('data', (c: Buffer) => chunks.push(c));
+      doc.on('end', () => {
+        const safeCity = ciudad.toLowerCase().replace(/[^a-z0-9]/gi, '_');
+        const pdfBuffer = Buffer.concat(chunks);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=padron_${safeCity}.pdf`);
+        res.end(pdfBuffer);
+      });
+
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
+      const margin = 18;
+      const usableWidth = pageWidth - (margin * 2);
+      const usableHeight = pageHeight - (margin * 2);
+      const gutter = 8;
+      const colWidth = (usableWidth - gutter) / 2;
+
+      const subCols = [
+        { key: 'ci', header: 'CÉDULA', width: 38, align: 'left' },
+        { key: 'nombre_completo', header: 'APELLIDO Y NOMBRE', width: 126, align: 'left' },
+        { key: 'local_votacion', header: 'LOCAL DE VOTACIÓN', width: 80, align: 'left' },
+        { key: 'mesa', header: 'M', width: 14, align: 'center' },
+        { key: 'orden', header: 'ORD', width: 14, align: 'center' }
+      ];
+
+      const rowHeight = 11.2;
+      const headerHeight = 24;
+      const tableHeaderHeight = 12;
+      const footerHeight = 14;
+      const contentTop = margin + headerHeight + 4;
+      const tableTop = contentTop + tableHeaderHeight;
+      const maxRowsPerCol = Math.floor((usableHeight - headerHeight - tableHeaderHeight - footerHeight - 6) / rowHeight);
+
+      const drawPageHeader = (d: any, cityTitle: string, totalCount: number) => {
+        d.rect(margin, margin, usableWidth, headerHeight).fill('#0f172a');
+        
+        d.fillColor('#ffffff').fontSize(8.5).font('Helvetica-Bold')
+         .text('PADRÓN ELECTORAL NACIONAL - ' + cityTitle.toUpperCase(), margin + 6, margin + 4, { width: usableWidth - 160, lineBreak: false });
+        
+        let subText = 'Listado Oficial para Mesa y Coordinación';
+        if (local && local !== 'ALL') subText += ` • Local: ${local}`;
+        if (mesa && mesa !== 'ALL') subText += ` • Mesa: ${mesa}`;
+
+        d.fillColor('#94a3b8').fontSize(6.5).font('Helvetica')
+         .text(subText, margin + 6, margin + 14, { width: usableWidth - 160, lineBreak: false });
+
+        d.fillColor('#38bdf8').fontSize(7.5).font('Helvetica-Bold')
+         .text('TOTAL: ' + totalCount.toLocaleString() + ' ELECTORES', pageWidth - margin - 150, margin + 5, { width: 144, align: 'right' });
+        
+        const today = new Date().toLocaleDateString('es-PY');
+        d.fillColor('#94a3b8').fontSize(6).font('Helvetica')
+         .text('Generado: ' + today, pageWidth - margin - 150, margin + 14, { width: 144, align: 'right' });
+
+        for (let c = 0; c < 2; c++) {
+          const colX = margin + c * (colWidth + gutter);
+          d.rect(colX, contentTop, colWidth, tableHeaderHeight).fill('#1e293b');
+          
+          let curX = colX;
+          d.fillColor('#f8fafc').fontSize(5.5).font('Helvetica-Bold');
+          for (const sc of subCols) {
+            d.text(sc.header, curX + 2, contentTop + 3.2, { width: sc.width - 4, align: sc.align as any });
+            curX += sc.width;
+          }
+        }
+      };
+
+      if (rows.length === 0) {
+        doc.addPage();
+        drawPageHeader(doc, ciudad, 0);
+        doc.fillColor('#64748b').fontSize(10).font('Helvetica')
+           .text('No se encontraron electores para los criterios especificados.', margin, tableTop + 30, { width: usableWidth, align: 'center' });
+      } else {
+        let currentIdx = 0;
+        while (currentIdx < rows.length) {
+          doc.addPage();
+          drawPageHeader(doc, ciudad, rows.length);
+
+          for (let c = 0; c < 2 && currentIdx < rows.length; c++) {
+            const colX = margin + c * (colWidth + gutter);
+            let rowY = tableTop;
+
+            for (let r = 0; r < maxRowsPerCol && currentIdx < rows.length; r++) {
+              const elector = rows[currentIdx];
+              const isEven = r % 2 === 0;
+              
+              doc.rect(colX, rowY, colWidth, rowHeight).fill(isEven ? '#ffffff' : '#f1f5f9');
+              doc.rect(colX, rowY, colWidth, rowHeight).lineWidth(0.2).stroke('#e2e8f0');
+
+              let curX = colX;
+              
+              // CI
+              doc.fillColor('#0f172a').fontSize(5.8).font('Helvetica-Bold')
+                 .text(String(elector.ci || ''), curX + 1.5, rowY + 2.5, { width: subCols[0].width - 3, lineBreak: false });
+              curX += subCols[0].width;
+
+              // Nombre
+              const nombreCompleto = ((elector.apellido || '') + ' ' + (elector.nombre || '')).trim() || '—';
+              doc.fillColor('#1e293b').fontSize(5.8).font('Helvetica')
+                 .text(nombreCompleto, curX + 1.5, rowY + 2.5, { width: subCols[1].width - 3, lineBreak: false });
+              curX += subCols[1].width;
+
+              // Local
+              doc.fillColor('#475569').fontSize(5.2).font('Helvetica')
+                 .text(String(elector.local_votacion || '—'), curX + 1.5, rowY + 2.5, { width: subCols[2].width - 3, lineBreak: false });
+              curX += subCols[2].width;
+
+              // Mesa
+              doc.fillColor('#0369a1').fontSize(6).font('Helvetica-Bold')
+                 .text(String(elector.mesa || '0'), curX, rowY + 2.5, { width: subCols[3].width, align: 'center', lineBreak: false });
+              curX += subCols[3].width;
+
+              // Orden
+              doc.fillColor('#0f172a').fontSize(6).font('Helvetica-Bold')
+                 .text(String(elector.orden || '0'), curX, rowY + 2.5, { width: subCols[4].width, align: 'center', lineBreak: false });
+
+              rowY += rowHeight;
+              currentIdx++;
+            }
+          }
+        }
+      }
+
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
+        doc.switchToPage(i);
+        doc.fillColor('#64748b').fontSize(6).font('Helvetica')
+           .text(
+             'Página ' + (i + 1) + ' de ' + range.count + '  •  Padrón Electoral - ' + ciudad.toUpperCase() + '  •  Intelecciones',
+             margin,
+             pageHeight - margin - 8,
+             { width: usableWidth, align: 'center' }
+           );
+      }
+
+      doc.end();
+    } catch (err: any) {
+      console.error('[PADRON PDF EXPORT ERROR]:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── GET /api/admin/electors/stats ──────────────────────────────────────────
   router.get('/admin/electors/stats', (req, res) => {
     try {
