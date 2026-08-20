@@ -194,7 +194,7 @@ router.get('/structure/coordinators/:id/electors', requireRole('SUPERUSUARIO','J
   try {
     const electors = db.prepare(`
       WITH captures AS MATERIALIZED (
-        SELECT * FROM elector_captures WHERE is_disputed = 0 AND coordinator_id = ?
+        SELECT * FROM elector_captures WHERE coordinator_id = ?
       )
       SELECT ec.id,
              COALESCE(e.nombre, 'ELECTOR') as nombre, 
@@ -203,9 +203,21 @@ router.get('/structure/coordinators/:id/electors', requireRole('SUPERUSUARIO','J
              COALESCE(e.local_votacion, 'REGISTRO DE CAMPO') as local_votacion, 
              COALESCE(e.mesa, 0) as mesa, 
              COALESCE(e.orden, 0) as orden,
-             ec.traffic_light, ec.needs_transport, ec.telefono
+             ec.traffic_light, ec.needs_transport, ec.telefono,
+             ec.is_disputed,
+             cc.status as conflict_status,
+             cc.conflict_type
       FROM captures ec
       LEFT JOIN electors e ON ec.elector_ci = e.ci
+      LEFT JOIN capture_conflicts cc ON (
+        (ec.id = cc.capture_id OR ec.id = cc.capture_id_b)
+        AND cc.id = (
+          SELECT id FROM capture_conflicts
+          WHERE capture_id = ec.id OR capture_id_b = ec.id
+          ORDER BY timestamp DESC LIMIT 1
+        )
+      )
+      WHERE ec.is_disputed = 0 OR cc.status = 'PENDING' OR cc.status IS NULL
     `).all(id);
 
     // Dispute history: captures lost by this coordinator
@@ -223,7 +235,7 @@ router.get('/structure/coordinators/:id/electors', requireRole('SUPERUSUARIO','J
       LEFT JOIN electors e ON ec.elector_ci = e.ci
       LEFT JOIN elector_captures winner_ec ON cc.winner_capture_id = winner_ec.id
       LEFT JOIN users AS winner_u ON winner_ec.coordinator_id = winner_u.id
-      WHERE ec.coordinator_id = ? AND ec.is_disputed = 1 AND cc.status = 'RESOLVED'
+      WHERE ec.coordinator_id = ? AND ec.is_disputed = 1 AND cc.status = 'RESOLVED' AND cc.winner_capture_id != ec.id
     `).all(id);
 
     res.json({ electors, disputesLost });

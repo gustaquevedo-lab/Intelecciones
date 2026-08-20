@@ -1,6 +1,7 @@
 import express from 'express';
 import db from '../db';
 import { normalizePhone } from '../utils/phone';
+import { getDistrictVariants, normalizeDistrict } from '../utils/districtNormalizer';
 
 export interface CachedUser {
   id: number;
@@ -73,11 +74,20 @@ export const getRole = (req: express.Request) => {
 
 export function requireRole(...roles: string[]) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const role = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
-    if (!roles.map(r => r.toUpperCase()).includes(role)) {
-      return res.status(403).json({ error: 'Acceso denegado. Rol insuficiente.' });
+    const userRole = getRole(req);
+    const normalizedAllowed = roles.map(r => {
+      const u = r.toUpperCase().trim();
+      if (u === 'SUPER_ADMIN' || u === 'SUPERADMIN') return 'SUPERUSUARIO';
+      if (u === 'CANDIDATE' || u === 'CANDIDATO') return 'JEFE_CAMPANA';
+      if (u === 'COORDINATOR') return 'COORDINADOR';
+      if (u === 'LIDER_LISTA') return 'SUBJEFE';
+      return u;
+    });
+
+    if (userRole === 'SUPERUSUARIO' || normalizedAllowed.includes(userRole)) {
+      return next();
     }
-    next();
+    return res.status(403).json({ error: 'Acceso denegado. Rol insuficiente.' });
   };
 }
 
@@ -108,32 +118,7 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
       }
 
       if (effectiveDistrict) {
-        const d = effectiveDistrict;
-        const normalized = d.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-        const variants = [normalized];
-        if (normalized === 'CONCEPCION') variants.push('CONCEPCIÓN');
-        if (normalized === 'ASUNCION') variants.push('ASUNCIÓN');
-        if (normalized === 'ITAPUA') variants.push('ITAPÚA');
-        if (normalized === 'GUAIRA') variants.push('GUAIRÁ');
-        if (normalized === 'CAAGUAZU') variants.push('CAAGUAZÚ');
-        if (normalized === 'CAAZAPA') variants.push('CAAZAPÁ');
-        if (normalized === 'PARAGUARI') variants.push('PARAGUARÍ');
-        if (normalized === 'ALTO PARANA') variants.push('ALTO PARANÁ');
-        if (normalized === 'NEEMBUCU') {
-          variants.push('ÑEEMBUCÚ');
-          variants.push('ÑEEMBUCU');
-          variants.push('NEEMBUCÚ');
-        }
-        if (normalized === 'CANINDEYU') variants.push('CANINDEYÚ');
-        if (normalized === 'BOQUERON') variants.push('BOQUERÓN');
-
-        // Let's add lowercase and uppercase variants to ensure match regardless of case
-        const allVariants = Array.from(new Set([
-          ...variants,
-          ...variants.map(v => v.toLowerCase()),
-          ...variants.map(v => v.toUpperCase())
-        ]));
-
+        const allVariants = getDistrictVariants(effectiveDistrict);
         console.log(`[SECURITY] Applying district filter variants: [${allVariants.join(', ')}] for table ${tableAlias}`);
         const placeHolders = allVariants.map(() => '?').join(',');
 

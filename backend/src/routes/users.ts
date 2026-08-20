@@ -3,6 +3,7 @@ import db from '../db';
 import { getCachedUserInfo, getRole, getSecurityFilter, getListId, clearUserCache, sanitizeElectorData } from './helpers';
 import { trackEvent, invalidateAllReportsCaches, logAction, adminLimiter } from '../server';
 import { normalizePhone } from '../utils/phone';
+import { normalizeDistrict } from '../utils/districtNormalizer';
 
 const canModifyUser = (requesterId: string | number | undefined, requesterRole: string, targetUserId: string | number): boolean => {
   const reqRole = requesterRole.toUpperCase().trim();
@@ -207,6 +208,8 @@ router.post('/', adminLimiter, (req, res) => {
       }
     }
 
+    const finalDistrito = normalizeDistrict(distrito) || null;
+
     const result = db.prepare(`
       INSERT INTO users (username, password, role, assigned_list_id, assigned_campaign_id, assigned_local, assigned_mesa, nombre, photo_url, parent_id, telefono, ci, needs_password_change, distrito)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
@@ -223,7 +226,7 @@ router.post('/', adminLimiter, (req, res) => {
       finalParentId,
       telefono || null,
       cleanCI,
-      distrito || null
+      finalDistrito
     );
     
     logAction(1, 'CREATE', 'USER', Number(result.lastInsertRowid), `Created user ${finalUsername} with role ${role}`);
@@ -558,6 +561,8 @@ router.put('/:id', (req, res) => {
     }
   }
 
+  const finalDistrito = distrito ? (normalizeDistrict(distrito) || null) : null;
+
   try {
     db.prepare(`
       UPDATE users 
@@ -574,7 +579,7 @@ router.put('/:id', (req, res) => {
       finalParentId, 
       telefono || null, 
       cleanCI, 
-      distrito || null,
+      finalDistrito,
       req.params.id
     );
     clearUserCache(req.params.id); // invalidate cache after update

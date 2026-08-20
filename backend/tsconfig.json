@@ -17,5 +17,6 @@
     "jsx": "react-jsx",
     "isolatedModules": false
   },
-  "exclude": ["node_modules", "dist", "scripts", "tests", "vitest.config.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "scripts", "tests", "vitest.config.ts", "*.ts"]
 }

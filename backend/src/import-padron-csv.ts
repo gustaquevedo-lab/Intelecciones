@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
 import db from './db';
+import { normalizeDistrict } from './utils/districtNormalizer';
 
 const uploadsDir = '/Users/gustaquevedo/Library/CloudStorage/OneDrive-Personal/Dev/Intelecciones/backend/uploads';
 
@@ -80,8 +81,8 @@ async function runImport() {
             parts[3] ? parseFloat(parts[3]) : null, // lng
             parts[4], // direccion
             parts[5], // icon
-            parts[6], // distrito
-            parts[7], // ciudad
+            normalizeDistrict(parts[6]), // distrito
+            normalizeDistrict(parts[7] || parts[6]), // ciudad
             parts[8] ? parseInt(parts[8]) : null, // campaign_id
             parts[9], // departamento
             parts[10] ? parseInt(parts[10]) : null, // distrito_id
@@ -133,8 +134,8 @@ async function runImport() {
           row[3], // fecha_nacimiento
           row[4], // sexo
           row[5], // departamento
-          row[6], // distrito
-          row[7], // ciudad
+          normalizeDistrict(row[6]), // distrito
+          normalizeDistrict(row[7] || row[6]), // ciudad
           row[8], // local_votacion
           row[9], // cod_local
           row[10], // direccion

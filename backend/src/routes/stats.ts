@@ -6,6 +6,7 @@ import { cacheService } from '../services/cache';
 import {
   getRole, getSecurityFilter, getListId, getDistrict, getTenant, requireRole
 } from './helpers';
+import { getDistrictVariants, normalizeDistrict } from '../utils/districtNormalizer';
 import { commandStatsCache, logAction } from '../server';
 
 let _districtsCache: { data: string[], ts: number } | null = null;
@@ -409,16 +410,18 @@ export default function statsRoutes() {
 
   // ── GET /api/reports/padron/locales ─────────────────────────────────────────
   router.get('/reports/padron/locales', (req, res) => {
-    const ciudad = (req.query.ciudad as string || '').trim();
-    if (!ciudad) return res.json([]);
+    const rawCiudad = (req.query.ciudad as string || '').trim();
+    if (!rawCiudad) return res.json([]);
     try {
+      const allVariants = getDistrictVariants(rawCiudad);
+      const placeHolders = allVariants.map(() => '?').join(',');
       const rows = db.prepare(`
         SELECT DISTINCT local_votacion
         FROM electors
         WHERE local_votacion IS NOT NULL AND local_votacion != ''
-          AND (UPPER(TRIM(ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(distrito)) = UPPER(TRIM(?)))
+          AND (ciudad IN (${placeHolders}) OR distrito IN (${placeHolders}))
         ORDER BY local_votacion ASC
-      `).all(ciudad, ciudad) as any[];
+      `).all(...allVariants, ...allVariants) as any[];
       res.json(rows.map(r => r.local_votacion));
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -426,19 +429,21 @@ export default function statsRoutes() {
   });
 
   // ── GET /api/reports/padron/export/xlsx ───────────────────────────────────────
-  router.get('/reports/padron/export/xlsx', requireRole('SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'SUBJEFE', 'CANDIDATO'), (req, res) => {
-    const ciudad = (req.query.ciudad as string || '').trim();
+  router.get('/reports/padron/export/xlsx', requireRole('SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'SUBJEFE', 'CANDIDATO', 'COORDINADOR'), (req, res) => {
+    const rawCiudad = (req.query.ciudad as string || '').trim();
     const local = (req.query.local as string || '').trim();
     const mesa = (req.query.mesa as string || '').trim();
     const search = (req.query.search as string || '').trim();
 
-    if (!ciudad) {
+    if (!rawCiudad) {
       return res.status(400).json({ error: 'Debe especificar el nombre de la ciudad o distrito.' });
     }
 
     try {
-      let whereClauses = ['(UPPER(TRIM(ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(distrito)) = UPPER(TRIM(?)))'];
-      let params: any[] = [ciudad, ciudad];
+      const allVariants = getDistrictVariants(rawCiudad);
+      const placeHolders = allVariants.map(() => '?').join(',');
+      let whereClauses = [`(ciudad IN (${placeHolders}) OR distrito IN (${placeHolders}))`];
+      let params: any[] = [...allVariants, ...allVariants];
 
       if (local && local !== 'ALL') {
         whereClauses.push('UPPER(local_votacion) = UPPER(?)');
@@ -469,7 +474,7 @@ export default function statsRoutes() {
         'Local de Votación': r.local_votacion || '',
         'Mesa': r.mesa || 0,
         'Orden': r.orden || 0,
-        'Ciudad / Distrito': r.ciudad || r.distrito || ciudad
+        'Ciudad / Distrito': r.ciudad || r.distrito || rawCiudad
       }));
 
       const wb = XLSX.utils.book_new();
@@ -480,7 +485,7 @@ export default function statsRoutes() {
       XLSX.utils.book_append_sheet(wb, ws, 'Padrón');
       const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-      const safeCity = ciudad.toLowerCase().replace(/[^a-z0-9]/gi, '_');
+      const safeCity = rawCiudad.toLowerCase().replace(/[^a-z0-9]/gi, '_');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=padron_${safeCity}.xlsx`);
       res.end(buffer);
@@ -491,21 +496,23 @@ export default function statsRoutes() {
   });
 
   // ── GET /api/reports/padron/export/pdf ────────────────────────────────────────
-  router.get('/reports/padron/export/pdf', requireRole('SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'SUBJEFE', 'CANDIDATO'), (req, res) => {
-    const ciudad = (req.query.ciudad as string || '').trim();
+  router.get('/reports/padron/export/pdf', requireRole('SUPERUSUARIO', 'JEFE_CAMPANA', 'PADRINO', 'SUBJEFE', 'CANDIDATO', 'COORDINADOR'), (req, res) => {
+    const rawCiudad = (req.query.ciudad as string || '').trim();
     const local = (req.query.local as string || '').trim();
     const mesa = (req.query.mesa as string || '').trim();
     const search = (req.query.search as string || '').trim();
     const limitParam = req.query.limit as string;
     const maxLimit = limitParam && !isNaN(parseInt(limitParam)) ? parseInt(limitParam) : 30000;
 
-    if (!ciudad) {
+    if (!rawCiudad) {
       return res.status(400).json({ error: 'Debe especificar el nombre de la ciudad o distrito.' });
     }
 
     try {
-      let whereClauses = ['(UPPER(TRIM(ciudad)) = UPPER(TRIM(?)) OR UPPER(TRIM(distrito)) = UPPER(TRIM(?)))'];
-      let params: any[] = [ciudad, ciudad];
+      const allVariants = getDistrictVariants(rawCiudad);
+      const placeHolders = allVariants.map(() => '?').join(',');
+      let whereClauses = [`(ciudad IN (${placeHolders}) OR distrito IN (${placeHolders}))`];
+      let params: any[] = [...allVariants, ...allVariants];
 
       if (local && local !== 'ALL') {
         whereClauses.push('UPPER(local_votacion) = UPPER(?)');
@@ -540,7 +547,7 @@ export default function statsRoutes() {
       const chunks: Buffer[] = [];
       doc.on('data', (c: Buffer) => chunks.push(c));
       doc.on('end', () => {
-        const safeCity = ciudad.toLowerCase().replace(/[^a-z0-9]/gi, '_');
+        const safeCity = rawCiudad.toLowerCase().replace(/[^a-z0-9]/gi, '_');
         const pdfBuffer = Buffer.concat(chunks);
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=padron_${safeCity}.pdf`);
@@ -606,14 +613,14 @@ export default function statsRoutes() {
 
       if (rows.length === 0) {
         doc.addPage();
-        drawPageHeader(doc, ciudad, 0);
+        drawPageHeader(doc, rawCiudad, 0);
         doc.fillColor('#64748b').fontSize(10).font('Helvetica')
            .text('No se encontraron electores para los criterios especificados.', margin, tableTop + 30, { width: usableWidth, align: 'center' });
       } else {
         let currentIdx = 0;
         while (currentIdx < rows.length) {
           doc.addPage();
-          drawPageHeader(doc, ciudad, rows.length);
+          drawPageHeader(doc, rawCiudad, rows.length);
 
           for (let c = 0; c < 2 && currentIdx < rows.length; c++) {
             const colX = margin + c * (colWidth + gutter);
@@ -665,7 +672,7 @@ export default function statsRoutes() {
         doc.switchToPage(i);
         doc.fillColor('#64748b').fontSize(6).font('Helvetica')
            .text(
-             'Página ' + (i + 1) + ' de ' + range.count + '  •  Padrón Electoral - ' + ciudad.toUpperCase() + '  •  Intelecciones',
+             'Página ' + (i + 1) + ' de ' + range.count + '  •  Padrón Electoral - ' + rawCiudad.toUpperCase() + '  •  Intelecciones',
              margin,
              pageHeight - margin - 8,
              { width: usableWidth, align: 'center' }

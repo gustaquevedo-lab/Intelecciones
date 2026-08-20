@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import Database from 'better-sqlite3';
+import { normalizeDistrict, runDistrictNormalizationMigration } from '../utils/districtNormalizer';
 
 const dataDir = path.join(__dirname, '../../../PADRON ACTUAL/data');
 const dbPath = path.join(__dirname, '../../intellecciones.db');
@@ -241,7 +242,7 @@ if (fs.existsSync(disPath)) {
     const dep = parseInt(buf.toString('ascii', 1, 3).trim()) || 0;
     const dist = parseInt(buf.toString('ascii', 3, 5).trim()) || 0;
     const desc = buf.toString('ascii', 5, 55).trim().toUpperCase();
-    districts[`${dep}-${dist}`] = desc;
+    districts[`${dep}-${dist}`] = normalizeDistrict(desc);
   }
   fs.closeSync(fd);
 }
@@ -461,6 +462,9 @@ db.exec(`
 
 // Restablecer pragmas de sincronización
 db.pragma('synchronous = NORMAL');
+
+// Run global district normalization
+runDistrictNormalizationMigration(db);
 
 console.log('===============================================================');
 console.log('--- RESET MIGRACIÓN LIMPIA COMPLETADA CON ÉXITO Y 0 ERRORES ---');
