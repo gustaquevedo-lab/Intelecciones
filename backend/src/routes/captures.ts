@@ -17,7 +17,10 @@ export default function capturesRoutes() {
       const rawCapture = CaptureSchema.parse(req.body);
       const capture = { ...rawCapture, elector_ci: rawCapture.elector_ci.replace(/\./g, '').replace(/,/g, '').trim() };
 
-      const user = db.prepare('SELECT assigned_list_id, assigned_campaign_id, distrito FROM users WHERE id = ?').get(capture.coordinator_id) as any;
+      const user = db.prepare('SELECT id, assigned_list_id, assigned_campaign_id, distrito FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1')
+        .get(capture.coordinator_id, String(capture.coordinator_id), String(capture.coordinator_id)) as any;
+      
+      const realCoordinatorId = user?.id || capture.coordinator_id;
       let list_id = user?.assigned_list_id;
       let campaign_id = user?.assigned_campaign_id;
       const userDistrict = user?.distrito || 'DESCONOCIDO';
@@ -28,10 +31,17 @@ export default function capturesRoutes() {
       }
       if (!list_id) {
         const fallbackList = db.prepare('SELECT id FROM lists LIMIT 1').get() as any;
-        if (fallbackList) list_id = fallbackList.id;
+        if (fallbackList) {
+          list_id = fallbackList.id;
+        } else {
+          // If no lists exist at all, create a default list so captures are NEVER rejected
+          const defaultList = db.prepare(`
+            INSERT INTO lists (list_number, type, ciudad)
+            VALUES ('1', 'GENERAL', ?)
+          `).run(userDistrict);
+          list_id = Number(defaultList.lastInsertRowid);
+        }
       }
-
-      if (!list_id) return res.status(403).json({ error: 'El usuario no tiene una lista ni campaña asignada para capturar electores.' });
 
       const electorExists = db.prepare('SELECT ci FROM electors WHERE ci = ?').get(capture.elector_ci);
       if (!electorExists) {
@@ -57,13 +67,13 @@ export default function capturesRoutes() {
           .get(capture.elector_ci, list_id) as any;
 
         if (intraListCapture) {
-          if (intraListCapture.coordinator_id !== capture.coordinator_id) {
+          if (intraListCapture.coordinator_id !== realCoordinatorId) {
             db.prepare('UPDATE elector_captures SET is_disputed = 1 WHERE elector_ci = ? AND list_id = ?').run(capture.elector_ci, list_id);
 
             const result = db.prepare(`
               INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport, photo_ci_frente, photo_ci_verso)
               VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
-            `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
+            `).run(capture.elector_ci, realCoordinatorId, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
 
             db.prepare(`
               INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
@@ -76,9 +86,9 @@ export default function capturesRoutes() {
               UPDATE elector_captures
               SET lat = ?, lng = ?, traffic_light = ?, needs_transport = ?, photo_ci_frente = ?, photo_ci_verso = ?, timestamp = CURRENT_TIMESTAMP
               WHERE elector_ci = ? AND coordinator_id = ? AND list_id = ?
-            `).run(capture.lat, capture.lng, capture.traffic_light, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null, capture.elector_ci, capture.coordinator_id, list_id);
+            `).run(capture.lat, capture.lng, capture.traffic_light, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null, capture.elector_ci, realCoordinatorId, list_id);
 
-            logAction(capture.coordinator_id, 'UPDATE', 'CAPTURE', capture.elector_ci, `Updated capture for ${capture.elector_ci}`);
+            logAction(realCoordinatorId, 'UPDATE', 'CAPTURE', capture.elector_ci, `Updated capture for ${capture.elector_ci}`);
             return { success: true, message: 'Captura actualizada correctamente.', is_disputed: intraListCapture.is_disputed === 1 };
           }
         }
@@ -95,7 +105,7 @@ export default function capturesRoutes() {
           const result = db.prepare(`
             INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, is_disputed, telefono, needs_transport, photo_ci_frente, photo_ci_verso)
             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
-          `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
+          `).run(capture.elector_ci, realCoordinatorId, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
 
           db.prepare(`
             INSERT INTO capture_conflicts (capture_id, capture_id_b, elector_ci, list_id_a, list_id_b, conflict_type, status)
@@ -109,9 +119,9 @@ export default function capturesRoutes() {
         db.prepare(`
           INSERT INTO elector_captures (elector_ci, coordinator_id, list_id, campaign_id, lat, lng, traffic_light, telefono, needs_transport, photo_ci_frente, photo_ci_verso)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(capture.elector_ci, capture.coordinator_id, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
+        `).run(capture.elector_ci, realCoordinatorId, list_id, campaign_id, capture.lat, capture.lng, capture.traffic_light, capture.telefono, capture.needs_transport ? 1 : 0, capture.photo_ci_frente || null, capture.photo_ci_verso || null);
 
-        logAction(capture.coordinator_id, 'CREATE', 'CAPTURE', capture.elector_ci, `Captured elector ${capture.elector_ci} as ${capture.traffic_light}`);
+        logAction(realCoordinatorId, 'CREATE', 'CAPTURE', capture.elector_ci, `Captured elector ${capture.elector_ci} as ${capture.traffic_light}`);
 
         return { success: true, is_disputed: false };
       });

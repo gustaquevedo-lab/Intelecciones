@@ -5,6 +5,7 @@ import { getCachedUserInfo, getRole, getSecurityFilter, getListId, getDistrict, 
 import { dbQueryAsync, dbGetAsync } from '../db-async';
 import { trackEvent, fullReportCache, myTeamReportsCache, invalidateAllReportsCaches, logAction } from '../server';
 import { normalizePhone } from '../utils/phone';
+import { getDistrictVariants, normalizeDistrict } from '../utils/districtNormalizer';
 
 export default function teamRoutes(upload: multer.Multer) {
   const router = Router();
@@ -327,9 +328,12 @@ router.get('/structure/padrinos/:id/full-report', requireRole('SUPERUSUARIO','JE
 router.get('/coordinator/:id/captures', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR'), (req, res) => {
   const { id } = req.params;
   try {
+    const user = db.prepare('SELECT id FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1').get(id, String(id), String(id)) as any;
+    const resolvedId = user ? user.id : id;
+
     const captures = db.prepare(`
       WITH captures AS MATERIALIZED (
-        SELECT * FROM elector_captures WHERE coordinator_id = ?
+        SELECT * FROM elector_captures WHERE coordinator_id = ? OR coordinator_id = ?
       )
       SELECT ec.*, 
              COALESCE(e.nombre, 'ELECTOR') as nombre, 
@@ -354,7 +358,7 @@ router.get('/coordinator/:id/captures', requireRole('SUPERUSUARIO','JEFE_CAMPANA
       LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
       LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
       ORDER BY ec.timestamp DESC
-    `).all(id);
+    `).all(resolvedId, id);
     res.json(captures);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -823,6 +827,9 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
 
         const needsListsJoin = selectedList && selectedList !== 'ALL';
 
+        const distVariants = getDistrictVariants(selectedDistrict);
+        const distPlaceholders = distVariants.map(() => '?').join(',');
+
         let q1_ids = '';
 
         let q2_ids = `
@@ -830,7 +837,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           FROM users u INDEXED BY idx_users_distrito
           INNER JOIN elector_captures ec ON ec.coordinator_id = u.id
           ${needsListsJoin ? 'LEFT JOIN lists l ON ec.list_id = l.id' : ''}
-          WHERE 1=1 AND u.distrito = ?
+          WHERE 1=1 AND u.distrito IN (${distPlaceholders})
         `;
 
         let extraFilters = "";
@@ -868,7 +875,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           SELECT ec.id, ec.timestamp
           FROM captures ec
           INNER JOIN electors e ON ec.elector_ci = e.ci
-          WHERE e.distrito = ?
+          WHERE (e.distrito IN (${distPlaceholders}) OR e.ciudad IN (${distPlaceholders}))
         `;
         q2_ids += extraFilters;
 
@@ -900,7 +907,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
           ORDER BY ec.timestamp DESC
         `;
-        electorParams = [...extraParams, selectedDistrict, selectedDistrict, ...extraParams];
+        electorParams = [...extraParams, ...distVariants, ...distVariants, ...distVariants, ...extraParams];
       } else {
         electorSql = `
           SELECT ec.id as capture_id, ec.elector_ci, ec.telefono as elector_telefono,

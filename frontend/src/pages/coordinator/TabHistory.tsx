@@ -316,7 +316,31 @@ const TabHistory = (props: any) => {
             </div>
           </div>
       
-          <SectionLabel icon={<History size={13} />} text={isReadOnly ? "Historial de Consultas" : "Mis Capturas Recientes"} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <SectionLabel icon={<History size={13} />} text={isReadOnly ? "Historial de Consultas" : "Mis Capturas Recientes"} />
+            <button
+              onClick={() => {
+                if (typeof props.fetchHistory === 'function') props.fetchHistory();
+                import('../../services/syncService').then(s => s.forceSyncNow());
+              }}
+              style={{
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                color: 'var(--plra-300)',
+                background: 'rgba(56, 189, 248, 0.08)',
+                border: '1px solid rgba(56, 189, 248, 0.2)',
+                borderRadius: '8px',
+                padding: '0.35rem 0.65rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
+            >
+              🔄 Actualizar / Sincronizar
+            </button>
+          </div>
+
           {isLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[0, 1, 2].map(i => (
@@ -331,50 +355,45 @@ const TabHistory = (props: any) => {
               </p>
             </div>
           ) : (
-            <Virtuoso
-              style={{ height: Math.min(history.length * 100, 480) }}
-              totalCount={history.length}
-              itemContent={(index) => {
-                const cap = history[index];
-                return (
-                  <motion.div key={cap.ci || cap.elector_ci || cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : cap.traffic_light === 'RED' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : cap.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)', border: '1px solid currentColor' }}>
-                      <User size={20} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {history.map((cap: any) => (
+                <motion.div key={cap.ci || cap.elector_ci || cap.id} layout style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: cap.traffic_light === 'GREEN' ? 'rgba(34,197,94,0.1)' : cap.traffic_light === 'YELLOW' ? 'rgba(245,158,11,0.1)' : cap.traffic_light === 'PURPLE' ? 'rgba(168,85,247,0.1)' : cap.traffic_light === 'RED' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cap.traffic_light === 'GREEN' ? 'var(--green)' : cap.traffic_light === 'YELLOW' ? 'var(--yellow)' : cap.traffic_light === 'PURPLE' ? '#A855F7' : cap.traffic_light === 'RED' ? 'var(--red)' : 'var(--text-3)', border: '1px solid currentColor', flexShrink: 0 }}>
+                    <User size={20} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
+                      {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
+                      {cap.is_pending_sync && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'rgba(234,179,8,0.2)', border: '1px solid rgba(234,179,8,0.4)', color: '#FACC15', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>⏳ GUARDADO LOCAL (SINCRONIZANDO)</span>}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{cap.nombre} {cap.apellido}</h4>
-                        {cap.needs_transport === 1 && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'var(--plra-300)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>🚗 TRANSPORTE</span>}
-                        {cap.is_pending_sync && <span style={{ fontSize: '0.55rem', fontWeight: 800, background: 'rgba(234,179,8,0.2)', border: '1px solid rgba(234,179,8,0.4)', color: '#FACC15', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>⏳ GUARDADO LOCAL (SINCRONIZANDO)</span>}
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.ci || cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion || cap.local}</p>
+                    {cap.is_disputed === 1 && (
+                      <div style={{ marginTop: '0.35rem', padding: '0.4rem 0.6rem', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.7rem' }}>
+                        {cap.conflict_status === 'RESOLVED' ? (
+                          <span style={{ color: 'var(--red)', fontWeight: 800 }}>
+                            ⚠️ Perdido en disputa — Adjudicado a {cap.winner_coordinator_name || 'Otro Coordinador'} {cap.winner_list_number ? `(Lista ${cap.winner_list_number})` : ''}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--yellow)', fontWeight: 800 }}>
+                            ⚠️ En disputa (Resolución pendiente)
+                          </span>
+                        )}
                       </div>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>CI: {Number(cap.ci || cap.elector_ci).toLocaleString('es-PY')} • {cap.local_votacion || cap.local}</p>
-                      {cap.is_disputed === 1 && (
-                        <div style={{ marginTop: '0.35rem', padding: '0.4rem 0.6rem', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.7rem' }}>
-                          {cap.conflict_status === 'RESOLVED' ? (
-                            <span style={{ color: 'var(--red)', fontWeight: 800 }}>
-                              ⚠️ Perdido en disputa — Adjudicado a {cap.winner_coordinator_name || 'Otro Coordinador'} {cap.winner_list_number ? `(Lista ${cap.winner_list_number})` : ''}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--yellow)', fontWeight: 800 }}>
-                              ⚠️ En disputa (Resolución pendiente)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {isReadOnly && cap.traffic_light && (
-                        <p style={{ fontSize: '0.65rem', color: 'var(--yellow)', marginTop: '0.2rem' }}>
-                          Captado por: {cap.coordinator_name || 'Otro coordinador'} {cap.padrino_name ? `• Padrino: ${cap.padrino_name}` : ''}
-                        </p>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {!isReadOnly && <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>}
-                      <button onClick={() => handleDeleteCapture(cap.id, cap.ci || cap.elector_ci)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                    </div>
-                  </motion.div>
-                );
-              }}
-            />
+                    )}
+                    {isReadOnly && cap.traffic_light && (
+                      <p style={{ fontSize: '0.65rem', color: 'var(--yellow)', marginTop: '0.2rem' }}>
+                        Captado por: {cap.coordinator_name || 'Otro coordinador'} {cap.padrino_name ? `• Padrino: ${cap.padrino_name}` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {!isReadOnly && <button onClick={() => handleEditHistory(cap)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.5rem', color: 'var(--text-2)', cursor: 'pointer' }}><Edit2 size={14} /></button>}
+                    <button onClick={() => handleDeleteCapture(cap.id, cap.ci || cap.elector_ci)} style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.5rem', color: 'var(--red)', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           )}
         </div>
     </>

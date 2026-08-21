@@ -115,20 +115,27 @@ export const syncPendingActions = async (): Promise<{ successCount: number; fail
     } catch (err: any) {
       debug.error(`[SYNC] Error al sincronizar acción ${action.id}:`, err);
       
-      // 4xx errors (client errors) - remove the action, it's broken
-      if (err.response && err.response.status >= 400 && err.response.status < 500) {
-        debug.warn(`[SYNC] Eliminando acción defectuosa (${err.response.status}):`, action);
-        await removePendingAction(action.id);
+      const status = err.response?.status;
+
+      // 429 (Rate Limit), 401/403 (Auth/Permission), 408 (Timeout), 5xx (Server Error), or Network Error:
+      // DO NOT REMOVE! Keep in queue and retry on next sync interval.
+      if (!status || status === 429 || status === 401 || status === 403 || status === 408 || status >= 500) {
+        debug.warn(`[SYNC] Error temporal/reintentable (${status || 'network'}), manteniendo acción ${action.id} en cola para reintento:`, action);
         failedCount++;
         continue;
       }
-      
-      // 5xx errors or network errors - KEEP the action in queue, will retry next sync
-      // This is the key fix: don't break the loop, just log and continue
-      debug.warn(`[SYNC] Error de servidor/red (${err.response?.status || 'network'}), manteniendo acción para retry:`, action);
+
+      // Only discard if explicitly unprocessable entity or bad request format (400, 422) after logging to failed audit
+      try {
+        const failedKey = 'intelecciones_failed_actions';
+        const existingFailed = JSON.parse(localStorage.getItem(failedKey) || '[]');
+        existingFailed.unshift({ ...action, failedAt: Date.now(), errorStatus: status, errorMessage: err.message });
+        localStorage.setItem(failedKey, JSON.stringify(existingFailed.slice(0, 50)));
+      } catch {}
+
+      debug.warn(`[SYNC] Descartando acción con formato no procesable (${status}):`, action);
+      await removePendingAction(action.id);
       failedCount++;
-      // Don't break anymore - continue processing remaining actions
-      // The action stays in the queue and will be retried on next sync
     }
   }
 
