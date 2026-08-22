@@ -33,24 +33,19 @@ const UpdatePrompt = () => {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
-  // Mandatory update: countdown auto-triggers if user doesn't act
-  useEffect(() => {
-    if (!needUpdate) {
-      setCountdown(15);
-      return;
-    }
-    if (countdown <= 0) {
-      updateServiceWorker(true);
+  // Non-intrusive update: Never auto-reload while user is actively working.
+  const handleUpdateClick = async () => {
+    try {
+      await updateServiceWorker(true);
       setTimeout(() => window.location.reload(), 300);
-      return;
+    } catch {
+      window.location.reload();
     }
-    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [needUpdate, countdown]);
+  };
 
   const close = () => {
     setOfflineReady(false);
-    // intentionally not clearing needUpdate — update is mandatory
+    if (typeof setNeedUpdate === 'function') setNeedUpdate(false);
   };
 
   const closeInstall = () => {
@@ -68,7 +63,7 @@ const UpdatePrompt = () => {
 
   return (
     <AnimatePresence>
-      {/* UPDATE PROMPT — mandatory, non-dismissable */}
+      {/* UPDATE PROMPT — user-triggered only */}
       {needUpdate && (
         <motion.div
           initial={{ y: 50, opacity: 0 }}
@@ -92,38 +87,39 @@ const UpdatePrompt = () => {
             backdropFilter: 'blur(10px)'
           }}
         >
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-            <div style={{
-              background: 'var(--plra-500)',
-              padding: '10px',
-              borderRadius: '12px',
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              boxShadow: '0 4px 12px rgba(0, 71, 171, 0.25)'
-            }}>
-              <RefreshCw size={20} color="#FFFFFF" className="spin-slow" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <div style={{
+                background: 'var(--plra-500)',
+                padding: '10px',
+                borderRadius: '12px',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 4px 12px rgba(0, 71, 171, 0.25)'
+              }}>
+                <RefreshCw size={20} color="#FFFFFF" />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
+                  Actualización disponible
+                </h4>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                  Hay nuevas mejoras listas para el sistema.
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
-                Nueva versión disponible
-              </h4>
-              <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-3)' }}>
-                Actualizando en <strong>{countdown}s</strong>. Hay mejoras listas para ti.
-              </p>
-            </div>
+            <button
+              onClick={() => { if (typeof setNeedUpdate === 'function') setNeedUpdate(false); }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '2px' }}
+            >
+              <X size={16} />
+            </button>
           </div>
           <button
-            onClick={async () => {
-              try {
-                await updateServiceWorker(true);
-                setTimeout(() => window.location.reload(), 300);
-              } catch {
-                window.location.reload();
-              }
-            }}
+            onClick={handleUpdateClick}
             style={{
               width: '100%',
               padding: '0.75rem',

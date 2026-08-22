@@ -28,8 +28,9 @@ export const getCachedUserInfo = (user_id: string): CachedUser | null => {
     LEFT JOIN lists l ON u.assigned_list_id = l.id
     LEFT JOIN campaigns c1 ON l.campaign_id = c1.id
     LEFT JOIN campaigns c2 ON u.assigned_campaign_id = c2.id
-    WHERE u.id = ?
-  `).get(user_id) as any;
+    WHERE u.id = ? OR u.ci = ? OR u.username = ?
+    LIMIT 1
+  `).get(user_id, user_id, user_id) as any;
   if (!user) return null;
   const entry: CachedUser = {
     id: user.id,

@@ -15,20 +15,8 @@ if (import.meta.env.VITE_POSTHOG_KEY) {
   });
 }
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    for (const r of registrations) r.unregister();
-  }).catch(() => {});
-}
-
-if ('caches' in window) {
-  caches.keys().then(keys => {
-    keys.forEach(k => caches.delete(k));
-  }).catch(() => {});
-}
-
+// Handle vite chunk preload errors safely without reload loops
 window.addEventListener('vite:preloadError', () => {
-  // Guard: only reload once per session to avoid infinite loops
   if (!sessionStorage.getItem('_vite_preload_reload')) {
     sessionStorage.setItem('_vite_preload_reload', '1');
     window.location.reload();

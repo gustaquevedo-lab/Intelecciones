@@ -711,8 +711,9 @@ app.get('/api/me', (req, res) => {
       FROM users u
       LEFT JOIN lists l ON u.assigned_list_id = l.id
       LEFT JOIN campaigns c ON (u.assigned_campaign_id = c.id OR l.campaign_id = c.id)
-      WHERE u.id = ?
-    `).get(userId) as any;
+      WHERE u.id = ? OR u.ci = ? OR u.username = ?
+      LIMIT 1
+    `).get(userId, userId, userId) as any;
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
     if (user.status === 'INACTIVE') return res.status(403).json({ error: 'Cuenta desactivada' });
 
