@@ -129,14 +129,20 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
             EXISTS (SELECT 1 FROM campaigns c2 WHERE c2.id = u.assigned_campaign_id AND c2.distrito IN (${placeHolders}))
           )`;
           params.push(...allVariants, ...allVariants, ...allVariants);
-        } else if (tableAlias === 'ec') {
-          sql += ` AND (e.distrito IN (${placeHolders}) OR e.ciudad IN (${placeHolders}))`;
+        } else if (tableAlias === 'e' || tableAlias === 'ec') {
+          sql += ` AND (
+            COALESCE(e.distrito, e.ciudad) IN (${placeHolders}) OR
+            COALESCE(e.ciudad, e.distrito) IN (${placeHolders})
+          )`;
           params.push(...allVariants, ...allVariants);
         } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
-          sql += ` AND (e.distrito IN (${placeHolders}) OR e.ciudad IN (${placeHolders}))`;
+          sql += ` AND (
+            COALESCE(e.distrito, e.ciudad) IN (${placeHolders}) OR
+            COALESCE(e.ciudad, e.distrito) IN (${placeHolders})
+          )`;
           params.push(...allVariants, ...allVariants);
         } else if (tableAlias === 'loc') {
-          sql += ` AND (${tableAlias}.ciudad IN (${placeHolders}) OR ${tableAlias}.distrito IN (${placeHolders}))`;
+          sql += ` AND (loc.ciudad IN (${placeHolders}) OR loc.distrito IN (${placeHolders}))`;
           params.push(...allVariants, ...allVariants);
         } else {
           let col = 'distrito';
@@ -175,9 +181,6 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
           const col = (tableAlias === 'u') ? 'assigned_list_id' : 'list_id';
           sql += ` AND ${tableAlias}.${col} = ?`;
           params.push(listId);
-        } else if (tableAlias === 'e') {
-          sql += ` AND EXISTS (SELECT 1 FROM elector_captures ec2 WHERE ec2.elector_ci = e.ci AND ec2.list_id = ?)`;
-          params.push(listId);
         }
       }
 
@@ -198,7 +201,6 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
 
     if (!user || !user.distrito) {
       if (role !== 'GUEST') {
-        console.warn(`[SECURITY] User ${user_id} (${role}) missing explicit district. Using fallback bypass for authorized roles.`, user);
         if (['SUPERUSUARIO', 'SUPER_ADMIN', 'JEFE_CAMPANA', 'SUBJEFE', 'PADRINO', 'COORDINADOR'].includes(role)) {
           return { sql: '', params: [] };
         }
@@ -208,19 +210,19 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
 
     let sql = '';
     let params: any[] = [];
-    if (tableAlias === 'ec') {
-      sql = ` AND e.distrito = ?`;
-      params = [user.distrito];
-    } else if (tableAlias === 'cc') {
-      sql = ` AND (e.distrito = ? OR ua.distrito = ? OR ub.distrito = ?)`;
-      params = [user.distrito, user.distrito, user.distrito];
-    } else if (tableAlias === 'cc_history') {
-      sql = ` AND (e.distrito = ? OR u_win_1.distrito = ? OR u_win_2.distrito = ?)`;
-      params = [user.distrito, user.distrito, user.distrito];
+    const allVariants = getDistrictVariants(user.distrito);
+    const placeHolders = allVariants.map(() => '?').join(',');
+
+    if (tableAlias === 'e' || tableAlias === 'ec') {
+      sql = ` AND (COALESCE(e.distrito, e.ciudad) IN (${placeHolders}) OR COALESCE(e.ciudad, e.distrito) IN (${placeHolders}))`;
+      params.push(...allVariants, ...allVariants);
+    } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
+      sql = ` AND (COALESCE(e.distrito, e.ciudad) IN (${placeHolders}) OR COALESCE(e.ciudad, e.distrito) IN (${placeHolders}))`;
+      params.push(...allVariants, ...allVariants);
     } else {
       let targetCol = distColumn;
-      sql = ` AND ${tableAlias}.${targetCol} = ?`;
-      params = [user.distrito];
+      sql = ` AND ${tableAlias}.${targetCol} IN (${placeHolders})`;
+      params.push(...allVariants);
     }
 
     if ((tableAlias === 'e') && user.campaign_id) {

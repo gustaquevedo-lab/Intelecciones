@@ -2,17 +2,31 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-// Consistently use backend folder for development, /app/data for production
-let dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
+// Consistently resolve persistent database storage path
+let dbDir = process.env.DATA_DIR || 
+            process.env.RAILWAY_VOLUME_MOUNT_PATH || 
+            (fs.existsSync('/data') ? '/data' : (process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd()));
+
 if (process.env.NODE_ENV !== 'production') {
   const rootBackendPath = path.join(process.cwd(), 'backend');
   if (fs.existsSync(rootBackendPath) && fs.statSync(rootBackendPath).isDirectory()) {
     dbDir = rootBackendPath;
   }
 }
-const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(dbDir, 'intellecciones.db');
 
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+
+const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(dbDir, 'intellecciones.db');
+
+// If volume mounted at /data is empty, but container had seed in /app/data, migrate it
+if (dbDir === '/data' && !fs.existsSync(dbPath) && fs.existsSync('/app/data/intellecciones.db')) {
+  try {
+    console.log('[DB] Migrating existing database from /app/data to persistent volume /data...');
+    fs.copyFileSync('/app/data/intellecciones.db', dbPath);
+  } catch (err: any) {
+    console.warn('[DB] Migration failed:', err.message);
+  }
+}
 
 // ── EMERGENCY WAL RECOVERY ───────────────────────────────────────────────────
 // If an interrupted write left a WAL file > 500 MB, delete it before opening.

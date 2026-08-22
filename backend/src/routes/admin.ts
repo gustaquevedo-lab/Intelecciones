@@ -661,7 +661,9 @@ export default function adminRoutes(upload: multer.Multer) {
   router.post('/admin/system/upload-database', upload.single('database'), (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: 'No database file attached' });
-      const dbDir = process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd();
+      const dbDir = process.env.DATA_DIR || 
+                    process.env.RAILWAY_VOLUME_MOUNT_PATH || 
+                    (fs.existsSync('/data') ? '/data' : (process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd()));
       const targetDbPath = path.join(dbDir, 'intellecciones.db');
       
       console.log(`[DB SYNC] Replacing production database with uploaded file: ${req.file.path} -> ${targetDbPath}`);
