@@ -243,6 +243,7 @@ const TabSearch = (props: any) => {
           </div>
         ) : (
           <button 
+            type="button"
             onClick={handleDownloadPadron}
             style={{
               width: '100%',
@@ -458,6 +459,7 @@ const TabSearch = (props: any) => {
                     </a>
                   )}
                   <button
+                    type="button"
                     onClick={handleShare}
                     style={{
                       width: '3.5rem', height: '3.5rem',
@@ -474,8 +476,9 @@ const TabSearch = (props: any) => {
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                    title="Compartir Ficha"
                   >
-                    <Share2 size={22} />
+                    <Share2 size={20} />
                   </button>
                 </div>
               </div>
@@ -842,6 +845,7 @@ const TabSearch = (props: any) => {
       
             <div className="card-cta-section">
               <button
+                type="button"
                 onClick={handleConfirm}
                 disabled={isLoading || isReadOnly}
                 className="btn btn-primary"
@@ -915,6 +919,7 @@ const TabSearch = (props: any) => {
               </p>
             </div>
             <button
+              type="button"
               onClick={() => { setElector(null); setSuccessMsg(''); setCi(''); }}
               className="btn btn-primary"
               style={{ marginTop: '0.5rem', borderRadius: '10px', fontSize: '0.8rem', letterSpacing: '0.08em', fontFamily: 'var(--font-display)' }}
@@ -991,6 +996,7 @@ const TabSearch = (props: any) => {
 
               <div style={{ padding: '1.25rem 3.5rem 1.5rem', textAlign: 'center', position: 'relative' }}>
                 <button
+                  type="button"
                   onClick={() => setShowModal(false)}
                   style={{ position: 'absolute', top: '1rem', right: '1.25rem', width: '32px', height: '32px', borderRadius: '9px', background: 'var(--surface-light)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
@@ -1070,6 +1076,7 @@ const TabSearch = (props: any) => {
                 ].map(({ color, bg, glow, border, count, label }) => (
                   <motion.button
                     key={color}
+                    type="button"
                     whileHover={{ scale: 1.04, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => editingCapture ? handleUpdateCapture(color) : handleCapture(color as any)}

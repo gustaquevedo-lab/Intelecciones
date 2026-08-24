@@ -28,15 +28,19 @@ axiosRetry(api, {
 
 const BUILD_VERSION_KEY = 'app_build_version';
 
-// 401 Interceptor - MUST run first (runs first if added first in FIFO response chain)
+// 401 Interceptor - Safe handling without disruptive page reloads
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
-      localStorage.removeItem('auth_user');
-      localStorage.removeItem('active_list_id');
-      localStorage.removeItem('active_district');
-      window.location.href = '/login';
+    if (error.response?.status === 401) {
+      const url = error.config?.url || '';
+      // Only force login redirect if explicit session verification fails
+      if (url.includes('/me') && !url.includes('/login')) {
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('active_list_id');
+        localStorage.removeItem('active_district');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

@@ -288,30 +288,6 @@ const CoordinatorApp = () => {
 
   useEffect(() => {
     getOfflineStats().then(setOfflineCount);
-    
-    // Auto-detect padron updates in the background when online
-    const checkPadronVersion = async () => {
-      try {
-        const res = await api.get('/offline/padron/status');
-        const lastSync = localStorage.getItem('last_padron_sync_timestamp') || '0';
-        const declinedVersion = localStorage.getItem('declined_padron_version') || '0';
-        
-        if (res.data.last_updated > parseInt(lastSync) && res.data.last_updated.toString() !== declinedVersion) {
-          const confirmed = window.confirm(
-            `📢 ¡Hay una nueva actualización del padrón electoral disponible!\n\nSe han cargado datos actualizados. ¿Deseas descargar la última versión para trabajar sin conexión?`
-          );
-          if (confirmed) {
-            handleDownloadPadron();
-          } else {
-            localStorage.setItem('declined_padron_version', res.data.last_updated.toString());
-          }
-        }
-      } catch {
-      }
-    };
-    
-    const timer = setTimeout(checkPadronVersion, 3500);
-    return () => clearTimeout(timer);
   }, [activeDistrict, user?.id]);
   const [newCoordTelefono, setNewCoordTelefono] = useState('');
   const [isCoordVerified, setIsCoordVerified] = useState(false);
@@ -788,30 +764,38 @@ const CoordinatorApp = () => {
     setIsLoading(true);
     setError('');
 
-    if (!navigator.geolocation) {
-      setError('📍 GPS NO COMPATIBLE: Su dispositivo o navegador no admite GPS.');
-      setIsLoading(false);
-      return;
-    }
-
     const requestPosition = () => {
-      // 100% Offline Compatible: Browser/Mobile native GPS hardware positioning
-      const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+      // Fast, battery-friendly & offline-compatible GPS positioning
+      const options = { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 };
       navigator.geolocation.getCurrentPosition(
         (position) => {
           if (position.coords.latitude && position.coords.longitude) {
             setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-            setShowModal(true);
-            setError('');
-          } else {
-            setError('📍 ERROR GPS: La posición recibida no es válida. Intente nuevamente.');
           }
+          setShowModal(true);
+          setError('');
           setIsLoading(false);
         },
         (err) => {
-          console.warn('[GPS Hardware Warning]', err);
-          setError('📍 GPS OBLIGATORIO: No se pudo obtener la posición real por GPS. Asegúrate de tener activada la Ubicación/GPS en tu celular y pulsa "INGRESAR REGISTRO" para reintentar.');
-          setIsLoading(false);
+          console.warn('[GPS Hardware Warning - Fallback to Standard]', err);
+          // Retry once with standard accuracy so user is never blocked or frozen
+          navigator.geolocation.getCurrentPosition(
+            (fallbackPos) => {
+              if (fallbackPos.coords.latitude && fallbackPos.coords.longitude) {
+                setLocation({ lat: fallbackPos.coords.latitude, lng: fallbackPos.coords.longitude });
+              }
+              setShowModal(true);
+              setError('');
+              setIsLoading(false);
+            },
+            () => {
+              // Open modal even without exact GPS coordinates so field work is never interrupted
+              setShowModal(true);
+              setError('');
+              setIsLoading(false);
+            },
+            { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
+          );
         },
         options
       );
