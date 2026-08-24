@@ -1208,9 +1208,23 @@ app.get('/api/electors/:ci', (req, res) => {
 
   try {
     const elector = db.prepare(`
-      SELECT e.*, c.traffic_light, c.is_disputed, c.coordinator_id as captured_by, 
-             c.telefono as capture_telefono, c.lat as capture_lat, c.lng as capture_lng, c.needs_transport,
-             u.nombre as coordinator_name, p.nombre as padrino_name
+      SELECT e.*, 
+             c.traffic_light, 
+             c.is_disputed, 
+             c.coordinator_id as captured_by, 
+             c.telefono as capture_telefono, 
+             c.lat as capture_lat, 
+             c.lng as capture_lng, 
+             c.needs_transport,
+             c.timestamp as captured_at,
+             COALESCE(NULLIF(u.nombre, ''), u.username, 'Coordinador ID: ' || c.coordinator_id) as coordinator_name,
+             u.ci as coordinator_ci,
+             u.telefono as coordinator_telefono,
+             u.role as coordinator_role,
+             p.id as padrino_id,
+             COALESCE(NULLIF(p.nombre, ''), p.username, 'Sin Padrino Asignado') as padrino_name,
+             p.ci as padrino_ci,
+             p.telefono as padrino_telefono
       FROM electors e
       LEFT JOIN elector_captures c ON c.id = (
         SELECT id FROM elector_captures
@@ -1220,8 +1234,8 @@ app.get('/api/electors/:ci', (req, res) => {
           timestamp DESC 
         LIMIT 1
       )
-      LEFT JOIN users u ON c.coordinator_id = u.id
-      LEFT JOIN users p ON u.parent_id = p.id
+      LEFT JOIN users u ON (c.coordinator_id = u.id OR c.coordinator_id = u.ci OR c.coordinator_id = u.username)
+      LEFT JOIN users p ON (u.parent_id = p.id OR u.parent_id = p.ci)
       WHERE e.ci = ? ${distritoFilter}
     `).get(...queryParams) as any;
     

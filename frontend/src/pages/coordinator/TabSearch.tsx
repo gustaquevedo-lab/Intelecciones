@@ -6,7 +6,7 @@ import {
   ClipboardCheck, ArrowRight, AlertCircle, AlertTriangle,
   CheckCheck, ThumbsUp, HelpCircle, X, Shield, Share2, History, Edit2, Trash2, MessageSquare, Fingerprint, Landmark,
   UserPlus, Camera, LayoutList, Users, Mic, Square, ChevronRight,
-  Car, Inbox, Truck, Download, Activity
+  Car, Inbox, Truck, Download, Activity, Phone, Calendar
 } from 'lucide-react';
 import { getImageUrl } from '../../services/api';
 import { ImageCropperModal } from '../../components/ImageCropperModal';
@@ -572,21 +572,191 @@ const TabSearch = (props: any) => {
             {elector.traffic_light && (
               <div className="card-section" style={{ background: 'var(--surface-light)', borderTop: '1px solid var(--border)' }}>
                 <SectionLabel icon={<AlertCircle size={13} />} text="Detalle de Captación" color="var(--yellow)" />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <DataItem 
-                    icon={<User size={18} />} 
-                    iconColor="blue" 
-                    label="Capturado por" 
-                    value={elector.coordinator_name || `Coordinador (ID: ${elector.captured_by})`} 
-                  />
-                  {elector.padrino_name && (
-                    <DataItem 
-                      icon={<Users size={18} />} 
-                      iconColor="purple" 
-                      label="Padrino" 
-                      value={elector.padrino_name} 
-                    />
-                  )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  
+                  {/* Coordinator Information Card */}
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    borderRadius: '14px',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--plra-300)', letterSpacing: '0.1em' }}>
+                        👤 Coordinador Captador
+                      </span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 800, background: 'rgba(59, 130, 246, 0.15)', color: '#60A5FA', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                        ID #{elector.coordinator_id || elector.captured_by || '—'}
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--plra-300)', flexShrink: 0 }}>
+                        <User size={20} />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'white', textTransform: 'uppercase' }}>
+                          {elector.coordinator_name || `Coordinador (ID: ${elector.captured_by})`}
+                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                          {elector.coordinator_ci && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 600 }}>
+                              CI: {Number(elector.coordinator_ci).toLocaleString('es-PY')}
+                            </span>
+                          )}
+                          {elector.coordinator_telefono && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-2)', fontWeight: 700 }}>
+                              • Tel: {elector.coordinator_telefono}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {elector.coordinator_telefono && (
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
+                        <a
+                          href={`https://wa.me/${formatWhatsApp(elector.coordinator_telefono)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            flex: 1,
+                            padding: '0.45rem',
+                            borderRadius: '8px',
+                            background: 'rgba(34, 197, 94, 0.12)',
+                            border: '1px solid rgba(34, 197, 94, 0.25)',
+                            color: '#4ADE80',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <MessageSquare size={13} /> WhatsApp
+                        </a>
+                        <a
+                          href={`tel:${elector.coordinator_telefono}`}
+                          style={{
+                            flex: 1,
+                            padding: '0.45rem',
+                            borderRadius: '8px',
+                            background: 'rgba(59, 130, 246, 0.12)',
+                            border: '1px solid rgba(59, 130, 246, 0.25)',
+                            color: '#60A5FA',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <Phone size={13} /> Llamar
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Padrino Information Card */}
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid rgba(168, 85, 247, 0.2)',
+                    borderRadius: '14px',
+                    padding: '0.85rem 1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', color: '#C084FC', letterSpacing: '0.1em' }}>
+                        👑 Padrino Responsable
+                      </span>
+                      {elector.padrino_id && (
+                        <span style={{ fontSize: '0.65rem', fontWeight: 800, background: 'rgba(168, 85, 247, 0.15)', color: '#C084FC', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                          ID #{elector.padrino_id}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(168, 85, 247, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C084FC', flexShrink: 0 }}>
+                        <Users size={20} />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'white', textTransform: 'uppercase' }}>
+                          {elector.padrino_name || 'Sin Padrino Asignado'}
+                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                          {elector.padrino_ci && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-3)', fontWeight: 600 }}>
+                              CI: {Number(elector.padrino_ci).toLocaleString('es-PY')}
+                            </span>
+                          )}
+                          {elector.padrino_telefono && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-2)', fontWeight: 700 }}>
+                              • Tel: {elector.padrino_telefono}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {elector.padrino_telefono && (
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
+                        <a
+                          href={`https://wa.me/${formatWhatsApp(elector.padrino_telefono)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            flex: 1,
+                            padding: '0.45rem',
+                            borderRadius: '8px',
+                            background: 'rgba(34, 197, 94, 0.12)',
+                            border: '1px solid rgba(34, 197, 94, 0.25)',
+                            color: '#4ADE80',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <MessageSquare size={13} /> WhatsApp
+                        </a>
+                        <a
+                          href={`tel:${elector.padrino_telefono}`}
+                          style={{
+                            flex: 1,
+                            padding: '0.45rem',
+                            borderRadius: '8px',
+                            background: 'rgba(168, 85, 247, 0.12)',
+                            border: '1px solid rgba(168, 85, 247, 0.25)',
+                            color: '#C084FC',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <Phone size={13} /> Llamar
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Priority and Transport Section */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                     <div style={{
                       background: 'var(--surface)',
@@ -610,7 +780,7 @@ const TabSearch = (props: any) => {
                         </span>
                       </div>
                     </div>
-      
+
                     <div style={{
                       background: 'var(--surface)',
                       border: '1px solid var(--border)',
@@ -626,7 +796,16 @@ const TabSearch = (props: any) => {
                       </span>
                     </div>
                   </div>
-      
+
+                  {elector.captured_at && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <Calendar size={13} style={{ color: 'var(--text-3)' }} />
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-3)', fontWeight: 600 }}>
+                        Fecha de Captación: {new Date(elector.captured_at).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
+
                   {(elector.capture_lat && elector.capture_lng) ? (
                     <a 
                       href={`https://www.google.com/maps/search/?api=1&query=${elector.capture_lat},${elector.capture_lng}`}

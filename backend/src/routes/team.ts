@@ -328,12 +328,18 @@ router.get('/structure/padrinos/:id/full-report', requireRole('SUPERUSUARIO','JE
 router.get('/coordinator/:id/captures', requireRole('SUPERUSUARIO','JEFE_CAMPANA','SUBJEFE','PADRINO','COORDINADOR'), (req, res) => {
   const { id } = req.params;
   try {
-    const user = db.prepare('SELECT id FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1').get(id, String(id), String(id)) as any;
+    const user = db.prepare('SELECT id, ci, username FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1').get(id, String(id), String(id)) as any;
     const resolvedId = user ? user.id : id;
+    const resolvedCi = user?.ci ? String(user.ci) : String(id);
+    const resolvedUsername = user?.username ? String(user.username) : String(id);
 
     const captures = db.prepare(`
       WITH captures AS MATERIALIZED (
-        SELECT * FROM elector_captures WHERE coordinator_id = ? OR coordinator_id = ?
+        SELECT * FROM elector_captures 
+        WHERE coordinator_id = ? 
+           OR coordinator_id = ? 
+           OR coordinator_id = ? 
+           OR coordinator_id = ?
       )
       SELECT ec.*, 
              COALESCE(e.nombre, 'ELECTOR') as nombre, 
@@ -355,10 +361,10 @@ router.get('/coordinator/:id/captures', requireRole('SUPERUSUARIO','JEFE_CAMPANA
         )
       )
       LEFT JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
-      LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+      LEFT JOIN users u_win ON (ec_win.coordinator_id = u_win.id OR ec_win.coordinator_id = u_win.ci)
       LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
       ORDER BY ec.timestamp DESC
-    `).all(resolvedId, id);
+    `).all(resolvedId, resolvedCi, resolvedUsername, id);
     res.json(captures);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -890,8 +896,8 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
           ) as subset
           INNER JOIN elector_captures ec ON subset.id = ec.id
           LEFT JOIN electors e ON ec.elector_ci = e.ci
-          LEFT JOIN users u ON ec.coordinator_id = u.id
-          LEFT JOIN users p ON u.parent_id = p.id
+          LEFT JOIN users u ON (ec.coordinator_id = u.id OR ec.coordinator_id = u.ci OR ec.coordinator_id = u.username)
+          LEFT JOIN users p ON (u.parent_id = p.id OR u.parent_id = p.ci)
           LEFT JOIN lists l ON ec.list_id = l.id
           LEFT JOIN campaigns c ON l.campaign_id = c.id
           LEFT JOIN capture_conflicts cc ON (
@@ -903,7 +909,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
             )
           )
           LEFT JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
-          LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+          LEFT JOIN users u_win ON (ec_win.coordinator_id = u_win.id OR ec_win.coordinator_id = u_win.ci)
           LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
           ORDER BY ec.timestamp DESC
         `;
@@ -928,8 +934,8 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
                  l_win.list_number as winner_list_number
           FROM elector_captures ec
           LEFT JOIN electors e ON ec.elector_ci = e.ci
-          LEFT JOIN users u ON ec.coordinator_id = u.id
-          LEFT JOIN users p ON u.parent_id = p.id
+          LEFT JOIN users u ON (ec.coordinator_id = u.id OR ec.coordinator_id = u.ci OR ec.coordinator_id = u.username)
+          LEFT JOIN users p ON (u.parent_id = p.id OR u.parent_id = p.ci)
           LEFT JOIN lists l ON ec.list_id = l.id
           LEFT JOIN campaigns c ON l.campaign_id = c.id
           LEFT JOIN capture_conflicts cc ON (
@@ -941,7 +947,7 @@ router.get('/my-team/reports', requireRole('SUPERUSUARIO','JEFE_CAMPANA','PADRIN
             )
           )
           LEFT JOIN elector_captures ec_win ON cc.winner_capture_id = ec_win.id
-          LEFT JOIN users u_win ON ec_win.coordinator_id = u_win.id
+          LEFT JOIN users u_win ON (ec_win.coordinator_id = u_win.id OR ec_win.coordinator_id = u_win.ci)
           LEFT JOIN lists l_win ON ec_win.list_id = l_win.id
           WHERE 1=1
         `;
