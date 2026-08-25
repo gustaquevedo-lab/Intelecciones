@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '../../components/Skeleton';
 import {
@@ -6,7 +6,7 @@ import {
   ClipboardCheck, ArrowRight, AlertCircle, AlertTriangle,
   CheckCheck, ThumbsUp, HelpCircle, X, Shield, Share2, History, Edit2, Trash2, MessageSquare, Fingerprint, Landmark,
   UserPlus, Camera, LayoutList, Users, Mic, Square, ChevronRight,
-  Car, Inbox, Truck, Download, Activity
+  Car, Inbox, Truck, Download, Activity, KeyRound, Lock, RefreshCw, AlertOctagon, Copy, Check
 } from 'lucide-react';
 import { getImageUrl } from '../../services/api';
 import { ImageCropperModal } from '../../components/ImageCropperModal';
@@ -206,11 +206,45 @@ const TabCoordinators = (props: any) => {
     // API handlers
     handleCapture, handleUpdateCapture, handleDeleteCapture,
     handleCreateCoord, handleCreatePadrino,
+    handleResetCoordPassword, handleDeleteCoordinator,
     fetchHistory, fetchRequests, fetchDisputes, fetchTeamStats,
     handlePhoneChange, fetchCoordinatorDetail, handleLookupCoordCI, handleLookupPadrinoCI,
     handleUploadCustomElectorPhoto, handleSaveCustomElector, handleEditHistory,
-
   } = props;
+
+  // Local state for coordinator management (Password Reset & Deletion)
+  const [coordToReset, setCoordToReset] = useState<any>(null);
+  const [customPasswordInput, setCustomPasswordInput] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccessData, setResetSuccessData] = useState<{ password?: string; message?: string } | null>(null);
+  const [copiedPass, setCopiedPass] = useState(false);
+
+  const [coordToDelete, setCoordToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const onConfirmReset = async () => {
+    if (!coordToReset || !handleResetCoordPassword) return;
+    setIsResetting(true);
+    try {
+      const res = await handleResetCoordPassword(coordToReset, customPasswordInput.trim());
+      setResetSuccessData(res || { message: 'Contraseña restablecida con éxito.' });
+    } catch {
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const onConfirmDelete = async () => {
+    if (!coordToDelete || !handleDeleteCoordinator) return;
+    setIsDeleting(true);
+    try {
+      await handleDeleteCoordinator(coordToDelete, 'inherit');
+      setCoordToDelete(null);
+    } catch {
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <>
@@ -311,7 +345,7 @@ const TabCoordinators = (props: any) => {
                     cursor: 'pointer'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem' }}>
                     <div style={{ width: '50px', height: '50px', borderRadius: '14px', overflow: 'hidden', border: '2px solid var(--border)', flexShrink: 0 }}>
                       {c.photo_url ? (
                         <img src={getImageUrl(c.photo_url) || ''} alt={c.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -323,9 +357,57 @@ const TabCoordinators = (props: any) => {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h5 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>{c.nombre}</h5>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>CI: {c.username} {c.telefono && `• ${c.telefono}`}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>CI: {c.username || c.ci} {c.telefono && `• ${c.telefono}`}</p>
                     </div>
-                    <ChevronRight size={18} style={{ color: 'var(--text-3)' }} />
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCoordToReset(c);
+                          setResetSuccessData(null);
+                          setCustomPasswordInput('');
+                        }}
+                        style={{
+                          background: 'rgba(234, 179, 8, 0.12)',
+                          border: '1px solid rgba(234, 179, 8, 0.25)',
+                          color: '#FACC15',
+                          borderRadius: '8px',
+                          padding: '0.45rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                        title="Restablecer Contraseña"
+                      >
+                        <KeyRound size={15} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCoordToDelete(c);
+                        }}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          color: 'var(--red)',
+                          borderRadius: '8px',
+                          padding: '0.45rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer'
+                        }}
+                        title="Eliminar Coordinador"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                      <ChevronRight size={18} style={{ color: 'var(--text-3)' }} />
+                    </div>
                   </div>
       
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem' }}>
@@ -367,16 +449,80 @@ const TabCoordinators = (props: any) => {
             className="modal-content-premium-styled"
             style={{ width: '95%', maxWidth: '500px', padding: '1.5rem' }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white', margin: 0 }}>{selectedCoordDetail.nombre}</h3>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>Capturas realizadas por el coordinador</p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>
+                  CI: {selectedCoordDetail.username || selectedCoordDetail.ci} {selectedCoordDetail.telefono && `• Tel: ${selectedCoordDetail.telefono}`}
+                </p>
               </div>
               <button 
+                type="button"
                 onClick={() => setShowDetailModal(false)}
                 style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.5rem', color: 'var(--text)', cursor: 'pointer' }}
               >
                 <X size={18} />
+              </button>
+            </div>
+
+            {/* Administrative Management Bar for Padrino */}
+            <div style={{
+              display: 'flex',
+              gap: '0.5rem',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '0.6rem',
+              marginBottom: '1.25rem'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCoordToReset(selectedCoordDetail);
+                  setResetSuccessData(null);
+                  setCustomPasswordInput('');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  background: 'rgba(234, 179, 8, 0.15)',
+                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  color: '#FACC15',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <KeyRound size={14} /> Resetear Clave
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCoordToDelete(selectedCoordDetail);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: 'var(--red)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={14} /> Eliminar Coordinador
               </button>
             </div>
       
@@ -455,6 +601,210 @@ const TabCoordinators = (props: any) => {
                     </div>
                   </div>
               ))}
+            </div>
+          </motion.div>
+        </div>
+      )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════════════════════
+        PASSWORD RESET MODAL
+      ══════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+      {coordToReset && (
+        <div className="modal-overlay-premium" style={{ zIndex: 1100000 }}>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="modal-content-premium-styled"
+            style={{ width: '95%', maxWidth: '440px', padding: '1.75rem' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FACC15' }}>
+                  <KeyRound size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>Restablecer Contraseña</h3>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: '2px 0 0' }}>{coordToReset.nombre}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setCoordToReset(null); setResetSuccessData(null); setCustomPasswordInput(''); setCopiedPass(false); }}
+                style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.4rem', color: 'var(--text)', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {!resetSuccessData ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.85rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', margin: 0, lineHeight: 1.4 }}>
+                    Puedes resetear la contraseña para que el coordinador pueda ingresar nuevamente a la aplicación.
+                  </p>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--text-3)' }}>
+                    • Cédula / Usuario: <strong style={{ color: 'white' }}>{coordToReset.username || coordToReset.ci}</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--plra-300)' }}>
+                    Nueva Contraseña (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    className="modern-input-premium-styled"
+                    placeholder={`Por defecto: Cédula (${(coordToReset.ci || coordToReset.username || '').toString().replace(/\D/g, '')})`}
+                    value={customPasswordInput}
+                    onChange={(e) => setCustomPasswordInput(e.target.value)}
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                    Si lo dejas vacío, su contraseña será su número de Cédula.
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setCoordToReset(null); setCustomPasswordInput(''); }}
+                    className="btn-cancel-styled"
+                    style={{ flex: 1 }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onConfirmReset}
+                    disabled={isResetting}
+                    className="btn-confirm-styled"
+                    style={{ flex: 1, background: 'linear-gradient(135deg, #EAB308 0%, #CA8A04 100%)', color: '#000', fontWeight: 800 }}
+                  >
+                    {isResetting ? <Spinner size={16} /> : 'Restablecer Clave'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'center', padding: '0.5rem 0' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                  <CheckCheck size={28} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'white', fontWeight: 800 }}>¡Contraseña Restablecida!</h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>{resetSuccessData.message}</p>
+                </div>
+
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 800 }}>Nueva Clave:</span>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FACC15', letterSpacing: '0.05em' }}>{resetSuccessData.password || (coordToReset.ci || coordToReset.username || '').toString().replace(/\D/g, '')}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const passToCopy = resetSuccessData.password || (coordToReset.ci || coordToReset.username || '').toString().replace(/\D/g, '');
+                      if (passToCopy) {
+                        navigator.clipboard.writeText(passToCopy);
+                        setCopiedPass(true);
+                        setTimeout(() => setCopiedPass(false), 2500);
+                      }
+                    }}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.4rem 0.6rem', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem' }}
+                  >
+                    {copiedPass ? <><Check size={14} style={{ color: 'var(--green)' }} /> Copiado</> : <><Copy size={14} /> Copiar</>}
+                  </button>
+                </div>
+
+                {coordToReset.telefono && (
+                  <a
+                    href={`https://wa.me/${formatWhatsApp(coordToReset.telefono)}?text=${encodeURIComponent(`Hola ${coordToReset.nombre}, tu contraseña de acceso a Intelecciones ha sido restablecida.\n\nUsuario: ${coordToReset.username || coordToReset.ci}\nContraseña: ${resetSuccessData.password || (coordToReset.ci || coordToReset.username || '').toString().replace(/\D/g, '')}\n\nIngresa aquí: ${window.location.origin}/login`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ background: '#25D366', color: 'white', padding: '0.75rem', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 800, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                  >
+                    <MessageSquare size={16} /> Enviar Clave por WhatsApp
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => { setCoordToReset(null); setResetSuccessData(null); setCustomPasswordInput(''); setCopiedPass(false); }}
+                  className="btn-cancel-styled"
+                  style={{ width: '100%' }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════════════════════
+        DELETE COORDINATOR MODAL
+      ══════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+      {coordToDelete && (
+        <div className="modal-overlay-premium" style={{ zIndex: 1100000 }}>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="modal-content-premium-styled"
+            style={{ width: '95%', maxWidth: '440px', padding: '1.75rem' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)' }}>
+                  <AlertOctagon size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>Eliminar Coordinador</h3>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: '2px 0 0' }}>{coordToDelete.nombre}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCoordToDelete(null)}
+                style={{ background: 'var(--surface-light)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.4rem', color: 'var(--text)', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', padding: '0.85rem' }}>
+                <p style={{ fontSize: '0.78rem', color: '#FCA5A5', margin: 0, lineHeight: 1.4, fontWeight: 600 }}>
+                  ¿Estás seguro de que deseas eliminar al coordinador <strong>{coordToDelete.nombre}</strong> (CI: {coordToDelete.username || coordToDelete.ci})?
+                </p>
+                <div style={{ marginTop: '0.6rem', padding: '0.4rem 0.6rem', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', fontSize: '0.7rem', color: 'var(--plra-200)' }}>
+                  🛡️ <strong>Protección de datos:</strong> Todas las capturas de electores realizadas por este coordinador se transferirán y conservarán automáticamente en tu cuenta de Padrino.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setCoordToDelete(null)}
+                  className="btn-cancel-styled"
+                  style={{ flex: 1 }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirmDelete}
+                  disabled={isDeleting}
+                  className="btn-confirm-styled"
+                  style={{ flex: 1, background: 'var(--red)', color: 'white', fontWeight: 800 }}
+                >
+                  {isDeleting ? <Spinner size={16} /> : 'Sí, Eliminar'}
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

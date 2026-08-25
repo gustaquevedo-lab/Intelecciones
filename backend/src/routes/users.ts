@@ -13,11 +13,25 @@ const canModifyUser = (requesterId: string | number | undefined, requesterRole: 
   const targetId = Number(targetUserId);
   if (reqId === targetId) return true;
   try {
-    const target = db.prepare('SELECT role, parent_id, assigned_campaign_id FROM users WHERE id = ?').get(targetId) as any;
+    const target = db.prepare('SELECT id, role, parent_id, assigned_campaign_id, ci, username FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1')
+      .get(targetId, String(targetUserId), String(targetUserId)) as any;
     if (!target) return false;
-    const requesterInfo = getCachedUserInfo(String(reqId));
+    const requesterInfo = getCachedUserInfo(String(requesterId));
     if (target.assigned_campaign_id && requesterInfo?.campaign_id && target.assigned_campaign_id !== requesterInfo.campaign_id) return false;
-    if (target.parent_id === reqId) return true;
+    
+    // Check if target is a child/coordinator created under this padrino or leader
+    const pId = target.parent_id;
+    if (
+      pId && (
+        Number(pId) === reqId || 
+        String(pId) === String(requesterId) || 
+        (requesterInfo?.ci && String(pId) === String(requesterInfo.ci)) ||
+        (requesterInfo?.username && String(pId) === String(requesterInfo.username))
+      )
+    ) {
+      return true;
+    }
+
     if (reqRole === 'SUBJEFE' || reqRole === 'JEFE_CAMPANA' || reqRole === 'CANDIDATO') {
       if (target.role !== 'SUPERUSUARIO' && target.role !== 'JEFE_CAMPANA' && target.role !== 'CANDIDATO') return true;
     }
@@ -344,18 +358,18 @@ router.delete('/:id', (req, res) => {
   const userId = req.params.id;
 
   try {
-    const userToDelete = db.prepare('SELECT username FROM users WHERE id = ?').get(userId) as any;
-    if (userToDelete?.username === 'admin') {
-      return res.status(403).json({ error: 'No se puede eliminar al administrador maestro (admin).' });
-    }
-
-    const user = db.prepare('SELECT id, role, parent_id FROM users WHERE id = ?').get(userId) as any;
+    const user = db.prepare('SELECT id, role, parent_id, username, ci FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1')
+      .get(userId, String(userId), String(userId)) as any;
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
+    if (user.username === 'admin') {
+      return res.status(403).json({ error: 'No se puede eliminar al administrador maestro (admin).' });
+    }
+
     if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
-      if (!canModifyUser(requesterId, requesterRole, userId)) {
+      if (!canModifyUser(requesterId, requesterRole, user.id)) {
         return res.status(403).json({ error: 'No tienes permisos para eliminar este usuario.' });
       }
       
@@ -366,50 +380,56 @@ router.delete('/:id', (req, res) => {
       }
     }
 
-    const capturesAction = req.query.action as string;
+    const capturesAction = (req.query.action as string) || 'inherit';
+    const targetParentId = user.parent_id || requesterId;
 
     const transaction = db.transaction(() => {
       db.prepare('PRAGMA foreign_keys = OFF').run();
       
+      const coordIds = [user.id, user.ci ? String(user.ci) : user.id, user.username ? String(user.username) : user.id, userId];
+
       // 1. Handle elector_captures based on action
       if (capturesAction === 'delete') {
-        db.prepare('DELETE FROM capture_conflicts WHERE capture_id IN (SELECT id FROM elector_captures WHERE coordinator_id = ?) OR capture_id_b IN (SELECT id FROM elector_captures WHERE coordinator_id = ?)').run(userId, userId);
-        db.prepare('DELETE FROM elector_captures WHERE coordinator_id = ?').run(userId);
-      } else if (capturesAction === 'inherit' && user.parent_id) {
-        db.prepare('UPDATE elector_captures SET coordinator_id = ? WHERE coordinator_id = ?').run(user.parent_id, userId);
+        db.prepare(`
+          DELETE FROM capture_conflicts 
+          WHERE capture_id IN (SELECT id FROM elector_captures WHERE coordinator_id IN (?, ?, ?, ?)) 
+             OR capture_id_b IN (SELECT id FROM elector_captures WHERE coordinator_id IN (?, ?, ?, ?))
+        `).run(...coordIds, ...coordIds);
+        db.prepare('DELETE FROM elector_captures WHERE coordinator_id IN (?, ?, ?, ?)').run(...coordIds);
+      } else if (capturesAction === 'inherit' && targetParentId) {
+        db.prepare('UPDATE elector_captures SET coordinator_id = ? WHERE coordinator_id IN (?, ?, ?, ?)').run(targetParentId, ...coordIds);
       } else {
-        // Default behavior (nullify)
-        db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+        db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id IN (?, ?, ?, ?)').run(...coordIds);
       }
       
-      // 2. Nullify references in vehicles (formerly logistics)
-      db.prepare('UPDATE vehicles SET assigned_user_id = NULL WHERE assigned_user_id = ?').run(userId);
+      // 2. Nullify references in vehicles
+      db.prepare('UPDATE vehicles SET assigned_user_id = NULL WHERE assigned_user_id IN (?, ?, ?, ?)').run(...coordIds);
       
       // 3. Nullify references in field_requests
-      db.prepare('UPDATE field_requests SET coordinator_id = NULL WHERE coordinator_id = ?').run(userId);
+      db.prepare('UPDATE field_requests SET coordinator_id = NULL WHERE coordinator_id IN (?, ?, ?, ?)').run(...coordIds);
 
       // 4. Nullify references in capture_conflicts and audit_logs
-      db.prepare('UPDATE capture_conflicts SET resolved_by_jefe_id = NULL WHERE resolved_by_jefe_id = ?').run(userId);
-      db.prepare('UPDATE capture_conflicts SET resolved_coordinator_id = NULL WHERE resolved_coordinator_id = ?').run(userId);
-      db.prepare('UPDATE audit_logs SET user_id = NULL WHERE user_id = ?').run(userId);
+      db.prepare('UPDATE capture_conflicts SET resolved_by_jefe_id = NULL WHERE resolved_by_jefe_id = ?').run(user.id);
+      db.prepare('UPDATE capture_conflicts SET resolved_coordinator_id = NULL WHERE resolved_coordinator_id IN (?, ?, ?, ?)').run(...coordIds);
+      db.prepare('UPDATE audit_logs SET user_id = NULL WHERE user_id = ?').run(user.id);
 
       // 5. Nullify references in participation_logs
-      db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(userId);
-
+      db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(user.id);
 
       // 8. Update children users to have no parent (orphan them instead of deleting)
-      db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(userId);
+      db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(user.id);
 
       // 9. Finally delete the user
-      db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+      db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
       db.prepare('PRAGMA foreign_keys = ON').run();
 
-      logAction(1, 'DELETE', 'USER', userId, `Deleted user with ID ${userId} and cleaned up all references`);
+      logAction(requesterId ? Number(requesterId) : 1, 'DELETE', 'USER', user.id, `Deleted user ${user.username} (${user.nombre})`);
     });
 
     transaction();
+    clearUserCache(String(user.id));
     invalidateAllReportsCaches();
-    res.json({ success: true });
+    res.json({ success: true, message: `Usuario ${user.nombre || user.username} eliminado correctamente.` });
   } catch (err: any) {
     console.error('[DELETE USER ERROR]:', err);
     res.status(500).json({ error: err.message });
@@ -592,29 +612,54 @@ router.put('/:id', (req, res) => {
 });
 
 
-router.post('/admin/:id/reset-password', (req, res) => {
+const handleResetPassword = (req: any, res: any) => {
   const requesterRole = (req.headers['x-user-role'] as string || '').toUpperCase().trim();
   const requesterId   = req.headers['x-user-id'] as string;
+  const targetId = req.params.id;
 
   if (requesterRole !== 'SUPERUSUARIO' && requesterId) {
-    if (!canModifyUser(requesterId, requesterRole, req.params.id)) {
+    if (!canModifyUser(requesterId, requesterRole, targetId)) {
       return res.status(403).json({ error: 'No tienes permisos para resetear la contraseña de este usuario.' });
     }
   }
 
   try {
-    const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.params.id) as any;
+    const user = db.prepare('SELECT id, username, ci, nombre FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1')
+      .get(targetId, String(targetId), String(targetId)) as any;
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     
-    // Set password to username as default and flag for change
-    db.prepare('UPDATE users SET password = ?, needs_password_change = 1 WHERE id = ?').run(user.username, req.params.id);
+    let targetPassword = (req.body?.new_password || '').toString().trim();
+    let isDefault = false;
+    if (!targetPassword) {
+      // Default to clean CI or username
+      const cleanCi = user.ci ? String(user.ci).replace(/\D/g, '') : '';
+      targetPassword = cleanCi || user.username;
+      isDefault = true;
+    }
+
+    if (targetPassword.length < 4) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres.' });
+    }
+
+    db.prepare('UPDATE users SET password = ?, needs_password_change = 0 WHERE id = ?').run(targetPassword, user.id);
+    clearUserCache(String(user.id));
     
-    logAction(1, 'RESET_PASSWORD', 'USER', req.params.id, `Password reset to default (username) for user ${user.username}`);
-    res.json({ success: true, message: `Contraseña reseteada. El usuario debe ingresar con su nombre de usuario (${user.username}) y cambiarla.` });
+    logAction(requesterId ? Number(requesterId) : 1, 'RESET_PASSWORD', 'USER', user.id, `Password reset for user ${user.username} (${user.nombre})`);
+    
+    res.json({ 
+      success: true, 
+      new_password: targetPassword,
+      message: isDefault 
+        ? `Contraseña reseteada con éxito a: ${targetPassword}` 
+        : `Contraseña actualizada con éxito.`
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
-});
+};
+
+router.post('/admin/:id/reset-password', handleResetPassword);
+router.post('/:id/reset-password', handleResetPassword);
 router.put('/profile/photo', (req, res) => {
     const userId = req.headers['x-user-id'] as string;
     const { photo_url } = req.body;

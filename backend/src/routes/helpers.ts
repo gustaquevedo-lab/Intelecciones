@@ -6,6 +6,8 @@ import { getDistrictVariants, normalizeDistrict } from '../utils/districtNormali
 export interface CachedUser {
   id: number;
   role: string;
+  ci?: string | null;
+  username?: string | null;
   assigned_list_id: number | null;
   assigned_campaign_id: number | null;
   distrito: string | null;
@@ -21,7 +23,7 @@ export const getCachedUserInfo = (user_id: string): CachedUser | null => {
   const hit = _userCache.get(user_id);
   if (hit && now - hit.ts < USER_CACHE_TTL) return hit;
   const user = db.prepare(`
-    SELECT u.id, u.role, u.assigned_list_id, u.assigned_campaign_id,
+    SELECT u.id, u.role, u.ci, u.username, u.assigned_list_id, u.assigned_campaign_id,
            COALESCE(u.distrito, l.ciudad, c1.distrito, c2.distrito) as distrito,
            COALESCE(l.campaign_id, u.assigned_campaign_id) as campaign_id
     FROM users u
@@ -35,6 +37,8 @@ export const getCachedUserInfo = (user_id: string): CachedUser | null => {
   const entry: CachedUser = {
     id: user.id,
     role: user.role,
+    ci: user.ci,
+    username: user.username,
     assigned_list_id: user.assigned_list_id,
     assigned_campaign_id: user.assigned_campaign_id,
     distrito: user.distrito,

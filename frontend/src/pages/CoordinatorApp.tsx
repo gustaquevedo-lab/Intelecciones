@@ -459,6 +459,45 @@ const CoordinatorApp = () => {
     }
   };
 
+  const handleResetCoordPassword = async (coord: any, customPassword?: string) => {
+    if (!coord) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await api.post(`/users/${coord.id}/reset-password`, {
+        new_password: customPassword || ''
+      });
+      setSuccessMsg(res.data.message || `✅ Contraseña restablecida con éxito.`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+      return res.data;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al restablecer contraseña');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCoordinator = async (coord: any, action: 'inherit' | 'delete' = 'inherit') => {
+    if (!coord) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await api.delete(`/users/${coord.id}?action=${action}`);
+      setSuccessMsg(res.data.message || `✅ Coordinador eliminado correctamente.`);
+      setShowDetailModal(false);
+      setSelectedCoordDetail(null);
+      fetchMyCoordinators();
+      fetchMyPadrinoStats();
+      fetchHistory();
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al eliminar coordinador');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleLookupCoordCI = async () => {
     if (!newCoordCI) return;
     setIsLoading(true);
@@ -1201,6 +1240,7 @@ const CoordinatorApp = () => {
     handleDownloadPadron,
     handleCapture, handleUpdateCapture, handleDeleteCapture,
     handleCreateCoord: handleCreateCoordinator, handleCreatePadrino,
+    handleResetCoordPassword, handleDeleteCoordinator,
     fetchHistory, fetchRequests, fetchDisputes, fetchTeamStats,
     handleSearch, handleConfirm, handleShare,
     handlePhoneChange, fetchCoordinatorDetail, handleLookupCoordCI, handleLookupPadrinoCI,
