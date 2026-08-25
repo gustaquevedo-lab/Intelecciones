@@ -230,7 +230,9 @@ const TabSearch = (props: any) => {
             <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase' }}>Padrón Offline</span>
           </div>
           <span style={{ fontSize: '0.65rem', fontWeight: 700, color: offlineCount > 0 ? 'var(--green)' : 'var(--text-3)' }}>
-            {offlineCount > 0 ? `${offlineCount.toLocaleString()} Registros` : 'Sin datos locales'}
+            {offlineCount > 0 
+              ? `${offlineCount.toLocaleString()} Reg.${localStorage.getItem('last_padron_sync_district') ? ` (${localStorage.getItem('last_padron_sync_district')})` : ''}` 
+              : 'Sin datos locales'}
           </span>
         </div>
         

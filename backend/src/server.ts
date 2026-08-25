@@ -526,12 +526,60 @@ const upload = multer({
 
 // 📱 OFFLINE SYNC ENDPOINT
 app.get('/api/offline/padron/status', (req, res) => {
+  const user_id = req.headers['x-user-id'];
+  const role = req.headers['x-user-role'];
   try {
     const lastUpdated = db.prepare("SELECT value FROM settings WHERE key = 'padron_last_updated'").get() as any;
-    const totalElectors = db.prepare("SELECT COUNT(*) as count FROM electors").get() as any;
+
+    // Resolve effective district for this user
+    let activeDistrito: string | null = getDistrict(req);
+    if (user_id && role !== 'SUPERUSUARIO' && role !== 'SUPER_ADMIN') {
+      const userRow = db.prepare(`
+        SELECT COALESCE(l.ciudad, c.distrito, u.distrito) as distrito
+        FROM users u
+        LEFT JOIN lists l ON u.assigned_list_id = l.id
+        LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
+        WHERE u.id = ?
+      `).get(user_id) as any;
+      if (userRow?.distrito) activeDistrito = normalizeDistrict(userRow.distrito);
+    }
+
+    let count = 0;
+    const columns = db.prepare('PRAGMA table_info(electors)').all() as any[];
+    const hasCiudad = columns.some((c: any) => c.name === 'ciudad');
+    const hasDistrito = columns.some((c: any) => c.name === 'distrito');
+
+    if (activeDistrito) {
+      const variants = getDistrictVariants(activeDistrito);
+      const placeholders = variants.map(() => '?').join(', ');
+      
+      let countQuery = 'SELECT COUNT(*) as count FROM electors WHERE ';
+      let distClauses: string[] = [];
+      let distParams: any[] = [];
+      
+      if (hasDistrito) {
+        distClauses.push(`UPPER(distrito) IN (${placeholders})`);
+        distParams.push(...variants.map(v => v.toUpperCase()));
+      }
+      if (hasCiudad) {
+        distClauses.push(`UPPER(ciudad) IN (${placeholders})`);
+        distParams.push(...variants.map(v => v.toUpperCase()));
+      }
+      
+      if (distClauses.length > 0) {
+        countQuery += distClauses.join(' OR ');
+        const row = db.prepare(countQuery).get(...distParams) as any;
+        count = row?.count || 0;
+      }
+    } else {
+      const row = db.prepare('SELECT COUNT(*) as count FROM electors').get() as any;
+      count = row?.count || 0;
+    }
+
     res.json({
       last_updated: lastUpdated ? parseInt(lastUpdated.value) : 0,
-      total: totalElectors?.count || 0
+      total: count,
+      distrito: activeDistrito || 'GLOBAL'
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -546,10 +594,10 @@ app.get('/api/offline/padron', (req, res) => {
   try {
     let query = 'SELECT ci, nombre, apellido, local_votacion, mesa, orden FROM electors';
     let params: any[] = [];
-    let activeDistrito = headerDistrict;
+    let activeDistrito: string | null = headerDistrict;
 
     // Resolve user's assigned district
-    let userDistrito = null;
+    let userDistrito: string | null = null;
     if (user_id) {
       const user = db.prepare(`
         SELECT COALESCE(l.ciudad, c.distrito, u.distrito) as distrito 
@@ -558,42 +606,62 @@ app.get('/api/offline/padron', (req, res) => {
         LEFT JOIN campaigns c ON (l.campaign_id = c.id OR u.assigned_campaign_id = c.id)
         WHERE u.id = ?
       `).get(user_id) as any;
-      userDistrito = user?.distrito;
+      if (user?.distrito) userDistrito = normalizeDistrict(user.distrito);
     }
 
     // Force strict district filtering for non-superusers
     if (role !== 'SUPERUSUARIO' && role !== 'SUPER_ADMIN') {
-        if (userDistrito) {
-            activeDistrito = userDistrito;
-        }
-    } else if (!activeDistrito) {
+      if (userDistrito) {
         activeDistrito = userDistrito;
+      }
+    } else if (!activeDistrito) {
+      activeDistrito = userDistrito;
     }
 
-    // Filter by district if we found one
+    // Normalize the final district if we have one
+    if (activeDistrito) {
+      activeDistrito = normalizeDistrict(activeDistrito);
+    }
+
+    // Filter by district using ALL known variants to ensure nothing is missed
     if (activeDistrito) {
       const columns = db.prepare('PRAGMA table_info(electors)').all() as any[];
-      const hasCiudad = columns.some(c => c.name === 'ciudad');
-      const hasDistrito = columns.some(c => c.name === 'distrito');
+      const hasCiudad = columns.some((c: any) => c.name === 'ciudad');
+      const hasDistrito = columns.some((c: any) => c.name === 'distrito');
+
+      const variants = getDistrictVariants(activeDistrito);
+      const uppercasedVariants = variants.map(v => v.toUpperCase());
+      const placeholders = uppercasedVariants.map(() => '?').join(', ');
+
+      let distClauses: string[] = [];
+      let distParams: any[] = [];
 
       if (hasDistrito && hasCiudad) {
-        query += " WHERE UPPER(distrito) = UPPER(?) OR UPPER(ciudad) = UPPER(?)";
-        params = [activeDistrito, activeDistrito];
+        distClauses.push(`UPPER(distrito) IN (${placeholders})`);
+        distParams.push(...uppercasedVariants);
+        distClauses.push(`UPPER(ciudad) IN (${placeholders})`);
+        distParams.push(...uppercasedVariants);
       } else if (hasDistrito) {
-        query += " WHERE UPPER(distrito) = UPPER(?)";
-        params = [activeDistrito];
+        distClauses.push(`UPPER(distrito) IN (${placeholders})`);
+        distParams.push(...uppercasedVariants);
       } else if (hasCiudad) {
-        query += " WHERE UPPER(ciudad) = UPPER(?)";
-        params = [activeDistrito];
+        distClauses.push(`UPPER(ciudad) IN (${placeholders})`);
+        distParams.push(...uppercasedVariants);
       }
-      console.log(`[OFFLINE] Filtrando padrón para distrito: ${activeDistrito}`);
-    } else if (role !== 'SUPERUSUARIO') {
+
+      if (distClauses.length > 0) {
+        query += ` WHERE ${distClauses.join(' OR ')}`;
+        params = distParams;
+      }
+
+      console.log(`[OFFLINE] Filtrando padrón para: ${activeDistrito} (${variants.length} variantes, ej: ${variants.slice(0,3).join(', ')})`);
+    } else if (role !== 'SUPERUSUARIO' && role !== 'SUPER_ADMIN') {
       // If NOT SuperUser and NO district found, return empty to prevent data leak/overload
       return res.json([]);
     }
 
     // No artificial cap when filtering by district — download full district padron
-    let limit = activeDistrito ? 200000 : 10000;
+    let limit = activeDistrito ? 300000 : 10000;
     if (req.query.limit) {
       const parsedLimit = parseInt(req.query.limit as string);
       if (!isNaN(parsedLimit) && parsedLimit > 0) {
@@ -609,7 +677,7 @@ app.get('/api/offline/padron', (req, res) => {
       }
     }
 
-    query += " LIMIT ? OFFSET ?";
+    query += ' LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     const electors = db.prepare(query).all(...params);
@@ -620,7 +688,7 @@ app.get('/api/offline/padron', (req, res) => {
       return [sanitized.ci, sanitized.nombre, sanitized.apellido, sanitized.local_votacion, sanitized.mesa, sanitized.orden];
     });
     
-    console.log(`[OFFLINE] Enviando ${compact.length} registros compactos.`);
+    console.log(`[OFFLINE] Enviando ${compact.length} registros compactos para ${activeDistrito || 'GLOBAL'}.`);
     res.json(compact);
   } catch (err: any) {
     console.error('[OFFLINE ERROR]', err);

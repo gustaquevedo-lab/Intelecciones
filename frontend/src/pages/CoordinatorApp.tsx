@@ -216,9 +216,25 @@ const CoordinatorApp = () => {
   // Hoisted function to download padron
   async function handleDownloadPadron() {
     const targetDistrict = activeDistrict || user?.distrito;
+
+    // First: query the server to get the real count for this district
+    let serverCount = 0;
+    let serverDistrito = targetDistrict?.toUpperCase() || 'GLOBAL';
+    try {
+      const statusRes = await api.get('/offline/padron/status', { timeout: 15000 });
+      serverCount = statusRes.data?.total || 0;
+      serverDistrito = statusRes.data?.distrito || serverDistrito;
+    } catch {
+      // Proceed without count if status fails
+    }
+
+    const countInfo = serverCount > 0
+      ? `\n\nRegistros disponibles en servidor para ${serverDistrito}: ${serverCount.toLocaleString()}`
+      : '';
+
     const confirmMsg = targetDistrict 
-      ? `¿Desea descargar el padrón de ${targetDistrict.toUpperCase()} para uso offline?\n\nEsto optimizará el espacio en su móvil.`
-      : '¿Desea descargar el padrón COMPLETO para uso offline?\n\nADVERTENCIA: Esto puede tardar varios minutos y consumir mucho espacio.';
+      ? `¿Desea descargar el padrón de ${targetDistrict.toUpperCase()} para uso offline?${countInfo}\n\nEsto optimizará el espacio en su móvil.`
+      : `¿Desea descargar el padrón COMPLETO para uso offline?${countInfo}\n\nADVERTENCIA: Esto puede tardar varios minutos y consumir mucho espacio.`;
 
     if (!window.confirm(confirmMsg)) return;
     setIsDownloading(true);
@@ -247,7 +263,9 @@ const CoordinatorApp = () => {
           allElectors = allElectors.concat(data);
           offset += data.length;
           
-          const pct = Math.min(90, Math.floor((allElectors.length / (allElectors.length + pageSize)) * 80));
+          // Show accurate progress based on server total if known
+          const totalEstimate = serverCount > 0 ? serverCount : (allElectors.length + pageSize);
+          const pct = Math.min(75, Math.floor((allElectors.length / totalEstimate) * 75));
           setDownloadProgress(5 + pct);
           
           if (data.length < pageSize) {
@@ -272,9 +290,12 @@ const CoordinatorApp = () => {
       const count = await getOfflineStats();
       setOfflineCount(count);
       
+      // Save metadata: city + actual local count + timestamp
       localStorage.setItem('last_padron_sync_timestamp', Date.now().toString());
+      localStorage.setItem('last_padron_sync_district', serverDistrito);
+      localStorage.setItem('last_padron_sync_count', String(count));
       
-      alert(`Padrón descargado con éxito: ${count} electores disponibles offline.`);
+      alert(`Padrón descargado con éxito: ${count.toLocaleString()} electores de ${serverDistrito} disponibles offline.`);
       setIsStatsLoading(false);
     } catch (err: any) {
       setIsStatsLoading(false);
