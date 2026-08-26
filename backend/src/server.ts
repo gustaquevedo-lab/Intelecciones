@@ -714,8 +714,8 @@ app.post('/api/upload-photo', uploadLimiter, upload.single('photo'), (req, res) 
   const host = req.get('host') || '';
   let protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol;
   
-  // Force HTTPS in production or for specific domains like railway.app
-  if (process.env.NODE_ENV === 'production' || host.includes('railway.app') || host.includes('vercel.app')) {
+  // Force HTTPS in production or for specific domains like intellihouse.lat / vercel.app
+  if (process.env.NODE_ENV === 'production' || host.includes('intellihouse.lat') || host.includes('railway.app') || host.includes('vercel.app')) {
     protocol = 'https';
   }
 
@@ -1060,7 +1060,7 @@ app.post('/api/dia-d/vote', async (req, res) => {
     // Resolve base url
     const host = req.get('host') || '';
     let protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol;
-    if (process.env.NODE_ENV === 'production' || host.includes('railway.app') || host.includes('vercel.app')) {
+    if (process.env.NODE_ENV === 'production' || host.includes('intellihouse.lat') || host.includes('railway.app') || host.includes('vercel.app')) {
       protocol = 'https';
     }
     const baseUrl = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : `${protocol}://${host}`;

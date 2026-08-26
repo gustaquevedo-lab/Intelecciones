@@ -3,30 +3,32 @@ import path from 'path';
 import fs from 'fs';
 
 // Consistently resolve persistent database storage path
-let dbDir = process.env.DATA_DIR || 
-            process.env.RAILWAY_VOLUME_MOUNT_PATH || 
-            (fs.existsSync('/data') ? '/data' : (process.env.NODE_ENV === 'production' ? '/app/data' : process.cwd()));
+let dbDir = process.env.DATA_DIR;
 
-if (process.env.NODE_ENV !== 'production') {
-  const rootBackendPath = path.join(process.cwd(), 'backend');
-  if (fs.existsSync(rootBackendPath) && fs.statSync(rootBackendPath).isDirectory()) {
-    dbDir = rootBackendPath;
+if (!dbDir) {
+  if (fs.existsSync('/home/dev-server/apps/intelecciones/data')) {
+    dbDir = '/home/dev-server/apps/intelecciones/data';
+  } else if (fs.existsSync('/app/data')) {
+    dbDir = '/app/data';
+  } else {
+    const rootBackendPath = path.join(process.cwd(), 'backend');
+    if (fs.existsSync(rootBackendPath) && fs.statSync(rootBackendPath).isDirectory()) {
+      dbDir = rootBackendPath;
+    } else {
+      dbDir = process.cwd();
+    }
   }
 }
 
-if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+if (!fs.existsSync(dbDir)) {
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+  } catch (err: any) {
+    console.warn(`[DB] Could not create directory ${dbDir}:`, err.message);
+  }
+}
 
 const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : path.join(dbDir, 'intellecciones.db');
-
-// If volume mounted at /data is empty, but container had seed in /app/data, migrate it
-if (dbDir === '/data' && !fs.existsSync(dbPath) && fs.existsSync('/app/data/intellecciones.db')) {
-  try {
-    console.log('[DB] Migrating existing database from /app/data to persistent volume /data...');
-    fs.copyFileSync('/app/data/intellecciones.db', dbPath);
-  } catch (err: any) {
-    console.warn('[DB] Migration failed:', err.message);
-  }
-}
 
 // ── EMERGENCY WAL RECOVERY ───────────────────────────────────────────────────
 // If an interrupted write left a WAL file > 500 MB, delete it before opening.
@@ -62,9 +64,9 @@ try {
   }
 }
 db.pragma('synchronous = NORMAL');
-db.pragma('cache_size = -65536');    // 64 MB cache (balanced for most environments)
+db.pragma('cache_size = -131072');   // 128 MB page cache (optimized for 5M electors in dev-server)
 db.pragma('temp_store = MEMORY');
-db.pragma('mmap_size = 268435456');  // 256MB memory-mapped I/O (safe for all environments)
+db.pragma('mmap_size = 1073741824'); // 1 GB memory-mapped I/O for instant disk access
 db.pragma('busy_timeout = 30000');   // wait up to 30s (CRITICAL: prevents SQLite_BUSY on cold starts/heavy load)
 db.pragma('auto_vacuum = INCREMENTAL');
 db.pragma('page_size = 4096');
@@ -135,8 +137,10 @@ if (dbVersion < currentSchemaVersion) {
 try {
   db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_voted ON participation_logs(local_votacion, mesa, orden);");
   db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_local_mesa ON participation_logs(local_votacion, mesa);");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_electors_distrito_local ON electors(distrito, local_votacion);");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_electors_ciudad_local ON electors(ciudad, local_votacion);");
 } catch (e: any) {
-  console.error("MIGRATION ERROR creating indexes for participation_logs:", e.message);
+  console.error("MIGRATION ERROR creating indexes:", e.message);
 }
 
 // ── TSJE TREP SCRAPER TABLES (idempotent — runs every boot) ──

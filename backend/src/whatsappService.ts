@@ -224,12 +224,15 @@ class WhatsAppManager {
       if (connection === 'close') {
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const loggedOut = statusCode === DisconnectReason.loggedOut;
-        console.log(`[WHATSAPP][${terminalId}] Closed. Code=${statusCode} LoggedOut=${loggedOut}`);
+        const isTimeout = statusCode === DisconnectReason.timedOut || statusCode === 408;
+        console.log(`[WHATSAPP][${terminalId}] Closed. Code=${statusCode} LoggedOut=${loggedOut} Timeout=${isTimeout}`);
 
         t.status = 'DISCONNECTED';
         t.qr = null;
         t.lastError = loggedOut
           ? 'Sesión cerrada. Escanea el QR nuevamente.'
+          : isTimeout
+          ? 'Tiempo de espera de código QR agotado. Inicia la conexión cuando estés listo para escanear.'
           : `Desconectado (código ${statusCode})`;
         this.clients.delete(terminalId);
 
@@ -238,8 +241,11 @@ class WhatsAppManager {
           const sp = this.getSessionPath(terminalId);
           try { fs.rmSync(sp, { recursive: true, force: true }); } catch {}
           try { fs.mkdirSync(sp, { recursive: true }); } catch {}
+        } else if (isTimeout) {
+          // Stop infinite reconnect loops on QR timeout — user will request connect when ready to scan
+          console.log(`[WHATSAPP][${terminalId}] QR timed out without scan. Pausing reconnection loop.`);
         } else {
-          // Auto-reconnect for any other reason (network drop, server restart, etc.)
+          // Auto-reconnect for genuine network drops
           this.scheduleReconnect(terminalId, 5000);
         }
       }

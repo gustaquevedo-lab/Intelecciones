@@ -316,7 +316,7 @@ export default function attendanceRoutes() {
 
       const host = req.get('host') || '';
       let protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol;
-      if (process.env.NODE_ENV === 'production' || host.includes('railway.app') || host.includes('vercel.app')) {
+      if (process.env.NODE_ENV === 'production' || host.includes('intellihouse.lat') || host.includes('railway.app') || host.includes('vercel.app')) {
         protocol = 'https';
       }
       const baseUrl = process.env.APP_URL ? process.env.APP_URL.replace(/\/$/, '') : `${protocol}://${host}`;

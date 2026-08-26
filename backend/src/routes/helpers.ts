@@ -136,14 +136,14 @@ export const getSecurityFilter = (req: express.Request, tableAlias: string = 'c'
           params.push(...allVariants, ...allVariants, ...allVariants);
         } else if (tableAlias === 'e' || tableAlias === 'ec') {
           sql += ` AND (
-            COALESCE(e.distrito, e.ciudad) IN (${placeHolders}) OR
-            COALESCE(e.ciudad, e.distrito) IN (${placeHolders})
+            e.distrito IN (${placeHolders}) OR
+            e.ciudad IN (${placeHolders})
           )`;
           params.push(...allVariants, ...allVariants);
         } else if (tableAlias === 'cc' || tableAlias === 'cc_history') {
           sql += ` AND (
-            COALESCE(e.distrito, e.ciudad) IN (${placeHolders}) OR
-            COALESCE(e.ciudad, e.distrito) IN (${placeHolders})
+            e.distrito IN (${placeHolders}) OR
+            e.ciudad IN (${placeHolders})
           )`;
           params.push(...allVariants, ...allVariants);
         } else if (tableAlias === 'loc') {
