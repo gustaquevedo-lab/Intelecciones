@@ -283,6 +283,12 @@ try {
       list_id INTEGER,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 } catch (e: any) {
   console.error('[DB BOOTSTRAP] Error creating base tables:', e.message);
