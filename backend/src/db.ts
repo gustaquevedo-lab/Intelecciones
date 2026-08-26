@@ -856,6 +856,12 @@ const runSchemaMigrations = () => {
     addColumnIfNotExists("voting_locations", "icon", "TEXT DEFAULT 'Landmark'");
     addColumnIfNotExists("voting_locations", "distrito", "TEXT DEFAULT ''");
     addColumnIfNotExists("voting_locations", "ciudad", "TEXT DEFAULT ''");
+    addColumnIfNotExists("voting_locations", "nombre", "TEXT");
+    addColumnIfNotExists("voting_locations", "cod_local", "TEXT");
+    try {
+      db.prepare("UPDATE voting_locations SET nombre = name WHERE nombre IS NULL AND name IS NOT NULL").run();
+      db.prepare("UPDATE voting_locations SET cod_local = code WHERE cod_local IS NULL AND code IS NOT NULL").run();
+    } catch (e) {}
     addColumnIfNotExists("campaigns", "enabled_modules", "TEXT DEFAULT 'COMMAND_CENTER,REGISTRY'");
     addColumnIfNotExists("users", "enabled_modules", "TEXT");
     addColumnIfNotExists("users", "telefono", "TEXT");
