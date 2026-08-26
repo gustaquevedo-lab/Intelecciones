@@ -705,11 +705,11 @@ export default function statsRoutes() {
     }
     try {
       const districts = db.prepare(`
-        SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM voting_locations WHERE distrito IS NOT NULL AND distrito != ''
-        UNION SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM campaigns WHERE distrito IS NOT NULL AND distrito != ''
-        UNION SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM lists WHERE ciudad IS NOT NULL AND ciudad != ''
+        SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM voting_locations WHERE distrito IS NOT NULL AND distrito != '' AND distrito NOT LIKE 'http%'
+        UNION SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM campaigns WHERE distrito IS NOT NULL AND distrito != '' AND distrito NOT LIKE 'http%'
+        UNION SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM lists WHERE ciudad IS NOT NULL AND ciudad != '' AND ciudad NOT LIKE 'http%'
       `).all() as any[];
-      const data = districts.map((d: any) => d.name).sort();
+      const data = districts.map((d: any) => d.name).filter(Boolean).sort();
       _districtsCache = { data, ts: now };
       res.json(data);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
