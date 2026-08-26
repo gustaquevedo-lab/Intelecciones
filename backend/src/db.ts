@@ -284,6 +284,52 @@ try {
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS capture_conflicts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      capture_id INTEGER,
+      capture_id_b INTEGER,
+      elector_ci TEXT,
+      list_id INTEGER,
+      list_id_a INTEGER,
+      list_id_b INTEGER,
+      status TEXT DEFAULT 'PENDING',
+      resolved_by_jefe_id INTEGER,
+      resolved_coordinator_id INTEGER,
+      conflict_type TEXT DEFAULT 'INTERNAL',
+      jefe_decision_id INTEGER,
+      consent_a INTEGER DEFAULT 0,
+      consent_b INTEGER DEFAULT 0,
+      resolved_at DATETIME,
+      winner_capture_id INTEGER,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS field_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      coordinator_id INTEGER,
+      list_id INTEGER,
+      type TEXT NOT NULL,
+      priority TEXT DEFAULT 'NORMAL',
+      description TEXT,
+      photo_url TEXT,
+      audio_url TEXT,
+      status TEXT DEFAULT 'PENDING',
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS vehicles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      driver_name TEXT NOT NULL,
+      driver_phone TEXT,
+      vehicle_type TEXT DEFAULT 'AUTO',
+      plate_number TEXT,
+      capacity INTEGER DEFAULT 4,
+      status TEXT DEFAULT 'AVAILABLE',
+      lat REAL,
+      lng REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT,
