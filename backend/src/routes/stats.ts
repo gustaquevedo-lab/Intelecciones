@@ -705,11 +705,9 @@ export default function statsRoutes() {
     }
     try {
       const districts = db.prepare(`
-        SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM campaigns WHERE distrito IS NOT NULL AND distrito != ''
+        SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM voting_locations WHERE distrito IS NOT NULL AND distrito != ''
+        UNION SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM campaigns WHERE distrito IS NOT NULL AND distrito != ''
         UNION SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM lists WHERE ciudad IS NOT NULL AND ciudad != ''
-        UNION SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM voting_locations WHERE distrito IS NOT NULL AND distrito != ''
-        UNION SELECT DISTINCT UPPER(TRIM(ciudad)) as name FROM electors WHERE ciudad IS NOT NULL AND ciudad != ''
-        UNION SELECT DISTINCT UPPER(TRIM(distrito)) as name FROM electors WHERE distrito IS NOT NULL AND distrito != ''
       `).all() as any[];
       const data = districts.map((d: any) => d.name).sort();
       _districtsCache = { data, ts: now };

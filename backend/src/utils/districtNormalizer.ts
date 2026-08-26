@@ -573,54 +573,29 @@ export function runDistrictNormalizationMigration(db: any) {
   try {
     console.log('[DISTRICT NORMALIZER] Executing global district normalization migration...');
 
-    // 1. Amambay - Pedro Juan Caballero
-    const pjcVariants = "('PEDRO J. CABALLERO', 'PEDRO J CABALLERO', 'P.J. CABALLERO', 'P. J. CABALLERO', 'PJC', 'PEDRO JUAN CABALLERO', 'pedro j. caballero', 'pedro juan caballero')";
-    safeRun(`UPDATE electors SET distrito = 'PEDRO JUAN CABALLERO', ciudad = 'PEDRO JUAN CABALLERO' WHERE distrito IN ${pjcVariants} OR ciudad IN ${pjcVariants}`);
+    // Clean up users, lists, campaigns, voting_locations (fast, <1000 rows)
+    const pjcVariants = "('PEDRO J. CABALLERO', 'PEDRO J CABALLERO', 'P.J. CABALLERO', 'P. J. CABALLERO', 'PJC', 'pedro j. caballero', 'pedro juan caballero')";
     safeRun(`UPDATE users SET distrito = 'PEDRO JUAN CABALLERO' WHERE distrito IN ${pjcVariants}`);
     safeRun(`UPDATE lists SET ciudad = 'PEDRO JUAN CABALLERO' WHERE ciudad IN ${pjcVariants}`);
     safeRun(`UPDATE campaigns SET distrito = 'PEDRO JUAN CABALLERO' WHERE distrito IN ${pjcVariants}`);
     safeRun(`UPDATE voting_locations SET distrito = 'PEDRO JUAN CABALLERO' WHERE distrito IN ${pjcVariants}`);
 
-    // 2. Coronel Oviedo
-    const oviVariants = "('CNEL. OVIEDO', 'CNEL OVIEDO', 'CORONEL OVIEDO', 'cnel. oviedo', 'coronel oviedo')";
-    safeRun(`UPDATE electors SET distrito = 'CORONEL OVIEDO', ciudad = 'CORONEL OVIEDO' WHERE distrito IN ${oviVariants} OR ciudad IN ${oviVariants}`);
+    const oviVariants = "('CNEL. OVIEDO', 'CNEL OVIEDO', 'cnel. oviedo', 'coronel oviedo')";
     safeRun(`UPDATE users SET distrito = 'CORONEL OVIEDO' WHERE distrito IN ${oviVariants}`);
     safeRun(`UPDATE lists SET ciudad = 'CORONEL OVIEDO' WHERE ciudad IN ${oviVariants}`);
     safeRun(`UPDATE campaigns SET distrito = 'CORONEL OVIEDO' WHERE distrito IN ${oviVariants}`);
     safeRun(`UPDATE voting_locations SET distrito = 'CORONEL OVIEDO' WHERE distrito IN ${oviVariants}`);
 
-    // 3. Ciudad del Este
-    const cdeVariants = "('CDE', 'CIUDAD DEL ESTE', 'cde', 'ciudad del este')";
-    safeRun(`UPDATE electors SET distrito = 'CIUDAD DEL ESTE', ciudad = 'CIUDAD DEL ESTE' WHERE distrito IN ${cdeVariants} OR ciudad IN ${cdeVariants}`);
+    const cdeVariants = "('CDE', 'cde', 'ciudad del este')";
     safeRun(`UPDATE users SET distrito = 'CIUDAD DEL ESTE' WHERE distrito IN ${cdeVariants}`);
     safeRun(`UPDATE lists SET ciudad = 'CIUDAD DEL ESTE' WHERE ciudad IN ${cdeVariants}`);
     safeRun(`UPDATE voting_locations SET distrito = 'CIUDAD DEL ESTE' WHERE distrito IN ${cdeVariants}`);
 
-    // 4. Presidente Franco
-    const francoVariants = "('PTO. PTE. FRANCO', 'PUERTO PRESIDENTE FRANCO', 'PTE. FRANCO', 'PRESIDENTE FRANCO')";
-    safeRun(`UPDATE electors SET distrito = 'PRESIDENTE FRANCO', ciudad = 'PRESIDENTE FRANCO' WHERE distrito IN ${francoVariants} OR ciudad IN ${francoVariants}`);
-    safeRun(`UPDATE users SET distrito = 'PRESIDENTE FRANCO' WHERE distrito IN ${francoVariants}`);
-    safeRun(`UPDATE lists SET ciudad = 'PRESIDENTE FRANCO' WHERE ciudad IN ${francoVariants}`);
-    safeRun(`UPDATE voting_locations SET distrito = 'PRESIDENTE FRANCO' WHERE distrito IN ${francoVariants}`);
-
-    // 5. Fernando de la Mora
-    const fdoVariants = "('FDO. DE LA MORA', 'FDO DE LA MORA', 'FDLA MORA', 'FERNANDO DE LA MORA')";
-    safeRun(`UPDATE electors SET distrito = 'FERNANDO DE LA MORA', ciudad = 'FERNANDO DE LA MORA' WHERE distrito IN ${fdoVariants} OR ciudad IN ${fdoVariants}`);
-    safeRun(`UPDATE users SET distrito = 'FERNANDO DE LA MORA' WHERE distrito IN ${fdoVariants}`);
-    safeRun(`UPDATE lists SET ciudad = 'FERNANDO DE LA MORA' WHERE ciudad IN ${fdoVariants}`);
-    safeRun(`UPDATE voting_locations SET distrito = 'FERNANDO DE LA MORA' WHERE distrito IN ${fdoVariants}`);
-
-    // 6. Asuncion / Capital
-    const asuVariants = "('CAPITAL', 'ASUNCION', 'ASUNCIÓN', 'asuncion', 'asunción')";
-    safeRun(`UPDATE electors SET distrito = 'ASUNCION', ciudad = 'ASUNCION' WHERE distrito IN ${asuVariants} OR ciudad IN ${asuVariants}`);
+    const asuVariants = "('CAPITAL', 'ASUNCIÓN', 'asuncion', 'asunción')";
     safeRun(`UPDATE users SET distrito = 'ASUNCION' WHERE distrito IN ${asuVariants}`);
     safeRun(`UPDATE lists SET ciudad = 'ASUNCION' WHERE ciudad IN ${asuVariants}`);
     safeRun(`UPDATE voting_locations SET distrito = 'ASUNCION' WHERE distrito IN ${asuVariants}`);
 
-    // 7. General uppercase and trim cleanup across all tables
-    safeRun("UPDATE electors SET ciudad = UPPER(TRIM(ciudad)), distrito = UPPER(TRIM(distrito)) WHERE ciudad IS NOT NULL AND distrito IS NOT NULL");
-    safeRun("UPDATE electors SET ciudad = distrito WHERE (ciudad IS NULL OR ciudad = '') AND (distrito IS NOT NULL AND distrito != '')");
-    safeRun("UPDATE electors SET distrito = ciudad WHERE (distrito IS NULL OR distrito = '') AND (ciudad IS NOT NULL AND ciudad != '')");
     safeRun("UPDATE users SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL");
     safeRun("UPDATE lists SET ciudad = UPPER(TRIM(ciudad)) WHERE ciudad IS NOT NULL");
     safeRun("UPDATE campaigns SET distrito = UPPER(TRIM(distrito)) WHERE distrito IS NOT NULL");

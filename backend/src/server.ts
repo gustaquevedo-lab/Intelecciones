@@ -1486,10 +1486,14 @@ app.get('/api/login-attempts', (req, res) => {
 // Schema migrations now handled by db.ts
 // Legacy ALTER TABLE cleanup removed for performance
 
-// Run global district normalization migration on all tables
-runDistrictNormalizationMigration(db);
-
-console.log("DATABASE: Unificación y normalización canónica de distritos completada exitosamente.");
+// Defer district normalization to background after server starts
+setImmediate(() => {
+  try {
+    runDistrictNormalizationMigration(db);
+  } catch (err: any) {
+    console.error('[DISTRICT NORMALIZER ERROR]', err.message);
+  }
+});
 
 
 

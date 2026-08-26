@@ -108,6 +108,186 @@ const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: 
   } catch (e: any) { console.error(`MIGRATION ERROR adding ${columnName} to ${tableName}: ${e.message}`); }
 };
 
+// Ensure all core tables exist before applying column migrations
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS campaigns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      enabled_modules TEXT DEFAULT 'COMMAND_CENTER,REGISTRY',
+      status TEXT DEFAULT 'ACTIVE',
+      slogan TEXT,
+      photo_url TEXT,
+      distrito TEXT,
+      goal INTEGER DEFAULT 1000
+    );
+
+    CREATE TABLE IF NOT EXISTS lists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_id INTEGER,
+      type TEXT NOT NULL,
+      list_number TEXT,
+      option_number TEXT,
+      candidate_ci TEXT,
+      candidate_nombre TEXT,
+      candidate_alias TEXT,
+      goal INTEGER DEFAULT 1000,
+      photo_url TEXT,
+      ciudad TEXT DEFAULT '',
+      is_adversary INTEGER DEFAULT 0,
+      FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT,
+      role TEXT NOT NULL,
+      assigned_list_id INTEGER,
+      assigned_campaign_id INTEGER,
+      assigned_local TEXT,
+      assigned_mesa INTEGER,
+      assigned_table_role TEXT,
+      nombre TEXT,
+      photo_url TEXT,
+      needs_password_change INTEGER DEFAULT 0,
+      parent_id INTEGER,
+      telefono TEXT,
+      phone_hash TEXT,
+      distrito TEXT,
+      ci TEXT,
+      status TEXT DEFAULT 'ACTIVE',
+      FOREIGN KEY(assigned_list_id) REFERENCES lists(id),
+      FOREIGN KEY(assigned_campaign_id) REFERENCES campaigns(id),
+      FOREIGN KEY(parent_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS voting_locations (
+      cod_local TEXT PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      lat REAL,
+      lng REAL,
+      direccion TEXT,
+      icon TEXT DEFAULT 'Landmark',
+      distrito TEXT DEFAULT '',
+      ciudad TEXT DEFAULT ''
+    );
+
+    CREATE TABLE IF NOT EXISTS electors (
+      ci TEXT PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      apellido TEXT,
+      local_votacion TEXT NOT NULL,
+      mesa INTEGER NOT NULL,
+      orden INTEGER NOT NULL,
+      is_priority BOOLEAN DEFAULT 0,
+      ciudad TEXT DEFAULT '',
+      distrito TEXT DEFAULT '',
+      barrio TEXT DEFAULT '',
+      photo_ci_frente TEXT,
+      photo_ci_verso TEXT,
+      sexo TEXT,
+      fecha_nacimiento TEXT,
+      edad INTEGER DEFAULT 0,
+      departamento TEXT,
+      cod_local TEXT,
+      pol_mil INTEGER DEFAULT 0,
+      interdicto INTEGER DEFAULT 0,
+      fiscales INTEGER DEFAULT 0,
+      es_indigen INTEGER DEFAULT 0,
+      tiene_disc INTEGER DEFAULT 0,
+      ref_discap TEXT,
+      fec_inscri TEXT,
+      inhabilitado INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS elector_captures (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      elector_ci TEXT,
+      coordinator_id INTEGER,
+      list_id INTEGER,
+      campaign_id INTEGER,
+      lat REAL NOT NULL,
+      lng REAL NOT NULL,
+      traffic_light TEXT NOT NULL,
+      is_disputed BOOLEAN DEFAULT 0,
+      needs_transport BOOLEAN DEFAULT 0,
+      telefono TEXT,
+      phone_hash TEXT,
+      original_capture_id INTEGER,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      assigned_vehicle_id INTEGER,
+      transport_status TEXT DEFAULT 'PENDING',
+      photo_ci_frente TEXT DEFAULT '',
+      photo_ci_verso TEXT DEFAULT '',
+      copiatin_printed_at DATETIME
+    );
+
+    CREATE TABLE IF NOT EXISTS whatsapp_terminals (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT 'DISCONNECTED',
+      last_qr TEXT,
+      campaign_id INTEGER,
+      phone_number TEXT,
+      warmup_enabled INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      local_votacion TEXT NOT NULL,
+      mesa INTEGER,
+      check_in DATETIME DEFAULT CURRENT_TIMESTAMP,
+      check_out DATETIME,
+      lat REAL,
+      lng REAL,
+      photo_url TEXT,
+      status TEXT DEFAULT 'PRESENTE'
+    );
+
+    CREATE TABLE IF NOT EXISTS participation_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      local_votacion TEXT NOT NULL,
+      mesa INTEGER NOT NULL,
+      orden INTEGER NOT NULL,
+      veedor_id INTEGER,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(veedor_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      local_votacion TEXT NOT NULL,
+      mesa INTEGER NOT NULL,
+      votos_nuestro INTEGER DEFAULT 0,
+      votos_oponente_1 INTEGER DEFAULT 0,
+      votos_oponente_2 INTEGER DEFAULT 0,
+      votos_otros INTEGER DEFAULT 0,
+      votos_nulos INTEGER DEFAULT 0,
+      votos_blancos INTEGER DEFAULT 0,
+      foto_acta_url TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      tenant_id TEXT DEFAULT 'default',
+      category TEXT DEFAULT 'INTENDENTE'
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      action TEXT NOT NULL,
+      entity TEXT,
+      entity_id TEXT,
+      details TEXT,
+      list_id INTEGER,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+} catch (e: any) {
+  console.error('[DB BOOTSTRAP] Error creating base tables:', e.message);
+}
+
 // Columns added OUTSIDE the version-gated block run on every startup (safe, idempotent)
 addColumnIfNotExists("elector_captures", "copiatin_printed_at", "DATETIME");
 addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
@@ -134,14 +314,10 @@ if (dbVersion < currentSchemaVersion) {
 }
 
 // Create index optimizations on startup
-try {
-  db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_voted ON participation_logs(local_votacion, mesa, orden);");
-  db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_local_mesa ON participation_logs(local_votacion, mesa);");
-  db.exec("CREATE INDEX IF NOT EXISTS idx_electors_distrito_local ON electors(distrito, local_votacion);");
-  db.exec("CREATE INDEX IF NOT EXISTS idx_electors_ciudad_local ON electors(ciudad, local_votacion);");
-} catch (e: any) {
-  console.error("MIGRATION ERROR creating indexes:", e.message);
-}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_voted ON participation_logs(local_votacion, mesa, orden);"); } catch (e: any) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_participation_logs_local_mesa ON participation_logs(local_votacion, mesa);"); } catch (e: any) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_electors_distrito_local ON electors(distrito, local_votacion);"); } catch (e: any) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_electors_ciudad_local ON electors(ciudad, local_votacion);"); } catch (e: any) {}
 
 // ── TSJE TREP SCRAPER TABLES (idempotent — runs every boot) ──
 try {
@@ -333,42 +509,15 @@ const runSchemaMigrations = () => {
       );
     `);
 
-    // Auto-wipe legacy campaigns/users on production startup
-    try {
-      const hasCampaignsTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='campaigns'").get();
-      if (hasCampaignsTable) {
-        const oldCamps = db.prepare("SELECT COUNT(*) as c FROM campaigns").get() as any;
-        if (oldCamps && oldCamps.c > 0) {
-          console.log("[DB BOOTSTRAP] Purging legacy campaigns and users in production database...");
-          db.pragma('foreign_keys = OFF');
-          try { db.prepare("DELETE FROM tenant_electors").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM elector_locations").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM logistics").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM results").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM acta_results").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM voter_confirmations").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM mesa_constitutions").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM capture_conflicts").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM elector_captures").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM lists").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM campaigns").run(); } catch (e) {}
-          try { db.prepare("DELETE FROM users WHERE username NOT IN ('3657834', 'admin')").run(); } catch (e) {}
-          db.pragma('foreign_keys = ON');
-        }
-      }
-    } catch (e: any) {
-      console.warn("[DB BOOTSTRAP WIPE WARNING]", e.message);
-    }
-
     // Ensure SuperAdmin users exist
     try {
       db.prepare(`
-        INSERT OR REPLACE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
+        INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
         VALUES (1, '3657834', '123456', 'SUPERUSUARIO', 'Gustavo Quevedo', '3657834', '+595981123456', 'ACTIVE', 0)
       `).run();
 
       db.prepare(`
-        INSERT OR REPLACE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
+        INSERT OR IGNORE INTO users (id, username, password, role, nombre, ci, telefono, status, needs_password_change)
         VALUES (2, 'admin', '123456', 'SUPERADMIN', 'Super Administrador', '1234567', '+595981123456', 'ACTIVE', 0)
       `).run();
     } catch (e: any) {
