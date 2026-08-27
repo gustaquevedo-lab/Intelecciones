@@ -366,12 +366,34 @@ const TabSearch = (props: any) => {
             transition={{ type: 'spring', damping: 24, stiffness: 180 }}
             style={{
               background: 'var(--surface)',
-              border: '1px solid var(--border)',
+              border: elector.out_of_district ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border)',
               borderRadius: '1.5rem',
               overflow: 'hidden',
               boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
             }}
           >
+            {/* Banner de Jurisdicción Territorial */}
+            {elector.out_of_district && (
+              <div style={{
+                background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%)',
+                borderBottom: '1px solid rgba(245, 158, 11, 0.35)',
+                padding: '0.85rem 1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <AlertTriangle size={22} style={{ color: '#FBBF24', flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#FBBF24', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    ⚠️ Cédula en otra jurisdicción
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.9)', marginTop: '2px', lineHeight: 1.3 }}>
+                    Empadronado en <strong>{(elector.distrito || elector.ciudad || 'Otro Distrito').toUpperCase()}</strong>.{elector.user_district ? ` Tu zona asignada es ${elector.user_district.toUpperCase()}.` : ''}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="card-header-section" style={{
               background: 'linear-gradient(135deg, var(--plra-700) 0%, var(--plra-900) 100%)',
               borderBottom: '1px solid var(--border-hi)',
@@ -424,6 +446,19 @@ const TabSearch = (props: any) => {
                         }}>
                           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ADE80', animation: 'pulse-dot 2s infinite' }} />
                           ACTIVO / HABILITADO
+                        </div>
+                      )}
+                      {elector.out_of_district && (
+                        <div className="badge" style={{ 
+                          background: 'rgba(245,158,11,0.25)', 
+                          color: '#FBBF24', 
+                          border: '1px solid rgba(245,158,11,0.4)',
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.62rem',
+                          fontWeight: 900
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F59E0B' }} />
+                          FUERA DE DISTRITO
                         </div>
                       )}
                     </div>

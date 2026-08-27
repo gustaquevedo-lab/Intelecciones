@@ -1251,70 +1251,117 @@ app.get('/api/dia-d/validate/:ci', (req, res) => {
 app.get('/api/electors/:ci', (req, res) => {
   const rawCI = req.params.ci || '';
   const cleanCI = rawCI.replace(/\./g, '').replace(/,/g, '').trim();
+  if (!cleanCI) {
+    return res.status(400).json({ error: 'Cédula no proporcionada.' });
+  }
+
   const list_id = getListId(req);
   const user_id = req.headers['x-user-id'] ? Number(req.headers['x-user-id']) : null;
   const role = getRole(req);
 
-  let distritoFilter = '';
-  let queryParams: any[] = [user_id || 0, list_id || 0, cleanCI];
-
-  if (role !== 'SUPERUSUARIO' && role !== 'SUPER_ADMIN' && user_id) {
-    const userInfo = getCachedUserInfo(String(user_id));
-    if (userInfo?.distrito) {
-      const allVariants = getDistrictVariants(userInfo.distrito);
-      const placeHolders = allVariants.map(() => '?').join(',');
-      distritoFilter = `
-        AND (
-          e.distrito IN (${placeHolders}) 
-          OR e.ciudad IN (${placeHolders})
-          OR c.coordinator_id = ?
-        )
-      `;
-      queryParams.push(...allVariants, ...allVariants, user_id);
-    }
-  }
-
   try {
-    const elector = db.prepare(`
-      SELECT e.*, 
-             c.traffic_light, 
-             c.is_disputed, 
-             c.coordinator_id as captured_by, 
-             c.telefono as capture_telefono, 
-             c.lat as capture_lat, 
-             c.lng as capture_lng, 
-             c.needs_transport,
-             c.timestamp as captured_at,
-             COALESCE(NULLIF(u.nombre, ''), u.username, 'Coordinador ID: ' || c.coordinator_id) as coordinator_name,
-             u.ci as coordinator_ci,
-             u.telefono as coordinator_telefono,
-             u.role as coordinator_role,
-             p.id as padrino_id,
-             COALESCE(NULLIF(p.nombre, ''), p.username, 'Sin Padrino Asignado') as padrino_name,
-             p.ci as padrino_ci,
-             p.telefono as padrino_telefono
-      FROM electors e
-      LEFT JOIN elector_captures c ON c.id = (
-        SELECT id FROM elector_captures
-        WHERE elector_ci = e.ci
-        ORDER BY 
-          (CASE WHEN coordinator_id = ? THEN 1 WHEN list_id = ? THEN 2 ELSE 3 END), 
-          timestamp DESC 
-        LIMIT 1
-      )
-      LEFT JOIN users u ON (c.coordinator_id = u.id OR c.coordinator_id = u.ci OR c.coordinator_id = u.username)
-      LEFT JOIN users p ON (u.parent_id = p.id OR u.parent_id = p.ci)
-      WHERE e.ci = ? ${distritoFilter}
-    `).get(...queryParams) as any;
+    // 1. Consulta directa y ultrarrápida del elector por clave primaria/índice CI (< 0.02ms)
+    const elector = db.prepare('SELECT * FROM electors WHERE ci = ? LIMIT 1').get(cleanCI) as any;
     
-    if (elector) {
-      res.json(elector);
-    } else {
-      res.status(404).json({ error: 'Elector no encontrado en el padrón.' });
+    if (!elector) {
+      return res.status(404).json({ error: 'Elector no encontrado en el padrón nacional.' });
     }
+
+    // 2. Comprobar si el elector está fuera del distrito del usuario
+    let isOutOfDistrict = false;
+    let userDistrict: string | null = null;
+
+    if (role !== 'SUPERUSUARIO' && role !== 'SUPER_ADMIN' && user_id) {
+      const userInfo = getCachedUserInfo(String(user_id));
+      if (userInfo?.distrito) {
+        userDistrict = userInfo.distrito;
+        const allVariants = getDistrictVariants(userInfo.distrito).map(v => v.toUpperCase().trim());
+        const electorDist = (elector.distrito || elector.ciudad || '').toUpperCase().trim();
+        const matchesDistrict = allVariants.includes(electorDist);
+
+        if (!matchesDistrict) {
+          isOutOfDistrict = true;
+        }
+      }
+    }
+
+    // 3. Buscar la última captura usando el índice idx_captures_ci (< 0.05ms)
+    const capture = db.prepare(`
+      SELECT * FROM elector_captures
+      WHERE elector_ci = ?
+      ORDER BY 
+        (CASE WHEN coordinator_id = ? THEN 1 WHEN list_id = ? THEN 2 ELSE 3 END), 
+        timestamp DESC 
+      LIMIT 1
+    `).get(cleanCI, user_id || 0, list_id || 0) as any;
+
+    let coordinator_name = null;
+    let coordinator_ci = null;
+    let coordinator_telefono = null;
+    let coordinator_role = null;
+    let padrino_id = null;
+    let padrino_name = 'Sin Padrino Asignado';
+    let padrino_ci = null;
+    let padrino_telefono = null;
+
+    // 4. Si tiene captura, buscar detalles del coordinador y padrino de forma indexada
+    if (capture && capture.coordinator_id) {
+      // Si el elector fue capturado por este mismo coordinador, no restringir por distrito
+      if (user_id && String(capture.coordinator_id) === String(user_id)) {
+        isOutOfDistrict = false;
+      }
+
+      const coordIdStr = String(capture.coordinator_id);
+      const coordUser = db.prepare('SELECT id, nombre, username, ci, telefono, role, parent_id FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1').get(capture.coordinator_id, coordIdStr, coordIdStr) as any;
+      
+      if (coordUser) {
+        coordinator_name = coordUser.nombre || coordUser.username || `Coordinador ID: ${capture.coordinator_id}`;
+        coordinator_ci = coordUser.ci;
+        coordinator_telefono = coordUser.telefono;
+        coordinator_role = coordUser.role;
+
+        if (coordUser.parent_id) {
+          const parentIdStr = String(coordUser.parent_id);
+          const parentUser = db.prepare('SELECT id, nombre, username, ci, telefono FROM users WHERE id = ? OR ci = ? LIMIT 1').get(coordUser.parent_id, parentIdStr) as any;
+          if (parentUser) {
+            padrino_id = parentUser.id;
+            padrino_name = parentUser.nombre || parentUser.username || 'Padrino Asignado';
+            padrino_ci = parentUser.ci;
+            padrino_telefono = parentUser.telefono;
+          }
+        }
+      } else {
+        coordinator_name = `Coordinador ID: ${capture.coordinator_id}`;
+      }
+    }
+
+    const responsePayload = {
+      ...elector,
+      out_of_district: isOutOfDistrict,
+      user_district: userDistrict,
+      warning_message: isOutOfDistrict ? `Este elector vota en ${elector.distrito || elector.ciudad || 'otro distrito'}, fuera de tu distrito asignado (${userDistrict}).` : null,
+      traffic_light: capture?.traffic_light || null,
+      is_disputed: capture?.is_disputed || 0,
+      captured_by: capture?.coordinator_id || null,
+      capture_telefono: capture?.telefono || null,
+      capture_lat: capture?.lat || null,
+      capture_lng: capture?.lng || null,
+      needs_transport: capture?.needs_transport || 0,
+      captured_at: capture?.timestamp || null,
+      coordinator_name,
+      coordinator_ci,
+      coordinator_telefono,
+      coordinator_role,
+      padrino_id,
+      padrino_name,
+      padrino_ci,
+      padrino_telefono
+    };
+
+    return res.json(responsePayload);
   } catch (err: any) {
     console.error('[ELECTOR LOOKUP ERROR]', err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

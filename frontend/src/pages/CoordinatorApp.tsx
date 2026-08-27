@@ -825,39 +825,67 @@ const CoordinatorApp = () => {
     setError('');
 
     const requestPosition = () => {
-      // Fast, battery-friendly & offline-compatible GPS positioning
-      const options = { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 };
+      // Guardar coordenadas de respaldo
+      const saveLastGps = (lat: number, lng: number) => {
+        try {
+          localStorage.setItem('last_known_gps', JSON.stringify({ lat, lng, timestamp: Date.now() }));
+        } catch {}
+      };
+
+      // Recuperar última coordenada conocida
+      const getLastGps = (): { lat: number, lng: number } | null => {
+        try {
+          const cached = localStorage.getItem('last_known_gps');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed.lat && parsed.lng && (parsed.lat !== 0 || parsed.lng !== 0)) {
+              return { lat: parsed.lat, lng: parsed.lng };
+            }
+          }
+        } catch {}
+        return null;
+      };
+
+      // Intentar GPS de alta precisión con timeout de 3s
       navigator.geolocation.getCurrentPosition(
         (position) => {
           if (position.coords.latitude && position.coords.longitude) {
-            setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+            const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+            setLocation(loc);
+            saveLastGps(loc.lat, loc.lng);
+            setShowModal(true);
+            setError('');
+          } else {
+            const lastLoc = getLastGps();
+            if (lastLoc) {
+              setLocation(lastLoc);
+              setSuccessMsg('📍 Usando última ubicación registrada por el GPS.');
+              setTimeout(() => setSuccessMsg(''), 3500);
+              setShowModal(true);
+              setError('');
+            } else {
+              setError('❌ GPS obligatorio: No se detectaron coordenadas satelitales. Por favor active la ubicación/GPS de su dispositivo para poder registrar.');
+              setShowModal(false);
+            }
           }
-          setShowModal(true);
-          setError('');
           setIsLoading(false);
         },
-        (err) => {
-          console.warn('[GPS Hardware Warning - Fallback to Standard]', err);
-          // Retry once with standard accuracy so user is never blocked or frozen
-          navigator.geolocation.getCurrentPosition(
-            (fallbackPos) => {
-              if (fallbackPos.coords.latitude && fallbackPos.coords.longitude) {
-                setLocation({ lat: fallbackPos.coords.latitude, lng: fallbackPos.coords.longitude });
-              }
-              setShowModal(true);
-              setError('');
-              setIsLoading(false);
-            },
-            () => {
-              // Open modal even without exact GPS coordinates so field work is never interrupted
-              setShowModal(true);
-              setError('');
-              setIsLoading(false);
-            },
-            { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
-          );
+        () => {
+          // Fallback a última posición registrada del dispositivo
+          const lastLoc = getLastGps();
+          if (lastLoc) {
+            setLocation(lastLoc);
+            setSuccessMsg('📍 Usando última ubicación registrada por el GPS.');
+            setTimeout(() => setSuccessMsg(''), 3500);
+            setShowModal(true);
+            setError('');
+          } else {
+            setError('❌ GPS obligatorio: No se detectaron coordenadas satelitales. Por favor active la ubicación/GPS en su teléfono para poder registrar.');
+            setShowModal(false);
+          }
+          setIsLoading(false);
         },
-        options
+        { enableHighAccuracy: true, timeout: 3000, maximumAge: 60000 }
       );
     };
 
@@ -918,7 +946,12 @@ const CoordinatorApp = () => {
       categoryText = 'NO AFILIADO - apoya generales';
     }
 
-    const activeLocation = location || { lat: 0, lng: 0 };
+    const activeLocation = location;
+    if (!activeLocation || !activeLocation.lat || !activeLocation.lng || (activeLocation.lat === 0 && activeLocation.lng === 0)) {
+      setError('❌ No se puede guardar sin coordenadas satelitales (GPS obligatorio). Active la ubicación en su teléfono.');
+      setIsLoading(false);
+      return;
+    }
     const captureData = {
       elector_ci: customElectorCI,
       coordinator_id: user?.id,
@@ -972,7 +1005,11 @@ const CoordinatorApp = () => {
   const handleCapture = async (color: 'GREEN' | 'YELLOW' | 'RED' | 'PURPLE') => {
     if (!elector || isReadOnly || !user) return;
     
-    const activeLocation = location || { lat: 0, lng: 0 };
+    const activeLocation = location;
+    if (!activeLocation || !activeLocation.lat || !activeLocation.lng || (activeLocation.lat === 0 && activeLocation.lng === 0)) {
+      setError('❌ Error: No se puede guardar la captura sin coordenadas satelitales (GPS obligatorio).');
+      return;
+    }
     const cleanPhone = telefono ? telefono.replace(/\D/g, '') : '';
     
     const captureData = {
