@@ -45,24 +45,46 @@ export default function whatsappRoutes(storage: multer.StorageEngine) {
     res.json({ success: true });
   });
 
+  // ── INBOUND EVOLUTION WEBHOOK ──────────────────────────────────────────────
+  router.post('/webhook', async (req, res) => {
+    try {
+      await whatsappService.handleWebhook(req.body);
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('[WHATSAPP WEBHOOK ERROR]', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   router.get('/status', (req, res) => {
     const terminalId = (req.query.terminalId as string) || 'default';
     res.json(whatsappService.getStatus(terminalId));
   });
 
-  router.post('/connect', (req, res) => {
+  router.post('/connect', async (req, res) => {
     const terminalId = (req.body.terminalId as string) || 'default';
-    const status = whatsappService.getStatus(terminalId);
-    if (!status) return res.status(404).json({ error: `Terminal "${terminalId}" no encontrada. Créala primero.` });
-    if (status.status === 'CONNECTED') return res.json({ success: true, status: 'CONNECTED', message: 'Ya conectada' });
-    if (status.status === 'CONNECTING') return res.json({ success: true, status: 'CONNECTING', message: 'Ya iniciando conexión', qr: status.qr });
-    whatsappService.connect(terminalId);
-    res.json({ success: true, status: 'CONNECTING', message: 'Iniciando conexión WhatsApp...' });
+    try {
+      const result = await whatsappService.connect(terminalId);
+      res.json({
+        success: true,
+        status: result.status,
+        qr: result.qr || null,
+        message: result.message
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
-  router.post('/disconnect', (req, res) => {
+  router.post('/disconnect', async (req, res) => {
     const terminalId = (req.body.terminalId as string) || 'default';
-    whatsappService.disconnect(terminalId);
+    await whatsappService.disconnect(terminalId);
+    res.json({ success: true });
+  });
+
+  router.delete('/terminals/:id', async (req, res) => {
+    const { id } = req.params;
+    await whatsappService.deleteTerminal(id);
     res.json({ success: true });
   });
 

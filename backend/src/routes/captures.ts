@@ -20,7 +20,11 @@ export default function capturesRoutes() {
       const user = db.prepare('SELECT id, assigned_list_id, assigned_campaign_id, distrito FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1')
         .get(capture.coordinator_id, String(capture.coordinator_id), String(capture.coordinator_id)) as any;
       
-      const realCoordinatorId = user?.id || capture.coordinator_id;
+      let realCoordinatorId = user?.id;
+      if (!realCoordinatorId) {
+        const fallbackCoord = db.prepare('SELECT id, assigned_list_id, assigned_campaign_id, distrito FROM users WHERE role = ? ORDER BY id ASC LIMIT 1').get('COORDINADOR') as any;
+        realCoordinatorId = fallbackCoord?.id || capture.coordinator_id;
+      }
       let list_id = user?.assigned_list_id;
       let campaign_id = user?.assigned_campaign_id;
       const userDistrict = user?.distrito || 'DESCONOCIDO';
