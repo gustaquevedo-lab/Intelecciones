@@ -508,12 +508,15 @@ const CoordinatorApp = () => {
       setSuccessMsg(res.data.message || `✅ Coordinador eliminado correctamente.`);
       setShowDetailModal(false);
       setSelectedCoordDetail(null);
-      fetchMyCoordinators();
-      fetchMyPadrinoStats();
-      fetchHistory();
+      await fetchMyCoordinators();
+      await fetchMyPadrinoStats();
+      await fetchHistory();
       setTimeout(() => setSuccessMsg(''), 4000);
+      return res.data;
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al eliminar coordinador');
+      const errorMsg = err.response?.data?.error || err.message || 'Error al eliminar coordinador';
+      setError(errorMsg);
+      throw new Error(errorMsg);
     } finally {
       setIsLoading(false);
     }

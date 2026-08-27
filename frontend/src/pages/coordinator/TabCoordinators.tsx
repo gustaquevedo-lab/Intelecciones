@@ -221,6 +221,7 @@ const TabCoordinators = (props: any) => {
 
   const [coordToDelete, setCoordToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const onConfirmReset = async () => {
     if (!coordToReset || !handleResetCoordPassword) return;
@@ -237,10 +238,12 @@ const TabCoordinators = (props: any) => {
   const onConfirmDelete = async () => {
     if (!coordToDelete || !handleDeleteCoordinator) return;
     setIsDeleting(true);
+    setDeleteError('');
     try {
       await handleDeleteCoordinator(coordToDelete, 'inherit');
       setCoordToDelete(null);
-    } catch {
+    } catch (err: any) {
+      setDeleteError(err.message || 'Error al eliminar coordinador.');
     } finally {
       setIsDeleting(false);
     }
@@ -785,6 +788,12 @@ const TabCoordinators = (props: any) => {
                   🛡️ <strong>Protección de datos:</strong> Todas las capturas de electores realizadas por este coordinador se transferirán y conservarán automáticamente en tu cuenta de Padrino.
                 </div>
               </div>
+
+              {deleteError && (
+                <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid var(--red)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: '#FCA5A5', fontSize: '0.75rem', fontWeight: 600 }}>
+                  ❌ {deleteError}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button

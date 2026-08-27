@@ -402,24 +402,20 @@ router.delete('/:id', (req, res) => {
         db.prepare('UPDATE elector_captures SET coordinator_id = NULL WHERE coordinator_id IN (?, ?, ?, ?)').run(...coordIds);
       }
       
-      // 2. Nullify references in vehicles
-      db.prepare('UPDATE vehicles SET assigned_user_id = NULL WHERE assigned_user_id IN (?, ?, ?, ?)').run(...coordIds);
-      
-      // 3. Nullify references in field_requests
+      // 2. Nullify references in field_requests
       db.prepare('UPDATE field_requests SET coordinator_id = NULL WHERE coordinator_id IN (?, ?, ?, ?)').run(...coordIds);
 
-      // 4. Nullify references in capture_conflicts and audit_logs
+      // 3. Nullify references in capture_conflicts
       db.prepare('UPDATE capture_conflicts SET resolved_by_jefe_id = NULL WHERE resolved_by_jefe_id = ?').run(user.id);
       db.prepare('UPDATE capture_conflicts SET resolved_coordinator_id = NULL WHERE resolved_coordinator_id IN (?, ?, ?, ?)').run(...coordIds);
-      db.prepare('UPDATE audit_logs SET user_id = NULL WHERE user_id = ?').run(user.id);
 
-      // 5. Nullify references in participation_logs
+      // 4. Nullify references in participation_logs
       db.prepare('UPDATE participation_logs SET veedor_id = NULL WHERE veedor_id = ?').run(user.id);
 
-      // 8. Update children users to have no parent (orphan them instead of deleting)
+      // 5. Update children users to have no parent (orphan them instead of deleting)
       db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(user.id);
 
-      // 9. Finally delete the user
+      // 6. Finally delete the user
       db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
       db.prepare('PRAGMA foreign_keys = ON').run();
 
