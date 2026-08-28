@@ -17,21 +17,35 @@ export default function capturesRoutes() {
       const rawCapture = CaptureSchema.parse(req.body);
       const capture = { ...rawCapture, elector_ci: rawCapture.elector_ci.replace(/\./g, '').replace(/,/g, '').trim() };
 
-      const user = db.prepare('SELECT id, assigned_list_id, assigned_campaign_id, distrito FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1')
-        .get(capture.coordinator_id, String(capture.coordinator_id), String(capture.coordinator_id)) as any;
-      
-      let realCoordinatorId = user?.id;
-      if (!realCoordinatorId) {
-        const fallbackCoord = db.prepare('SELECT id, assigned_list_id, assigned_campaign_id, distrito FROM users WHERE role = ? ORDER BY id ASC LIMIT 1').get('COORDINADOR') as any;
-        realCoordinatorId = fallbackCoord?.id || capture.coordinator_id;
+      const coordinatorLookupId = capture.coordinator_id || req.headers['x-user-id'];
+      if (!coordinatorLookupId) {
+        return res.status(400).json({ error: 'El campo coordinator_id es obligatorio para registrar una captura.' });
       }
-      let list_id = user?.assigned_list_id;
-      let campaign_id = user?.assigned_campaign_id;
-      const userDistrict = user?.distrito || 'DESCONOCIDO';
+
+      const user = db.prepare('SELECT id, assigned_list_id, assigned_campaign_id, distrito, role, parent_id FROM users WHERE id = ? OR ci = ? OR username = ? LIMIT 1')
+        .get(coordinatorLookupId, String(coordinatorLookupId), String(coordinatorLookupId)) as any;
+      
+      if (!user) {
+        return res.status(400).json({ 
+          error: `El coordinador especificado (${coordinatorLookupId}) no existe o no fue encontrado en el sistema. Asegúrese de haber iniciado sesión correctamente.` 
+        });
+      }
+
+      const realCoordinatorId = user.id;
+      let list_id = user.assigned_list_id;
+      let campaign_id = user.assigned_campaign_id;
+      const userDistrict = user.distrito || 'DESCONOCIDO';
 
       if (!list_id && campaign_id) {
         const firstList = db.prepare('SELECT id FROM lists WHERE campaign_id = ? LIMIT 1').get(campaign_id) as any;
         if (firstList) list_id = firstList.id;
+      }
+      if (!list_id && user.parent_id) {
+        const parent = db.prepare('SELECT assigned_list_id, assigned_campaign_id FROM users WHERE id = ?').get(user.parent_id) as any;
+        if (parent?.assigned_list_id) {
+          list_id = parent.assigned_list_id;
+          if (!campaign_id) campaign_id = parent.assigned_campaign_id;
+        }
       }
       if (!list_id) {
         const fallbackList = db.prepare('SELECT id FROM lists LIMIT 1').get() as any;
