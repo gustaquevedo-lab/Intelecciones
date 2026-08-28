@@ -111,12 +111,16 @@ export const queuePendingAction = async (action: { type: string; url: string; me
 
 export const getPendingActions = async (): Promise<any[]> => {
   try {
-    const actions: any[] = [];
-    await pendingSyncStore.iterate((value) => {
-      actions.push(value);
-    });
-    // Sort by timestamp ascending
-    return actions.sort((a, b) => a.timestamp - b.timestamp);
+    const fetchPromise = (async () => {
+      const actions: any[] = [];
+      await pendingSyncStore.iterate((value) => {
+        actions.push(value);
+      });
+      return actions.sort((a, b) => a.timestamp - b.timestamp);
+    })();
+    // Timeout of 500ms to avoid blocking online operations
+    const timeoutPromise = new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 500));
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err) {
     debug.error('[localforage] Failed to get pending actions:', err);
     return [];
@@ -125,7 +129,9 @@ export const getPendingActions = async (): Promise<any[]> => {
 
 export const getPendingActionsCount = async (): Promise<number> => {
   try {
-    return await pendingSyncStore.length();
+    const lenPromise = pendingSyncStore.length();
+    const timeoutPromise = new Promise<number>((resolve) => setTimeout(() => resolve(0), 500));
+    return await Promise.race([lenPromise, timeoutPromise]);
   } catch {
     return 0;
   }
@@ -143,140 +149,168 @@ export const removePendingAction = async (id: any): Promise<void> => {
 export const savePadronOffline = async (electors: any[], onProgress?: (pct: number) => void) => {
   const db = await initOfflineDB();
   
-  // Clear existing data first
-  await new Promise<void>((resolve, reject) => {
-    if (!db.objectStoreNames.contains(STORE_NAME)) {
-      resolve();
-      return;
-    }
-    
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.clear();
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
+  // Clear existing data first with timeout
+  try {
+    await new Promise<void>((resolve, reject) => {
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        resolve();
+        return;
+      }
+      
+      const timer = setTimeout(() => resolve(), 3000);
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.clear();
+      request.onsuccess = () => { clearTimeout(timer); resolve(); };
+      request.onerror = () => { clearTimeout(timer); resolve(); };
+    });
+  } catch {}
 
-  const CHUNK_SIZE = 500;
+  const CHUNK_SIZE = 4000;
   let processed = 0;
   const total = electors.length;
 
   const processChunk = async (startIndex: number) => {
-    return new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      
-      const endIndex = Math.min(startIndex + CHUNK_SIZE, total);
-      
-      for (let i = startIndex; i < endIndex; i++) {
-        const electorArr = electors[i];
-        if (!electorArr || !electorArr[0]) continue;
-
-        const rawLocal = (electorArr[3] || '').toString().trim();
-        const cleanLocal = (!rawLocal || rawLocal === '0' || rawLocal.toLowerCase() === 'sin local' || rawLocal.toLowerCase() === 'desconocido' || rawLocal.toLowerCase() === 'dato no registrado') 
-          ? 'DATO NO REGISTRADO' 
-          : rawLocal.toUpperCase();
-
-        const rawMesa = parseInt(electorArr[4]) || 0;
-        const cleanMesa = rawMesa === 0 ? 'DATO NO REGISTRADO' : rawMesa;
-
-        const rawOrden = parseInt(electorArr[5]) || 0;
-        const cleanOrden = rawOrden === 0 ? 'DATO NO REGISTRADO' : rawOrden;
-
-        const elector = {
-          ci: electorArr[0].toString().trim(),
-          nombre: electorArr[1] ? electorArr[1].toString().trim().toUpperCase() : 'SIN NOMBRE',
-          apellido: electorArr[2] ? electorArr[2].toString().trim().toUpperCase() : 'DATO NO REGISTRADO',
-          local_votacion: cleanLocal,
-          mesa: cleanMesa,
-          orden: cleanOrden,
-          nombre_clean: (electorArr[1] || '').toString().toLowerCase().trim(),
-          apellido_clean: (electorArr[2] || '').toString().toLowerCase().trim()
-        };
-        store.put(elector);
-      }
-
-      transaction.oncomplete = () => {
-        processed = endIndex;
-        if (onProgress) onProgress(Math.round((processed / total) * 100));
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        debug.warn(`[DB] Chunk timeout at index ${startIndex}`);
         resolve();
-      };
-      transaction.onerror = () => reject(transaction.error);
+      }, 10000);
+
+      try {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        
+        const endIndex = Math.min(startIndex + CHUNK_SIZE, total);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+          const electorArr = electors[i];
+          if (!electorArr || !electorArr[0]) continue;
+
+          const rawLocal = (electorArr[3] || '').toString().trim();
+          const cleanLocal = (!rawLocal || rawLocal === '0' || rawLocal.toLowerCase() === 'sin local' || rawLocal.toLowerCase() === 'desconocido' || rawLocal.toLowerCase() === 'dato no registrado') 
+            ? 'DATO NO REGISTRADO' 
+            : rawLocal.toUpperCase();
+
+          const rawMesa = parseInt(electorArr[4]) || 0;
+          const cleanMesa = rawMesa === 0 ? 'DATO NO REGISTRADO' : rawMesa;
+
+          const rawOrden = parseInt(electorArr[5]) || 0;
+          const cleanOrden = rawOrden === 0 ? 'DATO NO REGISTRADO' : rawOrden;
+
+          const elector = {
+            ci: electorArr[0].toString().trim(),
+            nombre: electorArr[1] ? electorArr[1].toString().trim().toUpperCase() : 'SIN NOMBRE',
+            apellido: electorArr[2] ? electorArr[2].toString().trim().toUpperCase() : 'DATO NO REGISTRADO',
+            local_votacion: cleanLocal,
+            mesa: cleanMesa,
+            orden: cleanOrden,
+            nombre_clean: (electorArr[1] || '').toString().toLowerCase().trim(),
+            apellido_clean: (electorArr[2] || '').toString().toLowerCase().trim()
+          };
+          store.put(elector);
+        }
+
+        transaction.oncomplete = () => {
+          clearTimeout(timer);
+          processed = endIndex;
+          if (onProgress) onProgress(Math.round((processed / total) * 100));
+          resolve();
+        };
+        transaction.onerror = () => { clearTimeout(timer); resolve(); };
+        transaction.onabort = () => { clearTimeout(timer); resolve(); };
+      } catch (err) {
+        clearTimeout(timer);
+        resolve();
+      }
     });
   };
 
   for (let i = 0; i < total; i += CHUNK_SIZE) {
     await processChunk(i);
-    // Yield to main thread to keep UI responsive
-    await new Promise(r => setTimeout(r, 0));
+    // Yield to main thread for 25ms to let UI render smoothly
+    await new Promise(r => setTimeout(r, 25));
   }
 
-  debug.log(`Successfully saved ${total} electors offline in chunks.`);
+  debug.log(`Successfully saved ${total} electors offline.`);
 };
 
 export const searchElectorOffline = async (query: string): Promise<any[]> => {
-  const db = await initOfflineDB();
-  
-  return new Promise((resolve, reject) => {
-    if (!db.objectStoreNames.contains(STORE_NAME)) {
-      resolve([]);
-      return;
-    }
-    
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const results: any[] = [];
-    const cleanQuery = query.toLowerCase().trim();
-    const isNumeric = /^\d+$/.test(cleanQuery);
-
-    if (isNumeric) {
-      // Direct CI lookup (O(1) instead of O(n))
-      const request = store.get(cleanQuery);
-      request.onsuccess = () => {
-        if (request.result) resolve([request.result]);
-        else resolve([]);
-      };
-      request.onerror = () => reject(request.error);
-      return;
-    }
-
-    // Name/Apellido search (Cursor-based) - O(n) but limited to 50 results
-    const request = store.openCursor();
-    request.onsuccess = (event: any) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        const { nombre_clean, apellido_clean } = cursor.value;
-        if (nombre_clean.includes(cleanQuery) || apellido_clean.includes(cleanQuery)) {
-          results.push(cursor.value);
+  try {
+    const searchPromise = (async () => {
+      const db = await initOfflineDB();
+      return new Promise<any[]>((resolve, reject) => {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          resolve([]);
+          return;
         }
         
-        // Limit results to 50 for performance
-        if (results.length < 50) {
-          cursor.continue();
-        } else {
-          resolve(results);
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const results: any[] = [];
+        const cleanQuery = query.toLowerCase().trim();
+        const isNumeric = /^\d+$/.test(cleanQuery);
+
+        if (isNumeric) {
+          // Direct CI lookup (O(1))
+          const request = store.get(cleanQuery);
+          request.onsuccess = () => {
+            if (request.result) resolve([request.result]);
+            else resolve([]);
+          };
+          request.onerror = () => resolve([]);
+          return;
         }
-      } else {
-        resolve(results);
-      }
-    };
-    request.onerror = () => reject(request.error);
-  });
+
+        // Cursor-based search limited to 20 results
+        const request = store.openCursor();
+        request.onsuccess = (event: any) => {
+          const cursor = event.target.result;
+          if (cursor) {
+            const { nombre_clean, apellido_clean } = cursor.value;
+            if (nombre_clean?.includes(cleanQuery) || apellido_clean?.includes(cleanQuery)) {
+              results.push(cursor.value);
+            }
+            if (results.length < 20) {
+              cursor.continue();
+            } else {
+              resolve(results);
+            }
+          } else {
+            resolve(results);
+          }
+        };
+        request.onerror = () => resolve([]);
+      });
+    })();
+
+    const timeoutPromise = new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 1200));
+    return await Promise.race([searchPromise, timeoutPromise]);
+  } catch {
+    return [];
+  }
 };
 
-export const getOfflineStats = async () => {
-  const db = await initOfflineDB();
-  
-  return new Promise<number>((resolve) => {
-    if (!db.objectStoreNames.contains(STORE_NAME)) {
-      resolve(0);
-      return;
-    }
-    
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const countRequest = store.count();
-    countRequest.onsuccess = () => resolve(countRequest.result);
-    countRequest.onerror = () => resolve(0);
-  });
+export const getOfflineStats = async (): Promise<number> => {
+  try {
+    const countPromise = (async () => {
+      const db = await initOfflineDB();
+      return new Promise<number>((resolve) => {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          resolve(0);
+          return;
+        }
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const countRequest = store.count();
+        countRequest.onsuccess = () => resolve(countRequest.result || 0);
+        countRequest.onerror = () => resolve(0);
+      });
+    })();
+
+    const timeoutPromise = new Promise<number>((resolve) => setTimeout(() => resolve(0), 1000));
+    return await Promise.race([countPromise, timeoutPromise]);
+  } catch {
+    return 0;
+  }
 };

@@ -668,6 +668,7 @@ const CoordinatorApp = () => {
   };
 
   useEffect(() => {
+    let isCancelled = false;
     const lookup = async () => {
       const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
       if (cleanCI.length >= 5 && activeTab === 'search') {
@@ -675,7 +676,23 @@ const CoordinatorApp = () => {
           setIsLoading(true);
           let electorData = null;
 
-          // Check pending offline captures
+          // 1. Direct Online API query (Ultra-fast priority)
+          try {
+            const res = await api.get(`/electors/${cleanCI}`, { timeout: 5000 });
+            if (res.data && res.data.ci) {
+              electorData = res.data;
+            }
+          } catch {
+            // 2. Offline fallback ONLY if network failed
+            try {
+              const localResults = await searchElectorOffline(cleanCI);
+              if (localResults.length > 0) electorData = localResults[0];
+            } catch {}
+          }
+
+          if (isCancelled) return;
+
+          // 3. Non-blocking check for pending local capture
           let pendingCapture = null;
           try {
             const { getPendingActions } = await import('../services/offlineDb');
@@ -684,15 +701,7 @@ const CoordinatorApp = () => {
             if (found) pendingCapture = found.data;
           } catch {}
 
-          // Prioritize online API to guarantee exact server padron data (mesa, orden, local)
-          try {
-            const res = await api.get(`/electors/${cleanCI}`);
-            if (res.data) electorData = res.data;
-          } catch {
-            // Fallback to local offline cache only if server request fails
-            const localResults = await searchElectorOffline(cleanCI);
-            if (localResults.length > 0) electorData = localResults[0];
-          }
+          if (isCancelled) return;
 
           if (electorData) {
             if (pendingCapture) {
@@ -727,14 +736,17 @@ const CoordinatorApp = () => {
             setElector(null);
           }
         } catch {
-          setElector(null);
+          if (!isCancelled) setElector(null);
         } finally {
-          setIsLoading(false);
+          if (!isCancelled) setIsLoading(false);
         }
       }
     };
-    const timer = setTimeout(lookup, 600);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(lookup, 400);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
   }, [ci, activeTab]);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -748,6 +760,23 @@ const CoordinatorApp = () => {
     try {
       let electorData = null;
 
+      // 1. Direct Online API query (Fast priority)
+      try {
+        const res = await api.get(`/electors/${cleanCI}`, { timeout: 6000 });
+        if (res.data && res.data.ci) {
+          electorData = res.data;
+        }
+      } catch {
+        // 2. Offline fallback ONLY if network failed
+        try {
+          const localResults = await searchElectorOffline(cleanCI);
+          if (localResults.length > 0) {
+            electorData = localResults[0];
+          }
+        } catch {}
+      }
+
+      // 3. Non-blocking check for pending local capture
       let pendingCapture = null;
       try {
         const { getPendingActions } = await import('../services/offlineDb');
@@ -755,16 +784,6 @@ const CoordinatorApp = () => {
         const found = pending.find((a: any) => a.type === 'CAPTURE' && String(a.data?.elector_ci) === String(cleanCI));
         if (found) pendingCapture = found.data;
       } catch {}
-
-      try {
-        const res = await api.get(`/electors/${cleanCI}`);
-        electorData = res.data;
-      } catch {
-        const localResults = await searchElectorOffline(cleanCI);
-        if (localResults.length > 0) {
-          electorData = localResults[0];
-        }
-      }
       
       if (electorData || pendingCapture) {
         const finalElector = electorData ? {
