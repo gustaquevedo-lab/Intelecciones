@@ -11,7 +11,7 @@ export const useSSE = (onEvent: (event: { type: string; data: any }) => void) =>
     if (!user?.id) return;
 
     let eventSource: EventSource | null = null;
-    let delay = 1000;
+    let delay = 5000;
     let timeoutId: any = null;
     let everConnected = false;
     let errorCount = 0;

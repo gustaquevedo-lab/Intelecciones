@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, User,
@@ -667,85 +667,94 @@ const CoordinatorApp = () => {
     }
   };
 
+  const lookupSeqRef = useRef(0);
+
   useEffect(() => {
-    let isCancelled = false;
-    const lookup = async () => {
-      const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
-      if (cleanCI.length >= 5 && activeTab === 'search') {
+    const cleanCI = ci.replace(/\./g, '').replace(/,/g, '').trim();
+    if (cleanCI.length < 5 || activeTab !== 'search') {
+      setIsLoading(false);
+      setElector(null);
+      return;
+    }
+
+    const currentSeq = ++lookupSeqRef.current;
+    setIsLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        let electorData = null;
+
+        // 1. Direct Online API query (Fast priority)
         try {
-          setIsLoading(true);
-          let electorData = null;
-
-          // 1. Direct Online API query (Ultra-fast priority)
-          try {
-            const res = await api.get(`/electors/${cleanCI}`, { timeout: 5000 });
-            if (res.data && res.data.ci) {
-              electorData = res.data;
-            }
-          } catch {
-            // 2. Offline fallback ONLY if network failed
-            try {
-              const localResults = await searchElectorOffline(cleanCI);
-              if (localResults.length > 0) electorData = localResults[0];
-            } catch {}
-          }
-
-          if (isCancelled) return;
-
-          // 3. Non-blocking check for pending local capture
-          let pendingCapture = null;
-          try {
-            const { getPendingActions } = await import('../services/offlineDb');
-            const pending = await getPendingActions();
-            const found = pending.find((a: any) => a.type === 'CAPTURE' && String(a.data?.elector_ci) === String(cleanCI));
-            if (found) pendingCapture = found.data;
-          } catch {}
-
-          if (isCancelled) return;
-
-          if (electorData) {
-            if (pendingCapture) {
-              electorData = {
-                ...electorData,
-                traffic_light: pendingCapture.traffic_light || electorData.traffic_light,
-                capture_telefono: pendingCapture.telefono || electorData.capture_telefono,
-                needs_transport: pendingCapture.needs_transport ? 1 : electorData.needs_transport,
-                captured_by: user?.id,
-                coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
-              };
-            }
-            setElector(electorData);
-            setSuccessMsg('');
-            if (isReadOnly) saveElectorToHistory(electorData);
-            setError('');
-          } else if (pendingCapture) {
-            setElector({
-              ci: cleanCI,
-              nombre: pendingCapture.elector_nombre?.split(' ')[0] || 'ELECTOR',
-              apellido: pendingCapture.elector_nombre?.split(' ').slice(1).join(' ') || 'CAMPO',
-              local_votacion: 'REGISTRO DE CAMPO',
-              mesa: 0,
-              orden: 0,
-              traffic_light: pendingCapture.traffic_light,
-              capture_telefono: pendingCapture.telefono,
-              needs_transport: pendingCapture.needs_transport ? 1 : 0,
-              captured_by: user?.id,
-              coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
-            });
-            setError('');
-          } else {
-            setElector(null);
+          const res = await api.get(`/electors/${cleanCI}`, { timeout: 4000 });
+          if (res.data && res.data.ci) {
+            electorData = res.data;
           }
         } catch {
-          if (!isCancelled) setElector(null);
-        } finally {
-          if (!isCancelled) setIsLoading(false);
+          // 2. Offline fallback ONLY if network failed
+          try {
+            const localResults = await searchElectorOffline(cleanCI);
+            if (localResults.length > 0) electorData = localResults[0];
+          } catch {}
+        }
+
+        // Drop stale results if a newer lookup started
+        if (currentSeq !== lookupSeqRef.current) return;
+
+        // 3. Non-blocking check for pending local capture
+        let pendingCapture = null;
+        try {
+          const { getPendingActions } = await import('../services/offlineDb');
+          const pending = await getPendingActions();
+          const found = pending.find((a: any) => a.type === 'CAPTURE' && String(a.data?.elector_ci) === String(cleanCI));
+          if (found) pendingCapture = found.data;
+        } catch {}
+
+        if (currentSeq !== lookupSeqRef.current) return;
+
+        if (electorData) {
+          if (pendingCapture) {
+            electorData = {
+              ...electorData,
+              traffic_light: pendingCapture.traffic_light || electorData.traffic_light,
+              capture_telefono: pendingCapture.telefono || electorData.capture_telefono,
+              needs_transport: pendingCapture.needs_transport ? 1 : electorData.needs_transport,
+              captured_by: user?.id,
+              coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
+            };
+          }
+          setElector(electorData);
+          setSuccessMsg('');
+          if (isReadOnly) saveElectorToHistory(electorData);
+          setError('');
+        } else if (pendingCapture) {
+          setElector({
+            ci: cleanCI,
+            nombre: pendingCapture.elector_nombre?.split(' ')[0] || 'ELECTOR',
+            apellido: pendingCapture.elector_nombre?.split(' ').slice(1).join(' ') || 'CAMPO',
+            local_votacion: 'REGISTRO DE CAMPO',
+            mesa: 0,
+            orden: 0,
+            traffic_light: pendingCapture.traffic_light,
+            capture_telefono: pendingCapture.telefono,
+            needs_transport: pendingCapture.needs_transport ? 1 : 0,
+            captured_by: user?.id,
+            coordinator_name: user?.nombre || 'Tú (Pendiente Sync)'
+          });
+          setError('');
+        } else {
+          setElector(null);
+        }
+      } catch {
+        if (currentSeq === lookupSeqRef.current) setElector(null);
+      } finally {
+        if (currentSeq === lookupSeqRef.current) {
+          setIsLoading(false);
         }
       }
-    };
-    const timer = setTimeout(lookup, 400);
+    }, 250);
+
     return () => {
-      isCancelled = true;
       clearTimeout(timer);
     };
   }, [ci, activeTab]);
