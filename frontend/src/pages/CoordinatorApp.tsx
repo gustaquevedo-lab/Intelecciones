@@ -715,6 +715,7 @@ const CoordinatorApp = () => {
               };
             }
             setElector(electorData);
+            setSuccessMsg('');
             if (isReadOnly) saveElectorToHistory(electorData);
             setError('');
           } else if (pendingCapture) {
