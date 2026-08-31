@@ -324,13 +324,12 @@ try {
 }
 
 // Columns added OUTSIDE the version-gated block run on every startup (safe, idempotent)
+// NOTE: Only add columns here for tables that are guaranteed to exist from the
+// CREATE TABLE IF NOT EXISTS block above. Tables like whatsapp_terminals, attendance,
+// and results may not exist if created conditionally inside runSchemaMigrations.
 addColumnIfNotExists("elector_captures", "copiatin_printed_at", "DATETIME");
-addColumnIfNotExists("whatsapp_terminals", "campaign_id", "INTEGER");
-addColumnIfNotExists("whatsapp_terminals", "phone_number", "TEXT");
-addColumnIfNotExists("whatsapp_terminals", "warmup_enabled", "INTEGER DEFAULT 0");
-addColumnIfNotExists("attendance", "photo_url", "TEXT");
 addColumnIfNotExists("users", "assigned_table_role", "TEXT");
-addColumnIfNotExists("results", "category", "TEXT DEFAULT 'INTENDENTE'");
+addColumnIfNotExists("electors", "campaign_id", "INTEGER");
 
 // TSJE Padron columns (Only run if schema update needed to avoid table_info scan on 5M rows)
 if (dbVersion < currentSchemaVersion) {
@@ -1609,5 +1608,41 @@ export const runBootstrapChecks = () => {
   }
 };
 
-export default db;
+// ── WAL CHECKPOINT & GRACEFUL SHUTDOWN ──────────────────────────────────────
+// Periodic WAL checkpoint every 5 minutes to prevent WAL bloat (886 MB incidents)
+const WAL_CHECKPOINT_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const walCheckpointTimer = setInterval(() => {
+  try {
+    const result = db.pragma('wal_checkpoint(PASSIVE)');
+    const walSize = result?.[0];
+    if (walSize && walSize.log > 100) {
+      console.log(`[DB] WAL checkpoint: ${walSize.log} pages in WAL, ${walSize.checkpointed} checkpointed`);
+    }
+  } catch (e: any) {
+    console.warn('[DB] WAL checkpoint failed:', e.message);
+  }
+}, WAL_CHECKPOINT_INTERVAL);
 
+// Graceful shutdown: checkpoint WAL and close DB on process exit
+const gracefulShutdown = (signal: string) => {
+  console.log(`[DB] ${signal} received. Running final WAL checkpoint...`);
+  clearInterval(walCheckpointTimer);
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+    console.log('[DB] Final WAL checkpoint complete.');
+  } catch (e: any) {
+    console.warn('[DB] Final checkpoint failed:', e.message);
+  }
+  try {
+    db.close();
+    console.log('[DB] Database closed cleanly.');
+  } catch (e: any) {
+    console.warn('[DB] Database close failed:', e.message);
+  }
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+export default db;
