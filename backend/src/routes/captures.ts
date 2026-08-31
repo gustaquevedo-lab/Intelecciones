@@ -69,12 +69,11 @@ export default function capturesRoutes() {
         const apellido = parts.slice(1).join(' ') || 'No Registrado';
 
         db.prepare(`
-          INSERT INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito, photo_ci_frente, photo_ci_verso)
-          VALUES (?, ?, ?, 'REGISTRO DE CAMPO', 0, 0, ?, ?, ?, ?)
+          INSERT INTO electors (ci, nombre, apellido, local_votacion, mesa, orden, ciudad, distrito)
+          VALUES (?, ?, ?, 'REGISTRO DE CAMPO', 0, 0, ?, ?)
         `).run(
           capture.elector_ci, nombre, apellido,
-          userDistrict, userDistrict,
-          capture.photo_ci_frente || null, capture.photo_ci_verso || null
+          userDistrict, userDistrict
         );
 
         clearElectorsCache();
